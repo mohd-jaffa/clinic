@@ -98,6 +98,20 @@ export const UI_TEXT = {
     clearSearch: "Clear search",
   },
 
+  /** The kit's calendar and time list (D65). Weeks start on Monday, as the clinic's do. */
+  datePicker: {
+    choose: "Choose a date",
+    chooseTime: "Choose a time",
+    calendar: (field: string) => `${field}: pick a day`,
+    previousMonth: "Previous month",
+    nextMonth: "Next month",
+    today: "Today",
+    clear: "Clear",
+    weekdays: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+    weekdaysShort: ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"],
+    weekdaysAbbr: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+  },
+
   /** The ＋ in the phone's bottom bar opens these (plan §31.1). */
   quickActions: {
     title: "Add",
