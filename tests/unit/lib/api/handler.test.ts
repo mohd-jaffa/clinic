@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import { AppError, internalError, validationError } from "@/lib/errors";
+import { captureError } from "@/lib/audit/errorLog";
 import { logger } from "@/lib/logger";
 
 import { createRequestId, normalizeApiError, readBody, readJson, readQuery, withApiHandler } from "@/lib/api/handler";
@@ -9,6 +10,7 @@ import { createRequestId, normalizeApiError, readBody, readJson, readQuery, with
 vi.mock("@/lib/logger", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 }));
+vi.mock("@/lib/audit/errorLog", () => ({ captureError: vi.fn() }));
 
 function post(body: unknown, headers: Record<string, string> = {}) {
   return new Request("https://x.test/api/thing", {
@@ -185,8 +187,8 @@ describe("withApiHandler", () => {
     expect(JSON.stringify(body)).not.toContain("patients");
   });
 
-  it("logs a fault of the server's own with where it happened, under the reference the person is shown", async () => {
-    vi.mocked(logger.error).mockClear();
+  it("sends a fault of the server's own to the error log, under the reference the person is shown", async () => {
+    vi.mocked(captureError).mockClear();
     const driver = new Error("connection terminated");
     const request = new Request("https://x.test/api/appointments?search=Anu", {
       method: "POST",
@@ -195,46 +197,55 @@ describe("withApiHandler", () => {
     await withApiHandler(request, async () => {
       throw internalError("INTERNAL_ERROR", undefined, driver);
     });
-    expect(logger.error).toHaveBeenCalledExactlyOnceWith(
-      "API request failed",
-      {
-        kind: "INTERNAL",
-        code: "INTERNAL_ERROR",
-        httpStatus: 500,
-        traceId: expect.any(String),
-        details: undefined,
-        method: "POST",
-        path: "/api/appointments",
-        userId: undefined,
-        clinicId: undefined,
-        cause: "connection terminated",
-      },
-      "req_9",
-    );
+    expect(captureError).toHaveBeenCalledExactlyOnceWith({
+      source: "API",
+      message: "API request failed",
+      error: driver,
+      reference: "req_9",
+      kind: "INTERNAL",
+      code: "INTERNAL_ERROR",
+      httpStatus: 500,
+      method: "POST",
+      path: "/api/appointments",
+      userId: undefined,
+      clinicId: undefined,
+      context: { traceId: expect.any(String), details: undefined },
+    });
   });
 
-  it("names who was asking once the route knows, and a failure with no cause has none", async () => {
-    vi.mocked(logger.error).mockClear();
+  it("names who was asking once the route knows, and a failure with no cause logs itself", async () => {
+    vi.mocked(captureError).mockClear();
     await withApiHandler(post({}), async (context) => {
       context.asker = { userId: "u-1", clinicId: "c-1" };
       throw internalError("INTERNAL_ERROR");
     });
-    expect(logger.error).toHaveBeenCalledWith(
-      "API request failed",
-      expect.objectContaining({ userId: "u-1", clinicId: "c-1", cause: undefined }),
-      expect.any(String),
+    expect(captureError).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: "u-1", clinicId: "c-1", error: expect.any(AppError) }),
     );
   });
 
-  it("logs a refused request's cause in the output only, never in the answer", async () => {
+  it("keeps a refusal out of the error log, its cause in the output only, never in the answer", async () => {
+    vi.mocked(captureError).mockClear();
     const response = await withApiHandler(post({}, { "x-request-id": "req_409" }), async () => {
       throw new AppError({ kind: "CONFLICT", code: "CONFLICT", cause: new Error("duplicate key value") });
     });
-    expect(logger.error).toHaveBeenLastCalledWith(
-      "API request failed",
+    expect(captureError).not.toHaveBeenCalled();
+    expect(logger.warn).toHaveBeenLastCalledWith(
+      "API request refused",
       expect.objectContaining({ httpStatus: 409, cause: "duplicate key value" }),
       "req_409",
     );
     expect(JSON.stringify(await response.json())).not.toContain("duplicate key");
+  });
+
+  it("logs a refusal with no cause as having none", async () => {
+    await withApiHandler(post({}), async () => {
+      throw validationError("VALIDATION_ERROR");
+    });
+    expect(logger.warn).toHaveBeenLastCalledWith(
+      "API request refused",
+      expect.objectContaining({ httpStatus: 400, cause: undefined }),
+      expect.any(String),
+    );
   });
 });

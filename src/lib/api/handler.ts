@@ -2,6 +2,7 @@ import type { ZodType } from "zod";
 import { ZodError } from "zod";
 
 import type { ErrorMessageCode } from "@/constants/messages";
+import { captureError } from "@/lib/audit/errorLog";
 import { AppError, toAppError, validationError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
@@ -123,27 +124,42 @@ export async function withApiHandler<TData>(
     return successResponse(data, requestId, options.successStatus ?? 200);
   } catch (error) {
     const appError = normalizeApiError(error);
+    const where = {
+      kind: appError.kind,
+      code: appError.code,
+      httpStatus: appError.httpStatus,
+      method: request.method,
+      path: new URL(request.url).pathname,
+      userId: context.asker?.userId,
+      clinicId: context.asker?.clinicId,
+    };
 
     // The cause is logged, never returned: it is the driver's own text, and it
     // names tables, columns and sometimes values (AGENTS.md §13). A fault of
-    // the server's own is logged with who was asking; the error log takes it
-    // too from R1.6 (plan §36).
-    logger.error(
-      "API request failed",
-      {
-        kind: appError.kind,
-        code: appError.code,
-        httpStatus: appError.httpStatus,
-        traceId: appError.traceId,
-        details: appError.details,
-        method: request.method,
-        path: new URL(request.url).pathname,
-        userId: context.asker?.userId,
-        clinicId: context.asker?.clinicId,
-        cause: appError.cause instanceof Error ? appError.cause.message : appError.cause,
-      },
-      requestId,
-    );
+    // the server's own also goes to the error log, under the reference the
+    // person is shown (plan §36); a refusal — a 4xx — is the app working, and
+    // goes to the output only.
+    if (appError.httpStatus >= 500) {
+      await captureError({
+        source: "API",
+        message: "API request failed",
+        error: appError.cause ?? appError,
+        reference: requestId,
+        ...where,
+        context: { traceId: appError.traceId, details: appError.details },
+      });
+    } else {
+      logger.warn(
+        "API request refused",
+        {
+          ...where,
+          traceId: appError.traceId,
+          details: appError.details,
+          cause: appError.cause instanceof Error ? appError.cause.message : appError.cause,
+        },
+        requestId,
+      );
+    }
 
     return errorResponse(appError, requestId);
   }
