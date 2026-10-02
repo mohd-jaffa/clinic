@@ -1,6 +1,6 @@
 import * as z from "zod";
 
-import { MAX_AMOUNT_PAISE, MAX_QUANTITY } from "@/constants/limits";
+import { MAX_AMOUNT_PAISE, MAX_QUANTITY, PASSWORD_LENGTH, PHONE_NUMBER_DIGITS, TEXT_LIMITS } from "@/constants/limits";
 import { VALIDATION_MESSAGES } from "@/constants/messages";
 import { formatPaise } from "@/lib/format/currency";
 import { parseRupees } from "@/lib/money";
@@ -102,7 +102,7 @@ export function optionalLines(label: string, max: number) {
 }
 
 /** An email address that may be left empty; blank is null. */
-export function optionalEmail(label: string, max = 254) {
+export function optionalEmail(label: string, max: number = TEXT_LIMITS.email) {
   return optionalString(label, max, {
     test: (value) => EMAIL.test(value),
     message: VALIDATION_MESSAGES.email(label),
@@ -130,9 +130,45 @@ export function indianMobile(label = "Mobile number") {
     });
 }
 
+/**
+ * A phone number as a person writes it, mobile or landline — "0484 234 5678",
+ * "+91 98765 43210" — that may be left empty: 6 to 15 digits with spaces,
+ * hyphens and brackets, kept as typed, as the database's is_phone_number()
+ * checks it. A clinic prints its own number as it wrote it (plan §9).
+ */
+export function optionalPhoneNumber(label: string) {
+  return optionalString(
+    label,
+    TEXT_LIMITS.phoneNumber,
+    { test: isPhoneNumber, message: VALIDATION_MESSAGES.phoneNumber(label) },
+    normaliseLine,
+  );
+}
+
+// Digits with spaces, hyphens and brackets, a + only first; is_phone_number() uses the same.
+export const PHONE_NUMBER = /^\+?[0-9(][0-9 ()-]*[0-9]$/;
+
+export function isPhoneNumber(value: string): boolean {
+  if (!PHONE_NUMBER.test(value)) return false;
+  const digits = value.replace(/\D/g, "").length;
+  return digits >= PHONE_NUMBER_DIGITS.min && digits <= PHONE_NUMBER_DIGITS.max;
+}
+
+/**
+ * A password (plan §5.1): never trimmed, never altered (AGENTS.md §24) — what
+ * was typed is the password — and long enough.
+ */
+export function password(label = "Password") {
+  return z
+    .string({ error: VALIDATION_MESSAGES.required(label) })
+    .min(1, VALIDATION_MESSAGES.required(label))
+    .min(PASSWORD_LENGTH.min, VALIDATION_MESSAGES.tooShort(label, PASSWORD_LENGTH.min))
+    .max(PASSWORD_LENGTH.max, VALIDATION_MESSAGES.tooLong(label, PASSWORD_LENGTH.max));
+}
+
 /** An email address a form must have — trimmed and lower-cased, so it matches
  * the citext column it is stored in whatever way it was typed. */
-export function requiredEmail(label: string, max = 254) {
+export function requiredEmail(label: string, max: number = TEXT_LIMITS.email) {
   return z
     .string()
     .trim()

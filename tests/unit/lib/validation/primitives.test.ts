@@ -1,16 +1,19 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
+import { PASSWORD_LENGTH, TEXT_LIMITS } from "@/constants/limits";
 import { VALIDATION_MESSAGES } from "@/constants/messages";
-
 import {
   firstIssue,
   indianMobile,
+  isPhoneNumber,
   optionalEmail,
   optionalLine,
   optionalLines,
+  optionalPhoneNumber,
   paiseAmount,
   paiseText,
+  password,
   quantity,
   requiredEmail,
   requiredLine,
@@ -220,5 +223,57 @@ describe("quantity and firstIssue, given the unexpected", () => {
 
   it("falls back to the catalogue's own word when a failure names no issue", () => {
     expect(firstIssue(new z.ZodError([]))).toBe(VALIDATION_MESSAGES.invalid);
+  });
+});
+
+describe("optionalPhoneNumber", () => {
+  const schema = optionalPhoneNumber("Clinic phone");
+
+  it("keeps a mobile or a landline as it was typed, tidied, and nothing as nothing", () => {
+    expect(schema.parse(" 0484  234 5678 ")).toBe("0484 234 5678");
+    expect(schema.parse("+91 98765-43210")).toBe("+91 98765-43210");
+    expect(schema.parse("(0484) 2345678")).toBe("(0484) 2345678");
+    expect(schema.parse("")).toBeNull();
+  });
+
+  it("refuses what is not a phone number, naming the field", () => {
+    for (const typed of ["call me", "12345", "1234567890123456", "98765+43210"]) {
+      expect(messageOf(schema, typed), typed).toBe(VALIDATION_MESSAGES.phoneNumber("Clinic phone"));
+    }
+    expect(messageOf(schema, "1".repeat(TEXT_LIMITS.phoneNumber + 1))).toBe(
+      VALIDATION_MESSAGES.tooLong("Clinic phone", TEXT_LIMITS.phoneNumber),
+    );
+  });
+});
+
+describe("isPhoneNumber", () => {
+  it("counts 6 to 15 digits, whatever stands between them", () => {
+    expect(isPhoneNumber("123456")).toBe(true);
+    expect(isPhoneNumber("12345")).toBe(false);
+    expect(isPhoneNumber("+123456789012345")).toBe(true);
+    expect(isPhoneNumber("+1234567890123456")).toBe(false);
+  });
+});
+
+describe("password", () => {
+  const schema = password("New password");
+
+  it("keeps a password exactly as typed, spaces and all", () => {
+    expect(schema.parse("  pass word  ")).toBe("  pass word  ");
+  });
+
+  it("says a missing, short or overlong one in the field's name", () => {
+    expect(messageOf(schema, "")).toBe(VALIDATION_MESSAGES.required("New password"));
+    expect(messageOf(schema, undefined)).toBe(VALIDATION_MESSAGES.required("New password"));
+    expect(messageOf(schema, "a".repeat(PASSWORD_LENGTH.min - 1))).toBe(
+      VALIDATION_MESSAGES.tooShort("New password", PASSWORD_LENGTH.min),
+    );
+    expect(messageOf(schema, "a".repeat(PASSWORD_LENGTH.max + 1))).toBe(
+      VALIDATION_MESSAGES.tooLong("New password", PASSWORD_LENGTH.max),
+    );
+  });
+
+  it("is called Password unless named", () => {
+    expect(messageOf(password(), "")).toBe(VALIDATION_MESSAGES.required("Password"));
   });
 });

@@ -24,3 +24,67 @@ export const MAX_PAGE_START = 100_000;
 
 /** What a list's search box may send. */
 export const MAX_SEARCH_LENGTH = 100;
+
+/**
+ * How long each kind of text may be (AGENTS.md §24). A schema bounds its field
+ * by one of these, and the column's CHECK by the same number — tests/db keeps
+ * the two equal — so a form can never accept what the database refuses.
+ */
+export const TEXT_LIMITS = {
+  /** A person's name: a member's, a contact's. */
+  personName: 100,
+  clinicName: 100,
+  city: 60,
+  /** An address, on several lines. */
+  address: 500,
+  /** "Front desk", "Nurse" (plan §8.4). */
+  jobTitle: 60,
+  /** A doctor's specialization or qualifications: "Orthodontist", "BDS, MDS". */
+  doctorDetail: 100,
+  registrationNumber: 50,
+  /** A price-list entry's name (plan §9). */
+  serviceName: 100,
+  /** An appointment type's or an expense category's name: a chip, not a sentence. */
+  catalogueName: 60,
+  /** A payment's reference: a UPI transaction id, a cheque number. */
+  reference: 100,
+  /** Why something was done by hand: a plan date set, a void. */
+  reason: 200,
+  email: 254,
+  /** A UPI id: "clinic@okicici". */
+  upiId: 100,
+  /** A phone number as typed, mobile or landline. */
+  phoneNumber: 20,
+} as const;
+
+/** How many digits a phone number has, mobile or landline, the country code included. */
+export const PHONE_NUMBER_DIGITS = { min: 6, max: 15 } as const;
+
+/** Each appointment type's default length, in minutes (plan §28.2). */
+export const APPOINTMENT_MINUTES = { min: 5, max: 480 } as const;
+
+/**
+ * How long before another confirmation or password-reset email may go to the
+ * same account (plan §5.1's Resend, §5.3): enough to stop a button pressed
+ * over and over from filling someone's inbox, short enough that a person
+ * waiting never notices.
+ */
+export const EMAIL_LINK_COOLDOWN_SECONDS = 60;
+
+/** How much of a failure the error log keeps (0006_logs's CHECKs): enough to act on, never a novel. */
+export const ERROR_LOG_LIMITS = { message: 500, path: 300, detail: 2000, stack: 8000 } as const;
+
+/**
+ * How long a link in an email works — confirming an email, resetting a
+ * password: Supabase Auth's `otp_expiry` (supabase/config.toml, and the hosted
+ * project's Auth settings), which allows at most a day. tests/db keeps the two
+ * equal, so an email never promises longer than its link lasts.
+ */
+export const EMAIL_LINK_VALID_HOURS = 24;
+
+/**
+ * A password's length (plan §5.1): at least Supabase Auth's
+ * `minimum_password_length` (supabase/config.toml, kept equal by tests/db), at
+ * most the 72 characters its hashing reads.
+ */
+export const PASSWORD_LENGTH = { min: 8, max: 72 } as const;
