@@ -146,6 +146,10 @@ earlier lines are never rewritten.
 | D57 | **Two-factor authentication: Later.** | 2026-10-02 |
 | D58 | **A receipt PDF for every plan payment**, on the owner's Plan screen, from the platform's business details (platform settings). | 2026-10-02 |
 | D59 | **Visual direction: "The Clinic Map"** — the guide-map world (flat land field, coastline edges, capsule controls with a travelling chip), translated for a clinic: green + ink + one coral, no yellow or gold, no photos, no bounce, light and dark. Shaped with Impeccable (seed `d61c6e96`); the brief is §32.1. | 2026-10-02 |
+| D60 | **The typeface is chosen from a sample page:** three legible grotesks in the Clinic Map's colours, light and dark, with tokens, ₹ amounts and a queue row; the user picks before the tokens and the kit are built (R2.2). | 2026-10-02 |
+| D61 | **Until the final name (Q1), the brand is a text wordmark only:** "ClinicDesk" set in the app's typeface, no symbol — renaming stays one constant change. | 2026-10-02 |
+| D62 | **Phase 1 stays local for now;** Phase 2 branches from `phase-1/identity`, and both are pushed together later, when CI first runs. | 2026-10-02 |
+| D63 | **Invites use the app's own token** (answers Q23): a random token in the emailed link, only its hash kept on the membership with `invite_expires_at`; the account is made at invite with no password (admin API); `/accept-invite` checks the token on the server, which then sets the password and mobile and confirms the email. The link lasts `invite_valid_days`; Supabase's own invite link is not used. | 2026-10-02 |
 
 ## 3. Users and roles
 
@@ -521,10 +525,12 @@ specialization, qualifications (e.g. "BDS, MDS"), registration number, and
 consultation fee (optional — overrides the price list's Consultation for this
 doctor, D26).
 
-The server creates the auth user through Supabase `generateLink({ type:
-"invite" })`, a membership with `status = 'INVITED'`, the doctor profile if any,
-and sends the invite email (§22). The link works for `invite_valid_days` (§6)
-— how, given Supabase's one-day limit on its links, is Q23.
+The server makes the account (no password yet, through the admin API), a
+membership with `status = 'INVITED'`, the doctor profile if any, and an
+**invite token of its own** (D63) — random, emailed in the link, only its hash
+kept beside `invite_expires_at` — and sends the invite email (§22). The link
+works for `invite_valid_days` (§6); `/accept-invite` checks the token on the
+server, which then sets the password and mobile and confirms the email.
 **Resend** issues a new link; **Revoke** removes the invite. An email that
 already belongs to an active member of any clinic is refused in V1 (one clinic
 per person — D23).
@@ -1169,7 +1175,7 @@ Next.js 16 on Vercel (bom1)
         │  platform settings, DEV console, cron, clinic deletion
         ▼
 Supabase Cloud (ap-south-1)
-  ├── Auth                identities, confirmation, recovery, invite links
+  ├── Auth                identities, confirmation and recovery links
   ├── PostgreSQL          tables · RLS on every table · SQL functions (RPCs) for
   │                        every multi-row write · views for balances/follow-ups ·
   │                        pg_cron (purges, daily notices via pg_net)
@@ -1200,7 +1206,7 @@ Pinned to Brio's versions at Phase 0 (newest patch at the time):
 | Data on the client | SWR 2 through `useApiQuery` / `useApiPages` / `useApiMutation` |
 | Backend | Next.js route handlers · supabase-js 2 |
 | Database | Supabase PostgreSQL 17 · RLS · pg_cron · pg_net · pg_trgm · btree_gist · citext |
-| Auth | Supabase Auth (email + password; confirmation, recovery and invite links) |
+| Auth | Supabase Auth (email + password; confirmation and recovery links); invites by the app's own token (D63) |
 | Storage | Supabase Storage (the logo only) |
 | Mail | nodemailer over SMTP (Gmail first; Mailpit locally) |
 | PDF | pdfkit with bundled fonts |
@@ -1419,7 +1425,7 @@ clinics               id · name · clinic_type · phone · email · address · 
                       · deletion_requested_at · deletion_requested_by · deletion_due_on
 clinic_members        id · clinic_id · user_id · role (OWNER|DOCTOR|STAFF)
                       · status (INVITED|ACTIVE|INACTIVE) · job_title · permissions text[]
-                      · invited_by · invited_at · invite_expires_at · joined_at
+                      · invited_by · invited_at · invite_token_hash · invite_expires_at · joined_at
                       · deactivated_at · deactivated_by
                       unique (clinic_id, user_id); one OWNER per clinic;
                       one INVITED/ACTIVE membership per user (V1, D23)
@@ -2036,8 +2042,8 @@ tests (§34) and its changelog entry.
 
 | ID | Work | Source | Waits on | Status |
 |---|---|---|---|---|
-| R2.1 | `/impeccable init` → PRODUCT.md; `/impeccable shape` → the direction (§32.1); the brand mark and wordmark on the working name | §32.1 | Q1 | DOING (PRODUCT.md and §32.1 done 2026-10-02; the mark waits for the build) |
-| R2.2 | The direction contract in the surface brief; the face and the green / ink / coral values checked for AA in both themes; light and dark tokens in `globals.css`, no theme flash, `theme-color`; safe areas; `dvh`; the coastline paths | §32.1 | — | TODO |
+| R2.1 | `/impeccable init` → PRODUCT.md; `/impeccable shape` → the direction (§32.1); the wordmark on the working name, text only (D61) | §32.1 | — | DOING (PRODUCT.md and §32.1 done 2026-10-02; the wordmark waits for the typeface) |
+| R2.2 | The direction contract in the surface brief; the face chosen from a sample page (D60) and the green / ink / coral values checked for AA in both themes; light and dark tokens in `globals.css`, no theme flash, `theme-color`; safe areas; `dvh`; the coastline paths | §32.1 | — | TODO |
 | R2.3 | The UI kit (§32.2 list, plus the capsule with its travelling chip, the coast header, the lake, the pin and the Quick Actions lobe) with 100% coverage | §32.1, §32.2 | — | TODO |
 | R2.4 | Response card and confirm card (`useResponse`) | §32 | — | TODO |
 | R2.5 | AppShell: bottom bar + quick add (phone), rail (tablet), sidebar (desktop); permission-filtered navigation; AppScreen + ServerData | §31.1 | — | TODO |
@@ -2055,7 +2061,7 @@ tests (§34) and its changelog entry.
 | R3.1 | `0010_clinic_profile`: clinic details, paper size, fee timing, the logo upload | §9 | — | TODO |
 | R3.2 | Price list, appointment types and expense categories screens (tables from `0007`) | §9 | — | TODO |
 | R3.3 | `0011_closures`: holidays and leave | §9 | — | TODO |
-| R3.4 | `0009_team`: invite (presets, dependencies, doctor details and fee), invite email, resend, revoke, expiry | §8.3, §8.4 | Q19, Q23 | TODO |
+| R3.4 | `0009_team`: invite with its own token (D63; presets, dependencies, doctor details and fee), invite email, resend, revoke, expiry | §8.3, §8.4 | Q19 | TODO |
 | R3.5 | Accept invite screen | §8.5 | — | TODO |
 | R3.6 | Team list and member detail: permissions, job title, doctor details, deactivate/reactivate; escalation and last-owner guards | §8.2, §8.6 | — | TODO |
 | R3.7 | The owner's own doctor profile | §3.1 | — | TODO |
@@ -2222,7 +2228,7 @@ starts.
 | Q20 | Queue refresh? | **Answered: every 15 s and on focus (D34).** |
 | Q21 | Temperature unit? | **Answered: °F (D31).** |
 | Q22 | Who writes the privacy policy and terms? | **Open.** Drafted in R12.2 from what the app keeps; the user reviews before release. |
-| Q23 | How does an invite link last `invite_valid_days` (§8.4), when Supabase Auth's links last at most a day (`otp_expiry` ≤ 86400, one value for every link)? | **Open; needed before R3.x.** **Recommended:** the app's own invite token — a random token emailed in the link, only its hash kept on the membership beside `invite_expires_at`; `/accept-invite` checks it on the server, which then sets the password through the admin API. The alternatives are capping `invite_valid_days` at 1, or Resend on day two. |
+| Q23 | How does an invite link last `invite_valid_days` (§8.4), when Supabase Auth's links last at most a day? | **Answered: the app's own invite token (D63).** |
 | Q24 | What paper size and fee timing does a new clinic start with (§9)? | **Default:** A4, and the fee collected after the consultation (`DEFAULT_CLINIC_SETTINGS`); each clinic changes both in Settings. |
 
 ## 42. Later (unscheduled)

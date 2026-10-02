@@ -269,3 +269,24 @@ appended and never rewritten (AGENTS.md §33).
 - Why it is blocked: the setting cannot be honoured by a Supabase link.
 - Required decision/input: Q23 — recommended, the app's own invite token.
 - Temporary workaround: none needed before Phase 3.
+
+## 2026-10-02 — Phase 2 questions answered
+
+### Changed
+- Plan decisions D60 – D63 (the user, before Phase 2):
+  - D60: the typeface is chosen from a sample page of three faces in the
+    Clinic Map's colours, light and dark, before the tokens and kit (R2.2).
+  - D61: until the final name, the brand is a text wordmark only.
+  - D62: Phase 1 stays local; Phase 2 branches from `phase-1/identity`, and
+    both are pushed together later.
+  - D63: invites use the app's own token (Q23 answered); §8.4, the member
+    columns (`invite_token_hash`) and R3.4 follow it.
+- Q24 (a new clinic's paper size and fee timing) keeps its default: A4, after
+  the consultation.
+
+### Validation
+- Planning only.
+
+### Blockers
+- Resolution: the invite-link blocker of Phase 1 is settled by D63.
+- CI still waits for the push (D62).
