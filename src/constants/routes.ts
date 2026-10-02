@@ -33,6 +33,17 @@ export function isPublicPath(pathname: string): boolean {
   return PUBLIC_PATHS.includes(pathname);
 }
 
+/**
+ * The account screens a signed-in person has no use for, and is sent on from
+ * (plan §5.5). Confirming an email, resetting a password and accepting an
+ * invite stay open to them: their links sign a person in, whoever was before.
+ */
+const SIGNED_OUT_ONLY_PATHS: readonly string[] = [AUTH_ROUTES.signIn, AUTH_ROUTES.register, AUTH_ROUTES.forgotPassword];
+
+export function isSignedOutOnlyPath(pathname: string): boolean {
+  return SIGNED_OUT_ONLY_PATHS.includes(pathname);
+}
+
 /** The sign-in URL, remembering where the visitor was heading. */
 export function signInPath(returnTo?: string | null): string {
   if (!returnTo || returnTo === HOME_ROUTE) return AUTH_ROUTES.signIn;
