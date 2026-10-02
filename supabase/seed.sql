@@ -1,0 +1,3 @@
+-- Demo data for local development only (plan §35). Never loaded into a hosted
+-- project. The demo clinic, its team and its patients arrive with the phases
+-- that build their tables; every name and figure here is synthetic.
