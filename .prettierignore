@@ -1,0 +1,8 @@
+# Prettier also skips what .gitignore does.
+
+# Prose is wrapped by hand, and the plan's tables and emphasis are kept as written.
+*.md
+
+# Generated.
+package-lock.json
+supabase/.temp/

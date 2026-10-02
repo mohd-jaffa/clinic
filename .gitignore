@@ -1,15 +1,23 @@
 # dependencies
-node_modules/
-.pnpm-store/
+/node_modules
+
+# testing
+/coverage
+/test-results/
+/playwright-report/
 
 # next.js
-.next/
-out/
+/.next/
+/out/
 next-env.d.ts
+*.tsbuildinfo
 
-# env
-.env
-.env*.local
+# production
+/build
+
+# env files: only the example is committed
+.env*
+!.env.example
 
 # supabase
 supabase/.branches/
@@ -17,14 +25,14 @@ supabase/.temp/
 
 # misc
 .DS_Store
+*.pem
 *.log
 .vercel/
-*.tsbuildinfo
 
 # Design reference images — kept locally, never committed
 /design-references/
 
-# Impeccable working files (mocks, reviews, build state)
+# Impeccable working files (mocks, reviews, build state, decision logs)
 /.impeccable/mocks/
 /.impeccable/review/
 /.impeccable/build/

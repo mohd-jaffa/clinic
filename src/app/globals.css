@@ -1,0 +1,10 @@
+@import "tailwindcss";
+
+/*
+ * The design tokens — the Clinic Map's land, ink, ground, surface and coral,
+ * in light and dark — arrive with R2.2 (plan §32.1). Until then the browser's
+ * own colours stand, so nothing here pretends to be the design.
+ */
+:root {
+  color-scheme: light dark;
+}
