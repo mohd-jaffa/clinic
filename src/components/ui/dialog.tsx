@@ -10,7 +10,8 @@ import { Modal } from "./modal";
  * response card are built on it (plan §32.2). On a phone it rises at the foot
  * of the screen, within thumb's reach and above the keyboard; from 768 px it
  * sits in the middle. Its title names it, its body says why, and its actions
- * stand at the end, the main one last.
+ * stand at the end, the main one last — on a phone, one under another at full
+ * width, the main one on top, nearest the thumb's reach and first to be read.
  */
 export function Dialog({
   open,
@@ -51,7 +52,7 @@ export function Dialog({
           {title}
         </h2>
         {children && <div className="text-muted">{children}</div>}
-        {actions && <div className="mt-2 flex flex-wrap-reverse justify-end gap-2">{actions}</div>}
+        {actions && <div className="mt-2 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">{actions}</div>}
       </div>
     </Modal>
   );

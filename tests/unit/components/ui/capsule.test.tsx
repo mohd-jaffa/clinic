@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { Check } from "lucide-react";
+import { Check, Clock } from "lucide-react";
 import { describe, expect, it } from "vitest";
 
 import { Capsule, CapsuleChip, capsuleClasses } from "@/components/ui/capsule";
@@ -8,7 +8,7 @@ const chipOf = (container: HTMLElement) => container.querySelector("[data-chip]"
 
 describe("Capsule", () => {
   it("says where something stands, its chip on the trailing edge while it waits", () => {
-    const { container } = render(<Capsule label="Waiting" />);
+    const { container } = render(<Capsule label="Waiting" icon={Clock} />);
     expect(screen.getByText("Waiting")).not.toHaveAttribute("data-live");
     expect(chipOf(container)).toHaveAttribute("data-chip", "trailing");
   });
@@ -34,8 +34,8 @@ describe("CapsuleChip", () => {
     expect(chipOf(container).querySelector("svg")).toHaveClass("animate-spin");
   });
 
-  it("may hold nothing at all", () => {
-    const { container } = render(<CapsuleChip tone="surface" size="md" at="leading" />);
-    expect(chipOf(container).childElementCount).toBe(0);
+  it("holds its icon while nothing is on its way", () => {
+    const { container } = render(<CapsuleChip tone="surface" size="md" at="leading" icon={Clock} />);
+    expect(chipOf(container).querySelector("svg")).not.toHaveClass("animate-spin");
   });
 });

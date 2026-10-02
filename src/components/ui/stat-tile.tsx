@@ -4,9 +4,12 @@ import type { ReactNode } from "react";
 
 import { cn } from "./cn";
 
-/** Figures side by side, as one description list: two to a row on a phone, four from a tablet. */
+/**
+ * Figures side by side, as one description list: as many to a row as keep
+ * each at 9rem — so an amount is never cut short, whatever it sits in.
+ */
 export function StatGrid({ children }: { children: ReactNode }) {
-  return <dl className="grid grid-cols-2 gap-3 md:grid-cols-4">{children}</dl>;
+  return <dl className="grid grid-cols-[repeat(auto-fit,minmax(9rem,1fr))] gap-3">{children}</dl>;
 }
 
 /**

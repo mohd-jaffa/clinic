@@ -22,7 +22,8 @@ const ACTION =
  * The Quick Actions lobe (plan §32.1): the ＋ in the phone's bottom bar raises
  * a lobe of land from the bottom, its top edge a coastline, holding capsule
  * actions — Walk-in, Appointment, Patient, Payment, Expense — already filtered
- * to what the person may do. Focus goes to the first action; Escape, a tap
+ * to what the person may do, one under another on a phone so every word fits,
+ * two side by side from 640 px. Focus goes to the first action; Escape, a tap
  * above it or the close button lets it sink back, and the focus returns to
  * the ＋. Taking an action closes it on the way.
  */
@@ -56,7 +57,7 @@ export function QuickActions({
             <IconButton icon={X} label={UI_TEXT.actions.close} onClick={onClose} />
           </span>
         </div>
-        <ul ref={list} role="list" className="grid grid-cols-2 gap-3">
+        <ul ref={list} role="list" className="grid gap-2.5 sm:grid-cols-2 sm:gap-3">
           {actions.map((action) => {
             const { key, label, icon: Icon } = action;
             const body = (
@@ -71,7 +72,7 @@ export function QuickActions({
               </>
             );
             return (
-              <li key={key} className="min-w-0 last:odd:col-span-2">
+              <li key={key} className="min-w-0 sm:last:odd:col-span-2">
                 {action.href ? (
                   <Link href={action.href} onClick={onClose} className={ACTION}>
                     {body}

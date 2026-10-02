@@ -36,8 +36,8 @@ describe("QuickActions", () => {
     expect(lobe).toHaveClass("modal-lobe");
     expect(screen.getByRole("button", { name: "Walk-in" })).toHaveFocus();
     expect(screen.getByRole("link", { name: "Appointment" })).toHaveAttribute("href", "/appointments");
-    // The odd one out takes the whole last row.
-    expect(screen.getByRole("link", { name: "Patient" }).parentElement).toHaveClass("last:odd:col-span-2");
+    // Side by side from 640 px, the odd one out taking the whole last row.
+    expect(screen.getByRole("link", { name: "Patient" }).parentElement).toHaveClass("sm:last:odd:col-span-2");
 
     await userEvent.click(screen.getByRole("button", { name: "Walk-in" }));
     expect(walkIn).toHaveBeenCalledOnce();

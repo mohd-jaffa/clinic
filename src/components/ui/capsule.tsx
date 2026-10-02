@@ -19,7 +19,7 @@ export type ChipAt = "trailing" | "leading";
 const TONES: Record<CapsuleTone, { body: string; chip: string }> = {
   action: { body: "bg-action text-on-action", chip: "bg-chip text-on-chip" },
   danger: { body: "bg-coral text-on-coral", chip: "bg-on-coral text-coral" },
-  surface: { body: "bg-surface text-ink", chip: "bg-chip text-on-chip" },
+  surface: { body: "bg-surface text-ink ring-1 ring-line ring-inset", chip: "bg-chip text-on-chip" },
 };
 
 /**
@@ -71,7 +71,7 @@ export function CapsuleChip({
   tone: CapsuleTone;
   size: CapsuleSize;
   at: ChipAt;
-  icon?: LucideIcon;
+  icon: LucideIcon;
   busy?: boolean;
 }) {
   const iconSize = SIZES[size].icon;
@@ -90,7 +90,7 @@ export function CapsuleChip({
       {busy ? (
         <Loader2 size={iconSize} strokeWidth={2.5} className="animate-spin" />
       ) : (
-        Icon && <Icon size={iconSize} strokeWidth={2.5} />
+        <Icon size={iconSize} strokeWidth={2.5} />
       )}
     </span>
   );
@@ -109,7 +109,8 @@ export function Capsule({
   size = "sm",
 }: {
   label: string;
-  icon?: LucideIcon;
+  /** What the chip holds: the state's mark — a clock while waiting, a check once in. */
+  icon: LucideIcon;
   live?: boolean;
   tone?: CapsuleTone;
   size?: CapsuleSize;
