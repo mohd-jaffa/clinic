@@ -2,7 +2,7 @@
 
 import { ArrowRight, Loader2, type LucideIcon } from "lucide-react";
 import Link from "next/link";
-import type { ButtonHTMLAttributes, ReactNode } from "react";
+import type { ButtonHTMLAttributes, ReactNode, Ref } from "react";
 
 import { CapsuleChip, capsuleClasses, type CapsuleSize, type CapsuleTone, type ChipAt } from "./capsule";
 import { cn } from "./cn";
@@ -83,6 +83,8 @@ function capsule(
 }
 
 interface ButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "className"> {
+  /** For a card that puts the focus on it first. */
+  ref?: Ref<HTMLButtonElement>;
   label?: string;
   children?: ReactNode;
   variant?: ButtonVariant;
@@ -149,6 +151,7 @@ export function LinkButton({
   size = "md",
   icon,
   fullWidth = false,
+  onClick,
 }: {
   href: string;
   label: string;
@@ -159,10 +162,13 @@ export function LinkButton({
   size?: ButtonSize;
   icon?: LucideIcon;
   fullWidth?: boolean;
+  /** As it is followed: a card closing as its link takes the person on. */
+  onClick?: () => void;
 }) {
   const { className, body } = capsule({ variant, size, live: false, fullWidth }, icon, false, label);
   const props = {
     href,
+    onClick,
     "aria-label": accessibleName,
     className: cn(className, "active:scale-[0.98]"),
     ...(newTab && { target: "_blank", rel: "noopener noreferrer" }),

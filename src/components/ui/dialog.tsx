@@ -1,7 +1,11 @@
 "use client";
 
+import { X } from "lucide-react";
 import { useId, type ReactNode, type RefObject } from "react";
 
+import { UI_TEXT } from "@/constants/messages";
+
+import { IconButton } from "./button";
 import { cn } from "./cn";
 import { Modal } from "./modal";
 
@@ -9,9 +13,10 @@ import { Modal } from "./modal";
  * A card that asks or tells one thing and waits — the confirm card and the
  * response card are built on it (plan §32.2). On a phone it rises at the foot
  * of the screen, within thumb's reach and above the keyboard; from 768 px it
- * sits in the middle. Its title names it, its body says why, and its actions
- * stand at the end, the main one last — on a phone, one under another at full
- * width, the main one on top, nearest the thumb's reach and first to be read.
+ * sits in the middle. Its mark says what kind of card it is, its title names
+ * it, its body says why, and its actions stand at the end, the main one last —
+ * on a phone, one under another at full width, the main one on top, nearest
+ * the thumb's reach and first to be read.
  */
 export function Dialog({
   open,
@@ -19,6 +24,8 @@ export function Dialog({
   title,
   role = "dialog",
   initialFocus,
+  mark,
+  closable = false,
   actions,
   children,
 }: {
@@ -28,6 +35,10 @@ export function Dialog({
   title: string;
   role?: "dialog" | "alertdialog";
   initialFocus?: RefObject<HTMLElement | null>;
+  /** Drawn above the title: what kind of card it is. */
+  mark?: ReactNode;
+  /** A close button in its corner, calling `onDismiss`: for a card that tells, where a question is answered by its actions. */
+  closable?: boolean;
   actions?: ReactNode;
   children?: ReactNode;
 }) {
@@ -47,8 +58,14 @@ export function Dialog({
         "md:inset-0 md:m-auto md:h-fit md:max-h-[85dvh] md:w-full md:max-w-md",
       )}
     >
-      <div className="grid gap-3 p-6">
-        <h2 id={headingId} className="text-title font-bold">
+      <div className="relative grid gap-3 p-6">
+        {closable && onDismiss && (
+          <span className="absolute top-2 right-2 text-muted">
+            <IconButton icon={X} label={UI_TEXT.actions.close} onClick={onDismiss} />
+          </span>
+        )}
+        {mark}
+        <h2 id={headingId} className={cn("text-title font-bold", closable && "pr-10")}>
           {title}
         </h2>
         {children && <div className="text-muted">{children}</div>}

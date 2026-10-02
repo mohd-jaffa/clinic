@@ -83,6 +83,13 @@ export const UI_TEXT = {
     retry: "Try again",
     showMore: "Show more",
     viewAll: "View all",
+    cancel: "Cancel",
+  },
+
+  /** The response card (plan §32.2). */
+  response: {
+    reference: (requestId: string) => `Reference: ${requestId}`,
+    closeNotice: (title: string) => `Close “${title}”`,
   },
 
   states: {

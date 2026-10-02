@@ -54,7 +54,10 @@ describe("QuickActions", () => {
     expect(screen.queryByRole("dialog", { name: "Add" })).not.toBeInTheDocument();
 
     await open();
-    await userEvent.click(screen.getByRole("link", { name: "Patient" }));
+    // jsdom cannot follow a link: the place is only chosen here.
+    const link = screen.getByRole("link", { name: "Patient" });
+    link.addEventListener("click", (event) => event.preventDefault());
+    await userEvent.click(link);
     expect(screen.queryByRole("dialog", { name: "Add" })).not.toBeInTheDocument();
   });
 });

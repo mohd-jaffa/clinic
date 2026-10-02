@@ -49,4 +49,22 @@ describe("Dialog", () => {
     expect(screen.getByRole("alertdialog", { name: "Sign out?" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Stay" })).toHaveFocus();
   });
+
+  it("shows its mark above its title, and a close button when it only tells", async () => {
+    const onDismiss = vi.fn();
+    render(
+      <Dialog open title="Patient saved" onDismiss={onDismiss} mark={<span>Saved mark</span>} closable>
+        Meena Gupta is in your patients.
+      </Dialog>,
+    );
+    const card = screen.getByRole("dialog", { name: "Patient saved" });
+    expect(card).toHaveTextContent(/^Saved markPatient saved/);
+    await userEvent.click(screen.getByRole("button", { name: "Close" }));
+    expect(onDismiss).toHaveBeenCalledOnce();
+  });
+
+  it("has no close button where nothing may dismiss it", () => {
+    render(<Dialog open role="alertdialog" title="Plan ends in 3 days" closable actions={<button>See plan</button>} />);
+    expect(screen.queryByRole("button", { name: "Close" })).not.toBeInTheDocument();
+  });
 });

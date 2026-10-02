@@ -179,6 +179,10 @@
      browser does not resize it (iOS): set by KeyboardInset, so a sheet's
      foot rides above it. */
   --keyboard-inset: 0px;
+
+  /* How far a notice stands off the bottom: above the phone's bottom bar
+     where the screen has one, nothing where it does not. */
+  --bottom-bar-offset: 0px;
 }
 
 /* Deliberately unlayered, so they win over a padding utility — which means
@@ -338,6 +342,57 @@
       transform: translateX(100%);
     }
   }
+}
+
+/* ============================================================
+   The response card's notice (response-card.tsx): it rises as a
+   card does and leaves the way it came. Its hairline empties over
+   its life: that is its clock, not motion, so it keeps its time
+   under reduced motion, and pauses while the notice is held.
+   ============================================================ */
+@keyframes card-out {
+  to {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+
+@keyframes notice-countdown {
+  to {
+    transform: scaleX(0);
+  }
+}
+
+@utility animate-card-in {
+  animation: card-in var(--duration-map) var(--ease-map);
+}
+
+@utility animate-card-out {
+  animation: card-out var(--duration-map) var(--ease-map) forwards;
+}
+
+[data-countdown] {
+  transform-origin: left;
+  animation-name: notice-countdown;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+  animation-duration: var(--notice-life) !important;
+}
+
+/* Where a notice is held (top-layer.ts): inside the modal on top, or, with
+   none open, shown as a popover so it is drawn above a sheet still leaving.
+   It is only a place, of no size; the notice inside places itself. */
+.notice-holder {
+  position: fixed;
+  inset: 0 auto auto 0;
+  width: 0;
+  height: 0;
+  margin: 0;
+  border: 0;
+  padding: 0;
+  overflow: visible;
+  background: transparent;
+  color: inherit;
 }
 
 /* Reduced motion: instant (plan §32.1). */

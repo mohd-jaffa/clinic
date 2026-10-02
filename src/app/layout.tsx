@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Figtree } from "next/font/google";
 
+import { ResponseProvider } from "@/components/ui/response-card";
 import { UI_TEXT } from "@/constants/messages";
 import { ThemeProvider } from "@/lib/theme/ThemeProvider";
 import { THEME_BOOT_SCRIPT, THEME_COLORS } from "@/lib/theme/themes";
@@ -52,7 +53,9 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           ignores only <body>'s own attributes, one level deep. */}
       <body className="min-h-dvh" suppressHydrationWarning>
         <KeyboardInset />
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          <ResponseProvider>{children}</ResponseProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

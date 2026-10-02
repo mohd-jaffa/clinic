@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Check, Plus, Trash2 } from "lucide-react";
+import { createRef } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { Button, IconButton, LinkButton } from "@/components/ui/button";
@@ -19,6 +20,12 @@ describe("Button", () => {
   it("is a plain button unless it is told otherwise, so it never submits a form by accident", () => {
     render(<Button label="Cancel" />);
     expect(screen.getByRole("button")).toHaveAttribute("type", "button");
+  });
+
+  it("hands its element to a ref, for a card that puts the focus on it", () => {
+    const ref = createRef<HTMLButtonElement>();
+    render(<Button ref={ref} label="View patient" />);
+    expect(ref.current).toBe(screen.getByRole("button", { name: "View patient" }));
   });
 
   it("submits when it is a form's submit button", () => {
@@ -134,6 +141,15 @@ describe("LinkButton", () => {
     expect(chat).toHaveAttribute("target", "_blank");
     expect(chat).toHaveAttribute("rel", "noopener noreferrer");
     expect(chat).toHaveClass("w-full");
+  });
+
+  it("tells its screen as it is followed, so a card can close on its way", async () => {
+    const onClick = vi.fn();
+    render(<LinkButton href="/bills/1" label="View bill" onClick={onClick} />);
+    const link = screen.getByRole("link", { name: "View bill" });
+    link.addEventListener("click", (event) => event.preventDefault());
+    await userEvent.click(link);
+    expect(onClick).toHaveBeenCalledOnce();
   });
 });
 

@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
+import { MAP_MS } from "@/lib/motion";
 import { THEME_COLORS } from "@/lib/theme/themes";
 
 /**
@@ -105,5 +106,11 @@ describe("the utilities", () => {
     for (const name of Object.keys(light).filter((token) => token !== "shadow-tone")) {
       expect(css, name).toContain(`--color-${name}: var(--${name});`);
     }
+  });
+});
+
+describe("the motion", () => {
+  it("plays the map's one duration, the time script waits on", () => {
+    expect(css).toContain(`--duration-map: ${MAP_MS}ms;`);
   });
 });
