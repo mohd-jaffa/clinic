@@ -343,3 +343,59 @@ appended and never rewritten (AGENTS.md §33).
 
 ### Blockers
 - None.
+
+## 2026-10-02 — R2.3, the UI kit (built; waiting for the user's look)
+
+### Added
+- Decisions D65 (the pickers are the app's own) and D66 (the calendar grid
+  and the charts come with their screens, R5.3 and R10.3), from the user.
+- `src/components/ui`, the §32.2 kit in the Clinic Map's look:
+  - capsules: `capsule` (the travelling chip, trailing until live), `button`
+    (primary, danger, secondary, quiet; `LinkButton`, `IconButton`),
+    `status-pill`, `alert-chip`, `pin`, `avatar` (initials);
+  - fields: `field` (the well, label, hint, error), `text-field` (and
+    textarea), `phone-field` (+91), `money-field` (₹, text to paise by the
+    schema), `select-menu` and `select-field`, `date-picker` and
+    `date-field`, `time-field`, `segmented-control` (the chip travels to the
+    choice), `choice-chips` (on the ground or the land), `checkbox-group`,
+    `search-field`; `anchored-popover` for the lists and the calendar;
+  - overlays: `modal` (native dialog; inert page, focus in and back, Tab
+    loop, kept mounted), `top-layer`, `sheet` (bottom sheet on a phone, side
+    panel from 768 px), `dialog` (the card the confirm and response cards
+    will use);
+  - screens: `coast-header` (the land and its coastline, a pin on it),
+    `page-header`, `section-heading`, `row` (rows with their own action),
+    `stat-tile`, `lake`, `quick-actions` (the lobe), `empty-state`,
+    `skeleton` (the land draws first), `screen-notice`, `list-screen`,
+    `tabs`, `date-strip`; the text `wordmark` (R2.1).
+- Ported from Brio: `useArrowSelection`, `KeyboardInset` (mounted in the
+  root layout), the modal, popover, select, calendar and tabs, with their
+  tests.
+- Tokens: `edge` (a field's 3:1 border), `action-soft`, `coral-soft`, the
+  `scrim`, the token numeral size, the lake's and the lobe's shapes, and the
+  sheet, card and lobe motion on the one curve. Status tones for member
+  statuses and plan states (`statuses.ts`).
+- Screenshots of every piece, phone and desktop, light and dark, with the
+  list, the calendar, a sheet, a card and the lobe open, in
+  `design-references/kit/` (not committed); the preview page they were taken
+  from is not committed either.
+
+### Changed
+- `lucide-react` added (plan §24's icons).
+- `AGENTS.md` keeps the note `next dev` writes, as its own comment says.
+
+### Found while building
+- Two classes setting the same property (`text-ink` and `text-action`) on
+  one element let the stylesheet's order decide; the calendar's today and the
+  date strip now choose one set of classes per state.
+- At 360–390 px the lobe's two columns cut "Appointment" short: one column
+  on a phone, two from 640 px. The card's actions stack full width on a
+  phone, the main one on top.
+
+### Validation
+- Typecheck, lint, format check passed.
+- Unit and integration tests passed (904), coverage 100%.
+- Build passed; E2E passed (phone, desktop).
+
+### Blockers
+- None. R2.3 closes when the user has looked at the screenshots.
