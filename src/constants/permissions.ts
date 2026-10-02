@@ -204,3 +204,17 @@ export function effectivePermissions(role: ClinicRole, stored: readonly Permissi
  */
 export const ROUTE_ACCESS = { member: "MEMBER", owner: "OWNER" } as const;
 export type RouteAccess = Permission | (typeof ROUTE_ACCESS)[keyof typeof ROUTE_ACCESS];
+
+/**
+ * Whether a member may reach what serves `access` (plan §8): any member, the
+ * owner alone, or a named permission — the owner holding every one. The route
+ * guard asks it of every request; the shell asks it of every place it shows.
+ */
+export function hasAccess(
+  membership: { role: ClinicRole; permissions: readonly Permission[] },
+  access: RouteAccess,
+): boolean {
+  if (access === ROUTE_ACCESS.member) return true;
+  if (access === ROUTE_ACCESS.owner) return membership.role === "OWNER";
+  return membership.permissions.includes(access);
+}

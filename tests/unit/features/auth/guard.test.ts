@@ -11,7 +11,7 @@ vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServiceRoleClient: supabaseClients.createSupabaseServiceRoleClient,
 }));
 
-const { bearerToken, hasAccess, isWrite, readAccessToken, withAccountRoute, withClinicRoute, withDevRoute } =
+const { bearerToken, isWrite, readAccessToken, withAccountRoute, withClinicRoute, withDevRoute } =
   await import("@/features/auth/guard");
 
 const request = (method = "GET", headers: Record<string, string> = { authorization: "Bearer tok" }) =>
@@ -46,19 +46,10 @@ describe("reading the token", () => {
   });
 });
 
-describe("isWrite and hasAccess", () => {
-  it("count anything but a read as a write", () => {
+describe("isWrite", () => {
+  it("counts anything but a read as a write", () => {
     expect(["GET", "head", "OPTIONS"].map(isWrite)).toEqual([false, false, false]);
     expect(["POST", "PATCH", "PUT", "DELETE"].map(isWrite)).toEqual([true, true, true, true]);
-  });
-
-  it("let any member through to a member route, the owner alone to an owner route, and a holder to a permission", () => {
-    const owner = aSession().membership!;
-    expect(hasAccess(staff.membership!, "MEMBER")).toBe(true);
-    expect(hasAccess(staff.membership!, "OWNER")).toBe(false);
-    expect(hasAccess(owner, "OWNER")).toBe(true);
-    expect(hasAccess(staff.membership!, "patients.view")).toBe(true);
-    expect(hasAccess(staff.membership!, "payments.create")).toBe(false);
   });
 });
 

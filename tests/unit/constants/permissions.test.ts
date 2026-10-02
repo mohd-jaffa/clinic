@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   DEFAULT_PRESET,
   effectivePermissions,
+  hasAccess,
   isPermission,
   OWNER_ONLY_PERMISSION,
   PERMISSION_DEPENDENCIES,
@@ -99,5 +100,17 @@ describe("effectivePermissions", () => {
   it("gives anyone else exactly what is stored", () => {
     expect(effectivePermissions("STAFF", ["patients.view"])).toEqual(["patients.view"]);
     expect(effectivePermissions("DOCTOR", [])).toEqual([]);
+  });
+});
+
+describe("hasAccess", () => {
+  it("lets any member through to a member route, the owner alone to an owner route, and a holder to a permission", () => {
+    const staff = { role: "STAFF", permissions: ["patients.view"] } as const;
+    const owner = { role: "OWNER", permissions: PERMISSIONS } as const;
+    expect(hasAccess(staff, "MEMBER")).toBe(true);
+    expect(hasAccess(staff, "OWNER")).toBe(false);
+    expect(hasAccess(owner, "OWNER")).toBe(true);
+    expect(hasAccess(staff, "patients.view")).toBe(true);
+    expect(hasAccess(staff, "payments.create")).toBe(false);
   });
 });

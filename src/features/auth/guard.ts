@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { ROUTE_ACCESS, type RouteAccess } from "@/constants/permissions";
+import { hasAccess, type RouteAccess } from "@/constants/permissions";
 import { withApiHandler, type ApiContext } from "@/lib/api/handler";
 import { authenticationError, authorizationError, businessRuleError } from "@/lib/errors";
 import { createSupabaseAnonClient, createSupabaseServiceRoleClient } from "@/lib/supabase/server";
@@ -8,7 +8,7 @@ import type { Tenant } from "@/lib/supabase/tenant";
 
 import { readAccessTokenCookie } from "./cookies";
 import { getSession } from "./session";
-import type { AuthenticatedSession, SessionMembership } from "./types";
+import type { AuthenticatedSession } from "./types";
 
 /** The token in an `Authorization: Bearer` header, or null when there is none. */
 export function bearerToken(headers: Headers): string | null {
@@ -46,17 +46,6 @@ function askerOf(session: AuthenticatedSession): NonNullable<ApiContext["asker"]
 /** A method that changes something: what read-only refuses (plan §7.3). */
 export function isWrite(method: string): boolean {
   return !["GET", "HEAD", "OPTIONS"].includes(method.toUpperCase());
-}
-
-/**
- * Whether the member may do what the route does (plan §8): any member, the
- * owner alone, or a named permission — the owner holding every one. There is
- * no default: a route always says which (AGENTS.md §8).
- */
-export function hasAccess(membership: SessionMembership, access: RouteAccess): boolean {
-  if (access === ROUTE_ACCESS.member) return true;
-  if (access === ROUTE_ACCESS.owner) return membership.role === "OWNER";
-  return membership.permissions.includes(access);
 }
 
 /** What a clinic route is handed: who is asking, and a client that can only see their clinic. */

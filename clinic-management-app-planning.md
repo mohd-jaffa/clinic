@@ -153,6 +153,9 @@ earlier lines are never rewritten.
 | D64 | **The typeface is Figtree** (the user, from the sample page, D60), regular and bold, with its `latin` and `latin-ext` subsets (the ₹ sign is in `latin-ext`) and tabular figures. It has no slashed zero or alternate I/l, so codes and doses rely on Figtree's flagged 1 and on context. | 2026-10-02 |
 | D65 | **Select, date and time fields open the app's own list and calendar** (the user, as in Brio): a select-only combobox and a month calendar in the Clinic Map's look, in both themes, keyboard-complete — never the browser's pickers. | 2026-10-02 |
 | D66 | **The calendar grid and the chart kit are built with their screens:** the appointment calendar's grid in R5.3, the bar and donut charts in R10.3, shaped by the data they show. R2.3 builds the rest of the §32.2 kit, the date picker's month grid included. | 2026-10-02 |
+| D67 | **Quick add takes you there, its form open** (the user): each ＋ action goes to its own screen with its form already open — Walk-in to the Queue, Appointment to the calendar, Patient to Patients, Payment to Billing, Expense to Expenses (`?add=`) — so the outcome is seen in place and Back closes the form. Each screen owns its form; the shell carries none. | 2026-10-02 |
+| D68 | **No top bar on a phone** (the user): each screen's land carries its title; the account, the clinic and Settings are reached from More, which opens on who is signed in. | 2026-10-02 |
+| D69 | **＋ on tablet and desktop too** (the user): a round ＋ at the top of the rail and an **Add** capsule at the top of the sidebar open the same Quick Actions. | 2026-10-02 |
 
 ## 3. Users and roles
 
@@ -1662,14 +1665,16 @@ Items are filtered by permission (`NAVIGATION` in `src/constants/navigation.ts`)
 
 - **Phone — bottom bar (5):** Home · Queue · **＋** · Patients · More.
   The Queue tab carries the To-bill count for those who bill.
-  **＋ (quick add)** opens a sheet: Walk-in, Appointment, Patient, Payment,
-  Expense — each only with its permission. **More:** Appointments, Follow-ups,
-  Billing, Expenses, Reports, Team, Settings, Install app, Sign out.
+  **＋ (quick add)** opens the Quick Actions lobe: Walk-in, Appointment,
+  Patient, Payment, Expense — each only with its permission; each goes to its
+  screen with its form open (D67). No top bar (D68). **More:** who is signed
+  in (to My account), then Appointments, Follow-ups, Billing, Expenses,
+  Reports, Team, Settings, Install app, Sign out.
 - **Tablet — icon rail** with the same items; **desktop — sidebar** (the
   draft's layout): Home, Queue, Appointments, Patients, Follow-ups, Billing,
-  Expenses, Reports, Team, Settings; the clinic's name and logo at the top; the
-  account menu at the bottom. "Doctors" and "Staff" in the draft are one
-  **Team** screen.
+  Expenses, Reports, Team, Settings; the clinic's name and logo at the top,
+  with the ＋ (D69); the account menu at the bottom. "Doctors" and "Staff" in
+  the draft are one **Team** screen.
 - The **plan banner** sits above every screen's content when the state is not
   `ACTIVE`.
 
