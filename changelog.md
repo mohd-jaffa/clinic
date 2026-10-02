@@ -330,3 +330,16 @@ appended and never rewritten (AGENTS.md §33).
 
 ### Blockers
 - None.
+
+## 2026-10-02 — R2.1, the wordmark
+
+### Added
+- `src/components/ui/wordmark.tsx`: the text wordmark (D61) — the working
+  name from `UI_TEXT.appName` in Figtree bold, a little tight, in the colour
+  of where it sits; a rename stays one constant. `cn` ported from Brio.
+
+### Validation
+- Typecheck, lint, format check passed; unit tests passed.
+
+### Blockers
+- None.
