@@ -4,6 +4,7 @@ import { Figtree } from "next/font/google";
 import { UI_TEXT } from "@/constants/messages";
 import { ThemeProvider } from "@/lib/theme/ThemeProvider";
 import { THEME_BOOT_SCRIPT, THEME_COLORS } from "@/lib/theme/themes";
+import { KeyboardInset } from "@/lib/viewport/KeyboardInset";
 
 import "./globals.css";
 
@@ -50,6 +51,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       {/* Extensions write attributes onto <body> before React hydrates; this
           ignores only <body>'s own attributes, one level deep. */}
       <body className="min-h-dvh" suppressHydrationWarning>
+        <KeyboardInset />
         <ThemeProvider>{children}</ThemeProvider>
       </body>
     </html>

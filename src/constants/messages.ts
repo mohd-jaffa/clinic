@@ -76,6 +76,33 @@ export const UI_TEXT = {
   appName: "ClinicDesk",
   appDescription: "The front desk and consulting room of your clinic, on any device.",
 
+  /** The verbs every screen shares (plan §32.2). */
+  actions: {
+    close: "Close",
+    back: "Go back",
+    retry: "Try again",
+    showMore: "Show more",
+    viewAll: "View all",
+  },
+
+  states: {
+    loading: "Loading…",
+  },
+
+  /** A form field's own words (plan §32.2). */
+  fields: {
+    optional: "(Optional)",
+    phonePrefix: "+91",
+    phonePlaceholder: "98765 43210",
+    amountPlaceholder: "0.00",
+    clearSearch: "Clear search",
+  },
+
+  /** The ＋ in the phone's bottom bar opens these (plan §31.1). */
+  quickActions: {
+    title: "Add",
+  },
+
   /** My account's theme switch (D36): kept per device. */
   theme: {
     label: "Theme",

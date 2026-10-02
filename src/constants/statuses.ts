@@ -4,6 +4,13 @@
  * the list here (AGENTS.md §25). Later phases add theirs as their tables come.
  */
 
+/**
+ * How a status pill colours a status (plan §32.1): live in the action green,
+ * needing attention in coral, anything else quiet. The word always carries
+ * the meaning; the tone only repeats it.
+ */
+export type StatusTone = "neutral" | "live" | "attention";
+
 /** A membership's state (plan §8): invited until accepted, inactive when deactivated. */
 export const MEMBER_STATUSES = ["INVITED", "ACTIVE", "INACTIVE"] as const;
 export type MemberStatus = (typeof MEMBER_STATUSES)[number];
@@ -11,6 +18,11 @@ export const MEMBER_STATUS_LABELS: Record<MemberStatus, string> = {
   INVITED: "Invited",
   ACTIVE: "Active",
   INACTIVE: "Inactive",
+};
+export const MEMBER_STATUS_TONES: Record<MemberStatus, StatusTone> = {
+  INVITED: "neutral",
+  ACTIVE: "live",
+  INACTIVE: "neutral",
 };
 
 /** What kind of clinic it is (plan §5.1). */
@@ -54,6 +66,12 @@ export const SUBSCRIPTION_STATE_LABELS: Record<SubscriptionState, string> = {
   EXPIRING: "Ending soon",
   GRACE: "Ended",
   READ_ONLY: "View only",
+};
+export const SUBSCRIPTION_STATE_TONES: Record<SubscriptionState, StatusTone> = {
+  ACTIVE: "live",
+  EXPIRING: "attention",
+  GRACE: "attention",
+  READ_ONLY: "attention",
 };
 
 /** How the admin extends a plan (plan §7.4): a month, a year, or a date set by hand. */

@@ -16,7 +16,10 @@
      land-muted on land                 ≥ 4.5
      on-action / on-chip / on-coral     ≥ 4.5
      coral on ground and surface        ≥ 4.5 (coral words, "₹2,500 owed")
+     coral on coral-soft                ≥ 4.5 (an allergy chip)
+     action and ink on action-soft      ≥ 4.5 (a live status)
      action against land and ground     ≥ 3   (a capsule's edge)
+     edge against ground and surface    ≥ 3   (where a field is, WCAG 1.4.11)
 
    Light values are the bare :root; dark redefines them for a device set
    to dark (unless the person chose Light) and again for a person who
@@ -37,6 +40,10 @@
   --on-chip: #ffffff;
   --coral: #ba3c27;
   --on-coral: #ffffff;
+  --coral-soft: #fae6e1;
+  --action-soft: #e4ede9;
+  --edge: #738a7c;
+  --scrim: rgb(17 36 26 / 0.45);
   --shadow-tone: 17 36 26;
   color-scheme: light;
 }
@@ -57,6 +64,10 @@
     --on-chip: #0d1813;
     --coral: #ff8c73;
     --on-coral: #2a0d06;
+    --coral-soft: #3b2622;
+    --action-soft: #21382b;
+    --edge: #5a7564;
+    --scrim: rgb(0 0 0 / 0.6);
     --shadow-tone: 0 0 0;
     color-scheme: dark;
   }
@@ -77,6 +88,10 @@
   --on-chip: #0d1813;
   --coral: #ff8c73;
   --on-coral: #2a0d06;
+  --coral-soft: #3b2622;
+  --action-soft: #21382b;
+  --edge: #5a7564;
+  --scrim: rgb(0 0 0 / 0.6);
   --shadow-tone: 0 0 0;
   color-scheme: dark;
 }
@@ -107,6 +122,10 @@
   --color-on-chip: var(--on-chip);
   --color-coral: var(--coral);
   --color-on-coral: var(--on-coral);
+  --color-coral-soft: var(--coral-soft);
+  --color-action-soft: var(--action-soft);
+  --color-edge: var(--edge);
+  --color-scrim: var(--scrim);
   --color-transparent: transparent;
   --color-current: currentColor;
 
@@ -124,14 +143,20 @@
   --text-title--line-height: 1.25;
   --text-heading: 1.625rem;
   --text-heading--line-height: 1.15;
+  --text-token: 1.875rem;
+  --text-token--line-height: 0.95;
   --text-display: 2.75rem;
   --text-display--line-height: 0.95;
   --text-display-lg: 3.5rem;
   --text-display-lg--line-height: 0.95;
 
-  /* Capsules are fully round (rounded-full); these are the soft shapes. */
+  /* Capsules are fully round (rounded-full); these are the soft shapes. The
+     lake and the lobe are the map's two drawn-by-hand ones: an opening in
+     the land, and a small island of it. */
   --radius-row: 1.375rem;
   --radius-sheet: 1.75rem;
+  --radius-lake: 48% 52% 44% 56% / 38% 40% 60% 62%;
+  --radius-lobe: 58% 42% 55% 45% / 50% 56% 44% 50%;
 
   --shadow-raised: 0 18px 40px -18px rgb(var(--shadow-tone) / 0.35);
 
@@ -149,6 +174,11 @@
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-left: env(safe-area-inset-left, 0px);
   --duration-map: 260ms;
+
+  /* How far the on-screen keyboard covers the bottom of the layout where the
+     browser does not resize it (iOS): set by KeyboardInset, so a sheet's
+     foot rides above it. */
+  --keyboard-inset: 0px;
 }
 
 /* Deliberately unlayered, so they win over a padding utility — which means
@@ -210,6 +240,103 @@
   :focus-visible {
     outline: 3px solid var(--action);
     outline-offset: 3px;
+  }
+}
+
+/* ============================================================
+   Sheets, cards and the lobe (the kit's Modal), and the panels
+   that open from a control. One duration and one curve, no
+   overshoot (plan §32.1). A sheet rises from the bottom on a phone
+   and comes in from the right as a side panel from 768 px; a card
+   rises a short way; the lobe rises from the bottom. Each leaves
+   as it came where the browser can keep it on top while it goes.
+   ============================================================ */
+@keyframes rise-in {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes panel-in {
+  from {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes drop-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+@utility animate-drop-in {
+  animation: drop-in var(--duration-map) var(--ease-map);
+}
+
+.modal-sheet,
+.modal-lobe {
+  animation: rise-in var(--duration-map) var(--ease-map);
+}
+
+.modal-card {
+  animation: card-in var(--duration-map) var(--ease-map);
+}
+
+@media (min-width: 48rem) {
+  .modal-sheet {
+    animation-name: panel-in;
+  }
+}
+
+:is(.modal-sheet, .modal-card, .modal-lobe)[open]::backdrop {
+  animation: fade-in var(--duration-map) var(--ease-map);
+}
+
+@supports (overlay: auto) {
+  :is(.modal-sheet, .modal-card, .modal-lobe),
+  :is(.modal-sheet, .modal-card, .modal-lobe)::backdrop {
+    transition-property: transform, opacity, display, overlay;
+    transition-duration: var(--duration-map);
+    transition-timing-function: var(--ease-map);
+    transition-behavior: allow-discrete;
+  }
+
+  /* Closed: where each goes. The arrival stops, so one closed while still
+     coming turns back from where it is. */
+  .modal-sheet:not([open]),
+  .modal-lobe:not([open]) {
+    animation: none;
+    transform: translateY(100%);
+  }
+
+  .modal-card:not([open]) {
+    animation: none;
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  :is(.modal-sheet, .modal-card, .modal-lobe):not([open])::backdrop {
+    opacity: 0;
+  }
+
+  @media (min-width: 48rem) {
+    .modal-sheet:not([open]) {
+      transform: translateX(100%);
+    }
   }
 }
 

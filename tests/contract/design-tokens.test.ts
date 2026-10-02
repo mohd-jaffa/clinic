@@ -51,12 +51,18 @@ const TEXT_PAIRS: [string, string][] = [
   ["on-coral", "coral"],
   ["coral", "ground"],
   ["coral", "surface"],
+  ["coral", "coral-soft"],
+  ["ink", "coral-soft"],
+  ["action", "action-soft"],
+  ["ink", "action-soft"],
 ];
 
 const EDGE_PAIRS: [string, string][] = [
   ["action", "land"],
   ["action", "ground"],
   ["action", "surface"],
+  ["edge", "ground"],
+  ["edge", "surface"],
 ];
 
 describe.each([
@@ -67,7 +73,7 @@ describe.each([
     expect(contrast(theme[text], theme[ground])).toBeGreaterThanOrEqual(4.5);
   });
 
-  it.each(EDGE_PAIRS)("sets a %s capsule apart from %s at 3:1 or more", (edge, ground) => {
+  it.each(EDGE_PAIRS)("sets a %s edge apart from %s at 3:1 or more", (edge, ground) => {
     expect(contrast(theme[edge], theme[ground])).toBeGreaterThanOrEqual(3);
   });
 });

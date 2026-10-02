@@ -48,3 +48,18 @@ vi.mock("next/navigation", () => ({
   redirect: vi.fn(),
   notFound: vi.fn(),
 }));
+
+// jsdom has no popovers: no showPopover() or hidePopover(), and not the rule
+// that a popover not shown is not drawn. Enough for a test to see a list open
+// and close; the top layer and where it is placed are checked in a browser.
+if (typeof HTMLElement !== "undefined" && !HTMLElement.prototype.showPopover) {
+  HTMLElement.prototype.showPopover = function showPopover(this: HTMLElement) {
+    this.setAttribute("data-popover-open", "");
+  };
+  HTMLElement.prototype.hidePopover = function hidePopover(this: HTMLElement) {
+    this.removeAttribute("data-popover-open");
+  };
+  const style = document.createElement("style");
+  style.textContent = "[popover]:not([data-popover-open]) { display: none; }";
+  document.head.append(style);
+}

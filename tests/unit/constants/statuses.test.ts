@@ -26,6 +26,17 @@ describe("the vocabularies the database also knows", () => {
     }
   });
 
+  it("give every status a pill shows a tone", () => {
+    for (const [name, values] of vocabularies) {
+      const tones = (statuses as Record<string, unknown>)[`${name.replace(/S$/, "")}_TONES`] as
+        Record<string, string> | undefined;
+      if (!tones) continue;
+      expect(Object.keys(tones), name).toEqual([...values]);
+    }
+    expect(statuses.MEMBER_STATUS_TONES.ACTIVE).toBe("live");
+    expect(statuses.SUBSCRIPTION_STATE_TONES.READ_ONLY).toBe("attention");
+  });
+
   it("order a plan's states as the days pass", () => {
     expect(statuses.SUBSCRIPTION_STATES).toEqual(["ACTIVE", "EXPIRING", "GRACE", "READ_ONLY"]);
   });
