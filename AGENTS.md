@@ -68,9 +68,10 @@ specifies.
 
 ## 2.3 User-mandated development rules
 
-- **Commits:** commit after every completed feature or change, with a small,
-  short, professional conventional message (`feat(patients): search by
-  mobile digits`). Commit as **`jaFFa <jafakash.14@gmail.com>`** (plan D38).
+- **Commits:** commit after every completed feature or change. The message is
+  **one short, straight conventional line** — `feat: add patient search` —
+  with no body and **no co-author or other attribution trailer** (the user,
+  2026-10-02). Commit as **`jaFFa <jafakash.14@gmail.com>`** (plan D38).
   Work on a branch and merge to `main` through a PR with CI green.
 - **Testing mandate:** write unit, database, integration and E2E tests at each
   step — not later. Coverage is 100% and CI enforces it (§31).
