@@ -290,3 +290,43 @@ appended and never rewritten (AGENTS.md §33).
 ### Blockers
 - Resolution: the invite-link blocker of Phase 1 is settled by D63.
 - CI still waits for the push (D62).
+
+## 2026-10-02 — R2.2, the Clinic Map's tokens and themes
+
+### Added
+- The typeface sample (D60): Atkinson Hyperlegible Next, Public Sans and
+  Figtree on a real queue, bill and prescription in both themes, shown as
+  screenshots kept in `design-references/` (not committed). The user chose
+  **Figtree** (D64). Fourteen candidates were checked for the ₹ sign and
+  tabular figures first; Hanken Grotesk, Onest, Instrument Sans, Golos Text,
+  Rethink Sans and Red Hat Text have no ₹.
+- The direction contract in the surface brief
+  (`.impeccable/surfaces/src-app-layout-tsx.md`).
+- `src/app/globals.css`: the Clinic Map's tokens — land, ink, ground,
+  surface, coral and their text colours — in light and dark; Tailwind's own
+  palette, faces and sizes cleared so a screen can use only these; the type
+  scale (body 17px, display numerals at 0.95); the soft radii, the raised
+  shadow and the one curve; safe-area helpers (from Brio); 16px fields;
+  themed selection, caret, scrollbars and focus; reduced motion made instant.
+- Figtree through `next/font`, served by the app, with its `latin-ext`
+  subset, where the ₹ sign is.
+- Themes (D36), kept per device (`src/lib/theme`): System, Light, Dark; a
+  pre-paint script so a chosen theme never flashes the other; the toolbar
+  colour of each theme. Ported from Brio's two-direction switch.
+- The coastlines (`src/assets/coastlines.ts`): three authored paths — wide,
+  phone and the slim band.
+- Tests: every text pair AA in both themes and the two dark blocks identical
+  (`tests/contract/design-tokens.test.ts`); the theme script and provider;
+  the coastlines; and in the browser, a dark device, a light device and a
+  chosen Dark from the first paint, axe clean.
+
+### Changed
+- `@testing-library/user-event` added for component tests, as in Brio.
+
+### Found while building
+- A theme-color meta whose content is changed before hydration is taken by
+  React for a new one, and another is added: the chosen toolbar colour is
+  its own meta, placed first, and Next's are never touched.
+
+### Blockers
+- None.

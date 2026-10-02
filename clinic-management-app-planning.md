@@ -150,6 +150,7 @@ earlier lines are never rewritten.
 | D61 | **Until the final name (Q1), the brand is a text wordmark only:** "ClinicDesk" set in the app's typeface, no symbol — renaming stays one constant change. | 2026-10-02 |
 | D62 | **Phase 1 stays local for now;** Phase 2 branches from `phase-1/identity`, and both are pushed together later, when CI first runs. | 2026-10-02 |
 | D63 | **Invites use the app's own token** (answers Q23): a random token in the emailed link, only its hash kept on the membership with `invite_expires_at`; the account is made at invite with no password (admin API); `/accept-invite` checks the token on the server, which then sets the password and mobile and confirms the email. The link lasts `invite_valid_days`; Supabase's own invite link is not used. | 2026-10-02 |
+| D64 | **The typeface is Figtree** (the user, from the sample page, D60), regular and bold, with its `latin` and `latin-ext` subsets (the ₹ sign is in `latin-ext`) and tabular figures. It has no slashed zero or alternate I/l, so codes and doses rely on Figtree's flagged 1 and on context. | 2026-10-02 |
 
 ## 3. Users and roles
 
@@ -1725,10 +1726,8 @@ deep green-black water, a lifted deep-leaf land, pale ink, lighter coral.
 Exact values are set at R2.2 against WCAG AA (ink on land ≥ 4.5:1) in both
 themes.
 
-**Type.** One grotesk, two weights, ₹ and tabular figures; display numerals
-(tokens, rupees, counts) big and tight (≈ 0.95 leading); body 17 px. The face
-is chosen at R2.2 among hyperlegible grotesks — not Inter-as-display, DM Sans,
-IBM Plex or Space Grotesk.
+**Type.** **Figtree** (D64), two weights, ₹ and tabular figures; display
+numerals (tokens, rupees, counts) big and tight (≈ 0.95 leading); body 17 px.
 
 **Controls.** Capsules. A round chip rides the capsule's trailing edge and
 crosses to the leading edge when the thing is live, so a patient's capsule
@@ -2043,7 +2042,7 @@ tests (§34) and its changelog entry.
 | ID | Work | Source | Waits on | Status |
 |---|---|---|---|---|
 | R2.1 | `/impeccable init` → PRODUCT.md; `/impeccable shape` → the direction (§32.1); the wordmark on the working name, text only (D61) | §32.1 | — | DOING (PRODUCT.md and §32.1 done 2026-10-02; the wordmark waits for the typeface) |
-| R2.2 | The direction contract in the surface brief; the face chosen from a sample page (D60) and the green / ink / coral values checked for AA in both themes; light and dark tokens in `globals.css`, no theme flash, `theme-color`; safe areas; `dvh`; the coastline paths | §32.1 | — | TODO |
+| R2.2 | The direction contract in the surface brief; the face chosen from a sample page (D60) and the green / ink / coral values checked for AA in both themes; light and dark tokens in `globals.css`, no theme flash, `theme-color`; safe areas; `dvh`; the coastline paths | §32.1 | — | DONE (2026-10-02 · f89322a) |
 | R2.3 | The UI kit (§32.2 list, plus the capsule with its travelling chip, the coast header, the lake, the pin and the Quick Actions lobe) with 100% coverage | §32.1, §32.2 | — | TODO |
 | R2.4 | Response card and confirm card (`useResponse`) | §32 | — | TODO |
 | R2.5 | AppShell: bottom bar + quick add (phone), rail (tablet), sidebar (desktop); permission-filtered navigation; AppScreen + ServerData | §31.1 | — | TODO |
