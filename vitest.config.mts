@@ -25,8 +25,6 @@ const alias = {
 export default defineConfig({
   test: {
     alias,
-    // The integration project has no tests until Phase 1.
-    passWithNoTests: true,
     coverage: {
       provider: "v8",
       reporter: ["text", "json-summary", "html"],
@@ -59,6 +57,13 @@ export default defineConfig({
             NEXT_PUBLIC_SUPABASE_ANON_KEY: local.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "",
             SUPABASE_SERVICE_ROLE_KEY: local.SUPABASE_SERVICE_ROLE_KEY ?? "",
             NEXT_PUBLIC_APP_URL: local.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
+            SMTP_HOST: local.SMTP_HOST ?? "",
+            SMTP_PORT: local.SMTP_PORT ?? "",
+            SMTP_SECURE: local.SMTP_SECURE ?? "",
+            SMTP_USER: local.SMTP_USER ?? "",
+            SMTP_PASSWORD: local.SMTP_PASSWORD ?? "",
+            SMTP_FROM: local.SMTP_FROM ?? "",
+            TRIAL_CLAIM_SECRET: local.TRIAL_CLAIM_SECRET ?? "",
           },
           // Each file makes its own clinics; one at a time keeps them apart in the logs.
           fileParallelism: false,
