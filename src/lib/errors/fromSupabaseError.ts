@@ -20,6 +20,8 @@ const POSTGRES_ERRORS: Record<string, { kind: ErrorKind; code: ErrorMessageCode 
   "23502": { kind: "VALIDATION", code: "VALIDATION_ERROR" },
   "22P02": { kind: "VALIDATION", code: "VALIDATION_ERROR" },
   "22003": { kind: "VALIDATION", code: "VALIDATION_ERROR" },
+  // A function given an argument it does not take (invalid_parameter_value).
+  "22023": { kind: "VALIDATION", code: "VALIDATION_ERROR" },
   // A duplicate key: the constraint name is in the message, so it is mapped.
   "23505": { kind: "CONFLICT", code: "CONFLICT" },
   // Something still referenced, or a reference to something gone.

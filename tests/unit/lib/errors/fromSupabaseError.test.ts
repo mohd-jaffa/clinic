@@ -38,6 +38,17 @@ describe("fromPostgrestError", () => {
     expect(fromPostgrestError(postgrest({ code: "23505" })).kind).toBe("CONFLICT");
   });
 
+  it("reads a broken CHECK as a refused value, and an argument a function does not take as invalid", () => {
+    expect(fromPostgrestError(postgrest({ code: "23514" }))).toMatchObject({
+      code: "VALIDATION_ERROR",
+      httpStatus: 422,
+    });
+    expect(fromPostgrestError(postgrest({ code: "22023" }))).toMatchObject({
+      code: "VALIDATION_ERROR",
+      httpStatus: 400,
+    });
+  });
+
   it("reads a missing single row as not found", () => {
     expect(fromPostgrestError(postgrest({ code: "PGRST116" })).code).toBe("RECORD_NOT_FOUND");
   });
