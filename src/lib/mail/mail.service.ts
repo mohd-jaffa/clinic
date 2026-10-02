@@ -1,0 +1,33 @@
+import type { MailProvider } from "./mail.provider";
+import { accountConfirmationTemplate } from "./templates/account-confirmation";
+import { passwordResetTemplate } from "./templates/password-reset";
+
+interface MailServiceOptions {
+  provider: MailProvider;
+  from: string;
+  /** The app's address: where an email's links lead. */
+  appUrl: string;
+}
+
+/** Every email the app sends, one method each (plan §22); the words are MAIL_TEXT's. */
+export class MailService {
+  private readonly provider: MailProvider;
+  private readonly from: string;
+  private readonly appUrl: string;
+
+  constructor(options: MailServiceOptions) {
+    this.provider = options.provider;
+    this.from = options.from;
+    this.appUrl = options.appUrl;
+  }
+
+  async sendAccountConfirmation(input: { to: string; name: string; confirmationUrl: string }) {
+    const content = accountConfirmationTemplate({ ...input, appUrl: this.appUrl });
+    await this.provider.send({ from: this.from, to: input.to, ...content });
+  }
+
+  async sendPasswordReset(input: { to: string; name: string; resetUrl: string }) {
+    const content = passwordResetTemplate({ ...input, appUrl: this.appUrl });
+    await this.provider.send({ from: this.from, to: input.to, ...content });
+  }
+}
