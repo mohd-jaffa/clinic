@@ -1,0 +1,107 @@
+# The quality gates (plan §35, AGENTS.md §32), on every push to main and every
+# pull request:
+#
+#   checks   install → lint → format check → type check → unit tests
+#   app      the local Supabase, every migration applied → unit + integration
+#            tests with coverage at 100% → build → the browser journeys on
+#            that build, phone and desktop
+#
+# A release runs the same gates again on its tag before it deploys
+# (release.yml, Phase 13), calling this workflow with `ref`.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_call:
+    inputs:
+      ref:
+        description: The tag or commit to check; the triggering one when empty.
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ inputs.ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Lint, format, types and unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.ref }}
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npm run typecheck
+      - run: npm test
+
+  app:
+    name: Coverage, build and journeys
+    needs: checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.ref }}
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      # The same CLI the app is developed against.
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.109.1
+
+      # Only what the app uses: the database, auth, the API, storage and mail.
+      - name: Start the local Supabase
+        run: supabase start -x studio,imgproxy,realtime,edge-runtime,analytics,vector,meta
+
+      # The tests and the build read .env.local, as they do on a laptop.
+      - name: Point the app at it
+        run: |
+          eval "$(supabase status -o env)"
+          {
+            echo "NEXT_PUBLIC_SUPABASE_URL=$API_URL"
+            echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$ANON_KEY"
+            echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY"
+            echo "NEXT_PUBLIC_APP_URL=http://localhost:3100"
+          } > .env.local
+
+      - run: npm run test:coverage
+
+      - run: npm run build
+
+      - name: Install the browser
+        run: npx playwright install --with-deps chromium
+
+      - run: npm run test:e2e
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-${{ github.run_number }}
+          path: |
+            playwright-report/
+            test-results/
+            coverage/
+          retention-days: 14
+          if-no-files-found: ignore
