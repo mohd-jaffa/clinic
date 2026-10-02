@@ -2047,8 +2047,8 @@ tests (§34) and its changelog entry.
 |---|---|---|---|---|
 | R2.1 | `/impeccable init` → PRODUCT.md; `/impeccable shape` → the direction (§32.1); the wordmark on the working name, text only (D61) | §32.1 | — | DONE (2026-10-02 · 96f6345) |
 | R2.2 | The direction contract in the surface brief; the face chosen from a sample page (D60) and the green / ink / coral values checked for AA in both themes; light and dark tokens in `globals.css`, no theme flash, `theme-color`; safe areas; `dvh`; the coastline paths | §32.1 | — | DONE (2026-10-02 · f89322a) |
-| R2.3 | The UI kit (§32.2 list, plus the capsule with its travelling chip, the coast header, the lake, the pin and the Quick Actions lobe) with 100% coverage; own-look pickers (D65); the calendar grid and charts later (D66); screenshots checked by the user before R2.4 | §32.1, §32.2 | — | DOING |
-| R2.4 | Response card and confirm card (`useResponse`) | §32 | — | TODO |
+| R2.3 | The UI kit (§32.2 list, plus the capsule with its travelling chip, the coast header, the lake, the pin and the Quick Actions lobe) with 100% coverage; own-look pickers (D65); the calendar grid and charts later (D66); screenshots checked by the user before R2.4 | §32.1, §32.2 | — | DONE (2026-10-02 · a6cc5d5) |
+| R2.4 | Response card and confirm card (`useResponse`) | §32 | — | DONE (2026-10-02 · eb1b32c) |
 | R2.5 | AppShell: bottom bar + quick add (phone), rail (tablet), sidebar (desktop); permission-filtered navigation; AppScreen + ServerData | §31.1 | — | TODO |
 | R2.6 | System screens: error, global error, not found, loading skeletons | §31.2 | — | TODO |
 | R2.7 | Account screens: register (two steps), sign in, confirm email, forgot and reset password | §5 | — | TODO |

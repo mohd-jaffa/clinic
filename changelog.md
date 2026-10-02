@@ -399,3 +399,43 @@ appended and never rewritten (AGENTS.md §33).
 
 ### Blockers
 - None. R2.3 closes when the user has looked at the screenshots.
+
+## 2026-10-02 — R2.3 closed; R2.4, the response and confirm cards
+
+### Changed
+- R2.3 is done: the user looked at the kit's screenshots and was happy with
+  them.
+
+### Added
+- `src/components/ui/response-card.tsx`, ported from Brio: `ResponseProvider`
+  (mounted in the root layout) and `useResponse()` — `success`, `info`,
+  `warning`, `error`, `failure` (the API's words and request id, never raw
+  text) and `confirm` (the confirm card, which answers yes or no). One card at
+  a time: a graver card replaces a lighter one, the same card never stacks.
+  - A card with a next step is a `Dialog` (a bottom card on a phone, centred
+    from 768 px) with a mark in its tone — green for done, coral only for an
+    error, a warning or a question about something that cannot be undone —
+    up to three facts, the reference, and capsule actions; a destructive
+    question starts on Cancel.
+  - A card with nothing to do next is a notice above the bottom bar that
+    closes itself after 3 s, its hairline clock paused while it is held; it
+    is drawn inside the sheet on top, so it can be reached and is read out.
+- `Dialog` takes a mark and a close button; `Button` takes a ref,
+  `LinkButton` an `onClick`.
+- `src/lib/motion.ts`: the map's one duration in script (`MAP_MS`), kept equal
+  to `--duration-map` by the token contract test.
+- Words: `UI_TEXT.actions.cancel`, `UI_TEXT.response`.
+
+### Found while building
+- The reduced-motion rule shortens every animation, which would close a
+  notice at once; the notice's clock keeps its time, as it is not motion.
+- The Quick Actions test followed a link, which jsdom cannot do; it now only
+  chooses it.
+
+### Validation
+- Typecheck, lint, format check passed.
+- Unit and integration tests passed, coverage 100%.
+- Build passed; E2E passed (phone, desktop).
+
+### Blockers
+- None.
