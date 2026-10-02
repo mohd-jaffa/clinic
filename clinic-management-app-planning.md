@@ -151,6 +151,8 @@ earlier lines are never rewritten.
 | D62 | **Phase 1 stays local for now;** Phase 2 branches from `phase-1/identity`, and both are pushed together later, when CI first runs. | 2026-10-02 |
 | D63 | **Invites use the app's own token** (answers Q23): a random token in the emailed link, only its hash kept on the membership with `invite_expires_at`; the account is made at invite with no password (admin API); `/accept-invite` checks the token on the server, which then sets the password and mobile and confirms the email. The link lasts `invite_valid_days`; Supabase's own invite link is not used. | 2026-10-02 |
 | D64 | **The typeface is Figtree** (the user, from the sample page, D60), regular and bold, with its `latin` and `latin-ext` subsets (the ₹ sign is in `latin-ext`) and tabular figures. It has no slashed zero or alternate I/l, so codes and doses rely on Figtree's flagged 1 and on context. | 2026-10-02 |
+| D65 | **Select, date and time fields open the app's own list and calendar** (the user, as in Brio): a select-only combobox and a month calendar in the Clinic Map's look, in both themes, keyboard-complete — never the browser's pickers. | 2026-10-02 |
+| D66 | **The calendar grid and the chart kit are built with their screens:** the appointment calendar's grid in R5.3, the bar and donut charts in R10.3, shaped by the data they show. R2.3 builds the rest of the §32.2 kit, the date picker's month grid included. | 2026-10-02 |
 
 ## 3. Users and roles
 
@@ -1821,7 +1823,9 @@ These hold whatever the direction:
   capsule (with its travelling chip), coast header, lake, pin, Quick Actions
   lobe,
   empty-state, skeleton, screen-notice, tabs, date-strip, calendar grid, chart
-  kit (bar, donut). A screen does not restyle any of them.
+  kit (bar, donut). A screen does not restyle any of them. Pickers are the
+  app's own (D65); the calendar grid and the charts come with their screens
+  (D66).
 - **One way to report an outcome:** a **response card** (`useResponse()`);
   field errors inline; a screen that cannot load shows `ScreenNotice` with
   Retry; an error card shows the API's message and its `requestId`. **An action
@@ -2041,9 +2045,9 @@ tests (§34) and its changelog entry.
 
 | ID | Work | Source | Waits on | Status |
 |---|---|---|---|---|
-| R2.1 | `/impeccable init` → PRODUCT.md; `/impeccable shape` → the direction (§32.1); the wordmark on the working name, text only (D61) | §32.1 | — | DOING (PRODUCT.md and §32.1 done 2026-10-02; the wordmark waits for the typeface) |
+| R2.1 | `/impeccable init` → PRODUCT.md; `/impeccable shape` → the direction (§32.1); the wordmark on the working name, text only (D61) | §32.1 | — | DONE (2026-10-02 · 96f6345) |
 | R2.2 | The direction contract in the surface brief; the face chosen from a sample page (D60) and the green / ink / coral values checked for AA in both themes; light and dark tokens in `globals.css`, no theme flash, `theme-color`; safe areas; `dvh`; the coastline paths | §32.1 | — | DONE (2026-10-02 · f89322a) |
-| R2.3 | The UI kit (§32.2 list, plus the capsule with its travelling chip, the coast header, the lake, the pin and the Quick Actions lobe) with 100% coverage | §32.1, §32.2 | — | TODO |
+| R2.3 | The UI kit (§32.2 list, plus the capsule with its travelling chip, the coast header, the lake, the pin and the Quick Actions lobe) with 100% coverage; own-look pickers (D65); the calendar grid and charts later (D66); screenshots checked by the user before R2.4 | §32.1, §32.2 | — | DOING |
 | R2.4 | Response card and confirm card (`useResponse`) | §32 | — | TODO |
 | R2.5 | AppShell: bottom bar + quick add (phone), rail (tablet), sidebar (desktop); permission-filtered navigation; AppScreen + ServerData | §31.1 | — | TODO |
 | R2.6 | System screens: error, global error, not found, loading skeletons | §31.2 | — | TODO |
@@ -2085,7 +2089,7 @@ tests (§34) and its changelog entry.
 |---|---|---|---|---|
 | R5.1 | `0013_appointments`: table (clinic's appointment types), exclusion, transitions, closures check, tokens, functions | §11, §28.4 | — | TODO |
 | R5.2 | Booking sheet: patient search/quick add, doctor, date, time, type → duration; clash card | §11.1 | — | TODO |
-| R5.3 | Calendar: day (list / columns per doctor), week, doctor filter, closures shaded | §11.5 | — | TODO |
+| R5.3 | Calendar: day (list / columns per doctor), week, doctor filter, closures shaded; the kit's calendar grid (D66) | §11.5 | — | TODO |
 | R5.4 | Appointment detail: confirm, reschedule, cancel (reason), no-show | §11.2 | — | TODO |
 | R5.5 | Walk-ins, arrival tokens, today's queue (Waiting, With doctor, Still to come, Done) with 15 s refresh | §11.3, §11.4 | — | TODO |
 | R5.6 | Integration (concurrent bookings, concurrent tokens) + E2E | §34 | — | TODO |
@@ -2141,7 +2145,7 @@ tests (§34) and its changelog entry.
 |---|---|---|---|---|
 | R10.1 | `0021_dashboard_and_reports`: `dashboard_summary`, `report_daily`, `report_monthly` | §17, §18 | — | TODO |
 | R10.2 | Home: sections by permission; getting-started for a new clinic | §17 | — | TODO |
-| R10.3 | Reports: daily and monthly, the two charts | §18 | — | TODO |
+| R10.3 | Reports: daily and monthly, the two charts; the kit's chart kit, bar and donut (D66) | §18 | — | TODO |
 | R10.4 | Integration: a seeded month's figures equal hand-computed ones | §34 | — | TODO |
 | R10.5 | Day-end collection summary (by method, by receiver), printable | §18 | — | TODO |
 | R10.6 | Monthly by doctor: seen, visits, billed, paid to date | §18 | — | TODO |
