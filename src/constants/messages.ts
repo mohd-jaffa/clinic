@@ -39,8 +39,44 @@ export function getErrorMessage(code: ErrorMessageCode | string): string {
   return isErrorMessageCode(code) ? ERROR_MESSAGES[code] : ERROR_MESSAGES.INTERNAL_ERROR;
 }
 
+/**
+ * What a field says when it is wrong, beside the field (AGENTS.md §24). Every
+ * schema takes its words from here and never falls back to Zod's own English;
+ * tests/unit/lib/validation/index.test.ts fails if one does.
+ */
+export const VALIDATION_MESSAGES = {
+  required: (label: string) => `${label} needs a value.`,
+  wholeNumber: (label: string) => `${label} must be a whole number.`,
+  notNegative: (label: string) => `${label} cannot be negative.`,
+  amount: (label: string) => `${label} must be a valid amount.`,
+  email: (label: string) => `${label} must look like name@example.com.`,
+  tooLarge: (label: string, max: string) => `${label} can be at most ${max}.`,
+  phone: "Enter a valid 10-digit mobile number.",
+  moreThanZero: (label: string) => `${label} must be more than 0.`,
+  tooLong: (label: string, max: number) => `${label} can be at most ${max} characters.`,
+  tooShort: (label: string, min: number) => `${label} must be at least ${min} characters.`,
+  invalid: "That value is not valid.",
+} as const;
+
 export const UI_TEXT = {
   /** A working name (plan D35): the final one replaces it here and nowhere else. */
   appName: "ClinicDesk",
   appDescription: "The front desk and consulting room of your clinic, on any device.",
+
+  /** An age, short enough for a row or a prescription (plan §10.1). */
+  age: {
+    years: (count: number) => `${count} y`,
+    months: (count: number) => `${count} mo`,
+    days: (count: number) => `${count} d`,
+  },
+
+  /** How long ago something happened, by the clinic's calendar: "2 days ago". */
+  ago: {
+    today: "today",
+    yesterday: "yesterday",
+    days: (count: number) => `${count} days ago`,
+    weeks: (count: number) => (count === 1 ? "a week ago" : `${count} weeks ago`),
+    months: (count: number) => (count === 1 ? "a month ago" : `${count} months ago`),
+    years: (count: number) => (count === 1 ? "a year ago" : `${count} years ago`),
+  },
 } as const;
