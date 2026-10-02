@@ -260,8 +260,11 @@ export const DatePicker = forwardRef<
                           className={cn(
                             "flex size-11 items-center justify-center rounded-full text-body tabular-nums transition-colors",
                             "disabled:cursor-not-allowed disabled:opacity-35",
-                            day === value ? "bg-chip font-bold text-on-chip" : "text-ink enabled:hover:bg-ground",
-                            day === today && day !== value && "font-bold text-action ring-2 ring-inset ring-action",
+                            day === value
+                              ? "bg-chip font-bold text-on-chip"
+                              : day === today
+                                ? "font-bold text-action ring-2 ring-action ring-inset enabled:hover:bg-ground"
+                                : "text-ink enabled:hover:bg-ground",
                           )}
                         >
                           {Number(day.slice(8))}
