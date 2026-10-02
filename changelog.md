@@ -165,3 +165,107 @@ appended and never rewritten (AGENTS.md §33).
 - Why it is blocked: there is no GitHub remote yet, and Docker was not running.
 - Required decision/input: create the GitHub repository and push; start Docker.
 - Temporary workaround: none needed until Phase 1's integration tests.
+
+## 2026-10-02 — Phase 1, identity, tenancy and security
+
+### Added
+- **Migrations 0001 – 0008** (R1.1 – R1.8):
+  - `0001_foundation`: the extensions, nothing open by default (EXECUTE taken
+    from PUBLIC; tables, sequences and functions from the API roles), the
+    `updated_at` and `created_by`/`updated_by` triggers, and the text-hygiene
+    checks the app's normalising mirrors.
+  - `0002_identity`, `0003_clinics_and_members`: profiles (email and mobile
+    each unique), clinics, members (one owner per clinic, one clinic per
+    person), doctors (only on an owner or doctor, in the same clinic), the
+    permission catalogue and its dependencies as a `CHECK`, the DEV kept out of
+    every clinic both ways, and the RLS helpers.
+  - `0004_platform_settings`: the one row with plan §6's defaults and bounds,
+    and `update_platform_settings` (DEV only, unknown names refused, audited
+    from and to).
+  - `0005_subscriptions`: the plan, payments with receipt numbers per financial
+    year, trial claims kept as an HMAC, the state rule, `clinic_can_write()`,
+    `require_clinic_write()` and `extend_clinic_subscription`.
+  - `0006_logs`: the audit trail and the error log, and the hourly
+    `clean_up_logs()` reading the retention settings.
+  - `0007_clinic_catalogues`: price list, appointment types, expense categories,
+    written with `settings.manage` while the clinic can write; archived, never
+    deleted.
+  - `0008_register_clinic`: sign-up's one transaction, seeding exactly
+    `src/constants/seeds.ts`.
+- **Constants:** roles, the permission catalogue with dependencies and presets,
+  the vocabularies, the platform-setting defaults and bounds, the seeds, and the
+  text limits each column and form share.
+- **Server:** platform settings, the plan state (`subscriptionState`), audit and
+  error logging, the mail service (nodemailer, Mailpit locally) with the
+  confirmation and reset emails, registration with compensation and one trial
+  per mobile, sessions in HttpOnly cookies (sign-in by email or mobile, refresh,
+  sign-out, the session), `proxy.ts` with renewal, `withClinicRoute`,
+  `withAccountRoute` and `withDevRoute` building the `Tenant`, password reset by
+  link, change password and the profile — and the eleven `/api/auth/*` routes.
+- **Tests:** a DB contract for every migration and for `supabase/config.toml`,
+  each keeping a `CHECK`, default or bound equal to its constant; a contract
+  over all migrations (RLS on every table, nothing granted to `anon`, an empty
+  search path on every function, catalogue codes only, known permissions and
+  roles, every clinic-owned table cascading and indexed); unit tests for every
+  new file; and integration tests against the local Supabase — sign-up through
+  Mailpit, tenant isolation, the permission matrix so far, read-only refusal
+  through REST and the routes, the DEV seeing no clinic rows, settings taking
+  effect at once, and the SQL and TS plan rules agreeing day by day.
+
+### Changed
+- `withApiHandler` puts a 5xx in the error log under the request id; a 4xx
+  refusal goes to the output only.
+- `fromSupabaseError` reads `22023` (an argument a function does not take) as
+  a validation error.
+- The email primitives take their bound from `TEXT_LIMITS.email`; the phone
+  pattern and digit count are shared with `is_phone_number()`.
+- Local Supabase: sign-up through the public key off; mobile sign-in on with no
+  SMS sent; email links valid 24 hours; redirects to ports 3000 and 3100; the
+  app's mail through Mailpit on 55325; the Auth rate limits raised **locally
+  only**, since the test suites sign in hundreds of times a minute (production
+  keeps Supabase's, reviewed at R13.1).
+- Plan: R1.1 – R1.11 done; Q23 and Q24 added; R3.4 waits on Q23.
+
+### Defaults taken where the plan was silent (open to change)
+- A new clinic prints on **A4** and collects the fee **after the
+  consultation** (Q24).
+- A clinic's own phone is kept as typed, mobile or landline (6 – 15 digits),
+  as its letterhead prints it; an account's mobile is +91 E.164.
+- A confirmation or reset email can go again to the same account after 60
+  seconds; the links work for 24 hours, the most Supabase allows.
+- A mobile that has had its trial starts its new clinic view-only at once: its
+  last day is set 61 days back, past the longest grace the bounds allow.
+- Only money received gets a receipt number; a ₹0 extension has none.
+
+### Found while building (Supabase Auth)
+- Setting a password through the admin API ends every session of the account,
+  the one asking included: changing and resetting a password answer with a
+  fresh session.
+- Updating a phone through the admin API does not refuse one another account
+  holds: the profile's unique index is written first, and put back if Auth
+  refuses.
+- Signing out revokes refresh tokens only; an access token lasts until it
+  expires. A deactivated member is stopped by the membership check on every
+  request and in RLS, not by the token.
+
+### Validation
+- Lint, format check and typecheck clean.
+- 583 unit and 53 integration tests pass; coverage 100% of lines, branches,
+  functions and statements.
+- The production build and the smoke journey pass at phone and desktop widths,
+  axe clean.
+
+### Blockers
+- Resolution (Phase 0's blocker, in part): Docker runs; `supabase start`
+  applies every migration and the integration suite passes against it.
+  Still OPEN: CI has never run — the push to GitHub waits for the user.
+- Status: OPEN
+- Area: team invites (R3.4)
+- Description: plan §8.4 sends the invite through Supabase's
+  `generateLink({ type: "invite" })` and says the link works for
+  `invite_valid_days` (up to 30); Supabase's links last at most a day, one
+  value for every kind of link.
+- What was attempted: `otp_expiry` set to its maximum, 86400.
+- Why it is blocked: the setting cannot be honoured by a Supabase link.
+- Required decision/input: Q23 — recommended, the app's own invite token.
+- Temporary workaround: none needed before Phase 3.

@@ -523,7 +523,8 @@ doctor, D26).
 
 The server creates the auth user through Supabase `generateLink({ type:
 "invite" })`, a membership with `status = 'INVITED'`, the doctor profile if any,
-and sends the invite email (§22). The link works for `invite_valid_days` (§6).
+and sends the invite email (§22). The link works for `invite_valid_days` (§6)
+— how, given Supabase's one-day limit on its links, is Q23.
 **Resend** issues a new link; **Revoke** removes the invite. An email that
 already belongs to an active member of any clinic is refused in V1 (one clinic
 per person — D23).
@@ -2019,17 +2020,17 @@ tests (§34) and its changelog entry.
 
 | ID | Work | Source | Waits on | Status |
 |---|---|---|---|---|
-| R1.1 | `0001_foundation`: extensions, `updated_at` trigger, text hygiene | §29 | — | TODO |
-| R1.2 | `0002_identity`, `0003_clinics_and_members`: profiles, clinics, members, doctors; roles and the permission catalogue in TS with the DB `CHECK` kept equal | §3, §8.1, §28.1 | — | TODO |
-| R1.3 | RLS helpers (§27.2) and the policy pattern; `anon` locked out | §27 | — | TODO |
-| R1.4 | `0004_platform_settings`: the row with §6 defaults and bounds; `PLATFORM_SETTING_DEFAULTS`/`BOUNDS` kept equal; `getPlatformSettings()`; `update_platform_settings` | §6, D22 | — | TODO |
-| R1.5 | `0005_subscriptions`: subscription tables, `subscription_state()` = `subscriptionState()`, `clinic_can_write()`, `extend_clinic_subscription` | §7 | — | TODO |
-| R1.6 | `0006_logs`: audit and error logs, `logActionSafe`, `captureError`, `clean_up_logs()` reading the retention settings | §19, §36 | — | TODO |
-| R1.7 | Mail abstraction (nodemailer, Mailpit), the layout, the confirmation template | §22 | — | TODO |
-| R1.8 | Registration: `0007_clinic_catalogues`, `0008_register_clinic` (seeds from `seeds.ts`, the trial claim, no trial for a used mobile), compensation, confirmation, resend | §5.1, §7.6 | Q17 | TODO |
-| R1.9 | Sessions: cookies, sign-in by email or mobile, login/logout/refresh/session, `proxy.ts`, renewal, `withClinicRoute`/`withDevRoute`, the `Tenant` | §5.2, §5.5, §27.1 | — | TODO |
-| R1.10 | Password reset by link; change password; profile update | §5.3, §5.4 | Q18 | TODO |
-| R1.11 | Integration: tenant isolation, permission matrix (so far), read-only refusal through REST, DEV sees no clinic rows, settings take effect | §34 | — | TODO |
+| R1.1 | `0001_foundation`: extensions, `updated_at` trigger, text hygiene | §29 | — | DONE (2026-10-02 · 33b0c4f) |
+| R1.2 | `0002_identity`, `0003_clinics_and_members`: profiles, clinics, members, doctors; roles and the permission catalogue in TS with the DB `CHECK` kept equal | §3, §8.1, §28.1 | — | DONE (2026-10-02 · 33b0c4f) |
+| R1.3 | RLS helpers (§27.2) and the policy pattern; `anon` locked out | §27 | — | DONE (2026-10-02 · 33b0c4f) |
+| R1.4 | `0004_platform_settings`: the row with §6 defaults and bounds; `PLATFORM_SETTING_DEFAULTS`/`BOUNDS` kept equal; `getPlatformSettings()`; `update_platform_settings` | §6, D22 | — | DONE (2026-10-02 · f017f2f) |
+| R1.5 | `0005_subscriptions`: subscription tables, `subscription_state()` = `subscriptionState()`, `clinic_can_write()`, `extend_clinic_subscription` | §7 | — | DONE (2026-10-02 · 37d58d3) |
+| R1.6 | `0006_logs`: audit and error logs, `logActionSafe`, `captureError`, `clean_up_logs()` reading the retention settings | §19, §36 | — | DONE (2026-10-02 · ac41049) |
+| R1.7 | Mail abstraction (nodemailer, Mailpit), the layout, the confirmation template | §22 | — | DONE (2026-10-02 · f97badd) |
+| R1.8 | Registration: `0007_clinic_catalogues`, `0008_register_clinic` (seeds from `seeds.ts`, the trial claim, no trial for a used mobile), compensation, confirmation, resend | §5.1, §7.6 | Q17 | DONE (2026-10-02 · 24e89c0) |
+| R1.9 | Sessions: cookies, sign-in by email or mobile, login/logout/refresh/session, `proxy.ts`, renewal, `withClinicRoute`/`withDevRoute`, the `Tenant` | §5.2, §5.5, §27.1 | — | DONE (2026-10-02 · f8a759c) |
+| R1.10 | Password reset by link; change password; profile update | §5.3, §5.4 | Q18 | DONE (2026-10-02 · 7609a83) |
+| R1.11 | Integration: tenant isolation, permission matrix (so far), read-only refusal through REST, DEV sees no clinic rows, settings take effect | §34 | — | DONE (2026-10-02 · 5e18708) |
 
 ### Phase 2 — Design system, shell and account screens
 
@@ -2054,7 +2055,7 @@ tests (§34) and its changelog entry.
 | R3.1 | `0010_clinic_profile`: clinic details, paper size, fee timing, the logo upload | §9 | — | TODO |
 | R3.2 | Price list, appointment types and expense categories screens (tables from `0007`) | §9 | — | TODO |
 | R3.3 | `0011_closures`: holidays and leave | §9 | — | TODO |
-| R3.4 | `0009_team`: invite (presets, dependencies, doctor details and fee), invite email, resend, revoke, expiry | §8.3, §8.4 | Q19 | TODO |
+| R3.4 | `0009_team`: invite (presets, dependencies, doctor details and fee), invite email, resend, revoke, expiry | §8.3, §8.4 | Q19, Q23 | TODO |
 | R3.5 | Accept invite screen | §8.5 | — | TODO |
 | R3.6 | Team list and member detail: permissions, job title, doctor details, deactivate/reactivate; escalation and last-owner guards | §8.2, §8.6 | — | TODO |
 | R3.7 | The owner's own doctor profile | §3.1 | — | TODO |
@@ -2221,6 +2222,8 @@ starts.
 | Q20 | Queue refresh? | **Answered: every 15 s and on focus (D34).** |
 | Q21 | Temperature unit? | **Answered: °F (D31).** |
 | Q22 | Who writes the privacy policy and terms? | **Open.** Drafted in R12.2 from what the app keeps; the user reviews before release. |
+| Q23 | How does an invite link last `invite_valid_days` (§8.4), when Supabase Auth's links last at most a day (`otp_expiry` ≤ 86400, one value for every link)? | **Open; needed before R3.x.** **Recommended:** the app's own invite token — a random token emailed in the link, only its hash kept on the membership beside `invite_expires_at`; `/accept-invite` checks it on the server, which then sets the password through the admin API. The alternatives are capping `invite_valid_days` at 1, or Resend on day two. |
+| Q24 | What paper size and fee timing does a new clinic start with (§9)? | **Default:** A4, and the fee collected after the consultation (`DEFAULT_CLINIC_SETTINGS`); each clinic changes both in Settings. |
 
 ## 42. Later (unscheduled)
 
