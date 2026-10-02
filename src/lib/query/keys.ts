@@ -1,0 +1,31 @@
+/**
+ * Every endpoint the browser calls, in one place. A screen names a route
+ * through here, and the hook that refreshes after a change names the same one,
+ * so a mutation cannot revalidate a key no query used — the way an inline
+ * string quietly can. These double as SWR's cache keys.
+ */
+export const apiRoutes = {
+  // Sessions (plan §5, §30). Each feature adds its group as its phase builds it.
+  auth: {
+    session: "/api/auth/session",
+    login: "/api/auth/login",
+    logout: "/api/auth/logout",
+    refresh: "/api/auth/refresh",
+    confirm: "/api/auth/confirm",
+  },
+} as const;
+
+/**
+ * A route with its query: the values given, in the order given, and nothing
+ * for one left empty — so a list with no search asks for exactly its route,
+ * and shares its cache with every other screen that does.
+ */
+export function withQuery(route: string, params: Record<string, string | null | undefined>): string {
+  const query = new URLSearchParams();
+  for (const [name, value] of Object.entries(params)) {
+    if (value !== undefined && value !== null && value !== "") query.set(name, value);
+  }
+  const text = query.toString();
+  if (text === "") return route;
+  return `${route}${route.includes("?") ? "&" : "?"}${text}`;
+}
