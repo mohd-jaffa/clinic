@@ -2007,13 +2007,13 @@ tests (§34) and its changelog entry.
 
 | ID | Work | Source | Waits on | Status |
 |---|---|---|---|---|
-| R0.1 | This plan; AGENTS.md; CLAUDE.md; changelog.md; README | §2, D21 | — | DONE (2026-10-02 · planning, uncommitted) |
-| R0.2 | Next.js 16 app: TypeScript strict, Tailwind 4, React Compiler, ESLint, Prettier (120), Node 22 (`.nvmrc`, `engines`), `@/` and `@tests/` paths, `.gitignore`, npm scripts as Brio | §24 | — | TODO |
-| R0.3 | Test harness: Vitest unit (jsdom, setup) and integration (local-only guard) projects; coverage at 100% (§34.2); Playwright (phone + desktop, local-only guard, axe); `check-test-paths.mjs`; `tests/support` skeleton | §34 | — | TODO |
-| R0.4 | Local Supabase: `config.toml`, empty `seed.sql`, db scripts; `.env.example`; env validation (`src/lib/env`) | §35 | — | TODO |
-| R0.5 | CI workflow (`checks` + `app`), Supabase CLI pinned | §35 | — | TODO |
-| R0.6 | Core library ported from Brio: `AppError` + kinds + `fromSupabaseError`; logger with redaction; `lib/api` (handler, responses, client, pagination, params, idempotency); `lib/query` hooks and keys | §25, §36 | — | TODO |
-| R0.7 | Constants skeleton (`messages`, `routes`, `limits`); validation primitives and text hygiene; `money`; `phone` (+91); `format` (currency, date, age); `dates` (clinic timezone) | §26 | — | TODO |
+| R0.1 | This plan; AGENTS.md; CLAUDE.md; changelog.md; README | §2, D21 | — | DONE (2026-10-02 · 71e6f2e, 8692459) |
+| R0.2 | Next.js 16 app: TypeScript strict, Tailwind 4, React Compiler, ESLint, Prettier (120), Node 22 (`.nvmrc`, `engines`), `@/` and `@tests/` paths, `.gitignore`, npm scripts as Brio | §24 | — | DONE (2026-10-02 · b8b2f8e) |
+| R0.3 | Test harness: Vitest unit (jsdom, setup) and integration (local-only guard) projects; coverage at 100% (§34.2); Playwright (phone + desktop, local-only guard, axe); `check-test-paths.mjs`; `tests/support` skeleton | §34 | — | DONE (2026-10-02 · 56cbcd5) |
+| R0.4 | Local Supabase: `config.toml`, empty `seed.sql`, db scripts; `.env.example`; env validation (`src/lib/env`) | §35 | — | DONE (2026-10-02 · 2e88604; env validation with R0.6) |
+| R0.5 | CI workflow (`checks` + `app`), Supabase CLI pinned | §35 | — | DONE (2026-10-02 · dc78ad6; first run waits for the GitHub remote) |
+| R0.6 | Core library ported from Brio: `AppError` + kinds + `fromSupabaseError`; logger with redaction; `lib/api` (handler, responses, client, pagination, params, idempotency); `lib/query` hooks and keys | §25, §36 | — | DONE (2026-10-02 · 06a440b) |
+| R0.7 | Constants skeleton (`messages`, `routes`, `limits`); validation primitives and text hygiene; `money`; `phone` (+91); `format` (currency, date, age); `dates` (clinic timezone) | §26 | — | DONE (2026-10-02 · 7f6d9f2) |
 
 ### Phase 1 — Identity, tenancy and security
 

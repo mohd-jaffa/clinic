@@ -125,3 +125,43 @@ appended and never rewritten (AGENTS.md §33).
 ### Blockers
 - None. The exact colour values and the typeface are settled at R2.2 against
   contrast and ₹ coverage.
+
+## 2026-10-02 — Phase 0, groundwork
+
+### Added
+- The Next.js 16 app: TypeScript strict, Tailwind 4, React Compiler, ESLint
+  (with `src/lib` barred from importing features), Prettier, Node 22.
+- The test harness: Vitest unit and integration projects (integration refuses
+  a hosted Supabase), coverage enforced at 100% (proved to fail on an
+  untested file), Playwright at phone and desktop widths with an axe check,
+  and the test-path checker.
+- The local Supabase on 553xx ports, an 8-character minimum password,
+  `.env.example`, and the readme's setup and checks.
+- CI: lint, format, types and unit tests; then the local Supabase, coverage
+  across unit and integration, the build and the journeys.
+- The core library, ported from Brio and adapted: errors and their mapping,
+  the route handler and response envelope (now `Cache-Control: no-store`),
+  the browser client, idempotency keys, paging, the SWR hooks, env
+  validation, a logger that also redacts patient identity and clinical
+  fields, input hygiene, validation primitives, money in paise, +91 mobiles
+  and WhatsApp links with a message, currency and date formatting, the
+  clinic's calendar with the financial year, ages and estimated birth dates,
+  and the routes with open-redirect protection.
+
+### Changed
+- Commit messages are one short line with no co-author trailer (the user);
+  every earlier commit was rewritten to match, and `AGENTS.md` §2.3 says so.
+
+### Validation
+- Lint, format check and typecheck clean; 272 unit tests pass with 100%
+  coverage of lines, branches, functions and statements; the production
+  build and the smoke journey pass at phone and desktop widths, axe clean.
+
+### Blockers
+- Status: OPEN
+- Area: CI and the local database
+- Description: CI has never run, and `npm run db:start` is unverified.
+- What was attempted: everything else ran locally.
+- Why it is blocked: there is no GitHub remote yet, and Docker was not running.
+- Required decision/input: create the GitHub repository and push; start Docker.
+- Temporary workaround: none needed until Phase 1's integration tests.
