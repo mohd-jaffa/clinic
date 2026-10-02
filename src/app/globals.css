@@ -1,10 +1,226 @@
 @import "tailwindcss";
 
-/*
- * The design tokens — the Clinic Map's land, ink, ground, surface and coral,
- * in light and dark — arrive with R2.2 (plan §32.1). Until then the browser's
- * own colours stand, so nothing here pretends to be the design.
- */
+/* ============================================================
+   The Clinic Map (plan §32.1, D59): the tokens.
+
+   A screen is a guide map. The LAND, a flat leaf-green field with a
+   coastline edge, holds its one key fact; everything else sits on the
+   GROUND, a pale sage water. INK is near-black green; CORAL is for
+   attention only (overdue, to bill, an allergy, an action that cannot
+   be undone). No yellow, gold, blue or lilac.
+
+   Every pair a screen draws text with is checked for WCAG AA in both
+   themes by tests/contract/design-tokens.test.ts:
+     ink on ground, surface and land    ≥ 4.5
+     muted on ground and surface        ≥ 4.5
+     land-muted on land                 ≥ 4.5
+     on-action / on-chip / on-coral     ≥ 4.5
+     coral on ground and surface        ≥ 4.5 (coral words, "₹2,500 owed")
+     action against land and ground     ≥ 3   (a capsule's edge)
+
+   Light values are the bare :root; dark redefines them for a device set
+   to dark (unless the person chose Light) and again for a person who
+   chose Dark — the two dark blocks are kept identical by the same test.
+   ============================================================ */
 :root {
-  color-scheme: light dark;
+  --ground: #eef3ee;
+  --surface: #ffffff;
+  --ink: #11241a;
+  --muted: #46594d;
+  --line: #d5e0d7;
+  --land: #86cfa0;
+  --land-ink: #11241a;
+  --land-muted: #1f5236;
+  --action: #1c6a44;
+  --on-action: #ffffff;
+  --chip: #11241a;
+  --on-chip: #ffffff;
+  --coral: #ba3c27;
+  --on-coral: #ffffff;
+  --shadow-tone: 17 36 26;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground: #0d1813;
+    --surface: #14231b;
+    --ink: #e4f1e8;
+    --muted: #a7bcae;
+    --line: #26392e;
+    --land: #2e6a48;
+    --land-ink: #e4f1e8;
+    --land-muted: #cbe8d5;
+    --action: #7fd3a0;
+    --on-action: #0d1813;
+    --chip: #e4f1e8;
+    --on-chip: #0d1813;
+    --coral: #ff8c73;
+    --on-coral: #2a0d06;
+    --shadow-tone: 0 0 0;
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --ground: #0d1813;
+  --surface: #14231b;
+  --ink: #e4f1e8;
+  --muted: #a7bcae;
+  --line: #26392e;
+  --land: #2e6a48;
+  --land-ink: #e4f1e8;
+  --land-muted: #cbe8d5;
+  --action: #7fd3a0;
+  --on-action: #0d1813;
+  --chip: #e4f1e8;
+  --on-chip: #0d1813;
+  --coral: #ff8c73;
+  --on-coral: #2a0d06;
+  --shadow-tone: 0 0 0;
+  color-scheme: dark;
+}
+
+/* ============================================================
+   The tokens as Tailwind utilities — bg-land, text-ink, rounded-sheet,
+   text-display, ease-map … Tailwind's own palette, faces and sizes are
+   cleared first, so a screen can only use these (AGENTS.md §23).
+   ============================================================ */
+@theme {
+  --color-*: initial;
+  --font-*: initial;
+  --text-*: initial;
+}
+
+@theme inline {
+  --color-ground: var(--ground);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-land: var(--land);
+  --color-land-ink: var(--land-ink);
+  --color-land-muted: var(--land-muted);
+  --color-action: var(--action);
+  --color-on-action: var(--on-action);
+  --color-chip: var(--chip);
+  --color-on-chip: var(--on-chip);
+  --color-coral: var(--coral);
+  --color-on-coral: var(--on-coral);
+  --color-transparent: transparent;
+  --color-current: currentColor;
+
+  /* Figtree (D64), regular and bold; next/font serves it from the app. */
+  --font-sans: var(--font-figtree), system-ui, sans-serif;
+
+  /* The scale: body at 17px; display numerals (tokens, rupees, counts) tight. */
+  --text-caption: 0.8125rem;
+  --text-caption--line-height: 1.35;
+  --text-small: 0.9375rem;
+  --text-small--line-height: 1.4;
+  --text-body: 1.0625rem;
+  --text-body--line-height: 1.5;
+  --text-title: 1.25rem;
+  --text-title--line-height: 1.25;
+  --text-heading: 1.625rem;
+  --text-heading--line-height: 1.15;
+  --text-display: 2.75rem;
+  --text-display--line-height: 0.95;
+  --text-display-lg: 3.5rem;
+  --text-display-lg--line-height: 0.95;
+
+  /* Capsules are fully round (rounded-full); these are the soft shapes. */
+  --radius-row: 1.375rem;
+  --radius-sheet: 1.75rem;
+
+  --shadow-raised: 0 18px 40px -18px rgb(var(--shadow-tone) / 0.35);
+
+  /* One duration and one curve, no overshoot (plan §32.1). */
+  --ease-map: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ============================================================
+   The device: safe-area insets, ported from Brio. Every inset flows
+   through these four variables; nothing else reads env() directly.
+   ============================================================ */
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --duration-map: 260ms;
+}
+
+/* Deliberately unlayered, so they win over a padding utility — which means
+   they add to the element's own padding rather than replace it. An element
+   that wants both states its padding here: `safe-bottom [--safe-pb:1rem]`,
+   never `safe-bottom pb-4`. */
+.safe-top {
+  padding-top: calc(var(--safe-pt, 0px) + var(--safe-top));
+}
+
+.safe-bottom {
+  padding-bottom: calc(var(--safe-pb, 0px) + var(--safe-bottom));
+}
+
+.safe-x {
+  padding-left: calc(var(--safe-px, 0px) + var(--safe-left));
+  padding-right: calc(var(--safe-px, 0px) + var(--safe-right));
+}
+
+/* ============================================================
+   What every screen starts from — including the parts of the page
+   no component draws: selection, caret, scrollbars, focus.
+   ============================================================ */
+@layer base {
+  html {
+    background: var(--ground);
+    color: var(--ink);
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
+    -webkit-tap-highlight-color: transparent;
+    caret-color: var(--action);
+    accent-color: var(--action);
+    scrollbar-color: var(--muted) var(--ground);
+  }
+
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+
+  /* 16px or more, so iOS never zooms into a field (plan §32.2). */
+  input,
+  textarea,
+  select {
+    font-size: max(1rem, 1em);
+  }
+
+  ::selection {
+    background: var(--land);
+    color: var(--land-ink);
+  }
+
+  :focus-visible {
+    outline: 3px solid var(--action);
+    outline-offset: 3px;
+  }
+}
+
+/* Reduced motion: instant (plan §32.1). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

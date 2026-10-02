@@ -76,6 +76,14 @@ export const UI_TEXT = {
   appName: "ClinicDesk",
   appDescription: "The front desk and consulting room of your clinic, on any device.",
 
+  /** My account's theme switch (D36): kept per device. */
+  theme: {
+    label: "Theme",
+    system: "System",
+    light: "Light",
+    dark: "Dark",
+  },
+
   /** An age, short enough for a row or a prescription (plan §10.1). */
   age: {
     years: (count: number) => `${count} y`,

@@ -4,8 +4,8 @@ import { UI_TEXT } from "@/constants/messages";
 export default function Home() {
   return (
     <main className="mx-auto flex min-h-dvh max-w-xl flex-col justify-center gap-2 p-6">
-      <h1 className="text-3xl font-bold">{UI_TEXT.appName}</h1>
-      <p>{UI_TEXT.appDescription}</p>
+      <h1 className="text-heading font-bold">{UI_TEXT.appName}</h1>
+      <p className="text-muted">{UI_TEXT.appDescription}</p>
     </main>
   );
 }
