@@ -36,7 +36,13 @@ interface ApiEnvelope<T> {
 const REFRESH_ROUTE = apiRoutes.auth.refresh;
 
 /** The routes that establish or end a session; retrying one of them is nonsense. */
-const NEVER_RETRIED = [REFRESH_ROUTE, apiRoutes.auth.login, apiRoutes.auth.logout, apiRoutes.auth.confirm];
+const NEVER_RETRIED = [
+  REFRESH_ROUTE,
+  apiRoutes.auth.login,
+  apiRoutes.auth.logout,
+  apiRoutes.auth.confirm,
+  apiRoutes.auth.passwordResetComplete,
+];
 
 /**
  * At most one refresh is in flight. Several screens load at once, and without

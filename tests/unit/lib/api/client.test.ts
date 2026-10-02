@@ -289,10 +289,17 @@ describe("an expired session", () => {
   });
 
   it("never tries to refresh the endpoints that establish or end a session", async () => {
-    mockFetchError(401, "AUTH_SESSION_REQUIRED", "Please sign in to continue.");
-
-    await expect(postJson("/api/auth/login", { identifier: "9876543210", password: "nope" })).rejects.toThrow();
-    expect(mockFetch).toHaveBeenCalledTimes(1);
+    for (const route of [
+      "/api/auth/login",
+      "/api/auth/logout",
+      "/api/auth/confirm",
+      "/api/auth/password-reset/complete",
+    ]) {
+      mockFetch.mockClear();
+      mockFetchError(401, "AUTH_SESSION_REQUIRED", "Please sign in to continue.");
+      await expect(postJson(route, {})).rejects.toThrow();
+      expect(mockFetch, route).toHaveBeenCalledTimes(1);
+    }
   });
 });
 

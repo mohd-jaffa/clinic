@@ -1,3 +1,5 @@
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { apiRoutes, withQuery } from "@/lib/query/keys";
@@ -5,12 +7,24 @@ import { apiRoutes, withQuery } from "@/lib/query/keys";
 describe("apiRoutes", () => {
   it("names every endpoint the browser calls, once", () => {
     expect(apiRoutes.auth).toEqual({
+      register: "/api/auth/register",
       session: "/api/auth/session",
       login: "/api/auth/login",
       logout: "/api/auth/logout",
       refresh: "/api/auth/refresh",
       confirm: "/api/auth/confirm",
+      resendConfirmation: "/api/auth/resend-confirmation",
+      passwordReset: "/api/auth/password-reset",
+      passwordResetComplete: "/api/auth/password-reset/complete",
+      password: "/api/auth/password",
+      profile: "/api/auth/profile",
     });
+  });
+
+  it("names only routes that exist", () => {
+    for (const route of Object.values(apiRoutes).flatMap(Object.values)) {
+      expect(existsSync(join(process.cwd(), "src/app", route, "route.ts")), route).toBe(true);
+    }
   });
 });
 

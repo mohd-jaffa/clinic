@@ -7,11 +7,17 @@
 export const apiRoutes = {
   // Sessions (plan §5, §30). Each feature adds its group as its phase builds it.
   auth: {
+    register: "/api/auth/register",
     session: "/api/auth/session",
     login: "/api/auth/login",
     logout: "/api/auth/logout",
     refresh: "/api/auth/refresh",
     confirm: "/api/auth/confirm",
+    resendConfirmation: "/api/auth/resend-confirmation",
+    passwordReset: "/api/auth/password-reset",
+    passwordResetComplete: "/api/auth/password-reset/complete",
+    password: "/api/auth/password",
+    profile: "/api/auth/profile",
   },
 } as const;
 
