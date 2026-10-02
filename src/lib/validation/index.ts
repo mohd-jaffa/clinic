@@ -11,6 +11,8 @@ export {
   firstIssue,
   indianMobile,
   optionalEmail,
+  optionalPhoneNumber,
+  password,
   optionalLine,
   optionalLines,
   paiseAmount,
@@ -22,3 +24,24 @@ export {
 } from "./primitives";
 
 export { cursorParam, listQuerySchema, searchParam, type ListQuery } from "./schemas/list";
+
+export {
+  changePasswordSchema,
+  confirmEmailSchema,
+  emailRequestSchema,
+  loginSchema,
+  passwordResetCompleteSchema,
+  registerSchema,
+  updateProfileSchema,
+  type ChangePasswordInput,
+  type ChangePasswordPayload,
+  type ConfirmEmailPayload,
+  type EmailRequestPayload,
+  type LoginInput,
+  type LoginPayload,
+  type PasswordResetCompletePayload,
+  type RegisterInput,
+  type RegisterPayload,
+  type UpdateProfileInput,
+  type UpdateProfilePayload,
+} from "./schemas/auth";
