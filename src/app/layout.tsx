@@ -3,6 +3,8 @@ import { Figtree } from "next/font/google";
 
 import { ResponseProvider } from "@/components/ui/response-card";
 import { UI_TEXT } from "@/constants/messages";
+import { AuthProvider } from "@/features/auth/AuthProvider";
+import { readInitialSession } from "@/features/auth/session.server";
 import { ThemeProvider } from "@/lib/theme/ThemeProvider";
 import { THEME_BOOT_SCRIPT, THEME_COLORS } from "@/lib/theme/themes";
 import { KeyboardInset } from "@/lib/viewport/KeyboardInset";
@@ -21,7 +23,8 @@ const figtree = Figtree({
 });
 
 export const metadata: Metadata = {
-  title: UI_TEXT.appName,
+  // A screen names itself before the app: "Home · ClinicDesk".
+  title: { default: UI_TEXT.appName, template: `%s · ${UI_TEXT.appName}` },
   description: UI_TEXT.appDescription,
   applicationName: UI_TEXT.appName,
 };
@@ -42,7 +45,9 @@ export const viewport: Viewport = {
   ],
 };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  // Who is signed in, as the page is drawn: no screen waits for it (AGENTS.md §9).
+  const initial = await readInitialSession();
   return (
     <html lang="en" suppressHydrationWarning className={`${figtree.variable} h-full antialiased`}>
       <head>
@@ -54,7 +59,9 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body className="min-h-dvh" suppressHydrationWarning>
         <KeyboardInset />
         <ThemeProvider>
-          <ResponseProvider>{children}</ResponseProvider>
+          <AuthProvider initial={initial}>
+            <ResponseProvider>{children}</ResponseProvider>
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

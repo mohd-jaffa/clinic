@@ -119,9 +119,62 @@ export const UI_TEXT = {
     weekdaysAbbr: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
   },
 
-  /** The ＋ in the phone's bottom bar opens these (plan §31.1). */
+  /** The ＋ in the phone's bottom bar, the rail and the sidebar opens these (plan §31.1, D67, D69). */
   quickActions: {
     title: "Add",
+    walkIn: "Walk-in",
+    appointment: "Appointment",
+    patient: "Patient",
+    payment: "Payment",
+    expense: "Expense",
+  },
+
+  /** The shell's places and menus (plan §31.1). */
+  nav: {
+    main: "Main",
+    more: "More",
+    account: (name: string) => `Account: ${name}`,
+    myAccount: "My account",
+    /** Under a person's name: where they work, and as what. */
+    membership: (clinic: string, role: string) => `${clinic} · ${role}`,
+    /** Every place in the app, by its nav id. */
+    places: {
+      home: "Home",
+      queue: "Queue",
+      appointments: "Appointments",
+      patients: "Patients",
+      followUps: "Follow-ups",
+      billing: "Billing",
+      expenses: "Expenses",
+      reports: "Reports",
+      team: "Team",
+      settings: "Settings",
+    },
+    /** What each place behind More holds, under its name. */
+    hints: {
+      appointments: "The calendar",
+      followUps: "Who is due back",
+      billing: "Bills, payments and dues",
+      expenses: "What the clinic spends",
+      reports: "Daily and monthly",
+      team: "Doctors and staff",
+      settings: "Clinic, price list and plan",
+    },
+  },
+
+  /** Signing out, and the session gate (plan §5.4). */
+  auth: {
+    signOut: "Sign out",
+    signOutTitle: "Sign out?",
+    signOutBody: "You’ll need your email or mobile number and your password to sign in again.",
+    staySignedIn: "Stay signed in",
+    signingOut: "Signing out…",
+    checkingSession: "Checking who is signed in…",
+  },
+
+  /** Home (plan §31.2); its numbers come with its own phase. */
+  home: {
+    greeting: (firstName: string) => `Hello, ${firstName}`,
   },
 
   /** My account's theme switch (D36): kept per device. */

@@ -133,6 +133,9 @@
   --font-sans: var(--font-figtree), system-ui, sans-serif;
 
   /* The scale: body at 17px; display numerals (tokens, rupees, counts) tight. */
+  /* A place's name under its icon, in the bottom bar and the rail. */
+  --text-tab: 0.75rem;
+  --text-tab--line-height: 1;
   --text-caption: 0.8125rem;
   --text-caption--line-height: 1.35;
   --text-small: 0.9375rem;
@@ -183,6 +186,14 @@
   /* How far a notice stands off the bottom: above the phone's bottom bar
      where the screen has one, nothing where it does not. */
   --bottom-bar-offset: 0px;
+}
+
+/* The phone's bottom bar (AppShell): 4rem, and the ＋ rising out of the top
+   of it. A screen's last row, and a notice, clear both. */
+@media (width < 48rem) {
+  :root:has([data-bottom-nav]) {
+    --bottom-bar-offset: 5.5rem;
+  }
 }
 
 /* Deliberately unlayered, so they win over a padding utility — which means
