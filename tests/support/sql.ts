@@ -73,6 +73,17 @@ export function functionBody(sql: string, name: string): string {
   return match[0];
 }
 
+/**
+ * A function as the database has it now: its last definition across every
+ * migration, for a function a later migration redefines.
+ */
+export function latestFunctionBody(name: string): string {
+  const all = allMigrations();
+  const start = all.lastIndexOf(`create or replace function public.${name}(`);
+  if (start < 0) throw new Error(`No function ${name}`);
+  return functionBody(all.slice(start), name);
+}
+
 /** supabase/config.toml's text. */
 export function readSupabaseConfig(): string {
   return readFileSync(join(process.cwd(), "supabase/config.toml"), "utf8");

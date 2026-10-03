@@ -12,6 +12,7 @@ import {
   cleanTextLimit,
   columnLine,
   functionBody,
+  latestFunctionBody,
   quoted,
   readMigration,
 } from "@tests/support/sql";
@@ -46,8 +47,8 @@ describe("0003 clinics", () => {
   });
 });
 
-describe("0003 the permission catalogue", () => {
-  const valid = functionBody(sql, "permissions_are_valid");
+describe("the permission catalogue, as the latest migration defines it (0003, 0015)", () => {
+  const valid = latestFunctionBody("permissions_are_valid");
 
   it("knows exactly the permissions the app knows, in its order", () => {
     const catalogue = /permissions <@ array\[([\s\S]*?)\]::text\[\]/.exec(valid)![1];

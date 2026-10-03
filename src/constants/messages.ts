@@ -6,6 +6,8 @@
  * happened and what to do next, never more.
  */
 
+import { MAX_PATIENT_AGE } from "./limits";
+
 export const ERROR_MESSAGES = {
   VALIDATION_ERROR: "Please check the highlighted fields.",
   VALIDATION_INVALID_JSON: "The request body must be valid JSON.",
@@ -71,6 +73,11 @@ export const ERROR_MESSAGES = {
   MEMBER_STILL_INVITED: "They haven't joined yet. Resend or revoke their invite instead.",
   MEMBER_LOAD_FAILED: "This team member couldn't be loaded.",
   OWNER_NOT_DOCTOR: "Turn on “I also see patients” first.",
+  DOCTOR_INACTIVE: "That doctor is no longer on the team. Choose another.",
+
+  // Patients (plan §10, D103).
+  PATIENT_ARCHIVED: "This patient is archived. Restore them to make changes.",
+  PATIENT_BIRTH_DATE_INVALID: `A date of birth can’t be in the future, or more than ${MAX_PATIENT_AGE} years ago.`,
 
   // The browser could not reach the server (plan §21, D55): said by the client, never sent by the server.
   NETWORK_OFFLINE: "You're offline. Try again once the connection is back — what you typed is still here.",

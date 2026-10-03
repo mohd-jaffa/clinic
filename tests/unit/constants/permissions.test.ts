@@ -30,9 +30,9 @@ describe("the permission catalogue (plan §8.1)", () => {
     expect(isPermission("patients.delete")).toBe(false);
   });
 
-  it("makes everything that shows a patient need patients.view (plan §8.2 rule 2)", () => {
-    for (const permission of PERMISSIONS.filter((name) =>
-      /^(appointments|visits|payments|prescriptions)\./.test(name),
+  it("makes everything that shows a patient need patients.view (plan §8.2 rule 2, D102)", () => {
+    for (const permission of PERMISSIONS.filter(
+      (name) => /^(appointments|visits|payments|prescriptions)\./.test(name) || /^patients\.(create|edit)$/.test(name),
     )) {
       expect(PERMISSION_DEPENDENCIES[permission], permission).toContain("patients.view");
     }

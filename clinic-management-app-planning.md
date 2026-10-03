@@ -184,6 +184,13 @@ earlier lines are never rewritten.
 | D95 | **A member's role is fixed in V1** (the user): a member stays the Doctor or Staff they were invited as; their permissions, job title and doctor details change, the role does not — a doctor's records keep a doctor profile that never vanishes. | 2026-10-03 |
 | D96 | **The owner's doctor profile lives on their own row in Team** (the user): "Asha Menon (you)" opens their page — contact, a note that the owner has every permission, an **I also see patients** switch and, while it is on, their doctor details in the same sheet as any doctor's. Only the owner changes it. | 2026-10-03 |
 | D97 | **Turning "I also see patients" off keeps the profile, inactive** (the user): the owner leaves the doctor pickers, the queue and booking; records in their name keep it; turning it on brings the same profile back with its details. Migrations from patients on move up one: `0015_patients`, … | 2026-10-03 |
+| D98 | **What is typed about a patient travels in the body, never the address** (the user): the patients search and the mobile-match hint are `POST /api/patients/search` and `POST /api/patients/matches`, so no name or number lands in an address or a hosting log (§27.6) — as the invite preview keeps its token (R3.5). | 2026-10-03 |
+| D99 | **Adding a patient counts as contact** (the user): the doctor who adds a patient joins that patient's access list beside the assigned doctor, so a patient a doctor has just saved never leaves their view, whichever doctor they assigned (§27.3). | 2026-10-03 |
+| D100 | **An age is given in years; a baby by date of birth** (the user): 0 – 120 years (`MAX_PATIENT_AGE`), stored as today that many years ago with `dob_is_estimated`, so the age stays right as time passes. Shown as "34 y", and under a year as "8 mo". | 2026-10-03 |
+| D101 | **Each phase adds its own part of the patients list and profile** (the user): Phase 4 builds what patients have — search, All and Archived, the header, alerts, details. The next appointment and appointments come with Phase 5, the last visit and visits with Phase 6, open treatments with Phase 7, the balance, the Owing tab, the balance chip, bills and payments with Phase 8; their tracker rows say so. | 2026-10-03 |
+| D102 | **Adding or editing a patient needs seeing them** (the user): `patients.create` and `patients.edit` both imply `patients.view` (§8.2 rule 2); the editor ticks it and the database refuses a set without it (`0015`). | 2026-10-03 |
+| D103 | **An archived patient is read-only until restored** (the user): their profile and records are read as before, but their details and alerts cannot change, and nothing is booked for them; Restore first. The database refuses it, in words (`PATIENT_ARCHIVED`). | 2026-10-03 |
+| D104 | **The patients list is newest first** (the user): by patient number, the latest at the top, with nothing typed; a search puts the best match first — the patient number, then the mobile, then names that start with the words, hold them, or come close. | 2026-10-03 |
 
 ## 3. Users and roles
 
@@ -521,7 +528,8 @@ inventory module (§42).
 1. **The owner holds every permission implicitly** — nothing is stored, nothing
    can be removed.
 2. **Patient data needs `patients.view`.** Any `appointments.*`, `visits.*`,
-   `prescriptions.*` or `payments.*` permission implies it;
+   `prescriptions.*` or `payments.*` permission implies it, and so do
+   `patients.create` and `patients.edit` (D102);
    `prescriptions.write` also implies `visits.view`, and `payments.discount`
    implies `payments.create` (`PERMISSION_DEPENDENCIES`). The editor ticks
    them automatically and the server refuses a set that breaks the rule.
@@ -651,19 +659,28 @@ Patient number (`P-1001`, a per-clinic counter, never reused), and:
 - **A mobile number is not unique** — families share one. Adding a patient
   whose number is already on file shows those patients first ("Already here?")
   and lets the person continue.
+- **An age instead of a date of birth** is given in years, 0 – 120
+  (`MAX_PATIENT_AGE`), and stored as today that many years ago; a baby is
+  entered by their date of birth (D100). Ages show as "34 y", and under a
+  year as "8 mo".
 - **A doctor who adds a patient becomes their assigned doctor** by default, so
-  the patient is theirs (D3).
+  the patient is theirs (D3) — and stays theirs if they assign another doctor
+  (D99).
 - **Archived, never deleted** (`archived_at`, `archived_by`): an archived
-  patient leaves the lists and search, keeps every record, and can be restored.
+  patient leaves the lists and search, keeps every record, and can be
+  restored. Until then they are read-only (D103).
 
 ### 10.2 Patients list — `/patients`
 
 Search by name (fuzzy, trigram), mobile (on its digits however typed), or
-patient number. Each row: name, age and gender, mobile, patient number, last
+patient number — sent in the request's body, never its address (D98); the
+best match first, and newest first with nothing typed (D104). Each row: name,
+age and gender, mobile, patient number, last
 visit ("Last visit: 28 Sep"), and a balance chip when they owe. Paged
 (**Show more**, `PAGE_SIZE`). Tabs: All · Owing (`payments.view`) · Archived
 (`patients.edit`). A doctor sees only their own patients, without a filter to
-choose.
+choose. The last visit comes with Phase 6, the Owing tab and the balance chip
+with Phase 8 (D101).
 
 ### 10.3 Patient profile — `/patients/[id]`
 
@@ -681,7 +698,9 @@ One screen that tells the patient's current state without opening others:
    bills and payments — each part shown only with its permission.
 
 Desktop lays these out in two columns (state on the left, history on the
-right); a phone stacks them in that order.
+right); a phone stacks them in that order. Phase 4 builds the header, the
+alerts and the details; each later phase adds its part as its records arrive
+(D101).
 
 ### 10.4 Alerts — allergies, conditions, current medications
 
@@ -1402,8 +1421,8 @@ statement. Every policy is `to authenticated`; `anon` has no table access.
 ### 27.3 The doctor scope (D3)
 
 `patient_doctors (patient_id, doctor_id)` is the access list, **maintained by
-triggers**: the assigned doctor, and every doctor with an appointment, visit or
-treatment for the patient. It only grows (access granted by contact is kept, as
+triggers**: the assigned doctor, the doctor who added the patient (D99), and
+every doctor with an appointment, visit or treatment for the patient. It only grows (access granted by contact is kept, as
 the history it reveals is the doctor's own work); changing the assigned doctor
 adds the new one. One indexed lookup decides every patient-linked policy.
 
@@ -1412,7 +1431,9 @@ adds the new one. One indexed lookup decides every patient-linked policy.
 For each clinic-owned table:
 
 - **select:** `clinic_id = current_clinic_id()` and the view permission, and,
-  for patient-linked tables, `can_see_patient(patient_id)`.
+  for patient-linked tables, `can_see_patient(patient_id)` — written as the
+  doctor scope's set, `(select sees_every_patient()) or patient_id in (select
+  doctor_patient_ids())`, so it is asked once per statement, not per row.
 - **insert/update:** the same, plus the write permission and
   `clinic_can_write()`; `created_by`/`updated_by` forced by trigger to
   `auth.uid()`.
@@ -1506,7 +1527,8 @@ clinic_closures       id · clinic_id · doctor_id (null = whole clinic) · star
 ### 28.3 Patients
 
 ```text
-patients              id · clinic_id · patient_number ('P-1001', unique per clinic)
+patient_counters      clinic_id · last_number   (the clinic's patient numbers, from 1001)
+patients              id · clinic_id · patient_number (1001, shown P-1001; unique per clinic)
                       · full_name · phone · alt_phone · email · date_of_birth
                       · dob_is_estimated · gender · address · emergency_contact_name
                       · emergency_contact_phone · assigned_doctor_id · notes
@@ -1647,7 +1669,8 @@ Planned order (one or more per tracker row):
 0014_owner_doctor               set_owner_sees_patients, update_own_doctor (R3.7, D96, D97)
 0015_patients                   patients + counter, patient_doctors + triggers,
                                 can_see_patient(), patient_alerts, search indexes,
-                                import_patients
+                                create_patient, search_patients, import_patients;
+                                patients.create and .edit need patients.view (D102)
 0016_appointments               appointments, exclusion, transitions, daily_tokens,
                                 create/update/status/walk-in/arrived functions
 0017_visits                     visits (with billing state), vitals, send_in, mark_done,
@@ -1685,7 +1708,7 @@ take an `Idempotency-Key` header.
 | Team | `GET /api/team` · `POST /api/team/invites` · `POST /api/team/invites/[id]/resend` · `DELETE /api/team/invites/[id]` · `GET, PATCH /api/team/[id]` · `POST /api/team/[id]/active` |
 | Doctors | `GET /api/doctors` (active doctors, for pickers) |
 | Subscription | `GET /api/subscription` (state, dates, prices, contact, history — owner) · `GET /api/subscription/payments/[id]/receipt.pdf` |
-| Patients | `GET, POST /api/patients` · `GET /api/patients/matches?phone=` · `GET, PATCH /api/patients/[id]` · `POST /api/patients/[id]/archive` · `POST /api/patients/[id]/restore` · `GET /api/patients/[id]/summary` · `GET /api/patients/[id]/timeline` · `GET /api/patients/[id]/last-prescription` · `POST /api/patients/import` · `GET, POST /api/patients/[id]/alerts` · `PATCH /api/patients/[id]/alerts/[alertId]` |
+| Patients | `GET, POST /api/patients` · `POST /api/patients/search` (the words in the body, D98) · `POST /api/patients/matches` (the mobile in the body, D98) · `GET, PATCH /api/patients/[id]` · `POST /api/patients/[id]/archive` · `POST /api/patients/[id]/restore` · `GET /api/patients/[id]/summary` · `GET /api/patients/[id]/timeline` · `GET /api/patients/[id]/last-prescription` · `POST /api/patients/import` · `GET, POST /api/patients/[id]/alerts` · `PATCH /api/patients/[id]/alerts/[alertId]` |
 | Appointments | `GET, POST /api/appointments` · `GET, PATCH /api/appointments/[id]` · `POST /api/appointments/[id]/status` · `POST /api/appointments/[id]/arrived` · `POST /api/appointments/[id]/reminded` · `POST /api/appointments/walk-in` |
 | Queue | `GET /api/queue` · `POST /api/queue/send-in` · `POST /api/queue/done` · `POST /api/queue/next` |
 | Visits | `POST /api/visits` · `GET, PATCH /api/visits/[id]` · `PUT /api/visits/[id]/vitals` · `POST /api/visits/[id]/no-charge` |
@@ -2130,10 +2153,10 @@ tests (§34) and its changelog entry.
 
 | ID | Work | Source | Waits on | Status |
 |---|---|---|---|---|
-| R4.1 | `0015_patients`: counter, `patient_doctors` + triggers, `can_see_patient`, alerts, search indexes | §10, §27.3 | — | TODO |
+| R4.1 | `0015_patients`: counter, `patient_doctors` + triggers, `can_see_patient`, alerts, search indexes; `create_patient`, `search_patients`, `import_patients` (D98 – D104) | §10, §27.3 | — | TODO |
 | R4.2 | Patient sheet: DOB or age, gender, phones, emergency contact, assigned doctor; mobile-match hint | §10.1 | — | TODO |
-| R4.3 | Patients list: search (name, mobile digits, number), tabs, paging, last visit | §10.2 | — | TODO |
-| R4.4 | Patient profile: header, next appointment, open treatments, balance, timeline — sections by permission | §10.3 | — | TODO |
+| R4.3 | Patients list: search (name, mobile digits, number), tabs, paging; the last visit and Owing come with their phases (D101) | §10.2 | — | TODO |
+| R4.4 | Patient profile: header and details, sections by permission; the next appointment, open treatments, balance and history come with their phases (D101) | §10.3 | — | TODO |
 | R4.5 | Alerts: allergies, conditions, medications | §10.4 | — | TODO |
 | R4.6 | Archive and restore | §10.1 | — | TODO |
 | R4.7 | Integration: the doctor scope; staff without `patients.view`; isolation rows | §34 | — | TODO |
@@ -2143,10 +2166,10 @@ tests (§34) and its changelog entry.
 
 | ID | Work | Source | Waits on | Status |
 |---|---|---|---|---|
-| R5.1 | `0016_appointments`: table (clinic's appointment types), exclusion, transitions, closures check, the appointments on a closure being added listed (D87), tokens, functions | §11, §28.4 | — | TODO |
+| R5.1 | `0016_appointments`: table (clinic's appointment types), exclusion, transitions, closures check, the appointments on a closure being added listed (D87), nothing booked for an archived patient (D103), tokens, functions | §11, §28.4 | — | TODO |
 | R5.2 | Booking sheet: patient search/quick add, doctor, date, time, type → duration; clash card | §11.1 | — | TODO |
 | R5.3 | Calendar: day (list / columns per doctor), week, doctor filter, closures shaded; the kit's calendar grid (D66) | §11.5 | — | TODO |
-| R5.4 | Appointment detail: confirm, reschedule, cancel (reason), no-show | §11.2 | — | TODO |
+| R5.4 | Appointment detail: confirm, reschedule, cancel (reason), no-show; the profile's next appointment and its appointments in the history (D101) | §11.2, §10.3 | — | TODO |
 | R5.5 | Walk-ins, arrival tokens, today's queue (Waiting, With doctor, Still to come, Done) with 15 s refresh | §11.3, §11.4 | — | TODO |
 | R5.6 | Integration (concurrent bookings, concurrent tokens) + E2E | §34 | — | TODO |
 | R5.7 | WhatsApp click-to-send: the link and share helpers; appointment reminders and `reminded_at` | §22.1 | — | TODO |
@@ -2159,7 +2182,7 @@ tests (§34) and its changelog entry.
 | R6.2 | Visit workspace: alerts, vitals, complaint/diagnosis/notes, follow-up, per-section saves | §12.2 | — | TODO |
 | R6.3 | `0018_prescriptions`: items, advice, medicine suggestions, allergy warning; the doctor's own, or typed with `prescriptions.write` (`entered_by`) | §13, §8.2 | — | TODO |
 | R6.4 | `lib/pdf` letterhead (A4 and A5, footer) and the prescription PDF; share, download, print | §13, §33 | — | TODO |
-| R6.5 | Patient timeline with visits and prescriptions | §10.3 | — | TODO |
+| R6.5 | Patient timeline with visits and prescriptions; the patients list's last visit (D101) | §10.3, §10.2 | — | TODO |
 | R6.6 | Integration + E2E: queue → visit → prescription PDF | §34 | — | TODO |
 | R6.7 | Repeat last prescription; prescription templates (save, apply, edit, archive) | §13 | — | TODO |
 | R6.8 | Send prescription on WhatsApp | §22.1 | — | TODO |
@@ -2184,7 +2207,7 @@ tests (§34) and its changelog entry.
 | R8.3 | New bill screen: from To bill, a visit or a patient; the doctor's fee; discount and price change with `payments.discount`; collect now. Collect fee at arrival | §15.2, §11.3 | — | TODO |
 | R8.4 | `0022_payments`: record, refund, void; `patient_balances`, `bill_settlement`, `patient_stats` | §15.3, §15.4 | — | TODO |
 | R8.5 | Bill PDF; share, download, print | §15.5, §33 | — | TODO |
-| R8.6 | Checkout: the queue's To-bill column, Billing's tabs (To bill, bills, payments, outstanding), No charge; the profile's balance section | §15.4, §15.6 | — | TODO |
+| R8.6 | Checkout: the queue's To-bill column, Billing's tabs (To bill, bills, payments, outstanding), No charge; the profile's balance section, its bills and payments in the history, and the patients list's Owing tab and balance chip (D101) | §15.4, §15.6, §10.2, §10.3 | — | TODO |
 | R8.7 | Integration: double submit → one bill/payment; balances to the paisa; read-only refuses | §34 | — | TODO |
 | R8.8 | A bill's doctor (from the visit, or picked); send bill on WhatsApp | §18, §22.1 | — | TODO |
 

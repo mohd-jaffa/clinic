@@ -87,6 +87,9 @@ const BUSINESS_RULES: ReadonlySet<ErrorMessageCode> = new Set<ErrorMessageCode>(
   "MEMBER_STILL_INVITED",
   // The owner's own doctor details, while they see no patients (0014).
   "OWNER_NOT_DOCTOR",
+  // Patients (0015): an archived one is read-only (D103); a doctor no longer on the team.
+  "PATIENT_ARCHIVED",
+  "DOCTOR_INACTIVE",
 ]);
 
 /**

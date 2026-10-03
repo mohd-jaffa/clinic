@@ -36,6 +36,24 @@ export const CLINIC_TYPE_LABELS: Record<ClinicType, string> = {
   OTHER: "Other",
 };
 
+/** A patient's gender (plan §10.1, D33). */
+export const GENDERS = ["MALE", "FEMALE", "OTHER"] as const;
+export type Gender = (typeof GENDERS)[number];
+export const GENDER_LABELS: Record<Gender, string> = {
+  MALE: "Male",
+  FEMALE: "Female",
+  OTHER: "Other",
+};
+
+/** What a patient's alert warns of (plan §10.4): allergies first, wherever they show. */
+export const ALERT_KINDS = ["ALLERGY", "CONDITION", "MEDICATION"] as const;
+export type AlertKind = (typeof ALERT_KINDS)[number];
+export const ALERT_KIND_LABELS: Record<AlertKind, string> = {
+  ALLERGY: "Allergy",
+  CONDITION: "Condition",
+  MEDICATION: "Medication",
+};
+
 /** The paper bills and prescriptions print on (D28). */
 export const PAPER_SIZES = ["A4", "A5"] as const;
 export type PaperSize = (typeof PAPER_SIZES)[number];

@@ -104,12 +104,15 @@ export const PERMISSION_GROUPS: readonly { label: string; permissions: readonly 
 
 /**
  * What holding a permission needs (plan §8.2 rule 2): patient data needs
- * `patients.view`, so anything that shows a patient brings it; typing a
+ * `patients.view`, so anything that shows a patient — adding or editing one
+ * too (D102) — brings it; typing a
  * prescription needs the clinical record; a discount is given on a bill.
  * The editor ticks these itself, and a set without them is refused — by the
  * server and by the database.
  */
 export const PERMISSION_DEPENDENCIES: Partial<Record<Permission, readonly Permission[]>> = {
+  "patients.create": ["patients.view"],
+  "patients.edit": ["patients.view"],
   "appointments.view": ["patients.view"],
   "appointments.create": ["patients.view"],
   "appointments.edit": ["patients.view"],

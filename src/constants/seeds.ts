@@ -44,3 +44,9 @@ export const DEFAULT_CLINIC_SETTINGS: { paperSize: PaperSize; feeTiming: FeeTimi
   paperSize: "A4",
   feeTiming: "AFTER_CONSULTATION",
 };
+
+/**
+ * A clinic's first patient number (plan §10.1): P-1001, then one more for each
+ * patient added, from the clinic's own counter (0015).
+ */
+export const FIRST_PATIENT_NUMBER = 1001;

@@ -30,8 +30,13 @@ const CLINIC_TABLES: readonly { table: string; column: string }[] = [
   { table: "appointment_types", column: "clinic_id" },
   { table: "expense_categories", column: "clinic_id" },
   { table: "clinic_closures", column: "clinic_id" },
+  { table: "patients", column: "clinic_id" },
+  { table: "patient_alerts", column: "clinic_id" },
   { table: "audit_logs", column: "clinic_id" },
 ];
+
+/** A clinic's tables only the database itself reads and writes: the patient counter, the doctor scope (0015). */
+const DATABASE_TABLES = ["patient_counters", "patient_doctors"];
 
 /** The platform's own tables: no signed-in member, nor the DEV's own token, reads them. */
 const PLATFORM_TABLES = ["platform_settings", "trial_claims", "receipt_counters", "error_logs"];
@@ -44,6 +49,13 @@ beforeAll(async () => {
   [a, b] = await Promise.all([registerClinic({ clinicName: "Clinic A" }), registerClinic({ clinicName: "Clinic B" })]);
   await addMember(a.clinicId, { role: "DOCTOR", permissions: ["patients.view"] });
   await addClosure(a.owner.tenant, { doctorId: null, startsOn: todayKey(), endsOn: todayKey(), reason: "Holiday" });
+  const { data: patient, error } = await a.owner.tenant.supabase.rpc("create_patient", {
+    p_patient: { full_name: "Rohan Mehta", phone: "+919876543210", date_of_birth: "1990-04-12", gender: "MALE" },
+  });
+  if (error) throw error;
+  await a.owner.tenant.supabase
+    .from("patient_alerts")
+    .insert({ clinic_id: a.clinicId, patient_id: patient.id, kind: "ALLERGY", label: "Penicillin" });
   developer = await makeDeveloper();
 });
 
@@ -83,6 +95,13 @@ describe("as clinic B's owner, with a valid token", () => {
       .select("id");
     expect(updated).toEqual([]);
 
+    const { data: renamed } = await b.owner.tenant.supabase
+      .from("patients")
+      .update({ full_name: "Planted" })
+      .eq("clinic_id", a.clinicId)
+      .select("id");
+    expect(renamed).toEqual([]);
+
     const { data: moved } = await b.owner.tenant.supabase
       .from("services")
       .update({ clinic_id: a.clinicId })
@@ -91,8 +110,8 @@ describe("as clinic B's owner, with a valid token", () => {
     expect(moved ?? []).toEqual([]);
   });
 
-  it("reaches none of the platform's tables", async () => {
-    for (const table of PLATFORM_TABLES) {
+  it("reaches none of the platform's tables, nor those only the database reads", async () => {
+    for (const table of [...PLATFORM_TABLES, ...DATABASE_TABLES]) {
       const { error } = await b.owner.tenant.supabase.from(table).select("*").limit(1);
       expect(error?.code, table).toBe("42501");
     }
@@ -176,7 +195,12 @@ describe("signed out, with only the public key", () => {
     const anon = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY, {
       auth: { persistSession: false },
     });
-    for (const table of [...CLINIC_TABLES.map(({ table }) => table), "profiles", ...PLATFORM_TABLES]) {
+    for (const table of [
+      ...CLINIC_TABLES.map(({ table }) => table),
+      "profiles",
+      ...PLATFORM_TABLES,
+      ...DATABASE_TABLES,
+    ]) {
       const { error } = await anon.from(table).select("*").limit(1);
       expect(error?.code, table).toBe("42501");
     }

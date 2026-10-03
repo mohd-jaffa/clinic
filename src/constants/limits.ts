@@ -57,6 +57,12 @@ export const TEXT_LIMITS = {
   upiId: 100,
   /** A phone number as typed, mobile or landline. */
   phoneNumber: 20,
+  /** A record's own notes, on several lines: a patient's "prefers mornings". */
+  notes: 1000,
+  /** What an alert names: "Penicillin", "Metformin 500 mg" (plan §10.4). */
+  alertLabel: 100,
+  /** A line beside it: "rash, 2019". */
+  alertNote: 200,
 } as const;
 
 /** How many digits a phone number has, mobile or landline, the country code included. */
@@ -64,6 +70,12 @@ export const PHONE_NUMBER_DIGITS = { min: 6, max: 15 } as const;
 
 /** Each appointment type's default length, in minutes (plan §28.2). */
 export const APPOINTMENT_MINUTES = { min: 5, max: 480 } as const;
+
+/**
+ * The oldest a patient may be, in years (plan §10.1): a date of birth is at
+ * most this long ago, and an age at most this many (D100).
+ */
+export const MAX_PATIENT_AGE = 120;
 
 /** How long a holiday or a doctor's leave may last, both ends counted (D85). */
 export const MAX_CLOSURE_DAYS = 366;
