@@ -69,7 +69,8 @@ async function sendInviteEmail(
     inviterName: inviter.data!.full_name,
     clinicName: clinic.data!.name,
     role,
-    inviteUrl: `${getServerEnv().NEXT_PUBLIC_APP_URL}${AUTH_ROUTES.acceptInvite}?token=${token}`,
+    // In the fragment: an address's fragment is never sent to a server, so never in a log.
+    inviteUrl: `${getServerEnv().NEXT_PUBLIC_APP_URL}${AUTH_ROUTES.acceptInvite}#token=${token}`,
     validDays: settings.inviteValidDays,
   });
   await markSent(admin, recipient);

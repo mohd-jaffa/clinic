@@ -5,9 +5,9 @@ import { UI_TEXT, VALIDATION_MESSAGES } from "@/constants/messages";
 import { PERMISSIONS, permissionsAreConsistent } from "@/constants/permissions";
 import { INVITE_ROLES } from "@/constants/roles";
 
-import { optionalLine, optionalPaiseText, requiredEmail, requiredLine } from "../primitives";
+import { indianMobile, optionalLine, optionalPaiseText, password, requiredEmail, requiredLine } from "../primitives";
 
-const { team } = UI_TEXT;
+const { team, acceptInvite } = UI_TEXT;
 
 /**
  * What a member may do (plan §8.1): permissions from the catalogue, each
@@ -51,3 +51,26 @@ export const inviteSchema = z
 
 export type InviteInput = z.input<typeof inviteSchema>;
 export type InvitePayload = z.output<typeof inviteSchema>;
+
+/** An invite's token as its link carries it (D63): 32 random bytes, base64url. */
+const inviteToken = z.string({ error: VALIDATION_MESSAGES.invalid }).regex(/^[\w-]{43}$/, VALIDATION_MESSAGES.invalid);
+
+/** What the accept screen asks about first: the invite its link names (plan §8.5). */
+export const invitePreviewSchema = z.object({ token: inviteToken });
+
+export type InvitePreviewInput = z.input<typeof invitePreviewSchema>;
+
+/**
+ * Accepting an invite (plan §8.5, D91): the link's token, the person's name
+ * as they confirm it, their mobile, and the password they choose — never
+ * trimmed or changed.
+ */
+export const acceptInviteSchema = z.object({
+  token: inviteToken,
+  fullName: requiredLine(acceptInvite.nameLabel, { max: TEXT_LIMITS.personName }),
+  phone: indianMobile(acceptInvite.phoneLabel),
+  password: password(),
+});
+
+export type AcceptInviteInput = z.input<typeof acceptInviteSchema>;
+export type AcceptInvitePayload = z.output<typeof acceptInviteSchema>;

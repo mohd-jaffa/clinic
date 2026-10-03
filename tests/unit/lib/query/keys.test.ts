@@ -18,6 +18,8 @@ describe("apiRoutes", () => {
       passwordResetComplete: "/api/auth/password-reset/complete",
       password: "/api/auth/password",
       profile: "/api/auth/profile",
+      acceptInvite: "/api/auth/accept-invite",
+      invitePreview: "/api/auth/accept-invite/preview",
     });
   });
 

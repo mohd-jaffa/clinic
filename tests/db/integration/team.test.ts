@@ -48,7 +48,7 @@ const receptionistInvite = (overrides: Partial<InvitePayload> = {}): InvitePaylo
 /** The token in the newest invite email to an address. */
 async function tokenSentTo(email: string): Promise<string> {
   const { text } = await latestMessageTo(email);
-  return /\/accept-invite\?token=([\w-]+)/.exec(text)![1];
+  return /\/accept-invite#token=([\w-]+)/.exec(text)![1];
 }
 
 const membershipOf = async (id: string) =>

@@ -8,6 +8,7 @@ import { register } from "@/features/auth/register";
 import { login } from "@/features/auth/session";
 import type { AuthenticatedSession } from "@/features/auth/types";
 import { logoFolder } from "@/features/clinic/logo";
+import { hashInviteToken } from "@/features/team/invites";
 import { createSupabaseAnonClient, createSupabaseServiceRoleClient } from "@/lib/supabase/server";
 import type { Tenant } from "@/lib/supabase/tenant";
 import { loginSchema, registerSchema, type RegisterInput } from "@/lib/validation";
@@ -166,6 +167,36 @@ export async function addMember(
   const session = await signIn(person.email, person.password);
   if (status !== "ACTIVE") await setMemberStatus(memberId, status);
   return { ...person, memberId, session, tenant: tenantOf(session) };
+}
+
+/**
+ * An open invite whose link the test holds (plan §8.4): the account and the
+ * invite written as the server writes them, with a token of the test's own —
+ * the journeys send no mail to read one from.
+ */
+export async function inviteWithToken(
+  clinic: TestClinic,
+  { fullName = "Meera Pillai", role = "STAFF" }: { fullName?: string; role?: "DOCTOR" | "STAFF" } = {},
+): Promise<{ email: string; token: string }> {
+  const email = anEmail();
+  const { data, error } = await admin().auth.admin.createUser({ email, email_confirm: false });
+  if (error) throw error;
+  users.push(data.user.id);
+  const token = randomBytes(32).toString("base64url");
+  const { error: refused } = await admin().rpc("invite_member", {
+    p_clinic_id: clinic.clinicId,
+    p_actor_id: clinic.owner.userId,
+    p_user_id: data.user.id,
+    p_full_name: fullName,
+    p_email: email,
+    p_role: role,
+    p_job_title: null,
+    p_permissions: ["patients.view"],
+    p_doctor: role === "DOCTOR" ? {} : null,
+    p_token_hash: hashInviteToken(token),
+  });
+  if (refused) throw refused;
+  return { email, token };
 }
 
 /** Changes a membership's status as the team screen will. */

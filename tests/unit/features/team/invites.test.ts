@@ -97,7 +97,7 @@ const invited: TeamMember = {
 /** The token the newest invite email's link carries. */
 const sentToken = () => {
   const { inviteUrl } = mocks.sendInvite.mock.lastCall![0] as { inviteUrl: string };
-  return new URL(inviteUrl).searchParams.get("token")!;
+  return new URLSearchParams(new URL(inviteUrl).hash.slice(1)).get("token")!;
 };
 
 beforeEach(() => {
@@ -139,7 +139,7 @@ describe("inviteMember (plan §8.4)", () => {
       inviterName: "Asha Menon",
       clinicName: "Smile Care",
       role: "STAFF",
-      inviteUrl: expect.stringMatching(/^https:\/\/clinicdesk\.test\/accept-invite\?token=/),
+      inviteUrl: expect.stringMatching(/^https:\/\/clinicdesk\.test\/accept-invite#token=/),
       validDays: 7,
     });
     expect(mocks.markSent).toHaveBeenCalledWith(client, expect.objectContaining({ id: "user-9" }));

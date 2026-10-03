@@ -3,7 +3,7 @@ import type { z } from "zod";
 
 import { TEXT_LIMITS } from "@/constants/limits";
 import { VALIDATION_MESSAGES } from "@/constants/messages";
-import { firstIssue, inviteSchema } from "@/lib/validation";
+import { acceptInviteSchema, firstIssue, invitePreviewSchema, inviteSchema } from "@/lib/validation";
 
 function messageOf(schema: z.ZodType, value: unknown): string | null {
   const result = schema.safeParse(value);
@@ -59,5 +59,29 @@ describe("inviteSchema (plan §8.4, D89)", () => {
     expect(messageOf(inviteSchema, { ...staff, doctor: { ...staff.doctor, fee: "lots" } })).toBe(
       VALIDATION_MESSAGES.amount("Consultation fee"),
     );
+  });
+});
+
+const TOKEN = "Ab_3-".repeat(8) + "xyz";
+
+describe("acceptInviteSchema (plan §8.5)", () => {
+  it("takes the link's token, the name tidied, the mobile made whole and the password as typed", () => {
+    expect(
+      acceptInviteSchema.parse({
+        token: TOKEN,
+        fullName: " Meera  P ",
+        phone: "098765 01234",
+        password: " pass word ",
+      }),
+    ).toEqual({ token: TOKEN, fullName: "Meera P", phone: "+919876501234", password: " pass word " });
+  });
+
+  it("refuses what cannot be a token, and says what else is wrong in the catalogue's words", () => {
+    const accept = { token: TOKEN, fullName: "Meera", phone: "9876501234", password: "long enough" };
+    expect(messageOf(acceptInviteSchema, { ...accept, token: "abc" })).toBe(VALIDATION_MESSAGES.invalid);
+    expect(messageOf(acceptInviteSchema, { ...accept, fullName: "" })).toBe(VALIDATION_MESSAGES.required("Your name"));
+    expect(messageOf(acceptInviteSchema, { ...accept, phone: "12345" })).toBe(VALIDATION_MESSAGES.phone);
+    expect(messageOf(invitePreviewSchema, { token: TOKEN.slice(1) })).toBe(VALIDATION_MESSAGES.invalid);
+    expect(invitePreviewSchema.parse({ token: TOKEN })).toEqual({ token: TOKEN });
   });
 });

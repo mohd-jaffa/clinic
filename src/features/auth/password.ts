@@ -46,7 +46,7 @@ export async function requestPasswordReset(
  * device that changed it is handed a new one rather than signed out; then
  * every other session is ended.
  */
-async function freshSession(anon: SupabaseClient, admin: SupabaseClient, email: string, password: string) {
+export async function freshSession(anon: SupabaseClient, admin: SupabaseClient, email: string, password: string) {
   const { data, error } = await anon.auth.signInWithPassword({ email, password });
   if (error || !data.session) throw externalServiceError("EXTERNAL_SERVICE_ERROR", undefined, error);
   await endOtherSessions(admin, data.session.access_token);

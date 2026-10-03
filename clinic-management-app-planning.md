@@ -177,6 +177,8 @@ earlier lines are never rewritten.
 | D88 | **The Receptionist preset takes payments, without discounts** (the user; answers Q19): `payments.view` and `payments.create`, never `payments.discount`, so a receptionist's bill holds to the price list and the doctor's fee. The owner may untick it per person. | 2026-10-03 |
 | D89 | **Inviting is one sheet in sections** (the user): the person (name, email); the role (Doctor or Staff, a job title for staff); access — preset chips that tick the permissions, grouped by area, each still changeable; and, for a doctor only, their details (specialization, qualifications, registration number, fee). One **Send invite**. | 2026-10-03 |
 | D90 | **The invite link is only ever emailed** (the user): no link is shown on screen or shared another way; **Resend** sends a new one. The token stays out of chats and screens. | 2026-10-03 |
+| D91 | **Everyone accepting an invite sets a password** (the user): someone who already has an account (they left another clinic) confirms their name, gives their mobile and sets a password like anyone else — the link proves the email, as a reset link does, so their old password is replaced. | 2026-10-03 |
+| D92 | **Accepting an invite signs the invitee in, whoever was signed in** (the user): the accept screen shows as usual on a device where someone else is signed in; accepting replaces that session with the invitee's and lands on Home in a new page load. | 2026-10-03 |
 
 ## 3. Users and roles
 
@@ -1670,7 +1672,7 @@ take an `Idempotency-Key` header.
 
 | Area | Routes |
 |---|---|
-| Auth | `POST /api/auth/register` · `POST /api/auth/login` · `POST /api/auth/logout` · `POST /api/auth/refresh` · `GET /api/auth/session` · `POST /api/auth/confirm` · `POST /api/auth/resend-confirmation` · `POST /api/auth/password-reset` · `POST /api/auth/password-reset/complete` · `POST /api/auth/password` · `PATCH /api/auth/profile` · `POST /api/auth/accept-invite` |
+| Auth | `POST /api/auth/register` · `POST /api/auth/login` · `POST /api/auth/logout` · `POST /api/auth/refresh` · `GET /api/auth/session` · `POST /api/auth/confirm` · `POST /api/auth/resend-confirmation` · `POST /api/auth/password-reset` · `POST /api/auth/password-reset/complete` · `POST /api/auth/password` · `PATCH /api/auth/profile` · `POST /api/auth/accept-invite/preview` (what a link opens onto; the token in the body, never an address) · `POST /api/auth/accept-invite` |
 | Clinic | `GET, PATCH /api/clinic` · `GET, POST, DELETE /api/clinic/logo` · `POST, DELETE /api/clinic/deletion-request` · `GET /api/export/[area]` (CSV) |
 | Catalogues | `GET, POST /api/services` · `PATCH /api/services/[id]` · `GET, POST /api/appointment-types` · `PATCH /api/appointment-types/[id]` · `GET, POST /api/expense-categories` · `PATCH /api/expense-categories/[id]` |
 | Closures | `GET, POST /api/closures` · `DELETE /api/closures/[id]` |
@@ -2113,7 +2115,7 @@ tests (§34) and its changelog entry.
 | R3.2 | `0010_catalogue_rules`; price list, appointment types and expense categories screens (tables from `0007`; D80–D83) | §9 | — | DONE (2026-10-03 · f7b0669) |
 | R3.3 | `0011_closures`: holidays and leave (D84–D87); `GET /api/doctors` for its picker | §9, §30 | — | DONE (2026-10-03 · 528bedf) |
 | R3.4 | `0012_team`: invite with its own token (D63; presets, dependencies, doctor details and fee), invite email, resend, revoke, expiry, and the accept function R3.5 calls (D88–D90) | §8.3, §8.4 | — | DONE (2026-10-03 · 0b7cf09) |
-| R3.5 | Accept invite screen | §8.5 | — | TODO |
+| R3.5 | Accept invite screen (D91, D92) | §8.5 | — | TODO |
 | R3.6 | `0013_members`; team list and member detail: permissions, job title, doctor details, deactivate/reactivate; escalation and last-owner guards | §8.2, §8.6 | — | TODO |
 | R3.7 | The owner's own doctor profile | §3.1 | — | TODO |
 | R3.8 | Integration + E2E: invite a receptionist and a doctor; each sees only what they may | §34 | — | TODO |

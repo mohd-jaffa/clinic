@@ -36,4 +36,14 @@ describe("TeamClient (plan §30)", () => {
     await TeamClient.revoke("m-9");
     expect(sent()).toMatchObject({ url: "/api/team/invites/m-9", method: "DELETE" });
   });
+
+  it("asks what a link opens onto, and accepts it, with the token in the body", async () => {
+    await TeamClient.previewInvite("tok");
+    expect(sent()).toMatchObject({ url: "/api/auth/accept-invite/preview", method: "POST", body: '{"token":"tok"}' });
+
+    mockFetch.mockClear();
+    const accept = { token: "tok", fullName: "Meera", phone: "9876501234", password: "secret-pass" };
+    await TeamClient.acceptInvite(accept);
+    expect(sent()).toMatchObject({ url: "/api/auth/accept-invite", method: "POST", body: JSON.stringify(accept) });
+  });
 });

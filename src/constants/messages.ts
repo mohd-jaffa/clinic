@@ -559,6 +559,24 @@ export const UI_TEXT = {
     notRevoked: "The invite wasn’t revoked",
   },
 
+  /** Accepting an invite (plan §8.5, D91, D92): the screen the emailed link opens. */
+  acceptInvite: {
+    pageTitle: "Accept an invite",
+    title: (clinic: string) => `Join ${clinic}`,
+    intro: (role: string, email: string) =>
+      `You’re joining as ${role}. You’ll sign in with ${email} or your mobile number.`,
+    roles: { DOCTOR: "a doctor", STAFF: "a member of staff" },
+    opening: "Opening your invite…",
+    nameLabel: "Your name",
+    phoneLabel: "Mobile number",
+    passwordLabel: "Choose a password",
+    passwordHint: "At least 8 characters.",
+    join: "Join the clinic",
+    notJoined: "You haven’t joined yet",
+    invalidTitle: "This invite link isn’t valid",
+    expiredTitle: "This invite link has run out",
+  },
+
   /** My account's theme switch (D36): kept per device. */
   theme: {
     label: "Theme",

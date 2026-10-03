@@ -8,7 +8,7 @@ import type { Tenant } from "@/lib/supabase/tenant";
 
 import { readAccessTokenCookie } from "./cookies";
 import { getSession } from "./session";
-import type { AuthenticatedSession } from "./types";
+import type { AuthenticatedSession, SessionMembership } from "./types";
 
 /** The token in an `Authorization: Bearer` header, or null when there is none. */
 export function bearerToken(headers: Headers): string | null {
@@ -72,6 +72,22 @@ export interface ClinicRouteOptions {
  * carries the caller's token, so RLS checks it all again. The platform admin,
  * who belongs to no clinic, is refused.
  */
+/**
+ * The tenant a session acts as (plan §27.1): its own client, its clinic, and
+ * who it is there — built from the session, never from a request.
+ */
+export function tenantOf(session: AuthenticatedSession, membership: SessionMembership): Tenant {
+  return {
+    supabase: createSupabaseAnonClient(session.accessToken),
+    clinicId: membership.clinicId,
+    actorId: session.profile.id,
+    memberId: membership.id,
+    role: membership.role,
+    permissions: membership.permissions,
+    doctorId: membership.doctorId,
+  };
+}
+
 export function withClinicRoute<TData>(
   request: Request,
   options: ClinicRouteOptions,
@@ -89,17 +105,7 @@ export function withClinicRoute<TData>(
         throw businessRuleError("CLINIC_PLAN_EXPIRED");
       }
 
-      return handler({
-        ...api,
-        session,
-        supabase: createSupabaseAnonClient(session.accessToken),
-        clinicId: membership.clinicId,
-        actorId: session.profile.id,
-        memberId: membership.id,
-        role: membership.role,
-        permissions: membership.permissions,
-        doctorId: membership.doctorId,
-      });
+      return handler({ ...api, session, ...tenantOf(session, membership) });
     },
     { successStatus: options.successStatus },
   );
