@@ -1,7 +1,7 @@
 import { deleteJson, patchJson, postJson } from "@/lib/api/client";
 import { apiRoutes } from "@/lib/query/keys";
 import type { AuthSessionView } from "@/features/auth/types";
-import type { AcceptInviteInput, InviteInput, UpdateMemberInput } from "@/lib/validation";
+import type { AcceptInviteInput, InviteInput, OwnDoctorInput, UpdateMemberInput } from "@/lib/validation";
 
 import type { InvitePreview } from "./accept";
 import type { InviteOutcome, MemberDetail, TeamMember } from "./types";
@@ -20,6 +20,8 @@ export const TeamClient = {
     patchJson<MemberDetail>(apiRoutes.team.member(id), changes),
   setActive: ({ id, active }: { id: string; active: boolean }) =>
     postJson<MemberDetail>(apiRoutes.team.active(id), { active }),
+  /** The owner's own doctor profile (D96). */
+  updateOwnDoctor: (input: OwnDoctorInput) => patchJson<MemberDetail>(apiRoutes.team.ownDoctor, input),
   previewInvite: (token: string) => postJson<InvitePreview>(apiRoutes.auth.invitePreview, { token }),
   acceptInvite: (input: AcceptInviteInput) => postJson<AuthSessionView>(apiRoutes.auth.acceptInvite, input),
 };

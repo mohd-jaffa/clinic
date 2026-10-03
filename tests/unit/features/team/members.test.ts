@@ -7,7 +7,7 @@ import { fakeSupabase, postgrestError, type FakeSupabaseOptions } from "@tests/s
 const { logActionSafe } = vi.hoisted(() => ({ logActionSafe: vi.fn() }));
 vi.mock("@/lib/audit/auditLog", () => ({ logActionSafe }));
 
-const { getMember, setMemberActive, updateMember } = await import("@/features/team/members");
+const { getMember, setMemberActive, updateMember, updateOwnDoctor } = await import("@/features/team/members");
 
 function tenantWith(options: FakeSupabaseOptions) {
   const fake = fakeSupabase(options);
@@ -176,5 +176,76 @@ describe("setMemberActive (plan §8.6)", () => {
       rpc: () => ({ error: { ...postgrestError("P0001"), hint: "TEAM_OWNER_UNCHANGEABLE" } }),
     });
     await expect(setMemberActive(tenant, "m-2", false)).rejects.toMatchObject({ code: "TEAM_OWNER_UNCHANGEABLE" });
+  });
+});
+
+describe("updateOwnDoctor (plan §3.1, D96, D97)", () => {
+  const owner = (active: boolean) =>
+    row({
+      id: "member-0",
+      role: "OWNER",
+      doctors: {
+        active,
+        specialization: null,
+        qualifications: null,
+        registration_number: null,
+        consultation_fee_paise: null,
+      },
+    });
+
+  it("turns seeing patients off, keeping the profile, and audits it", async () => {
+    const { tenant, rpcs, queries, argsOf } = tenantWith(reads(owner(true), owner(false)));
+    expect(await updateOwnDoctor(tenant, { seesPatients: false }, "req_3")).toMatchObject({
+      seesPatients: false,
+      doctor: { specialization: null },
+    });
+    expect(rpcs).toEqual([{ name: "set_owner_sees_patients", args: { p_sees: false } }]);
+    expect(argsOf(queries[0], "eq")).toContainEqual(["id", "member-0"]);
+    expect(logActionSafe).toHaveBeenCalledWith(tenant, {
+      action: "UPDATE",
+      entityType: "clinic_members",
+      entityId: "member-0",
+      changes: { sees_patients: { from: true, to: false } },
+      requestId: "req_3",
+    });
+  });
+
+  it("turns it on and fills it in at once, and says why the database refused", async () => {
+    const { tenant, rpcs } = tenantWith(reads(row({ id: "member-0", role: "OWNER", doctors: null }), owner(true)));
+    await updateOwnDoctor(tenant, {
+      seesPatients: true,
+      doctor: { specialization: "Orthodontist", qualifications: null, registrationNumber: "KL-1", fee: null },
+    });
+    expect(rpcs).toEqual([
+      { name: "set_owner_sees_patients", args: { p_sees: true } },
+      {
+        name: "update_own_doctor",
+        args: {
+          p_changes: {
+            specialization: "Orthodontist",
+            qualifications: null,
+            registration_number: "KL-1",
+            consultation_fee_paise: null,
+          },
+        },
+      },
+    ]);
+
+    const off = tenantWith({
+      answer: () => ({ data: owner(false) }),
+      rpc: () => ({ error: { ...postgrestError("P0001"), hint: "OWNER_NOT_DOCTOR" } }),
+    });
+    await expect(
+      updateOwnDoctor(off.tenant, {
+        doctor: { specialization: null, qualifications: null, registrationNumber: null, fee: null },
+      }),
+    ).rejects.toMatchObject({ code: "OWNER_NOT_DOCTOR" });
+    const notOwner = tenantWith({
+      answer: () => ({ data: owner(true) }),
+      rpc: () => ({ error: postgrestError("42501") }),
+    });
+    await expect(updateOwnDoctor(notOwner.tenant, { seesPatients: true })).rejects.toMatchObject({
+      code: "AUTH_PERMISSION_DENIED",
+    });
   });
 });

@@ -103,6 +103,7 @@ export {
   inviteSchema,
   jobTitleSchema,
   memberActiveSchema,
+  ownDoctorSchema,
   updateMemberSchema,
   type AcceptInviteInput,
   type AcceptInvitePayload,
@@ -114,6 +115,8 @@ export {
   type JobTitleInput,
   type JobTitlePayload,
   type MemberActiveInput,
+  type OwnDoctorInput,
+  type OwnDoctorPayload,
   type UpdateMemberInput,
   type UpdateMemberPayload,
 } from "./schemas/team";

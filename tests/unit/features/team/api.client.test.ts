@@ -46,6 +46,11 @@ describe("TeamClient (plan §30)", () => {
     expect(sent()).toMatchObject({ url: "/api/team/m-2/active", method: "POST", body: '{"active":false}' });
   });
 
+  it("changes the owner's own doctor profile", async () => {
+    await TeamClient.updateOwnDoctor({ seesPatients: false });
+    expect(sent()).toMatchObject({ url: "/api/team/me/doctor", method: "PATCH", body: '{"seesPatients":false}' });
+  });
+
   it("asks what a link opens onto, and accepts it, with the token in the body", async () => {
     await TeamClient.previewInvite("tok");
     expect(sent()).toMatchObject({ url: "/api/auth/accept-invite/preview", method: "POST", body: '{"token":"tok"}' });

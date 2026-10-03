@@ -63,11 +63,23 @@ describe("Team (plan §8.4, §8.6)", () => {
     expect(rows("Inactive")).toEqual(["LGLeela GeorgeStaff · Nurse"]);
   });
 
-  it("opens each member's page — but not the owner's, nor one's own (D94)", () => {
+  it("opens each member's page, and the owner's own (D94, D96)", () => {
     draw();
     expect(screen.getByRole("link", { name: "Rahul Nair" })).toHaveAttribute("href", "/team/m-1");
     expect(screen.getByRole("link", { name: "Leela George" })).toHaveAttribute("href", "/team/m-4");
-    expect(screen.queryByRole("link", { name: /Asha Menon/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Asha Menon (you)" })).toHaveAttribute("href", "/team/m-0");
+  });
+
+  it("opens neither the owner's page nor their own for a manager", () => {
+    auth.current = authStub({ role: "STAFF", permissions: ["team.manage", "patients.view"] });
+    query.current = {
+      data: [team[0], { ...team[1], userId: "user-1", name: "Rahul Nair" }, team[4]],
+      isLoading: false,
+    };
+    draw();
+    expect(screen.queryByRole("link", { name: "Asha Menon" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Rahul Nair/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Leela George" })).toBeInTheDocument();
   });
 
   it("opens the invite sheet", async () => {

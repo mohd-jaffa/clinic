@@ -4,6 +4,7 @@ import { BadgeCheck, Briefcase, Check, Mail, Phone, Stethoscope, UserCheck, User
 import { useId, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { CoastHeader } from "@/components/ui/coast-header";
 import { LoadFailed } from "@/components/ui/list-screen";
 import { PageHeader } from "@/components/ui/page-header";
@@ -84,10 +85,51 @@ export function Member({ id }: { id: string }) {
 }
 
 function MemberPage({ member }: { member: MemberDetail }) {
+  const { profile } = useAuth();
+  return member.role === "OWNER" && member.userId === profile?.id ? (
+    <OwnProfile member={member} />
+  ) : (
+    <TeamMemberPage member={member} />
+  );
+}
+
+/** Who they are: their email and mobile, as the account holds them. */
+function Contact({ member }: { member: MemberDetail }) {
+  const id = useId();
+  return (
+    <section aria-labelledby={id}>
+      <SectionHeading id={id} title={words.contact} />
+      <RowList look="menu">
+        <Row look="menu" leading={<RowIcon icon={Mail} />} title={words.emailLabel} subtitle={member.email} />
+        <Row
+          look="menu"
+          leading={<RowIcon icon={Phone} />}
+          title={words.phoneLabel}
+          subtitle={member.phone ? `${UI_TEXT.fields.phonePrefix} ${formatPhoneDigits(member.phone)}` : words.noPhone}
+        />
+      </RowList>
+    </section>
+  );
+}
+
+/** A doctor's details as a row opening their sheet — when it may be changed. */
+function DoctorRow({ doctor, onClick }: { doctor: DoctorDetails; onClick?: () => void }) {
+  return (
+    <Row
+      look="menu"
+      leading={<RowIcon icon={Stethoscope} />}
+      title={words.doctorDetails}
+      subtitle={doctorLine(doctor)}
+      onClick={onClick}
+    />
+  );
+}
+
+function TeamMemberPage({ member }: { member: MemberDetail }) {
   const { membership } = useAuth();
   const { readOnly } = useReadOnly();
   const [sheet, setSheet] = useState<"details" | null>(null);
-  const ids = { contact: useId(), details: useId(), access: useId() };
+  const ids = { details: useId(), access: useId() };
   const manageable = !readOnly && membership !== null && canManage({ ...membership, memberId: membership.id }, member);
   const edit = manageable ? () => setSheet("details") : undefined;
   const close = () => setSheet(null);
@@ -96,31 +138,13 @@ function MemberPage({ member }: { member: MemberDetail }) {
     <div className="grid max-w-3xl grid-cols-1 gap-8">
       {member.status === "INACTIVE" && <ScreenNotice tone="info">{words.inactive}</ScreenNotice>}
       <ReadOnlyNote />
-
-      <section aria-labelledby={ids.contact}>
-        <SectionHeading id={ids.contact} title={words.contact} />
-        <RowList look="menu">
-          <Row look="menu" leading={<RowIcon icon={Mail} />} title={words.emailLabel} subtitle={member.email} />
-          <Row
-            look="menu"
-            leading={<RowIcon icon={Phone} />}
-            title={words.phoneLabel}
-            subtitle={member.phone ? `${UI_TEXT.fields.phonePrefix} ${formatPhoneDigits(member.phone)}` : words.noPhone}
-          />
-        </RowList>
-      </section>
+      <Contact member={member} />
 
       <section aria-labelledby={ids.details}>
         <SectionHeading id={ids.details} title={words.details} />
         <RowList look="menu">
           {member.doctor ? (
-            <Row
-              look="menu"
-              leading={<RowIcon icon={Stethoscope} />}
-              title={words.doctorDetails}
-              subtitle={doctorLine(member.doctor)}
-              onClick={edit}
-            />
+            <DoctorRow doctor={member.doctor} onClick={edit} />
           ) : (
             <Row
               look="menu"
@@ -156,6 +180,81 @@ function MemberPage({ member }: { member: MemberDetail }) {
       ) : (
         <JobTitleSheet open={sheet === "details"} onClose={close} member={member} />
       )}
+    </div>
+  );
+}
+
+/**
+ * The owner's own page (plan §3.1, D96, D97): every permission, always — so
+ * nothing to change there; **I also see patients**, saved as it is ticked,
+ * the session read again so the app knows; and, while it is on, their doctor
+ * details in the same sheet as any doctor's.
+ */
+function OwnProfile({ member }: { member: MemberDetail }) {
+  const { readOnly } = useReadOnly();
+  const [editing, setEditing] = useState(false);
+  const detailsId = useId();
+  const revalidate = [apiRoutes.team.member(member.id), apiRoutes.team.list, apiRoutes.doctors.list];
+
+  return (
+    <div className="grid max-w-3xl grid-cols-1 gap-8">
+      <ReadOnlyNote />
+      <Contact member={member} />
+      <p className="text-muted">{words.ownAccess}</p>
+      <SeesPatients key={String(member.seesPatients)} saved={member.seesPatients} revalidate={revalidate} />
+      {member.seesPatients && member.doctor && (
+        <section aria-labelledby={detailsId}>
+          <SectionHeading id={detailsId} title={words.details} />
+          <RowList look="menu">
+            <DoctorRow doctor={member.doctor} onClick={readOnly ? undefined : () => setEditing(true)} />
+          </RowList>
+          <DoctorDetailsSheet
+            open={editing}
+            onClose={() => setEditing(false)}
+            details={member.doctor}
+            save={(doctor) => TeamClient.updateOwnDoctor({ doctor })}
+            revalidate={revalidate}
+          />
+        </section>
+      )}
+    </div>
+  );
+}
+
+/**
+ * **I also see patients**, saved the moment it is ticked: it moves at once,
+ * and moves back if the save is refused; once saved, the session is read
+ * again so the app knows (D97).
+ */
+function SeesPatients({ saved, revalidate }: { saved: boolean; revalidate: string[] }) {
+  const { reload } = useAuth();
+  const { readOnly } = useReadOnly();
+  const respond = useResponse();
+  const [sees, setSees] = useState(saved);
+  const { submit, submitting } = useApiMutation(TeamClient.updateOwnDoctor, {
+    revalidate,
+    onSuccess: async (member) => {
+      await reload();
+      respond.success({ title: member.seesPatients ? words.seesOn : words.seesOff });
+    },
+    onError: (failure) => {
+      setSees(saved);
+      respond.failure(failure, { title: words.notChanged });
+    },
+  });
+
+  return (
+    <div className="-mx-3">
+      <Checkbox
+        label={words.seesPatients}
+        hint={words.seesPatientsHint}
+        checked={sees}
+        disabled={readOnly || submitting}
+        onChange={(event) => {
+          setSees(event.target.checked);
+          void submit({ seesPatients: event.target.checked });
+        }}
+      />
     </div>
   );
 }

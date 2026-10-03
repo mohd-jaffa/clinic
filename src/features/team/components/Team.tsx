@@ -78,8 +78,8 @@ function TeamLists({ members }: { members: readonly TeamMember[] }) {
   const [inviting, setInviting] = useState(false);
   const { resend, revoke, busy } = useInviteActions();
   const ids = { people: useId(), invited: useId(), inactive: useId() };
-  // Everyone joined has a page (D94) — but the owner and oneself, whose access no one here changes.
-  const opens = (member: TeamMember) => member.role !== "OWNER" && member.userId !== profile?.id;
+  // Everyone joined has a page (D94); the owner's is theirs alone (D96), and no one else opens their own.
+  const opens = (member: TeamMember) => (member.role === "OWNER") === (member.userId === profile?.id);
   const of = (status: TeamMember["status"]) => members.filter((member) => member.status === status);
   const [active, invited, inactive] = [of("ACTIVE"), of("INVITED"), of("INACTIVE")];
 

@@ -25,6 +25,7 @@ export function aMemberDetail(overrides: Partial<MemberDetail> = {}): MemberDeta
     ...aTeamMember({ id: "m-2", userId: "u-2", name: "Rahul Nair", role: "DOCTOR", jobTitle: null }),
     specialization: "Orthodontist",
     isDoctor: true,
+    seesPatients: true,
     phone: "+919876501234",
     doctor: {
       specialization: "Orthodontist",

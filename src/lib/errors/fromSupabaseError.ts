@@ -85,6 +85,8 @@ const BUSINESS_RULES: ReadonlySet<ErrorMessageCode> = new Set<ErrorMessageCode>(
   "TEAM_NOT_YOURSELF",
   "TEAM_MEMBER_NOT_YOURS",
   "MEMBER_STILL_INVITED",
+  // The owner's own doctor details, while they see no patients (0014).
+  "OWNER_NOT_DOCTOR",
 ]);
 
 /**

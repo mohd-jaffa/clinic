@@ -9,7 +9,7 @@ import { aMemberDetail } from "@tests/support/team";
 
 const { auth, client, query } = vi.hoisted(() => ({
   auth: { current: {} as ReturnType<typeof authStub> },
-  client: { update: vi.fn(), setActive: vi.fn() },
+  client: { update: vi.fn(), setActive: vi.fn(), updateOwnDoctor: vi.fn() },
   query: { current: {} as Record<string, unknown> },
 }));
 vi.mock("@/features/auth/AuthProvider", () => ({ useAuth: () => auth.current }));
@@ -35,6 +35,10 @@ beforeEach(() => {
   auth.current = authStub();
   query.current = { data: rahul, isLoading: false };
   client.update.mockImplementation(async ({ id, ...changes }: { id: string }) => ({ ...rahul, id, ...changes }));
+  client.updateOwnDoctor.mockImplementation(async (changes: { seesPatients?: boolean }) => ({
+    ...rahul,
+    seesPatients: changes.seesPatients ?? true,
+  }));
   client.setActive.mockImplementation(async ({ active }: { active: boolean }) => ({
     ...rahul,
     status: active ? "ACTIVE" : "INACTIVE",
@@ -179,6 +183,77 @@ describe("Member (plan §8.6, D94)", () => {
     auth.current = authStub({ membership: null });
     draw();
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+  });
+
+  it("shows the owner their own page: every permission, and whether they also see patients (D96)", async () => {
+    query.current = {
+      data: aMemberDetail({ id: "member-1", userId: "user-1", name: "Asha Menon", role: "OWNER", permissions: [] }),
+      isLoading: false,
+    };
+    draw();
+    expect(screen.getByText("As the owner, you have every permission, always.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Deactivate" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Save changes" })).not.toBeInTheDocument();
+
+    const sees = screen.getByRole("checkbox", { name: "I also see patients" });
+    expect(sees).toBeChecked();
+    await userEvent.click(screen.getByRole("button", { name: "Doctor details" }));
+    await userEvent.click(
+      within(screen.getByRole("dialog", { name: "Change doctor details" })).getByRole("button", { name: "Save" }),
+    );
+    await waitFor(() =>
+      expect(client.updateOwnDoctor).toHaveBeenCalledWith({
+        doctor: { specialization: "Orthodontist", qualifications: "BDS, MDS", registrationNumber: "KL-1", fee: "700" },
+      }),
+    );
+
+    await userEvent.click(sees);
+    expect(client.updateOwnDoctor).toHaveBeenLastCalledWith({ seesPatients: false });
+    await waitFor(() => expect(auth.current.reload).toHaveBeenCalled());
+    expect(screen.getByRole("status")).toHaveTextContent("You’re no longer one of the clinic’s doctors");
+  });
+
+  it("hides the details while the owner sees no patients, and says when the switch failed", async () => {
+    client.updateOwnDoctor
+      .mockResolvedValueOnce({ seesPatients: true })
+      .mockRejectedValueOnce(new ApiError(422, "CLINIC_PLAN_EXPIRED", "Your clinic is view-only."));
+    query.current = {
+      data: aMemberDetail({ id: "member-1", userId: "user-1", role: "OWNER", seesPatients: false, doctor: null }),
+      isLoading: false,
+    };
+    draw();
+    expect(screen.queryByRole("button", { name: "Doctor details" })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("checkbox", { name: "I also see patients" }));
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("You’re one of the clinic’s doctors now"));
+    await userEvent.click(screen.getByRole("checkbox", { name: "I also see patients" }));
+    expect(await screen.findByRole("alertdialog", { name: "That wasn’t changed" })).toHaveTextContent("view-only");
+  });
+
+  it("moves the switch at once, and back when the save is refused", async () => {
+    let refuse: (reason: unknown) => void = () => {};
+    client.updateOwnDoctor.mockImplementationOnce(() => new Promise((_, reject) => (refuse = reject)));
+    query.current = {
+      data: aMemberDetail({ id: "member-1", userId: "user-1", role: "OWNER", seesPatients: false, doctor: null }),
+      isLoading: false,
+    };
+    draw();
+    const sees = screen.getByRole("checkbox", { name: "I also see patients" });
+    await userEvent.click(sees);
+    expect(sees).toBeChecked();
+    refuse(new ApiError(422, "CLINIC_PLAN_EXPIRED", "Your clinic is view-only."));
+    await screen.findByRole("alertdialog", { name: "That wasn’t changed" });
+    expect(sees).not.toBeChecked();
+  });
+
+  it("lets the owner change nothing of their own in a view-only clinic", () => {
+    auth.current = authStub({ subscription: { ...aSession().subscription!, state: "READ_ONLY" } });
+    query.current = {
+      data: aMemberDetail({ id: "member-1", userId: "user-1", role: "OWNER" }),
+      isLoading: false,
+    };
+    draw();
+    expect(screen.getByRole("checkbox", { name: "I also see patients" })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "Doctor details" })).not.toBeInTheDocument();
   });
 
   it("stands rows in while it loads, and says why when it cannot", () => {

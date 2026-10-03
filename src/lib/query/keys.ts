@@ -53,6 +53,7 @@ export const apiRoutes = {
     list: "/api/team",
     member: (id: string) => `/api/team/${id}`,
     active: (id: string) => `/api/team/${id}/active`,
+    ownDoctor: "/api/team/me/doctor",
     invites: "/api/team/invites",
     invite: (id: string) => `/api/team/invites/${id}`,
     resend: (id: string) => `/api/team/invites/${id}/resend`,

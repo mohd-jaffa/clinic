@@ -100,3 +100,15 @@ export type UpdateMemberPayload = z.output<typeof updateMemberSchema>;
 export const memberActiveSchema = z.object({ active: z.boolean({ error: VALIDATION_MESSAGES.invalid }) });
 
 export type MemberActiveInput = z.input<typeof memberActiveSchema>;
+
+/**
+ * The owner's own doctor profile (plan §3.1, D96, D97): whether they also see
+ * patients, or their details — only what is named.
+ */
+export const ownDoctorSchema = z.object({
+  seesPatients: z.boolean({ error: VALIDATION_MESSAGES.invalid }).optional(),
+  doctor: doctorDetailsSchema.optional(),
+});
+
+export type OwnDoctorInput = z.input<typeof ownDoctorSchema>;
+export type OwnDoctorPayload = z.output<typeof ownDoctorSchema>;

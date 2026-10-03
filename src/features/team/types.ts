@@ -66,7 +66,10 @@ export interface DoctorDetails {
 /** A member as their page reads them (plan §8.6): the list's, with their mobile and a doctor's details. */
 export interface MemberDetail extends TeamMember {
   phone: string | null;
+  /** Their doctor profile's details — kept while an owner sees no patients (D97). */
   doctor: DoctorDetails | null;
+  /** Whether that profile is active: an owner who also sees patients, or any doctor. */
+  seesPatients: boolean;
 }
 
 /** A `clinic_members` row as a member's page reads it. */
@@ -76,6 +79,7 @@ export interface MemberDetailRow extends Omit<TeamMemberRow, "profile" | "doctor
 }
 
 interface DoctorRowDetails {
+  active: boolean;
   specialization: string | null;
   qualifications: string | null;
   registration_number: string | null;

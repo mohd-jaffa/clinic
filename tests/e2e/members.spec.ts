@@ -79,3 +79,28 @@ test("a manager is shown someone beyond their access, not given it to change (D9
   await expect(page.getByRole("heading", { name: team.accessTitle })).toBeVisible();
   await expectAccessible(page);
 });
+
+test("the owner stops and starts seeing patients, and fills in their doctor details (D96, D97)", async ({ page }) => {
+  const clinic = await registerClinic({ fullName: "Asha Menon" });
+  await signIn(page, clinic.owner.email, clinic.owner.password);
+
+  await page.goto("/team");
+  await page.getByRole("link", { name: team.you("Asha Menon") }).click();
+  await expect(page.getByText(member.ownAccess)).toBeVisible();
+  const sees = page.getByRole("checkbox", { name: member.seesPatients });
+  await expect(sees).toBeChecked();
+  await expectAccessible(page);
+
+  await page.getByRole("button", { name: member.doctorDetails }).click();
+  const sheet = page.getByRole("dialog", { name: member.doctorSheet });
+  await sheet.getByRole("textbox", { name: /^Registration number/ }).fill("KL-2041");
+  await sheet.getByRole("button", { name: actions.save }).click();
+  await expect(page.getByText("Reg. KL-2041")).toBeVisible();
+
+  await sees.uncheck();
+  await expect(notice(page, member.seesOff)).toBeVisible();
+  await expect(page.getByRole("button", { name: member.doctorDetails })).toHaveCount(0);
+  await sees.check();
+  await expect(notice(page, member.seesOn)).toBeVisible();
+  await expect(page.getByText("Reg. KL-2041")).toBeVisible();
+});

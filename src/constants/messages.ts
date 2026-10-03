@@ -70,6 +70,7 @@ export const ERROR_MESSAGES = {
   TEAM_MEMBER_NOT_YOURS: "Only the owner can change someone who manages the team, or has access you don't.",
   MEMBER_STILL_INVITED: "They haven't joined yet. Resend or revoke their invite instead.",
   MEMBER_LOAD_FAILED: "This team member couldn't be loaded.",
+  OWNER_NOT_DOCTOR: "Turn on “I also see patients” first.",
 
   // The browser could not reach the server (plan §21, D55): said by the client, never sent by the server.
   NETWORK_OFFLINE: "You're offline. Try again once the connection is back — what you typed is still here.",
@@ -595,6 +596,11 @@ export const UI_TEXT = {
     reactivateBody: "They can sign in again, with the access they had.",
     reactivated: (name: string) => `${name} reactivated`,
     notChanged: "That wasn’t changed",
+    ownAccess: "As the owner, you have every permission, always.",
+    seesPatients: "I also see patients",
+    seesPatientsHint: "You can be booked, run a queue and write prescriptions.",
+    seesOn: "You’re one of the clinic’s doctors now",
+    seesOff: "You’re no longer one of the clinic’s doctors",
   },
 
   /** Accepting an invite (plan §8.5, D91, D92): the screen the emailed link opens. */

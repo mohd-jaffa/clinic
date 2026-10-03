@@ -11,6 +11,7 @@ import {
   inviteSchema,
   jobTitleSchema,
   memberActiveSchema,
+  ownDoctorSchema,
   updateMemberSchema,
 } from "@/lib/validation";
 
@@ -124,5 +125,15 @@ describe("changing a member (plan §8.6)", () => {
     });
     expect(memberActiveSchema.parse({ active: false })).toEqual({ active: false });
     expect(messageOf(memberActiveSchema, { active: "no" })).toBe(VALIDATION_MESSAGES.invalid);
+  });
+});
+
+describe("ownDoctorSchema (plan §3.1)", () => {
+  it("takes seeing patients, the details, or both, and refuses anything else", () => {
+    expect(ownDoctorSchema.parse({ seesPatients: true })).toEqual({ seesPatients: true });
+    expect(ownDoctorSchema.parse({ doctor: { fee: "₹500" } })).toEqual({
+      doctor: { specialization: null, qualifications: null, registrationNumber: null, fee: 50_000 },
+    });
+    expect(messageOf(ownDoctorSchema, { seesPatients: "yes" })).toBe(VALIDATION_MESSAGES.invalid);
   });
 });
