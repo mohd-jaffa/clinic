@@ -816,3 +816,50 @@ appended and never rewritten (AGENTS.md §33).
 
 ### Blockers
 - None.
+
+## 2026-10-03 — R3.1, clinic details and the logo
+
+### Added
+- `0009_clinic_profile.sql` (D77: numbered in build order; the team is now
+  `0011`, closures `0010`): `clinics.logo_path`, held to the clinic's own
+  folder; `update_clinic_profile(p_changes)`, `set_clinic_logo`,
+  `clear_clinic_logo` (D79), each through `require_clinic_settings()` —
+  `settings.manage` and a clinic that can write; the private `clinic-logos`
+  bucket (500 KB; PNG, JPEG, WebP) with policies opening a clinic's folder to
+  its members to read and to `settings.manage` to store or remove.
+- `src/features/clinic` (plan §9): `getClinic`, `updateClinic`,
+  `replaceLogo` (typed by its first bytes; stored, switched, and only then the
+  old file removed), `removeLogo`, `readLogo` — each change audited with its
+  values; `GET, PATCH /api/clinic` and `GET, POST, DELETE /api/clinic/logo`
+  (the logo answered as the image only, `no-store`).
+- Clinic details — `/settings/clinic` (D78): the logo with Add/Change and
+  Remove (asked first); the details as rows opening one sheet (name, type,
+  address, city, phone, email, GSTIN); the paper size and the consultation
+  fee's timing saved the moment they are picked. View-only, it shows
+  everything and changes nothing, saying why.
+- The clinic's logo beside its name at the top of the desktop sidebar (plan
+  §31.1), from the session view (`clinicLogoUrl`).
+- The `paper` colour token (white in every theme): a logo is shown on it, as
+  it will print, so one made for white paper is not lost in dark mode
+  (`DESIGN.md` and its sidecar updated).
+- `NoAccess`: a member who reaches a screen they may not open by its address
+  is told so inside the shell, with the way home (`readScreen` → `refused`).
+- `optionalGstin` and `clinicDetailsSchema` / `updateClinicSchema`;
+  `src/constants/uploads.ts` (`MAX_LOGO_BYTES` = 500 KB, the user).
+- Plan D77 – D79; the migration list and R3.1, R3.3, R3.4 renumbered.
+
+### Changed
+- The test helpers: the fake Supabase client chains a function call and
+  answers Storage; `removeAll` removes a test clinic's logo files.
+
+### Validation
+- Typecheck, lint, format check passed.
+- Unit and integration tests passed (1258), coverage 100% — the integration test
+  against the local Supabase: settings.manage only, by the database itself;
+  no direct write to `clinics`; the logo stored, replaced, removed and out of
+  another clinic's reach; a view-only clinic changes nothing.
+- Build passed; E2E passed (46, phone and desktop), axe clean —
+  `tests/e2e/clinic.spec.ts`.
+
+### Blockers
+- None. `/privacy` names the logo when it is written (R12.2).
