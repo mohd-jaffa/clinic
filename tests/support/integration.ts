@@ -1,4 +1,4 @@
-import { randomInt, randomUUID } from "node:crypto";
+import { randomBytes, randomInt, randomUUID } from "node:crypto";
 
 import type { Permission } from "@/constants/permissions";
 import type { ClinicRole } from "@/constants/roles";
@@ -177,6 +177,7 @@ export async function setMemberStatus(memberId: string, status: MemberStatus): P
       status,
       deactivated_at: status === "INACTIVE" ? now : null,
       invite_expires_at: status === "INVITED" ? now : null,
+      invite_token_hash: status === "INVITED" ? randomBytes(32).toString("hex") : null,
     })
     .eq("id", memberId);
   if (error) throw error;
@@ -215,6 +216,9 @@ export async function removeAll(): Promise<void> {
     .eq("role", "OWNER")
     .in("user_id", users);
   for (const { clinic_id } of owned ?? []) if (!clinics.includes(clinic_id)) clinics.push(clinic_id);
+  // Accounts the app made for the clinics' invites go with them.
+  const { data: members } = await client.from("clinic_members").select("user_id").in("clinic_id", clinics);
+  for (const { user_id } of members ?? []) if (!users.includes(user_id)) users.push(user_id);
 
   for (const clinicId of clinics.splice(0)) {
     // Its logo files first: Storage keeps them past the row (0009_clinic_profile.sql).

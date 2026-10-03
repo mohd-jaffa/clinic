@@ -73,6 +73,13 @@ const BUSINESS_RULES: ReadonlySet<ErrorMessageCode> = new Set<ErrorMessageCode>(
   "EXPENSE_CATEGORY_REQUIRED",
   // Removing a holiday or leave that is over (0011, D84).
   "CLOSURE_OVER",
+  // The team (0012): who may be invited, what may be granted, a link run out.
+  "MEMBER_DEACTIVATED_HERE",
+  "INVITE_EMAIL_NOT_ALLOWED",
+  "TEAM_MANAGE_OWNER_ONLY",
+  "TEAM_PERMISSION_NOT_HELD",
+  "INVITE_SENT_RECENTLY",
+  "INVITE_EXPIRED",
 ]);
 
 /**

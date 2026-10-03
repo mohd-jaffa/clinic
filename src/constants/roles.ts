@@ -8,6 +8,10 @@
 export const CLINIC_ROLES = ["OWNER", "DOCTOR", "STAFF"] as const;
 export type ClinicRole = (typeof CLINIC_ROLES)[number];
 
+/** The roles someone is invited to (plan §8.4): there is one owner, who signed the clinic up. */
+export const INVITE_ROLES = ["DOCTOR", "STAFF"] as const satisfies readonly ClinicRole[];
+export type InviteRole = (typeof INVITE_ROLES)[number];
+
 export const CLINIC_ROLE_LABELS: Record<ClinicRole, string> = {
   OWNER: "Owner",
   DOCTOR: "Doctor",

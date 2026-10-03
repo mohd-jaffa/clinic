@@ -174,6 +174,9 @@ earlier lines are never rewritten.
 | D85 | **A closure starts today or later and lasts at most a year** (the user): it ends on or after its start, within 366 days of it (a column-protecting bound in `limits.ts`, kept equal to the table's `CHECK`). A start before today, in the clinic's timezone, is refused by the database — booking is never in the past, so it would change nothing. | 2026-10-03 |
 | D86 | **Closures for the same people do not overlap** (the user): two whole-clinic closures, or two of the same doctor's, may not share a day — the database refuses it (an exclusion constraint), in words. A doctor's leave inside a clinic holiday is allowed: they say different things. | 2026-10-03 |
 | D87 | **The appointments a closure falls on are listed in R5.1** (the user): R3.3 builds closures and their screen; R5.1, which brings appointments and the booking check, adds the list of appointments on the days of a closure being added (not cancelled). | 2026-10-03 |
+| D88 | **The Receptionist preset takes payments, without discounts** (the user; answers Q19): `payments.view` and `payments.create`, never `payments.discount`, so a receptionist's bill holds to the price list and the doctor's fee. The owner may untick it per person. | 2026-10-03 |
+| D89 | **Inviting is one sheet in sections** (the user): the person (name, email); the role (Doctor or Staff, a job title for staff); access — preset chips that tick the permissions, grouped by area, each still changeable; and, for a doctor only, their details (specialization, qualifications, registration number, fee). One **Send invite**. | 2026-10-03 |
+| D90 | **The invite link is only ever emailed** (the user): no link is shown on screen or shared another way; **Resend** sends a new one. The token stays out of chats and screens. | 2026-10-03 |
 
 ## 3. Users and roles
 
@@ -539,7 +542,7 @@ Kept in `PERMISSION_PRESETS`.
 | Preset | Permissions |
 |---|---|
 | **Doctor** (default for DOCTOR) | patients.view/create/edit · appointments.view/create/edit/cancel · visits.view/create/edit · payments.view/create/discount |
-| **Receptionist** | patients.view/create/edit · appointments.view/create/edit/cancel · payments.view/create (Q19) |
+| **Receptionist** | patients.view/create/edit · appointments.view/create/edit/cancel · payments.view/create (D88) |
 | **Assistant / Nurse** | patients.view · appointments.view/edit · visits.view/create/edit · prescriptions.write |
 | **Clinic manager** | every permission except `settings.manage` |
 | **Custom** | none ticked |
@@ -1631,28 +1634,29 @@ Planned order (one or more per tracker row):
                                 one of each kept, and one Consultation (D83)
 0011_closures                   clinic_closures (no two for the same people on a day, D86),
                                 remove_closure (D84)
-0012_team                       invite_member, accept_invite, update_member, set_member_active,
-                                doctor consultation fee
-0013_patients                   patients + counter, patient_doctors + triggers,
+0012_team                       the invite token; invite_member, resend_invite, revoke_invite,
+                                find_invite, accept_invite (R3.4)
+0013_members                    update_member, set_member_active (R3.6)
+0014_patients                   patients + counter, patient_doctors + triggers,
                                 can_see_patient(), patient_alerts, search indexes,
                                 import_patients
-0014_appointments               appointments, exclusion, transitions, daily_tokens,
+0015_appointments               appointments, exclusion, transitions, daily_tokens,
                                 create/update/status/walk-in/arrived functions
-0015_visits                     visits (with billing state), vitals, send_in, mark_done,
+0016_visits                     visits (with billing state), vitals, send_in, mark_done,
                                 next_patient, start_visit, save_vitals
-0016_prescriptions              prescriptions, prescription_items, save_prescription,
+0017_prescriptions              prescriptions, prescription_items, save_prescription,
                                 prescription_templates (+ items)
-0017_treatments                 treatments, treatment_sessions, transitions
-0018_follow_ups                 follow_up_contacts, follow_up_items
-0019_bills                      bills, bill_items, financial-year bill_counters, create_bill
+0018_treatments                 treatments, treatment_sessions, transitions
+0019_follow_ups                 follow_up_contacts, follow_up_items
+0020_bills                      bills, bill_items, financial-year bill_counters, create_bill
                                 (and the fee at arrival in mark_arrived), void_bill,
                                 mark_no_charge
-0020_payments                   payments, record_payment, void_payment,
+0021_payments                   payments, record_payment, void_payment,
                                 patient_balances, bill_settlement, patient_stats
-0021_expenses                   expenses
-0022_dashboard_and_reports      dashboard_summary, report_daily, report_monthly
-0023_subscription_notices       the daily pg_cron → pg_net call (address and secret in Vault)
-0024_clinic_deletion            request_clinic_deletion, cancel_clinic_deletion,
+0022_expenses                   expenses
+0023_dashboard_and_reports      dashboard_summary, report_daily, report_monthly
+0024_subscription_notices       the daily pg_cron → pg_net call (address and secret in Vault)
+0025_clinic_deletion            request_clinic_deletion, cancel_clinic_deletion,
                                 delete_clinic (DEV)
 ```
 
@@ -2108,9 +2112,9 @@ tests (§34) and its changelog entry.
 | R3.1 | `0009_clinic_profile`: clinic details, paper size, fee timing, the logo upload (D77–D79) | §9 | — | DONE (2026-10-03 · 0de6f85) |
 | R3.2 | `0010_catalogue_rules`; price list, appointment types and expense categories screens (tables from `0007`; D80–D83) | §9 | — | DONE (2026-10-03 · f7b0669) |
 | R3.3 | `0011_closures`: holidays and leave (D84–D87); `GET /api/doctors` for its picker | §9, §30 | — | DONE (2026-10-03 · 528bedf) |
-| R3.4 | `0012_team`: invite with its own token (D63; presets, dependencies, doctor details and fee), invite email, resend, revoke, expiry | §8.3, §8.4 | Q19 | TODO |
+| R3.4 | `0012_team`: invite with its own token (D63; presets, dependencies, doctor details and fee), invite email, resend, revoke, expiry, and the accept function R3.5 calls (D88–D90) | §8.3, §8.4 | — | TODO |
 | R3.5 | Accept invite screen | §8.5 | — | TODO |
-| R3.6 | Team list and member detail: permissions, job title, doctor details, deactivate/reactivate; escalation and last-owner guards | §8.2, §8.6 | — | TODO |
+| R3.6 | `0013_members`; team list and member detail: permissions, job title, doctor details, deactivate/reactivate; escalation and last-owner guards | §8.2, §8.6 | — | TODO |
 | R3.7 | The owner's own doctor profile | §3.1 | — | TODO |
 | R3.8 | Integration + E2E: invite a receptionist and a doctor; each sees only what they may | §34 | — | TODO |
 
@@ -2118,7 +2122,7 @@ tests (§34) and its changelog entry.
 
 | ID | Work | Source | Waits on | Status |
 |---|---|---|---|---|
-| R4.1 | `0013_patients`: counter, `patient_doctors` + triggers, `can_see_patient`, alerts, search indexes | §10, §27.3 | — | TODO |
+| R4.1 | `0014_patients`: counter, `patient_doctors` + triggers, `can_see_patient`, alerts, search indexes | §10, §27.3 | — | TODO |
 | R4.2 | Patient sheet: DOB or age, gender, phones, emergency contact, assigned doctor; mobile-match hint | §10.1 | — | TODO |
 | R4.3 | Patients list: search (name, mobile digits, number), tabs, paging, last visit | §10.2 | — | TODO |
 | R4.4 | Patient profile: header, next appointment, open treatments, balance, timeline — sections by permission | §10.3 | — | TODO |
@@ -2131,7 +2135,7 @@ tests (§34) and its changelog entry.
 
 | ID | Work | Source | Waits on | Status |
 |---|---|---|---|---|
-| R5.1 | `0014_appointments`: table (clinic's appointment types), exclusion, transitions, closures check, the appointments on a closure being added listed (D87), tokens, functions | §11, §28.4 | — | TODO |
+| R5.1 | `0015_appointments`: table (clinic's appointment types), exclusion, transitions, closures check, the appointments on a closure being added listed (D87), tokens, functions | §11, §28.4 | — | TODO |
 | R5.2 | Booking sheet: patient search/quick add, doctor, date, time, type → duration; clash card | §11.1 | — | TODO |
 | R5.3 | Calendar: day (list / columns per doctor), week, doctor filter, closures shaded; the kit's calendar grid (D66) | §11.5 | — | TODO |
 | R5.4 | Appointment detail: confirm, reschedule, cancel (reason), no-show | §11.2 | — | TODO |
@@ -2143,9 +2147,9 @@ tests (§34) and its changelog entry.
 
 | ID | Work | Source | Waits on | Status |
 |---|---|---|---|---|
-| R6.1 | `0015_visits`: visits (billing state), vitals, `send_in`, `mark_done`, `next_patient`; Send in, Done and Next patient in the queue and the workspace | §11.4, §12.1, §28.5 | — | TODO |
+| R6.1 | `0016_visits`: visits (billing state), vitals, `send_in`, `mark_done`, `next_patient`; Send in, Done and Next patient in the queue and the workspace | §11.4, §12.1, §28.5 | — | TODO |
 | R6.2 | Visit workspace: alerts, vitals, complaint/diagnosis/notes, follow-up, per-section saves | §12.2 | — | TODO |
-| R6.3 | `0016_prescriptions`: items, advice, medicine suggestions, allergy warning; the doctor's own, or typed with `prescriptions.write` (`entered_by`) | §13, §8.2 | — | TODO |
+| R6.3 | `0017_prescriptions`: items, advice, medicine suggestions, allergy warning; the doctor's own, or typed with `prescriptions.write` (`entered_by`) | §13, §8.2 | — | TODO |
 | R6.4 | `lib/pdf` letterhead (A4 and A5, footer) and the prescription PDF; share, download, print | §13, §33 | — | TODO |
 | R6.5 | Patient timeline with visits and prescriptions | §10.3 | — | TODO |
 | R6.6 | Integration + E2E: queue → visit → prescription PDF | §34 | — | TODO |
@@ -2156,9 +2160,9 @@ tests (§34) and its changelog entry.
 
 | ID | Work | Source | Waits on | Status |
 |---|---|---|---|---|
-| R7.1 | `0017_treatments`: treatments, sessions, transitions | §14.1 | — | TODO |
+| R7.1 | `0018_treatments`: treatments, sessions, transitions | §14.1 | — | TODO |
 | R7.2 | Treatments in the visit workspace and on the profile | §14.1 | — | TODO |
-| R7.3 | `0018_follow_ups`: `follow_up_items`, contacts | §14.2 | — | TODO |
+| R7.3 | `0019_follow_ups`: `follow_up_items`, contacts | §14.2 | — | TODO |
 | R7.4 | Follow-ups screen: tabs with counts, Call, WhatsApp, Book, Mark contacted | §14.3 | — | TODO |
 | R7.5 | Integration: each tab on the right day in the clinic's timezone; lapsed follows the setting | §34 | — | TODO |
 | R7.6 | Follow-up reminders on WhatsApp, recorded as a contact | §14.3, §22.1 | — | TODO |
@@ -2167,10 +2171,10 @@ tests (§34) and its changelog entry.
 
 | ID | Work | Source | Waits on | Status |
 |---|---|---|---|---|
-| R8.1 | `0019_bills`: bills, items, financial-year counters, `create_bill` (idempotent, price check without `payments.discount`), `void_bill`, `mark_no_charge`, the fee at arrival in `mark_arrived` | §15.2, §15.6, §11.3 | — | TODO |
+| R8.1 | `0020_bills`: bills, items, financial-year counters, `create_bill` (idempotent, price check without `payments.discount`), `void_bill`, `mark_no_charge`, the fee at arrival in `mark_arrived` | §15.2, §15.6, §11.3 | — | TODO |
 | R8.2 | `billing/totals.ts`, the one formula; discount by amount or % | §15.1 | — | TODO |
 | R8.3 | New bill screen: from To bill, a visit or a patient; the doctor's fee; discount and price change with `payments.discount`; collect now. Collect fee at arrival | §15.2, §11.3 | — | TODO |
-| R8.4 | `0020_payments`: record, refund, void; `patient_balances`, `bill_settlement`, `patient_stats` | §15.3, §15.4 | — | TODO |
+| R8.4 | `0021_payments`: record, refund, void; `patient_balances`, `bill_settlement`, `patient_stats` | §15.3, §15.4 | — | TODO |
 | R8.5 | Bill PDF; share, download, print | §15.5, §33 | — | TODO |
 | R8.6 | Checkout: the queue's To-bill column, Billing's tabs (To bill, bills, payments, outstanding), No charge; the profile's balance section | §15.4, §15.6 | — | TODO |
 | R8.7 | Integration: double submit → one bill/payment; balances to the paisa; read-only refuses | §34 | — | TODO |
@@ -2180,14 +2184,14 @@ tests (§34) and its changelog entry.
 
 | ID | Work | Source | Waits on | Status |
 |---|---|---|---|---|
-| R9.1 | `0021_expenses` and the expenses screen (the clinic's categories): add, edit, archive, month totals, by category | §16 | — | TODO |
+| R9.1 | `0022_expenses` and the expenses screen (the clinic's categories): add, edit, archive, month totals, by category | §16 | — | TODO |
 | R9.2 | Integration + E2E | §34 | — | TODO |
 
 ### Phase 10 — Home and reports
 
 | ID | Work | Source | Waits on | Status |
 |---|---|---|---|---|
-| R10.1 | `0022_dashboard_and_reports`: `dashboard_summary`, `report_daily`, `report_monthly` | §17, §18 | — | TODO |
+| R10.1 | `0023_dashboard_and_reports`: `dashboard_summary`, `report_daily`, `report_monthly` | §17, §18 | — | TODO |
 | R10.2 | Home: sections by permission; getting-started for a new clinic | §17 | — | TODO |
 | R10.3 | Reports: daily and monthly, the two charts; the kit's chart kit, bar and donut (D66) | §18 | — | TODO |
 | R10.4 | Integration: a seeded month's figures equal hand-computed ones | §34 | — | TODO |
@@ -2202,7 +2206,7 @@ tests (§34) and its changelog entry.
 | R11.2 | Console: overview, clinics (No trial and Deletion flags), clinic detail, accounts, error log, platform audit | §20 | — | TODO |
 | R11.3 | Extend plan (Monthly, Yearly, Set date); the owner's confirmation email | §7.4 | — | TODO |
 | R11.4 | Platform settings screen | §6, §20.4 | — | TODO |
-| R11.5 | `0023_subscription_notices`: daily notices, each once per period | §22 | — | TODO |
+| R11.5 | `0024_subscription_notices`: daily notices, each once per period | §22 | — | TODO |
 | R11.6 | Owner's activity log | §19 | — | TODO |
 | R11.7 | Integration + E2E: extend, change a setting, notices once, DEV sees no clinic data | §34 | — | TODO |
 | R11.8 | Plan receipts: receipt numbers, the receipt PDF, the business details settings | §7.5, §6 | Q2 | TODO |
@@ -2215,7 +2219,7 @@ tests (§34) and its changelog entry.
 | R12.2 | Privacy and terms | §21 | Q22 | TODO |
 | R12.3 | Manifest, icons, service worker, offline page, Install app | §21 | — | TODO |
 | R12.4 | Security headers; `noindex` on app routes; share-preview image | §21 | — | TODO |
-| R12.5 | `0024_clinic_deletion`: the owner's request and cancel (banner, emails), the admin's delete after the cooling-off | §9.1, §20 | — | TODO |
+| R12.5 | `0025_clinic_deletion`: the owner's request and cancel (banner, emails), the admin's delete after the cooling-off | §9.1, §20 | — | TODO |
 | R12.6 | CSV export, one file per area, audited | §9 | — | TODO |
 
 ### Phase 13 — Hardening and release v1.0.0
@@ -2271,7 +2275,7 @@ starts.
 | Q16 | The ClinicDesk footer on documents? | **Answered: yes, small (D30).** |
 | Q17 | Email confirmed before first use? | **Default:** yes. |
 | Q18 | Password reset by link? | **Default:** yes, a link (not Brio's temporary password). |
-| Q19 | Does the Receptionist preset take payments? | **Default:** yes (`payments.view`, `payments.create`; no discount). |
+| Q19 | Does the Receptionist preset take payments? | **Answered (D88):** yes (`payments.view`, `payments.create`; no discount). |
 | Q20 | Queue refresh? | **Answered: every 15 s and on focus (D34).** |
 | Q21 | Temperature unit? | **Answered: °F (D31).** |
 | Q22 | Who writes the privacy policy and terms? | **Open.** Drafted in R12.2 from what the app keeps; the user reviews before release. |

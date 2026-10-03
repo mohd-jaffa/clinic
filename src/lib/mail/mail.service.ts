@@ -1,5 +1,6 @@
 import type { MailProvider } from "./mail.provider";
 import { accountConfirmationTemplate } from "./templates/account-confirmation";
+import { inviteTemplate, type InviteInput } from "./templates/invite";
 import { passwordResetTemplate } from "./templates/password-reset";
 
 interface MailServiceOptions {
@@ -23,6 +24,11 @@ export class MailService {
 
   async sendAccountConfirmation(input: { to: string; name: string; confirmationUrl: string }) {
     const content = accountConfirmationTemplate({ ...input, appUrl: this.appUrl });
+    await this.provider.send({ from: this.from, to: input.to, ...content });
+  }
+
+  async sendInvite(input: Omit<InviteInput, "appUrl"> & { to: string }) {
+    const content = inviteTemplate({ ...input, appUrl: this.appUrl });
     await this.provider.send({ from: this.from, to: input.to, ...content });
   }
 

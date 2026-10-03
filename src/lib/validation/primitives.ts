@@ -217,6 +217,31 @@ export function paiseText(label: string, max = MAX_AMOUNT_PAISE) {
 }
 
 /**
+ * An amount typed in rupees that may be left empty — a doctor's own fee,
+ * where empty means the price list's (D26): null for nothing, whole paise
+ * otherwise, read as paiseText reads it.
+ */
+export function optionalPaiseText(label: string, max = MAX_AMOUNT_PAISE) {
+  return z
+    .string({ error: VALIDATION_MESSAGES.amount(label) })
+    .trim()
+    .optional()
+    .transform((text, ctx) => {
+      if (text === undefined || text === "") return null;
+      const paise = parseRupees(text);
+      if (paise === null || paise > max) {
+        ctx.addIssue({
+          code: "custom",
+          message:
+            paise === null ? VALIDATION_MESSAGES.amount(label) : VALIDATION_MESSAGES.tooLarge(label, formatPaise(max)),
+        });
+        return z.NEVER;
+      }
+      return paise;
+    });
+}
+
+/**
  * An amount that has already been parsed to whole paise — what a route
  * receives. Bounded like the field it came from.
  */

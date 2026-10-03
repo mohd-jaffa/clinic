@@ -53,6 +53,19 @@ export const ERROR_MESSAGES = {
   CLOSURES_LOAD_FAILED: "Holidays and leave couldn't be loaded.",
   DOCTORS_LOAD_FAILED: "The clinic's doctors couldn't be loaded.",
 
+  // The team (plan §8, D23, D63).
+  MEMBER_ALREADY_EXISTS:
+    "This person is already in a clinic on ClinicDesk, or invited to one. For now, a person belongs to one clinic.",
+  MEMBER_DEACTIVATED_HERE: "They were on your team before. Reactivate them from the team list instead.",
+  INVITE_EMAIL_NOT_ALLOWED: "This email can't join a clinic.",
+  TEAM_MANAGE_OWNER_ONLY: "Only the clinic's owner can let someone manage the team.",
+  TEAM_PERMISSION_NOT_HELD: "You can only give permissions you have yourself.",
+  INVITE_CHANGED: "That invite was accepted or removed meanwhile.",
+  INVITE_SENT_RECENTLY: "An invite went to them a moment ago. Give it a minute before sending another.",
+  INVITE_INVALID: "This invite link isn't valid any more. Ask the clinic to send you a new one.",
+  INVITE_EXPIRED: "This invite link has run out. Ask the clinic to send it again.",
+  TEAM_LOAD_FAILED: "The team couldn't be loaded.",
+
   // The browser could not reach the server (plan §21, D55): said by the client, never sent by the server.
   NETWORK_OFFLINE: "You're offline. Try again once the connection is back — what you typed is still here.",
   NETWORK_UNREACHABLE: "ClinicDesk couldn't be reached. Check the connection and try again.",
@@ -100,6 +113,7 @@ export const VALIDATION_MESSAGES = {
   notBeforeToday: (label: string) => `${label} can’t be before today.`,
   endsBeforeStart: (last: string, first: string) => `${last} can’t be before the ${first.toLowerCase()}.`,
   atMostDays: (max: number) => `It can last at most ${max} days.`,
+  permissionsNeedOthers: "Some of these need others ticked too.",
   invalid: "That value is not valid.",
   gstin: "GSTIN must be 15 characters, like 32ABCDE1234F1Z5.",
 } as const;
@@ -498,6 +512,53 @@ export const UI_TEXT = {
     emptyHint: "Add a holiday or a doctor’s leave, and booking will refuse those days.",
   },
 
+  /** The team (plan §8, D88 – D90): who works at the clinic, and inviting more. */
+  team: {
+    count: (count: number) => (count === 1 ? "1 person" : `${count} people`),
+    invite: "Invite",
+    inviteTitle: "Invite a team member",
+    send: "Send invite",
+    people: "Team",
+    invitedList: "Invited",
+    inactiveList: "Inactive",
+    you: (name: string) => `${name} (you)`,
+    linkUntil: (date: string) => `Link until ${date}`,
+    linkExpired: "Link has run out",
+    nameLabel: "Name",
+    emailLabel: "Email",
+    emailHint: "The invite goes here. They choose their own password.",
+    roleLabel: "Role",
+    jobTitleLabel: "Job title",
+    jobTitleHint: "Like Front desk or Nurse.",
+    accessTitle: "What they can do",
+    presetLabel: "Start from",
+    accessHint: "Change any of these. What one needs is ticked with it.",
+    ownerOnly: "Only the owner can give this.",
+    notYours: "You don’t have this yourself.",
+    doctorTitle: "Doctor details",
+    specializationLabel: "Specialization",
+    qualificationsLabel: "Qualifications",
+    qualificationsHint: "Like BDS, MDS.",
+    registrationLabel: "Registration number",
+    registrationHint: "Needed before they can sign a prescription.",
+    feeLabel: "Consultation fee",
+    feeHint: "Leave it empty to charge the price list’s Consultation.",
+    invited: (email: string) => `Invite sent to ${email}`,
+    invitedNoEmail: "The invite is saved, but its email didn’t go",
+    invitedNoEmailBody: "Send it with Resend once email is working.",
+    notInvited: "The invite wasn’t sent",
+    resend: "Resend",
+    resendNamed: (name: string) => `Resend the invite to ${name}`,
+    resent: (email: string) => `A new invite went to ${email}`,
+    notResent: "The invite wasn’t sent again",
+    revoke: "Revoke",
+    revokeNamed: (name: string) => `Revoke ${name}’s invite`,
+    revokeTitle: (name: string) => `Revoke ${name}’s invite?`,
+    revokeBody: "Their link stops working. You can invite them again later.",
+    revoked: (name: string) => `${name}’s invite revoked`,
+    notRevoked: "The invite wasn’t revoked",
+  },
+
   /** My account's theme switch (D36): kept per device. */
   theme: {
     label: "Theme",
@@ -541,6 +602,18 @@ export const MAIL_TEXT = {
     body: "Your clinic is set up. Confirm this is your email address, and you can sign in.",
     action: "Confirm my email",
     footnote: `You're getting this because this address was used to sign up a clinic on ${UI_TEXT.appName}. If that wasn't you, you can ignore this email.`,
+  },
+  invite: {
+    subject: (clinic: string) => `You're invited to ${clinic} on ${UI_TEXT.appName}`,
+    preheader: "Choose a password, and you're in.",
+    heading: (clinic: string) => `Join ${clinic}`,
+    body: (inviter: string, clinic: string, role: string) =>
+      `${inviter} has invited you to join ${clinic} on ${UI_TEXT.appName}, as ${role}. Choose your password and add your mobile number with the button below.`,
+    action: "Accept the invite",
+    linkValid: (days: number) => (days === 1 ? "The link works for 1 day." : `The link works for ${days} days.`),
+    footnote: "If you weren't expecting this, you can ignore this email. Nothing happens until the link is used.",
+    /** How the role reads in a sentence. */
+    roles: { DOCTOR: "a doctor", STAFF: "a member of staff" },
   },
   passwordReset: {
     subject: `Reset your ${UI_TEXT.appName} password`,

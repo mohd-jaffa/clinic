@@ -11,6 +11,7 @@ import {
   optionalGstin,
   optionalLine,
   optionalLines,
+  optionalPaiseText,
   optionalPhoneNumber,
   paiseAmount,
   paiseText,
@@ -143,6 +144,23 @@ describe("wholeNumberText", () => {
     expect(messageOf(minutes, "ten")).toBe(VALIDATION_MESSAGES.wholeNumber("Length"));
     expect(messageOf(minutes, "4")).toBe(VALIDATION_MESSAGES.between("Length", 5, 480));
     expect(messageOf(minutes, "481")).toBe(VALIDATION_MESSAGES.between("Length", 5, 480));
+  });
+});
+
+describe("optionalPaiseText", () => {
+  const fee = optionalPaiseText("Fee");
+
+  it("reads rupees as paise, and empty as none", () => {
+    expect(fee.parse("₹700")).toBe(70_000);
+    expect(fee.parse(" 1,500.50 ")).toBe(150_050);
+    expect(fee.parse("")).toBeNull();
+    expect(fee.parse(undefined)).toBeNull();
+  });
+
+  it("says, in words, an amount it cannot read or that is too large", () => {
+    expect(messageOf(fee, "seven hundred")).toBe(VALIDATION_MESSAGES.amount("Fee"));
+    expect(messageOf(optionalPaiseText("Fee", 100), "2")).toBe(VALIDATION_MESSAGES.tooLarge("Fee", "₹1"));
+    expect(messageOf(fee, 700)).toBe(VALIDATION_MESSAGES.amount("Fee"));
   });
 });
 

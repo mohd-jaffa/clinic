@@ -7,6 +7,7 @@ import {
   isPermission,
   OWNER_ONLY_PERMISSION,
   PERMISSION_DEPENDENCIES,
+  PERMISSION_GROUPS,
   PERMISSION_PRESET_SETS,
   PERMISSION_PRESETS,
   PERMISSION_TEXT,
@@ -89,6 +90,19 @@ describe("the presets (plan §8.3)", () => {
   it("never let an assistant bill or a receptionist see clinical records", () => {
     expect(PERMISSION_PRESET_SETS.ASSISTANT.permissions).not.toContain("payments.create");
     expect(PERMISSION_PRESET_SETS.RECEPTIONIST.permissions).not.toContain("visits.view");
+  });
+
+  it("let a receptionist bill and collect, never discount (D88)", () => {
+    expect(PERMISSION_PRESET_SETS.RECEPTIONIST.permissions).toEqual(
+      expect.arrayContaining(["payments.view", "payments.create"]),
+    );
+    expect(PERMISSION_PRESET_SETS.RECEPTIONIST.permissions).not.toContain("payments.discount");
+  });
+});
+
+describe("PERMISSION_GROUPS (D89)", () => {
+  it("puts every permission in one group, in catalogue order", () => {
+    expect(PERMISSION_GROUPS.flatMap((group) => group.permissions)).toEqual([...PERMISSIONS]);
   });
 });
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { ERROR_MESSAGES, getErrorMessage, isErrorMessageCode, UI_TEXT } from "@/constants/messages";
+import { ERROR_MESSAGES, getErrorMessage, isErrorMessageCode, MAIL_TEXT, UI_TEXT } from "@/constants/messages";
 
 describe("the app's words", () => {
   it("names the app through one constant (plan D35)", () => {
@@ -22,6 +22,11 @@ describe("the app's words", () => {
     expect([1, 4].map(UI_TEXT.priceList.count)).toEqual(["1 service", "4 services"]);
     expect([1, 4].map(UI_TEXT.appointmentTypes.count)).toEqual(["1 kind of visit", "4 kinds of visit"]);
     expect([1, 4].map(UI_TEXT.expenseCategories.count)).toEqual(["1 category", "4 categories"]);
+  });
+
+  it("counts the team, and an invite's days", () => {
+    expect([1, 4].map(UI_TEXT.team.count)).toEqual(["1 person", "4 people"]);
+    expect([1, 7].map(MAIL_TEXT.invite.linkValid)).toEqual(["The link works for 1 day.", "The link works for 7 days."]);
   });
 
   it("counts holidays and leave coming up, and their days", () => {

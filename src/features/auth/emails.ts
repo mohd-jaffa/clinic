@@ -53,7 +53,8 @@ async function authLink(
   return data.properties.action_link;
 }
 
-async function markSent(admin: SupabaseClient, recipient: Recipient): Promise<void> {
+/** Notes the moment an account email went to someone, for the next one's cooldown — the team's invites too. */
+export async function markSent(admin: SupabaseClient, recipient: Recipient): Promise<void> {
   const { error } = await admin
     .from("profiles")
     .update({ email_link_sent_at: new Date().toISOString() })

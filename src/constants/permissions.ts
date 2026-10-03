@@ -86,6 +86,23 @@ export const PERMISSION_TEXT: Record<Permission, { label: string; description: s
 };
 
 /**
+ * The permissions as the team's editor groups them (D89): by the part of the
+ * clinic they open, in catalogue order. Every permission is in one group.
+ */
+export const PERMISSION_GROUPS: readonly { label: string; permissions: readonly Permission[] }[] = [
+  { label: "Patients", permissions: ["patients.view", "patients.create", "patients.edit"] },
+  {
+    label: "Appointments",
+    permissions: ["appointments.view", "appointments.create", "appointments.edit", "appointments.cancel"],
+  },
+  { label: "Clinical records", permissions: ["visits.view", "visits.create", "visits.edit", "prescriptions.write"] },
+  { label: "Billing", permissions: ["payments.view", "payments.create", "payments.discount", "payments.edit"] },
+  { label: "Expenses", permissions: ["expenses.view", "expenses.create", "expenses.edit"] },
+  { label: "Reports", permissions: ["reports.view"] },
+  { label: "Team and settings", permissions: ["team.manage", "settings.manage"] },
+];
+
+/**
  * What holding a permission needs (plan §8.2 rule 2): patient data needs
  * `patients.view`, so anything that shows a patient brings it; typing a
  * prescription needs the clinical record; a discount is given on a bill.

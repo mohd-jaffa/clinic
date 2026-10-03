@@ -1,0 +1,63 @@
+import { describe, expect, it } from "vitest";
+import type { z } from "zod";
+
+import { TEXT_LIMITS } from "@/constants/limits";
+import { VALIDATION_MESSAGES } from "@/constants/messages";
+import { firstIssue, inviteSchema } from "@/lib/validation";
+
+function messageOf(schema: z.ZodType, value: unknown): string | null {
+  const result = schema.safeParse(value);
+  return result.success ? null : firstIssue(result.error);
+}
+
+const staff = {
+  fullName: "  Meera   Pillai ",
+  email: " Meera@Example.com ",
+  role: "STAFF",
+  jobTitle: " Front desk ",
+  permissions: ["patients.create", "patients.view"],
+  doctor: { specialization: "", qualifications: "", registrationNumber: "", fee: "" },
+};
+
+describe("inviteSchema (plan §8.4, D89)", () => {
+  it("tidies who it is for, keeps a job title for staff, and orders the permissions", () => {
+    expect(inviteSchema.parse(staff)).toEqual({
+      fullName: "Meera Pillai",
+      email: "meera@example.com",
+      role: "STAFF",
+      jobTitle: "Front desk",
+      permissions: ["patients.view", "patients.create"],
+      doctor: null,
+    });
+  });
+
+  it("keeps a doctor's details for a doctor, the fee in paise or none, and drops a job title", () => {
+    expect(
+      inviteSchema.parse({
+        ...staff,
+        role: "DOCTOR",
+        doctor: { specialization: "Orthodontist", qualifications: "BDS, MDS", registrationNumber: "", fee: "₹700" },
+      }),
+    ).toMatchObject({
+      jobTitle: null,
+      doctor: { specialization: "Orthodontist", qualifications: "BDS, MDS", registrationNumber: null, fee: 70_000 },
+    });
+    expect(inviteSchema.parse({ ...staff, role: "DOCTOR" }).doctor).toMatchObject({ fee: null });
+  });
+
+  it("says what is wrong, in the catalogue's words", () => {
+    expect(messageOf(inviteSchema, { ...staff, fullName: " " })).toBe(VALIDATION_MESSAGES.required("Name"));
+    expect(messageOf(inviteSchema, { ...staff, email: "meera" })).toBe(VALIDATION_MESSAGES.email("Email"));
+    expect(messageOf(inviteSchema, { ...staff, role: "OWNER" })).toBe(VALIDATION_MESSAGES.choose("Role"));
+    expect(messageOf(inviteSchema, { ...staff, jobTitle: "x".repeat(TEXT_LIMITS.jobTitle + 1) })).toBe(
+      VALIDATION_MESSAGES.tooLong("Job title", TEXT_LIMITS.jobTitle),
+    );
+    expect(messageOf(inviteSchema, { ...staff, permissions: ["appointments.view"] })).toBe(
+      VALIDATION_MESSAGES.permissionsNeedOthers,
+    );
+    expect(messageOf(inviteSchema, { ...staff, permissions: ["inventory.view"] })).toBe(VALIDATION_MESSAGES.invalid);
+    expect(messageOf(inviteSchema, { ...staff, doctor: { ...staff.doctor, fee: "lots" } })).toBe(
+      VALIDATION_MESSAGES.amount("Consultation fee"),
+    );
+  });
+});

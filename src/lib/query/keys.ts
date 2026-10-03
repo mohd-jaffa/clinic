@@ -46,6 +46,13 @@ export const apiRoutes = {
   doctors: {
     list: "/api/doctors",
   },
+  // The team (plan §8, §30): everyone, and the open invites.
+  team: {
+    list: "/api/team",
+    invites: "/api/team/invites",
+    invite: (id: string) => `/api/team/invites/${id}`,
+    resend: (id: string) => `/api/team/invites/${id}/resend`,
+  },
 } as const;
 
 /**

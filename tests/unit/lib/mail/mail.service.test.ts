@@ -26,6 +26,26 @@ describe("MailService", () => {
     );
   });
 
+  it("sends an invite to join a clinic", async () => {
+    const { send, mail } = service();
+    await mail.sendInvite({
+      to: "meera@example.com",
+      name: "Meera",
+      inviterName: "Asha Menon",
+      clinicName: "Smile Care",
+      role: "STAFF",
+      inviteUrl: "https://x.test/accept-invite?token=t",
+      validDays: 7,
+    });
+    expect(send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: "meera@example.com",
+        subject: "You're invited to Smile Care on ClinicDesk",
+        html: expect.stringContaining('href="https://x.test/accept-invite?token=t"'),
+      }),
+    );
+  });
+
   it("sends the password reset link", async () => {
     const { send, mail } = service();
     await mail.sendPasswordReset({ to: "asha@example.com", name: "Asha", resetUrl: "https://x.test/r" });
