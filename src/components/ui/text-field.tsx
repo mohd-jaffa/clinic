@@ -94,7 +94,7 @@ export const TextAreaField = forwardRef<
         aria-required={required || undefined}
         aria-invalid={error ? true : undefined}
         aria-describedby={hintId ?? errorId}
-        className={cn(FIELD_BASE, TYPED, "min-h-24 rounded-row py-3")}
+        className={cn(FIELD_BASE, TYPED, "field-sizing-content min-h-24 resize-none rounded-row py-3")}
         {...rest}
       />
       <FieldHint id={hintId} hint={hint} />

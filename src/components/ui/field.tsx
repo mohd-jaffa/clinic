@@ -61,7 +61,8 @@ export function FieldLabel({
     <label id={id} htmlFor={htmlFor} className="mb-1.5 block text-small font-bold text-ink">
       {label}
       {required && (
-        <span className="text-coral" aria-hidden="true">
+        // Muted: coral is kept for what must not be missed (plan §32.1).
+        <span className="text-muted" aria-hidden="true">
           {" *"}
         </span>
       )}

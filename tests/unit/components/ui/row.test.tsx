@@ -1,9 +1,10 @@
 import { render, screen } from "@testing-library/react";
+import { Trash2, Wallet } from "lucide-react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import { Button } from "@/components/ui/button";
-import { Row, RowList, RowToken } from "@/components/ui/row";
+import { Row, RowIcon, RowList, RowToken } from "@/components/ui/row";
 
 describe("RowList", () => {
   it("is a list, named when it says so", () => {
@@ -14,6 +15,37 @@ describe("RowList", () => {
     );
     expect(screen.getByRole("list", { name: "Waiting" })).toBeInTheDocument();
     expect(screen.getByRole("listitem")).toHaveTextContent("Priya Iyer");
+  });
+
+  it("keeps its rows apart, or, as a menu, one list parted by hairlines (D75)", () => {
+    const { rerender } = render(
+      <RowList>
+        <Row title="Priya Iyer" />
+      </RowList>,
+    );
+    expect(screen.getByRole("list")).toHaveClass("gap-2.5");
+    rerender(
+      <RowList look="menu">
+        <Row look="menu" title="Price list" />
+      </RowList>,
+    );
+    expect(screen.getByRole("list")).toHaveClass("divide-y", "divide-line");
+    expect(screen.getByRole("listitem")).not.toHaveClass("bg-surface");
+  });
+});
+
+describe("RowIcon", () => {
+  it("draws a menu row's icon bare, out of the screen reader's way: the row's title says what it is", () => {
+    const { container } = render(<RowIcon icon={Wallet} />);
+    const icon = container.firstElementChild!;
+    expect(icon).toHaveAttribute("aria-hidden", "true");
+    expect(icon.querySelector("svg")).toBeInTheDocument();
+    expect(icon).toHaveClass("text-ink");
+  });
+
+  it("is coral for a row whose screen holds what cannot be undone", () => {
+    const { container } = render(<RowIcon icon={Trash2} tone="attention" />);
+    expect(container.firstElementChild).toHaveClass("text-coral");
   });
 });
 
@@ -67,10 +99,19 @@ describe("Row", () => {
     expect(screen.getByRole("listitem").querySelectorAll(":scope > svg")).toHaveLength(0);
   });
 
+  it("in a menu, shows where it goes by a patch of colour under the pointer rather than a ring", () => {
+    render(
+      <ul>
+        <Row look="menu" title="Price list" href="/settings/prices" />
+      </ul>,
+    );
+    expect(screen.getByRole("listitem")).toHaveClass("hover:bg-ink/5");
+  });
+
   it("is a quiet outline when it is not yet in play, and plain when it goes nowhere", () => {
     render(
       <ul>
-        <Row title="Ananya Das" quiet />
+        <Row title="Ananya Das" look="quiet" />
       </ul>,
     );
     expect(screen.getByRole("listitem")).toHaveClass("ring-line");

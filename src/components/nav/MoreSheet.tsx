@@ -1,8 +1,7 @@
 "use client";
 
 import { Avatar } from "@/components/ui/avatar";
-import { IconChip } from "@/components/ui/icon-chip";
-import { Row, RowList } from "@/components/ui/row";
+import { Row, RowIcon, RowList } from "@/components/ui/row";
 import { Sheet } from "@/components/ui/sheet";
 import { UI_TEXT } from "@/constants/messages";
 import { MORE_NAV, MY_ACCOUNT_ROUTE, placesFor } from "@/constants/navigation";
@@ -24,8 +23,9 @@ export function MoreSheet({ open, onClose }: { open: boolean; onClose: () => voi
   return (
     <Sheet open={open} onClose={onClose} title={UI_TEXT.nav.more}>
       <div className="grid gap-5 pb-2">
-        <RowList>
+        <RowList look="menu">
           <Row
+            look="menu"
             href={MY_ACCOUNT_ROUTE}
             onClick={onClose}
             leading={<Avatar name={profile.fullName} />}
@@ -34,20 +34,21 @@ export function MoreSheet({ open, onClose }: { open: boolean; onClose: () => voi
           />
         </RowList>
         <nav aria-label={UI_TEXT.nav.more}>
-          <RowList>
+          <RowList look="menu">
             {placesFor(membership, MORE_NAV).map(({ id, label, icon, href, hint }) => (
               <Row
+                look="menu"
                 key={id}
                 href={href}
                 onClick={onClose}
-                leading={<IconChip icon={icon} />}
+                leading={<RowIcon icon={icon} />}
                 title={label}
                 subtitle={hint}
               />
             ))}
           </RowList>
         </nav>
-        <RowList>
+        <RowList look="menu">
           <SignOutRow onSignedOut={onClose} />
         </RowList>
       </div>

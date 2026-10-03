@@ -2,9 +2,8 @@
 
 import { Avatar } from "@/components/ui/avatar";
 import { CoastHeader } from "@/components/ui/coast-header";
-import { IconChip } from "@/components/ui/icon-chip";
 import { PageHeader } from "@/components/ui/page-header";
-import { Row, RowList } from "@/components/ui/row";
+import { Row, RowIcon, RowList } from "@/components/ui/row";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { UI_TEXT } from "@/constants/messages";
 import { MY_ACCOUNT_ROUTE, SETTINGS_GROUPS, settingsFor, type SettingsGroup } from "@/constants/navigation";
@@ -19,12 +18,13 @@ function Group({ group }: { group: SettingsGroup }) {
   return (
     <section aria-labelledby={id}>
       <SectionHeading id={id} title={group.title} />
-      <RowList>
+      <RowList look="menu">
         {group.items.map(({ id: key, label, hint, icon, href, attention }) => (
           <Row
+            look="menu"
             key={key}
             href={href}
-            leading={<IconChip icon={icon} tone={attention ? "attention" : undefined} />}
+            leading={<RowIcon icon={icon} tone={attention ? "attention" : undefined} />}
             title={label}
             subtitle={hint}
           />
@@ -59,8 +59,9 @@ export function Settings() {
         <div className="grid grid-cols-1 gap-8">
           <section aria-labelledby="settings-you">
             <SectionHeading id="settings-you" title={settings.you} />
-            <RowList>
+            <RowList look="menu">
               <Row
+                look="menu"
                 href={MY_ACCOUNT_ROUTE}
                 leading={<Avatar name={profile.fullName} />}
                 title={profile.fullName}
@@ -75,7 +76,7 @@ export function Settings() {
           {rest.map((group) => (
             <Group key={group.id} group={group} />
           ))}
-          <RowList>
+          <RowList look="menu">
             <SignOutRow />
           </RowList>
         </div>

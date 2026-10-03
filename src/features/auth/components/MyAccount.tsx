@@ -5,9 +5,8 @@ import { useState } from "react";
 
 import { Avatar } from "@/components/ui/avatar";
 import { CoastHeader } from "@/components/ui/coast-header";
-import { IconChip } from "@/components/ui/icon-chip";
 import { PageHeader } from "@/components/ui/page-header";
-import { Row, RowList } from "@/components/ui/row";
+import { Row, RowIcon, RowList } from "@/components/ui/row";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { UI_TEXT } from "@/constants/messages";
@@ -73,31 +72,34 @@ export function MyAccount() {
         <div className="grid grid-cols-1 gap-8">
           <section aria-labelledby="account-details">
             <SectionHeading id="account-details" title={account.details} />
-            <RowList>
+            <RowList look="menu">
               <Row
-                leading={<IconChip icon={UserRound} />}
+                look="menu"
+                leading={<RowIcon icon={UserRound} />}
                 title={account.nameLabel}
                 subtitle={profile.fullName}
                 onClick={readOnly ? undefined : () => setChanging("name")}
               />
               <Row
-                leading={<IconChip icon={Smartphone} />}
+                look="menu"
+                leading={<RowIcon icon={Smartphone} />}
                 title={account.phoneLabel}
                 subtitle={
                   profile.phone ? `${UI_TEXT.fields.phonePrefix} ${formatPhoneDigits(profile.phone)}` : account.noPhone
                 }
                 onClick={readOnly ? undefined : () => setChanging("phone")}
               />
-              <Row leading={<IconChip icon={Mail} />} title={account.emailLabel} subtitle={profile.email} />
+              <Row look="menu" leading={<RowIcon icon={Mail} />} title={account.emailLabel} subtitle={profile.email} />
             </RowList>
             <ReadOnlyNote />
           </section>
 
           <section aria-labelledby="account-password">
             <SectionHeading id="account-password" title={account.password} />
-            <RowList>
+            <RowList look="menu">
               <Row
-                leading={<IconChip icon={KeyRound} />}
+                look="menu"
+                leading={<RowIcon icon={KeyRound} />}
                 title={account.changePassword}
                 subtitle={account.changePasswordHint}
                 onClick={() => setChanging("password")}
@@ -118,7 +120,7 @@ export function MyAccount() {
             <p className="mt-2 text-small text-muted">{UI_TEXT.theme.hint}</p>
           </section>
 
-          <RowList>
+          <RowList look="menu">
             <SignOutRow />
           </RowList>
         </div>

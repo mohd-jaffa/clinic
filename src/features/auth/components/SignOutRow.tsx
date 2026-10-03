@@ -2,8 +2,7 @@
 
 import { LogOut } from "lucide-react";
 
-import { IconChip } from "@/components/ui/icon-chip";
-import { Row } from "@/components/ui/row";
+import { Row, RowIcon } from "@/components/ui/row";
 import { UI_TEXT } from "@/constants/messages";
 
 import { useSignOut } from "../hooks/useSignOut";
@@ -17,7 +16,8 @@ export function SignOutRow({ onSignedOut }: { onSignedOut?: () => void }) {
   const { signingOut, signOut } = useSignOut(onSignedOut);
   return (
     <Row
-      leading={<IconChip icon={LogOut} />}
+      look="menu"
+      leading={<RowIcon icon={LogOut} />}
       title={UI_TEXT.auth.signOut}
       subtitle={signingOut ? UI_TEXT.auth.signingOut : undefined}
       onClick={() => void signOut()}

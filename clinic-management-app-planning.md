@@ -161,6 +161,8 @@ earlier lines are never rewritten.
 | D72 | **My account: a sheet per detail** (the user): Name and Mobile are rows, each opening a sheet for that one detail; Change password opens a sheet with the current and the new; Email is shown and not changed (later); the theme is a System · Light · Dark switch on the screen; Sign out asks first. | 2026-10-03 |
 | D73 | **The plan banner is a slim band on top** (the user): across the top of every signed-in screen, above its land — quiet while the plan ends soon, coral once it has ended and while the clinic is view-only; the state in its words and icon, never colour alone. The offline banner (R2.11) is the same kind of band. | 2026-10-03 |
 | D74 | **How to renew leads to the Plan screen** (the user): the banner offers the owner **How to renew**, which opens `/settings/plan` (R11.1); until R11.1 it opens the not-found screen, as the other Settings rows do (D71). | 2026-10-03 |
+| D75 | **Menus are one list on the ground** (the user, at the Phase 2 finish review): Settings, My account and the More sheet list their rows as one continuous list per section, parted by hairlines, each icon bare (coral for Delete clinic) — never a card per row or a tile under an icon (§32.1 Refuses). Separate surface rows stay for lists of people and records (the queue, bills). The response and confirm cards set their icon bare beside the title. | 2026-10-03 |
+| D76 | **Quick Actions drops from its ＋ on tablet and desktop** (the user, at the Phase 2 finish review): from 768 px the lobe opens beside the rail's ＋ and the sidebar's **Add**, at the top, its lower edge the coastline; on a phone it still rises from the bottom. Each action is a capsule with its chip on the trailing edge, as every capsule's at rest. | 2026-10-03 |
 
 ## 3. Users and roles
 
@@ -1771,7 +1773,10 @@ Patients · More; the ＋ is a large round land-green chip raised above the bar
 (the user's choice, PRODUCT.md). Tapping it raises a land lobe from the bottom with a
 coastline top edge holding capsule actions: Walk-in, Appointment, Patient,
 Payment, Expense (permission-filtered). Tablet: icon rail. Desktop: sidebar on
-the ground; the land swells behind the page header.
+the ground; the land swells behind the page header. On both, the lobe drops
+from the rail's ＋ or the sidebar's **Add**, beside it, its lower edge the
+coastline (D76). Menus — Settings, My account, More — are one list on the
+ground parted by hairlines, icons bare (D75).
 
 **Account screens (D70).** The land leads: on a phone it holds the wordmark
 and the app's line over a coastline, the form on the ground below; from

@@ -256,15 +256,14 @@ describe("a confirmation", () => {
     act(() => {
       void respond.confirm({ title: "Sign out?", confirmLabel: "Sign out", confirmIcon: LogOut });
     });
-    expect(screen.getByRole("alertdialog", { name: "Sign out?" }).querySelector(".rounded-lobe")).toHaveClass(
-      "bg-ground",
-    );
+    // The mark is the icon beside the title, bare (D75).
+    const mark = (name: string) =>
+      screen.getByRole("heading", { name }).previousElementSibling!.querySelector("[aria-hidden='true']");
+    expect(mark("Sign out?")).toHaveClass("text-ink");
     act(() => {
       void respond.confirm({ title: "Void this bill?", confirmLabel: "Void bill", tone: "danger" });
     });
-    expect(screen.getByRole("alertdialog", { name: "Void this bill?" }).querySelector(".rounded-lobe")).toHaveClass(
-      "bg-coral-soft",
-    );
+    expect(mark("Void this bill?")).toHaveClass("text-coral");
   });
 
   it("answers no from its cancel button, and to Escape", async () => {

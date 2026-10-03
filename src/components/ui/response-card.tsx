@@ -119,9 +119,9 @@ const MARKS: Record<ResponseKind, MarkLook> = {
 const DANGER_MARK: MarkLook = { icon: TriangleAlert, tone: "attention" };
 
 const MARK_TONES: Record<StatusTone, string> = {
-  neutral: "bg-ground text-ink",
-  live: "bg-action-soft text-action",
-  attention: "bg-coral-soft text-coral",
+  neutral: "text-ink",
+  live: "text-action",
+  attention: "text-coral",
 };
 
 /** How long a card with no next step stays up. */
@@ -277,17 +277,11 @@ export function useResponse(): Respond {
 }
 
 /** A card's mark: a small lobe of its tone, holding what kind of card it is. */
+/** A card's mark: its kind's icon, bare beside the title — no tile under it (D75). */
 function Mark({ look: { icon: Icon, tone }, size }: { look: MarkLook; size: "md" | "sm" }) {
   return (
-    <span
-      aria-hidden="true"
-      className={cn(
-        "grid shrink-0 place-items-center rounded-lobe",
-        MARK_TONES[tone],
-        size === "md" ? "size-14" : "size-10",
-      )}
-    >
-      <Icon size={size === "md" ? 24 : 20} strokeWidth={2.25} />
+    <span aria-hidden="true" className={cn("shrink-0", MARK_TONES[tone])}>
+      <Icon size={size === "md" ? 24 : 20} strokeWidth={2.25} className="block" />
     </span>
   );
 }
@@ -431,8 +425,10 @@ function ResponseNotice({ card, onClose }: { card: Card; onClose: () => void }) 
         "rounded-sheet bg-surface text-ink shadow-raised ring-1 ring-line md:bottom-6",
       )}
     >
-      <div className="flex items-start gap-3 py-3 pr-1 pl-3">
-        <Mark look={MARKS[card.kind]} size="sm" />
+      <div className="flex items-start gap-2.5 py-3 pr-1 pl-4">
+        <span className="pt-2.5">
+          <Mark look={MARKS[card.kind]} size="sm" />
+        </span>
         <div className="min-w-0 flex-1 pt-2">
           <p className="font-bold">{card.title}</p>
           {card.message && <p className="mt-0.5 text-small text-muted">{card.message}</p>}

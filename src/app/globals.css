@@ -315,6 +315,11 @@
   .modal-sheet {
     animation-name: panel-in;
   }
+
+  /* Beside its ＋ from 768 px (D76): it drops from it rather than rising. */
+  .modal-lobe {
+    animation-name: drop-in;
+  }
 }
 
 :is(.modal-sheet, .modal-card, .modal-lobe)[open]::backdrop {
@@ -351,6 +356,11 @@
   @media (min-width: 48rem) {
     .modal-sheet:not([open]) {
       transform: translateX(100%);
+    }
+
+    .modal-lobe:not([open]) {
+      opacity: 0;
+      transform: translateY(-4px);
     }
   }
 }

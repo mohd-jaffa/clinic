@@ -1,20 +1,50 @@
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { cn } from "./cn";
 
 /**
- * A list of rows on the ground (plan §32.1): each row its own soft surface,
- * a little apart from the next — the queue's waiting patients, a list of
- * bills. Each child is a `Row`.
+ * A list of rows on the ground (plan §32.1). `rows`: each row its own soft
+ * surface, a little apart from the next — the queue's waiting patients, a
+ * list of bills. `menu`: one continuous list on the ground, rows parted by
+ * hairlines — Settings, My account, the More sheet (D75) — so a menu never
+ * becomes a stack of cards. Each child is a `Row` of the same look.
  */
-export function RowList({ label, children }: { label?: string; children: ReactNode }) {
+export function RowList({
+  label,
+  look = "rows",
+  children,
+}: {
+  label?: string;
+  look?: "rows" | "menu";
+  children: ReactNode;
+}) {
   return (
     // One column no wider than the list, so a long line is cut short with "…" rather than widening the page.
-    <ul role="list" aria-label={label} className="grid grid-cols-1 gap-2.5">
+    <ul
+      role="list"
+      aria-label={label}
+      className={cn("grid grid-cols-1", look === "menu" ? "divide-y divide-line border-y border-line" : "gap-2.5")}
+    >
       {children}
     </ul>
+  );
+}
+
+/**
+ * A menu row's icon, bare on the ground — no tile under it (D75). Decorative:
+ * the row's title says what it is. `attention` is coral, for a row whose
+ * screen holds what cannot be undone — Delete clinic (plan §32.1).
+ */
+export function RowIcon({ icon: Icon, tone }: { icon: LucideIcon; tone?: "attention" }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={cn("grid size-11 place-items-center", tone === "attention" ? "text-coral" : "text-ink")}
+    >
+      <Icon size={22} strokeWidth={2.25} />
+    </span>
   );
 }
 
@@ -35,8 +65,9 @@ export function RowToken({ value, label }: { value: string; label?: string }) {
  * target, so a row can open a patient and still carry its own **Send in**.
  * A chevron shows where the row goes when nothing else is at its end.
  *
- * `quiet` is a row not yet in play — still to come, done — drawn as an
- * outline on the ground rather than a surface.
+ * `look`: a `surface` row stands on the ground on its own; a `quiet` one is
+ * not yet in play — still to come, done — drawn as an outline instead; a
+ * `menu` row is one line of a menu's list, bare on the ground (D75).
  */
 export function Row({
   leading,
@@ -45,7 +76,7 @@ export function Row({
   trailing,
   href,
   onClick,
-  quiet = false,
+  look = "surface",
 }: {
   leading?: ReactNode;
   title: string;
@@ -53,8 +84,9 @@ export function Row({
   trailing?: ReactNode;
   href?: string;
   onClick?: () => void;
-  quiet?: boolean;
+  look?: "surface" | "quiet" | "menu";
 }) {
+  const menu = look === "menu";
   const stretched =
     "text-left after:absolute after:inset-0 after:rounded-row focus-visible:outline-none focus-visible:after:outline-3 focus-visible:after:outline-offset-2 focus-visible:after:outline-action";
   const name = <span className="block truncate font-bold text-ink">{title}</span>;
@@ -74,9 +106,14 @@ export function Row({
   return (
     <li
       className={cn(
-        "relative flex min-h-16 items-center gap-3 rounded-row py-2.5 pr-2 pl-3.5",
-        quiet ? "ring-1 ring-line ring-inset" : "bg-surface",
-        goes && "transition-shadow hover:ring-2 hover:ring-line hover:ring-inset",
+        "relative flex min-h-16 items-center gap-3",
+        menu ? "py-2 pr-1" : "rounded-row py-2.5 pr-2 pl-3.5",
+        look === "surface" && "bg-surface",
+        look === "quiet" && "ring-1 ring-line ring-inset",
+        goes &&
+          (menu
+            ? "transition-colors hover:bg-ink/5"
+            : "transition-shadow hover:ring-2 hover:ring-line hover:ring-inset"),
       )}
     >
       {leading && <span className="shrink-0">{leading}</span>}

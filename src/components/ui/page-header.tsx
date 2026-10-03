@@ -37,7 +37,7 @@ export function PageHeader({
         )}
         <div className="min-w-0 flex-1 pt-1">
           <h1 className="text-heading font-bold tracking-[-0.01em] md:text-display">{title}</h1>
-          {subtitle && <p className="mt-1.5 text-land-muted">{subtitle}</p>}
+          {subtitle && <p className="mt-1.5 text-land-muted md:mt-3 md:text-title">{subtitle}</p>}
         </div>
       </div>
       {children && <div className="flex shrink-0 flex-wrap items-center gap-2">{children}</div>}
