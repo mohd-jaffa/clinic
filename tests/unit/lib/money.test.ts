@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { paiseToRupees, parseRupees, roundToPaise, rupeesToPaise, sumPaise } from "@/lib/money";
+import { paiseToRupees, paiseToText, parseRupees, roundToPaise, rupeesToPaise, sumPaise } from "@/lib/money";
 
 describe("roundToPaise", () => {
   it("rounds positive numbers to 2 decimal places", () => {
@@ -44,6 +44,16 @@ describe("rupeesToPaise", () => {
 describe("paiseToRupees", () => {
   it("converts for display", () => {
     expect(paiseToRupees(49950)).toBe(499.5);
+  });
+});
+
+describe("paiseToText", () => {
+  it("writes paise as a money field holds them, and reads back to the same paise", () => {
+    expect(paiseToText(0)).toBe("0");
+    expect(paiseToText(150000)).toBe("1500");
+    expect(paiseToText(150050)).toBe("1500.50");
+    expect(paiseToText(5)).toBe("0.05");
+    for (const paise of [0, 5, 99, 100, 150050, 100_000_000]) expect(parseRupees(paiseToText(paise))).toBe(paise);
   });
 });
 

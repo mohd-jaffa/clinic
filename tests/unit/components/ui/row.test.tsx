@@ -75,6 +75,19 @@ describe("Row", () => {
     expect(screen.getByText("P-0118")).toBeInTheDocument();
   });
 
+  // That a tap on the value opens the row is the stretched target's work, shown in the browser (tests/e2e/catalogues.spec.ts).
+  it("reads a value at its end, still under its target, its chevron after it", () => {
+    render(
+      <ul>
+        <Row look="menu" title="Root canal" detail="₹4,500" onClick={vi.fn()} />
+      </ul>,
+    );
+    const row = screen.getByRole("listitem");
+    expect(row).toHaveTextContent("Root canal₹4,500");
+    expect(screen.getByText("₹4,500")).not.toHaveClass("relative");
+    expect(row.querySelector("svg")).toBeInTheDocument();
+  });
+
   it("is a button when it opens something in place", async () => {
     const onClick = vi.fn();
     render(

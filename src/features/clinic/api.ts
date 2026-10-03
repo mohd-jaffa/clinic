@@ -1,5 +1,6 @@
 import { LOGO_BUCKET, type LogoMimeType } from "@/constants/uploads";
 import { logActionSafe } from "@/lib/audit/auditLog";
+import { changedValues } from "@/lib/audit/changes";
 import { externalServiceError, fromPostgrestError, notFoundError, validationError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import type { Tenant } from "@/lib/supabase/tenant";
@@ -63,13 +64,6 @@ function columnsOf({ details, paperSize, feeTiming }: UpdateClinicPayload): Part
   };
 }
 
-/** Each column that really changed, from what to what. */
-function changed(before: ClinicRow, after: ClinicRow, columns: readonly (keyof ClinicRow)[]) {
-  return Object.fromEntries(
-    columns.filter((column) => before[column] !== after[column]).map((c) => [c, { from: before[c], to: after[c] }]),
-  );
-}
-
 /** Its details, its paper size or its fee timing; what is left out stays as it is. */
 export async function updateClinic(
   tenant: Tenant,
@@ -87,7 +81,7 @@ export async function updateClinic(
   if (error) throw fromPostgrestError(error);
   if (!after) throw notFoundError("RECORD_NOT_FOUND");
 
-  const changes = changed(before, after, Object.keys(columns) as (keyof ClinicRow)[]);
+  const changes = changedValues(before, after, Object.keys(columns) as (keyof ClinicRow & string)[]);
   if (Object.keys(changes).length > 0) {
     await logActionSafe(tenant, {
       action: "UPDATE",

@@ -10,18 +10,30 @@ import { followAuthLink } from "./mailpit";
  * elements at fault.
  */
 export async function expectAccessible(page: Page): Promise<void> {
-  // A card or menu still fading in is checked as it will stand, not halfway
-  // there: its colours mid-fade are blends no one reads. A pulse that never
-  // ends is not waited for.
-  await page.evaluate(() =>
-    Promise.all(
-      document
+  // A card or menu still fading is checked as it will stand, not halfway
+  // there: its colours mid-fade are blends no one reads. Neither a pulse that
+  // never ends nor a notice's countdown — a clock, whose end only starts the
+  // notice's fade — is waited for. A fade that begins during the check makes
+  // it run again, on the page as it then stands.
+  const settle = () =>
+    page.evaluate(async () => {
+      const fades = document
         .getAnimations()
-        .filter((animation) => animation.effect?.getComputedTiming().iterations !== Infinity)
-        .map((animation) => animation.finished.catch(() => undefined)),
-    ),
-  );
-  const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"]).analyze();
+        .filter(
+          (animation) =>
+            animation.effect?.getComputedTiming().iterations !== Infinity &&
+            !(animation.effect as KeyframeEffect | null)?.target?.closest("[data-countdown]"),
+        );
+      await Promise.all(fades.map((animation) => animation.finished.catch(() => undefined)));
+      return fades.length;
+    });
+  let results: Awaited<ReturnType<AxeBuilder["analyze"]>>;
+  let attempt = 0;
+  do {
+    await settle();
+    results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"]).analyze();
+    attempt += 1;
+  } while ((await settle()) > 0 && attempt < 3);
   expect(
     results.violations.map(
       (violation) =>

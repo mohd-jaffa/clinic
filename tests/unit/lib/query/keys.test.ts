@@ -21,8 +21,15 @@ describe("apiRoutes", () => {
     });
   });
 
+  it("names the catalogues, each one entry at its own address", () => {
+    expect(apiRoutes.services.one("s-1")).toBe("/api/services/s-1");
+    expect(apiRoutes.appointmentTypes.one("a-1")).toBe("/api/appointment-types/a-1");
+    expect(apiRoutes.expenseCategories.one("c-1")).toBe("/api/expense-categories/c-1");
+  });
+
   it("names only routes that exist", () => {
-    for (const route of Object.values(apiRoutes).flatMap(Object.values)) {
+    for (const named of Object.values(apiRoutes).flatMap(Object.values)) {
+      const route = typeof named === "function" ? named("[id]") : named;
       expect(existsSync(join(process.cwd(), "src/app", route, "route.ts")), route).toBe(true);
     }
   });

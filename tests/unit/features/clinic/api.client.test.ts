@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { ClinicClient } from "@/features/clinic/api.client";
+import {
+  AppointmentTypesClient,
+  ClinicClient,
+  ExpenseCategoriesClient,
+  ServicesClient,
+} from "@/features/clinic/api.client";
 import { apiRoutes } from "@/lib/query/keys";
 
 const mockFetch = vi.fn();
@@ -33,5 +38,37 @@ describe("ClinicClient", () => {
   it("removes the logo", async () => {
     await ClinicClient.removeLogo();
     expect(sent()).toMatchObject({ url: apiRoutes.clinic.logo, method: "DELETE" });
+  });
+});
+
+describe("the catalogue clients (plan §30)", () => {
+  it("add a service, an appointment type and an expense category to their lists", async () => {
+    await ServicesClient.add({ name: "Scaling", category: "PROCEDURE", price: "800" });
+    expect(sent()).toMatchObject({
+      url: apiRoutes.services.list,
+      method: "POST",
+      body: '{"name":"Scaling","category":"PROCEDURE","price":"800"}',
+    });
+
+    mockFetch.mockClear();
+    await AppointmentTypesClient.add({ name: "Root canal", minutes: "45" });
+    expect(sent()).toMatchObject({ url: apiRoutes.appointmentTypes.list, method: "POST" });
+
+    mockFetch.mockClear();
+    await ExpenseCategoriesClient.add({ name: "Lab fees" });
+    expect(sent()).toMatchObject({ url: apiRoutes.expenseCategories.list, method: "POST" });
+  });
+
+  it("change one at its own address, sending the change without its id", async () => {
+    await ServicesClient.change({ id: "s-1", active: false });
+    expect(sent()).toMatchObject({ url: "/api/services/s-1", method: "PATCH", body: '{"active":false}' });
+
+    mockFetch.mockClear();
+    await ExpenseCategoriesClient.change({ id: "c-1", details: { name: "Lease" } });
+    expect(sent()).toMatchObject({
+      url: "/api/expense-categories/c-1",
+      method: "PATCH",
+      body: '{"details":{"name":"Lease"}}',
+    });
   });
 });

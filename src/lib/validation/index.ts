@@ -22,6 +22,7 @@ export {
   requiredEmail,
   requiredLine,
   requiredLines,
+  wholeNumberText,
 } from "./primitives";
 
 export { cursorParam, listQuerySchema, searchParam, type ListQuery } from "./schemas/list";
@@ -67,3 +68,24 @@ export {
   type UpdateClinicInput,
   type UpdateClinicPayload,
 } from "./schemas/clinic";
+
+export {
+  appointmentTypeSchema,
+  changeAppointmentTypeSchema,
+  changeExpenseCategorySchema,
+  changeServiceSchema,
+  expenseCategorySchema,
+  serviceSchema,
+  type AppointmentTypeInput,
+  type AppointmentTypePayload,
+  type ChangeAppointmentTypeInput,
+  type ChangeAppointmentTypePayload,
+  type ChangeExpenseCategoryInput,
+  type ChangeExpenseCategoryPayload,
+  type ChangeServiceInput,
+  type ChangeServicePayload,
+  type ExpenseCategoryInput,
+  type ExpenseCategoryPayload,
+  type ServiceInput,
+  type ServicePayload,
+} from "./schemas/catalogues";

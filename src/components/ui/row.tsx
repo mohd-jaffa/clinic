@@ -63,7 +63,9 @@ export function RowToken({ value, label }: { value: string; label?: string }) {
  * it, and what it leads to. With `href` or `onClick` the whole row is the
  * target — its title stretched over it — and `trailing` sits above that
  * target, so a row can open a patient and still carry its own **Send in**.
- * A chevron shows where the row goes when nothing else is at its end.
+ * `detail` is a value read at the row's end — a price, a length — and stays
+ * part of the target. A chevron shows where the row goes when nothing else
+ * is at its end.
  *
  * `look`: a `surface` row stands on the ground on its own; a `quiet` one is
  * not yet in play — still to come, done — drawn as an outline instead; a
@@ -73,6 +75,7 @@ export function Row({
   leading,
   title,
   subtitle,
+  detail,
   trailing,
   href,
   onClick,
@@ -81,6 +84,7 @@ export function Row({
   leading?: ReactNode;
   title: string;
   subtitle?: ReactNode;
+  detail?: ReactNode;
   trailing?: ReactNode;
   href?: string;
   onClick?: () => void;
@@ -121,6 +125,7 @@ export function Row({
         {target}
         {subtitle && <span className="block truncate text-small text-muted tabular-nums">{subtitle}</span>}
       </span>
+      {detail && <span className="shrink-0 font-bold text-ink tabular-nums">{detail}</span>}
       {trailing && <span className="relative z-[1] flex shrink-0 items-center gap-2">{trailing}</span>}
       {goes && <ChevronRight size={20} strokeWidth={2.25} aria-hidden="true" className="mr-1.5 shrink-0 text-muted" />}
     </li>

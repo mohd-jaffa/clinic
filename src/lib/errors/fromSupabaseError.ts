@@ -65,6 +65,10 @@ function isNetworkFailure(err: PostgrestError): boolean {
 const BUSINESS_RULES: ReadonlySet<ErrorMessageCode> = new Set<ErrorMessageCode>([
   // A write while the clinic's plan has run out (plan §7.3).
   "CLINIC_PLAN_EXPIRED",
+  // Archiving the last of what a clinic must keep (0010, D83).
+  "CONSULTATION_SERVICE_REQUIRED",
+  "APPOINTMENT_TYPE_REQUIRED",
+  "EXPENSE_CATEGORY_REQUIRED",
 ]);
 
 /**

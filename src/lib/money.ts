@@ -44,6 +44,17 @@ export function parseRupees(text: string): number | null {
   return rupeesToPaise(digits);
 }
 
+/**
+ * Whole paise as a money field holds them: "1500", "1500.50", "0" — the
+ * digits worked out in integers, never through a float, so the field reads
+ * back to exactly what was stored.
+ */
+export function paiseToText(paise: number): string {
+  const rupees = Math.trunc(paise / 100);
+  const rest = paise % 100;
+  return rest === 0 ? String(rupees) : `${rupees}.${String(rest).padStart(2, "0")}`;
+}
+
 /** Whole paise as a rupee number, for display only — never for adding up. */
 export function paiseToRupees(paise: number): number {
   return paise / 100;

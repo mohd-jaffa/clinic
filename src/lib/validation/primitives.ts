@@ -230,6 +230,28 @@ export function paiseAmount(label: string, { allowZero = false, max = MAX_AMOUNT
 }
 
 /**
+ * A whole number typed into a text field — an appointment type's minutes —
+ * read from its digits and held to its bounds, so "15" arrives as 15 and
+ * "15.5" or "ten" is refused in words.
+ */
+export function wholeNumberText(label: string, { min, max }: { min: number; max: number }) {
+  return z
+    .string({ error: VALIDATION_MESSAGES.required(label) })
+    .trim()
+    .transform((text, ctx) => {
+      const refuse = (message: string) => {
+        ctx.addIssue({ code: "custom", message });
+        return z.NEVER;
+      };
+      if (text === "") return refuse(VALIDATION_MESSAGES.required(label));
+      if (!/^\d{1,9}$/.test(text)) return refuse(VALIDATION_MESSAGES.wholeNumber(label));
+      const value = Number(text);
+      if (value < min || value > max) return refuse(VALIDATION_MESSAGES.between(label, min, max));
+      return value;
+    });
+}
+
+/**
  * How many of a thing a bill line is for: a whole number from 1 to 999.
  * An emptied number field arrives as NaN, and says so in words.
  */

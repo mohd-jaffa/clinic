@@ -33,6 +33,18 @@ export const ERROR_MESSAGES = {
   LOGO_UPLOAD_FAILED: "The logo couldn't be stored. Please try again.",
   CLINIC_LOAD_FAILED: "The clinic's details couldn't be loaded.",
 
+  // The clinic's catalogues (plan §9, D80 – D83): a name is the clinic's only once while active.
+  SERVICE_ALREADY_EXISTS: "Another service on the price list already has this name.",
+  APPOINTMENT_TYPE_ALREADY_EXISTS: "Another appointment type already has this name.",
+  EXPENSE_CATEGORY_ALREADY_EXISTS: "Another expense category already has this name.",
+  // And one of each is always kept (D83).
+  CONSULTATION_SERVICE_REQUIRED: "The price list keeps at least one Consultation — bills start from it.",
+  APPOINTMENT_TYPE_REQUIRED: "Keep at least one appointment type — every booking needs one.",
+  EXPENSE_CATEGORY_REQUIRED: "Keep at least one expense category — every expense is filed under one.",
+  SERVICES_LOAD_FAILED: "The price list couldn't be loaded.",
+  APPOINTMENT_TYPES_LOAD_FAILED: "The appointment types couldn't be loaded.",
+  EXPENSE_CATEGORIES_LOAD_FAILED: "The expense categories couldn't be loaded.",
+
   // The browser could not reach the server (plan §21, D55): said by the client, never sent by the server.
   NETWORK_OFFLINE: "You're offline. Try again once the connection is back — what you typed is still here.",
   NETWORK_UNREACHABLE: "ClinicDesk couldn't be reached. Check the connection and try again.",
@@ -75,6 +87,7 @@ export const VALIDATION_MESSAGES = {
   moreThanZero: (label: string) => `${label} must be more than 0.`,
   tooLong: (label: string, max: number) => `${label} can be at most ${max} characters.`,
   tooShort: (label: string, min: number) => `${label} must be at least ${min} characters.`,
+  between: (label: string, min: number, max: number) => `${label} must be from ${min} to ${max}.`,
   invalid: "That value is not valid.",
   gstin: "GSTIN must be 15 characters, like 32ABCDE1234F1Z5.",
 } as const;
@@ -104,6 +117,7 @@ export const UI_TEXT = {
 
   states: {
     loading: "Loading…",
+    noMatches: (search: string) => `Nothing matches “${search}”`,
   },
 
   /** A form field's own words (plan §32.2). */
@@ -375,6 +389,72 @@ export const UI_TEXT = {
     feeTimingHint: "When reception collects the doctor’s fee.",
     feeTimingSaved: (timing: string) => `The consultation fee is now collected ${timing.toLowerCase()}`,
     choiceNotSaved: "That wasn’t changed",
+  },
+
+  /**
+   * What the price list, appointment types and expense categories share (plan
+   * §9, D80 – D83): archived, never deleted, and brought back from Archived.
+   */
+  catalogues: {
+    archived: "Archived",
+    showArchived: (count: number) => `Show archived (${count})`,
+    hideArchived: "Hide archived",
+    archive: "Archive",
+    restore: "Restore",
+    restoreNamed: (name: string) => `Restore ${name}`,
+    archivedNote: (name: string) => `${name} archived`,
+    restoredNote: (name: string) => `${name} restored`,
+    savedNote: (name: string) => `${name} saved`,
+    notChanged: "That wasn’t changed",
+  },
+
+  /** The price list (plan §9, D82): grouped by category, found by name. */
+  priceList: {
+    count: (count: number) => (count === 1 ? "1 service" : `${count} services`),
+    search: "Search services",
+    add: "Add service",
+    addTitle: "Add a service",
+    editTitle: "Change service",
+    nameLabel: "Service name",
+    categoryLabel: "Category",
+    categoryPlaceholder: "Choose a category",
+    priceLabel: "Price",
+    priceHint: "What a bill charges for one.",
+    added: (name: string) => `${name} added to the price list`,
+    notSaved: "The service wasn’t saved",
+    archiveTitle: (name: string) => `Archive ${name}?`,
+    archiveBody: "New bills won’t offer it. Bills that already have it keep it. You can restore it from Archived.",
+  },
+
+  /** Appointment types (plan §9, D32, D81): the kinds of visit, each with its usual length. */
+  appointmentTypes: {
+    count: (count: number) => (count === 1 ? "1 kind of visit" : `${count} kinds of visit`),
+    add: "Add appointment type",
+    addTitle: "Add an appointment type",
+    editTitle: "Change appointment type",
+    nameLabel: "Name",
+    minutesLabel: "Length in minutes",
+    minutesHint: "How long it usually takes, 5 to 480. A booking can change it.",
+    minutes: (count: number) => `${count} min`,
+    added: (name: string) => `${name} added`,
+    notSaved: "The appointment type wasn’t saved",
+    archiveTitle: (name: string) => `Archive ${name}?`,
+    archiveBody: "New bookings won’t offer it. Appointments that have it keep it. You can restore it from Archived.",
+    order: "New types join the end of the list.",
+  },
+
+  /** Expense categories (plan §9, §16, D40): how the clinic's spending is grouped. */
+  expenseCategories: {
+    count: (count: number) => (count === 1 ? "1 category" : `${count} categories`),
+    add: "Add category",
+    addTitle: "Add an expense category",
+    editTitle: "Rename category",
+    nameLabel: "Name",
+    added: (name: string) => `${name} added`,
+    notSaved: "The category wasn’t saved",
+    archiveTitle: (name: string) => `Archive ${name}?`,
+    archiveBody: "New expenses won’t offer it. Expenses filed under it keep it. You can restore it from Archived.",
+    order: "New categories join the end of the list.",
   },
 
   /** My account's theme switch (D36): kept per device. */

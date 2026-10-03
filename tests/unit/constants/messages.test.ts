@@ -17,4 +17,10 @@ describe("the app's words", () => {
     expect(getErrorMessage("CLINIC_PLAN_EXPIRED")).toBe(ERROR_MESSAGES.CLINIC_PLAN_EXPIRED);
     expect(getErrorMessage("relation patients does not exist")).toBe(ERROR_MESSAGES.INTERNAL_ERROR);
   });
+
+  it("counts a catalogue in the singular and the plural", () => {
+    expect([1, 4].map(UI_TEXT.priceList.count)).toEqual(["1 service", "4 services"]);
+    expect([1, 4].map(UI_TEXT.appointmentTypes.count)).toEqual(["1 kind of visit", "4 kinds of visit"]);
+    expect([1, 4].map(UI_TEXT.expenseCategories.count)).toEqual(["1 category", "4 categories"]);
+  });
 });

@@ -24,6 +24,19 @@ export const apiRoutes = {
     profile: "/api/clinic",
     logo: "/api/clinic/logo",
   },
+  // The clinic's catalogues (plan §9, §30): each a list, and one entry by id.
+  services: {
+    list: "/api/services",
+    one: (id: string) => `/api/services/${id}`,
+  },
+  appointmentTypes: {
+    list: "/api/appointment-types",
+    one: (id: string) => `/api/appointment-types/${id}`,
+  },
+  expenseCategories: {
+    list: "/api/expense-categories",
+    one: (id: string) => `/api/expense-categories/${id}`,
+  },
 } as const;
 
 /**

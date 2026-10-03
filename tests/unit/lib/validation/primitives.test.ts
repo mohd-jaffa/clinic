@@ -19,6 +19,7 @@ import {
   requiredEmail,
   requiredLine,
   requiredLines,
+  wholeNumberText,
 } from "@/lib/validation/primitives";
 
 function messageOf(schema: z.ZodType, value: unknown): string | null {
@@ -122,6 +123,25 @@ describe("paiseAmount", () => {
   it("names the field when it is not a number at all", () => {
     expect(messageOf(paiseAmount("Amount"), "500")).toBe(VALIDATION_MESSAGES.amount("Amount"));
     expect(messageOf(paiseAmount("Amount"), 12.5)).toBe(VALIDATION_MESSAGES.wholeNumber("Amount"));
+  });
+});
+
+describe("wholeNumberText", () => {
+  const minutes = wholeNumberText("Length", { min: 5, max: 480 });
+
+  it("reads typed digits as a whole number within its bounds", () => {
+    expect(minutes.parse(" 45 ")).toBe(45);
+    expect(minutes.parse("5")).toBe(5);
+    expect(minutes.parse("480")).toBe(480);
+  });
+
+  it("says, in words, what is missing, not whole, or out of bounds", () => {
+    expect(messageOf(minutes, "")).toBe(VALIDATION_MESSAGES.required("Length"));
+    expect(messageOf(minutes, undefined)).toBe(VALIDATION_MESSAGES.required("Length"));
+    expect(messageOf(minutes, "15.5")).toBe(VALIDATION_MESSAGES.wholeNumber("Length"));
+    expect(messageOf(minutes, "ten")).toBe(VALIDATION_MESSAGES.wholeNumber("Length"));
+    expect(messageOf(minutes, "4")).toBe(VALIDATION_MESSAGES.between("Length", 5, 480));
+    expect(messageOf(minutes, "481")).toBe(VALIDATION_MESSAGES.between("Length", 5, 480));
   });
 });
 
