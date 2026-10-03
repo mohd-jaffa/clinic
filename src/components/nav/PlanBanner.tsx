@@ -62,7 +62,7 @@ export function PlanBanner() {
   return (
     <section
       aria-label={plan.banner}
-      data-plan-banner=""
+      data-band=""
       className={cn(
         "safe-top flex items-start gap-x-3 px-4 pb-1.5 [--safe-pt:0.375rem] md:px-8",
         attention ? "bg-coral-soft" : "border-b border-line bg-surface",

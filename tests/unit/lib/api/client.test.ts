@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { afterEach, describe, it, expect, vi, beforeEach } from "vitest";
 import { ERROR_MESSAGES } from "@/constants/messages";
 import {
   ApiError,
@@ -339,5 +339,100 @@ describe("getFile", () => {
 
     await expect(getFile("/api/bills/b-1/bill.pdf")).resolves.toBeInstanceOf(Blob);
     expect(mockFetch).toHaveBeenCalledTimes(3);
+  });
+});
+
+describe("a dropped connection (plan §21, D55)", () => {
+  const KEY = "5f0c2a9e-3b1d-4c6e-9a7f-2d8b4e1c0a93";
+  const unreachable = () => mockFetch.mockRejectedValueOnce(new TypeError("Failed to fetch"));
+  const setOnline = (online: boolean) => vi.spyOn(navigator, "onLine", "get").mockReturnValue(online);
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockFetch.mockReset();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.useRealTimers();
+  });
+
+  it("refuses a read or an unkeyed write at once, in the app's words for offline", async () => {
+    setOnline(false);
+    unreachable();
+    await expect(getJson("/api/patients")).rejects.toMatchObject({
+      status: 0,
+      code: "NETWORK_OFFLINE",
+      message: ERROR_MESSAGES.NETWORK_OFFLINE,
+    });
+    unreachable();
+    await expect(patchJson("/api/auth/profile", { fullName: "Asha" })).rejects.toBeInstanceOf(ApiError);
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+  });
+
+  it("says the server could not be reached when the device is online", async () => {
+    setOnline(true);
+    unreachable();
+    await expect(postJson("/api/auth/login", {})).rejects.toMatchObject({ code: "NETWORK_UNREACHABLE" });
+  });
+
+  it("leaves a failure that is not the network's as it was", async () => {
+    const aborted = new DOMException("The user aborted a request.", "AbortError");
+    mockFetch.mockRejectedValueOnce(aborted);
+    await expect(getJson("/api/patients")).rejects.toBe(aborted);
+  });
+
+  it("holds a keyed write while offline, and sends it once the connection is back, with the same key", async () => {
+    const onLine = setOnline(false);
+    mockFetchSuccess({ id: "bill-1" });
+    const sent = postOnce("/api/bills", { total: 500 }, KEY);
+    await Promise.resolve();
+    expect(mockFetch).not.toHaveBeenCalled();
+
+    onLine.mockReturnValue(true);
+    window.dispatchEvent(new Event("online"));
+    await expect(sent).resolves.toEqual({ id: "bill-1" });
+    expect(mockFetch).toHaveBeenCalledOnce();
+    expect(mockFetch.mock.calls[0][1].headers).toMatchObject({ "Idempotency-Key": KEY });
+  });
+
+  it("sends a keyed write again when the connection drops on the way, the key unchanged", async () => {
+    const onLine = setOnline(true);
+    mockFetch.mockImplementationOnce(() => {
+      onLine.mockReturnValue(false);
+      return Promise.reject(new TypeError("Failed to fetch"));
+    });
+    mockFetchSuccess({ id: "bill-1" });
+    const sent = postOnce("/api/bills", { total: 500 }, KEY);
+    await vi.waitFor(() => expect(mockFetch).toHaveBeenCalledOnce());
+
+    onLine.mockReturnValue(true);
+    window.dispatchEvent(new Event("online"));
+    await expect(sent).resolves.toEqual({ id: "bill-1" });
+    const keys = mockFetch.mock.calls.map(([, init]) => init.headers["Idempotency-Key"]);
+    expect(keys).toEqual([KEY, KEY]);
+  });
+
+  it("tries a keyed write a few more times while online and unanswered, then gives up and says so", async () => {
+    vi.useFakeTimers();
+    setOnline(true);
+    for (let attempt = 0; attempt < 4; attempt++) unreachable();
+    const sent = postOnce("/api/bills", { total: 500 }, KEY);
+    const refused = expect(sent).rejects.toMatchObject({ code: "NETWORK_UNREACHABLE" });
+
+    await vi.advanceTimersByTimeAsync(1_000 + 2_000 + 4_000);
+    await refused;
+    expect(mockFetch).toHaveBeenCalledTimes(4);
+  });
+
+  it("lands a keyed write that gets through on a later try", async () => {
+    vi.useFakeTimers();
+    setOnline(true);
+    unreachable();
+    mockFetchSuccess({ id: "bill-1" });
+    const sent = postOnce("/api/bills", { total: 500 }, KEY);
+    await vi.advanceTimersByTimeAsync(1_000);
+    await expect(sent).resolves.toEqual({ id: "bill-1" });
+    expect(mockFetch).toHaveBeenCalledTimes(2);
   });
 });

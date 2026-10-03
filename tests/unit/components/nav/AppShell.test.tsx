@@ -1,6 +1,6 @@
 import { act, cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { settleNavigation, SLOW_MS, startNavigation } from "@/lib/navigation/pending";
 import { aSession, authStub } from "@tests/support/auth";
@@ -183,7 +183,11 @@ describe("the plan (plan §7.2, D73)", () => {
     inState("READ_ONLY");
     shell();
     const main = screen.getByRole("main");
-    expect(main.firstElementChild).toBe(within(main).getByRole("region", { name: "Your plan" }));
+    // Only the connection's place, empty while there is one, comes before it.
+    const [connection, plan] = main.children;
+    expect(connection).toBe(within(main).getByRole("status"));
+    expect(connection).toBeEmptyDOMElement();
+    expect(plan).toBe(within(main).getByRole("region", { name: "Your plan" }));
     cleanup();
 
     inState("ACTIVE");
@@ -200,6 +204,23 @@ describe("the plan (plan §7.2, D73)", () => {
     expect(lobe).toHaveTextContent("Your clinic is view-only until its plan is renewed.");
     expect(within(lobe).queryAllByRole("link")).toEqual([]);
     expect(within(lobe).getByRole("button", { name: "Patient" })).toHaveAttribute("aria-disabled", "true");
+  });
+});
+
+describe("the connection (plan §21, D55)", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("leads the screen with the offline band while it is gone, above the plan banner", () => {
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
+    auth.current = authStub({ subscription: { ...aSession().subscription!, state: "GRACE" } });
+    shell();
+
+    const main = screen.getByRole("main");
+    const [connection, plan] = main.children;
+    expect(connection).toHaveTextContent("You’re offline. What you type stays here until it can be saved.");
+    expect(plan).toBe(within(main).getByRole("region", { name: "Your plan" }));
   });
 });
 
@@ -237,7 +258,7 @@ describe("on the way to another screen", () => {
 
       act(() => settleNavigation());
       expect(main).not.toHaveAttribute("aria-busy");
-      expect(within(main).queryByRole("status")).not.toBeInTheDocument();
+      expect(within(main).queryByRole("status", { name: "Loading…" })).not.toBeInTheDocument();
     } finally {
       vi.useRealTimers();
     }

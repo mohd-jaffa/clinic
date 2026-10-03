@@ -25,6 +25,7 @@ import { useNavigationPending } from "@/hooks/useNavigationPending";
 
 import { AccountMenu } from "./AccountMenu";
 import { MoreSheet } from "./MoreSheet";
+import { OfflineBanner } from "./OfflineBanner";
 import { PlanBanner } from "./PlanBanner";
 import { AddButton } from "./QuickAdd";
 
@@ -40,9 +41,10 @@ import { AddButton } from "./QuickAdd";
  * - **Desktop (≥ 1024 px):** the sidebar on the ground — the clinic's name,
  *   the **Add** capsule, the places in three groups, the account at its foot.
  *
- * The plan banner leads every screen while the clinic's plan is not active
- * (`PlanBanner`), and in a view-only clinic the ＋ still opens its actions,
- * each turned off and saying why (plan §7.2).
+ * A band leads every screen while the connection is gone (`OfflineBanner`)
+ * and while the clinic's plan is not active (`PlanBanner`); in a view-only
+ * clinic the ＋ still opens its actions, each turned off and saying why
+ * (plan §7.2).
  *
  * Only the places and quick adds the person may use are shown. The current
  * place is a patch of land behind its icon — or, in the sidebar, behind the
@@ -124,6 +126,7 @@ function AppFrame({ children }: { children: ReactNode }) {
         data-navigating={navigating || undefined}
         className="min-w-0 flex-1 pb-[calc(var(--bottom-bar-offset)+var(--safe-bottom)+2rem)]"
       >
+        <OfflineBanner />
         <PlanBanner />
         {navigating && <ScreenSkeleton label={UI_TEXT.states.loading} />}
         {children}

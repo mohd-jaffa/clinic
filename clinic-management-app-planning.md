@@ -1116,7 +1116,8 @@ clinical or financial records, no clinic activity.
   key, so it can never land twice); whatever is being typed — a visit, a bill,
   a patient — stays on screen until it saves. Drafts live in memory only:
   **no patient data is written to the device** (no `localStorage`, no
-  IndexedDB, no cache). Reading needs the connection.
+  IndexedDB, no cache). Reading needs the connection. Which saves wait and
+  which are refused with what was typed kept: Q25.
 - **Security headers** on every response: CSP, HSTS, `X-Frame-Options: DENY`,
   `Referrer-Policy: same-origin`, `Permissions-Policy`. App routes are
   `noindex`.
@@ -2251,6 +2252,7 @@ starts.
 | Q22 | Who writes the privacy policy and terms? | **Open.** Drafted in R12.2 from what the app keeps; the user reviews before release. |
 | Q23 | How does an invite link last `invite_valid_days` (§8.4), when Supabase Auth's links last at most a day? | **Answered: the app's own invite token (D63).** |
 | Q24 | What paper size and fee timing does a new clinic start with (§9)? | **Default:** A4, and the fee collected after the consultation (`DEFAULT_CLINIC_SETTINGS`); each clinic changes both in Settings. |
+| Q25 | Which saves wait for the connection (§21, D55)? | **Default (R2.11):** a save that carries an idempotency key (§26) waits while the device is offline and goes when the connection returns, and is tried again after 1, 2 and 4 s if the server cannot be reached while online — the key makes it land once. Any other save is refused at once with the reason (`NETWORK_OFFLINE`, `NETWORK_UNREACHABLE`), what was typed kept in its sheet, and the person saves again. Reads are refused at once. |
 
 ## 42. Later (unscheduled)
 

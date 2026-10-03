@@ -30,6 +30,10 @@ export const ERROR_MESSAGES = {
 
   LOGO_TOO_LARGE: "That logo is larger than 500 KB.",
 
+  // The browser could not reach the server (plan §21, D55): said by the client, never sent by the server.
+  NETWORK_OFFLINE: "You're offline. Try again once the connection is back — what you typed is still here.",
+  NETWORK_UNREACHABLE: "ClinicDesk couldn't be reached. Check the connection and try again.",
+
   CONFLICT: "Someone else changed this at the same moment. Refresh and try again.",
   NOT_FOUND: "We couldn't find that.",
   RECORD_NOT_FOUND: "That record could not be found. Refresh and try again.",
@@ -275,6 +279,11 @@ export const UI_TEXT = {
       export: { label: "Export", hint: "All records as CSV files" },
       deleteClinic: { label: "Delete clinic", hint: "Ask to delete the clinic" },
     },
+  },
+
+  /** No connection (plan §21, D55): the band at the top while it is gone. */
+  offline: {
+    banner: "You’re offline. What you type stays here until it can be saved.",
   },
 
   /**

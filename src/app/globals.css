@@ -409,13 +409,14 @@
 /* A screen on its way out waits behind the next one's skeleton, as it was,
    so a navigation that is cancelled simply shows it again
    (useNavigationPending). */
-main[data-navigating] > :not([data-screen-skeleton], [data-plan-banner]) {
+main[data-navigating] > :not([data-screen-skeleton], [data-band]) {
   display: none;
 }
 
-/* The plan banner (PlanBanner) pays the top safe area when it leads a
-   screen; the screen's land under it does not pay it again. */
-[data-plan-banner] ~ * {
+/* A band across the top — no connection (OfflineBanner), the plan
+   (PlanBanner) — pays the top safe area when it leads a screen; whatever
+   follows it, another band or the screen's land, does not pay it again. */
+[data-band] ~ * {
   --safe-top: 0px;
 }
 
