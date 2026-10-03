@@ -127,6 +127,9 @@ const SETTINGS: NavItem = {
 /** Where who is signed in leads: their own name, mobile and password (plan §31.2). */
 export const MY_ACCOUNT_ROUTE = "/settings/account";
 
+/** The owner's Plan screen (plan §7.5): where the plan banner's How to renew leads (D74). */
+export const PLAN_ROUTE = `${SETTINGS_ROUTE}/plan`;
+
 /**
  * A row of the Settings index (plan §31.2, D71): the screen it opens, what
  * that screen holds, and who may open it — the clinic's setup for

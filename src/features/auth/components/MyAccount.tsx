@@ -13,6 +13,8 @@ import { SegmentedControl } from "@/components/ui/segmented-control";
 import { UI_TEXT } from "@/constants/messages";
 import { SETTINGS_ROUTE } from "@/constants/navigation";
 import { CLINIC_ROLE_LABELS } from "@/constants/roles";
+import { ReadOnlyNote } from "@/features/subscription/components/ReadOnlyNote";
+import { useReadOnly } from "@/features/subscription/hooks/useReadOnly";
 import { formatPhoneDigits } from "@/lib/phone";
 import { useTheme } from "@/lib/theme/ThemeProvider";
 import { THEME_PREFERENCE_LABELS, THEME_PREFERENCES } from "@/lib/theme/themes";
@@ -35,11 +37,14 @@ const THEME_OPTIONS = THEME_PREFERENCES.map((value) => ({ value, label: THEME_PR
  * sheet of its own — the email only shown, since changing the sign-in email
  * comes later — the password, the theme for this device (D36), and Sign out,
  * which asks first. From 1024 px the details and the password stand beside
- * the theme and Sign out.
+ * the theme and Sign out. In a view-only clinic the name and mobile cannot be
+ * changed, and say why; the password, the theme and Sign out still work
+ * (plan §7.2).
  */
 export function MyAccount() {
   const { profile, membership } = useAuth();
   const { preference, setPreference } = useTheme();
+  const { readOnly } = useReadOnly();
   const [changing, setChanging] = useState<Changing | null>(null);
   const close = () => setChanging(null);
 
@@ -73,7 +78,7 @@ export function MyAccount() {
                 leading={<IconChip icon={UserRound} />}
                 title={account.nameLabel}
                 subtitle={profile.fullName}
-                onClick={() => setChanging("name")}
+                onClick={readOnly ? undefined : () => setChanging("name")}
               />
               <Row
                 leading={<IconChip icon={Smartphone} />}
@@ -81,10 +86,11 @@ export function MyAccount() {
                 subtitle={
                   profile.phone ? `${UI_TEXT.fields.phonePrefix} ${formatPhoneDigits(profile.phone)}` : account.noPhone
                 }
-                onClick={() => setChanging("phone")}
+                onClick={readOnly ? undefined : () => setChanging("phone")}
               />
               <Row leading={<IconChip icon={Mail} />} title={account.emailLabel} subtitle={profile.email} />
             </RowList>
+            <ReadOnlyNote />
           </section>
 
           <section aria-labelledby="account-password">

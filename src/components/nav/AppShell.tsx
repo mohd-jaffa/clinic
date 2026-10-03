@@ -20,10 +20,12 @@ import {
 } from "@/constants/navigation";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { RequireAuth } from "@/features/auth/components/RequireAuth";
+import { useReadOnly } from "@/features/subscription/hooks/useReadOnly";
 import { useNavigationPending } from "@/hooks/useNavigationPending";
 
 import { AccountMenu } from "./AccountMenu";
 import { MoreSheet } from "./MoreSheet";
+import { PlanBanner } from "./PlanBanner";
 import { AddButton } from "./QuickAdd";
 
 /**
@@ -37,6 +39,10 @@ import { AddButton } from "./QuickAdd";
  *   under its icon, the round ＋ at its top (D69) and the account at its foot.
  * - **Desktop (≥ 1024 px):** the sidebar on the ground — the clinic's name,
  *   the **Add** capsule, the places in three groups, the account at its foot.
+ *
+ * The plan banner leads every screen while the clinic's plan is not active
+ * (`PlanBanner`), and in a view-only clinic the ＋ still opens its actions,
+ * each turned off and saying why (plan §7.2).
  *
  * Only the places and quick adds the person may use are shown. The current
  * place is a patch of land behind its icon — or, in the sidebar, behind the
@@ -55,6 +61,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 function AppFrame({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const { membership } = useAuth();
+  const { readOnly, reason } = useReadOnly();
   const [moreOpen, setMoreOpen] = useState(false);
   const [adding, setAdding] = useState(false);
   // On the way to another screen: its skeleton in this one's place, the navigation kept.
@@ -117,6 +124,7 @@ function AppFrame({ children }: { children: ReactNode }) {
         data-navigating={navigating || undefined}
         className="min-w-0 flex-1 pb-[calc(var(--bottom-bar-offset)+var(--safe-bottom)+2rem)]"
       >
+        <PlanBanner />
         {navigating && <ScreenSkeleton label={UI_TEXT.states.loading} />}
         {children}
       </main>
@@ -168,6 +176,7 @@ function AppFrame({ children }: { children: ReactNode }) {
         open={adding}
         onClose={() => setAdding(false)}
         actions={adds.map(({ key, label, icon, href }) => ({ key, label, icon, href }))}
+        blocked={readOnly ? reason : undefined}
       />
     </div>
   );

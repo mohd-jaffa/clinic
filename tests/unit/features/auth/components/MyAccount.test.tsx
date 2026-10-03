@@ -57,6 +57,18 @@ describe("MyAccount", () => {
     expect(within(phone).getByRole("textbox", { name: /^Mobile number/ })).toHaveValue("98765 43210");
   });
 
+  it("in a view-only clinic, keeps the name and mobile as they are and says why; the password still changes", async () => {
+    const { subscription } = aSession();
+    auth.current = authStub({ subscription: { ...subscription!, state: "READ_ONLY" } });
+    myAccount();
+    const region = details();
+    expect(within(region).queryByRole("button", { name: "Name" })).not.toBeInTheDocument();
+    expect(within(region).queryByRole("button", { name: "Mobile number" })).not.toBeInTheDocument();
+    expect(region).toHaveTextContent("Your clinic is view-only until its plan is renewed.");
+    await userEvent.click(screen.getByRole("button", { name: "Change password" }));
+    expect(screen.getByRole("dialog", { name: "Change password" })).toBeInTheDocument();
+  });
+
   it("says when no mobile has been added yet", () => {
     const { profile } = aSession();
     auth.current = authStub({ profile: { ...profile, phone: null } });

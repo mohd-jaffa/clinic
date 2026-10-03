@@ -34,7 +34,8 @@ export function Coastline({ name, flip = false }: { name: CoastlineName; flip?: 
  * straight card edge. A lead screen's land is generous; a dense one keeps the
  * slim `band`. `pin` is pinned on the coastline at the right — the one thing
  * not to miss (`Pin`). What sits on the land takes its colours: land-ink, and
- * land-muted for the quieter words.
+ * land-muted for the quieter words. It leads the screen, so it pays the top
+ * safe area — the status bar of a phone drawn edge to edge.
  */
 export function CoastHeader({
   size = "lead",
@@ -48,7 +49,12 @@ export function CoastHeader({
   const lead = size === "lead";
   return (
     <div className="relative">
-      <div className={cn("bg-land text-land-ink", lead ? "px-4 pt-5 pb-2 md:px-8 md:pt-8" : "px-4 py-2 md:px-8")}>
+      <div
+        className={cn(
+          "safe-top bg-land px-4 pb-2 text-land-ink md:px-8",
+          lead ? "[--safe-pt:1.25rem] md:[--safe-pt:2rem]" : "[--safe-pt:0.5rem]",
+        )}
+      >
         {children}
       </div>
       <div className="relative">

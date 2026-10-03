@@ -9,6 +9,7 @@ import {
   MORE_NAV,
   NAV_GROUPS,
   placesFor,
+  PLAN_ROUTE,
   QUICK_ADD,
   quickAddFor,
   SETTINGS_GROUPS,
@@ -115,6 +116,10 @@ describe("the Settings index (plan §31.2, D71)", () => {
     const [clinic, owner] = SETTINGS_GROUPS;
     expect(new Set(clinic.items.map((item) => item.access))).toEqual(new Set(["settings.manage"]));
     expect(new Set(owner.items.map((item) => item.access))).toEqual(new Set(["OWNER"]));
+  });
+
+  it("leads to the Plan screen the plan banner's How to renew opens (D74)", () => {
+    expect(SETTINGS_GROUPS[1].items[0].href).toBe(PLAN_ROUTE);
   });
 
   it("marks only Delete clinic as what cannot be undone", () => {

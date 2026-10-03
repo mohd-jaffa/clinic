@@ -6,14 +6,14 @@ import { describe, expect, it, vi } from "vitest";
 
 import { QuickActions, type QuickAction } from "@/components/ui/quick-actions";
 
-function Bar({ actions }: { actions: QuickAction[] }) {
+function Bar({ actions, blocked }: { actions: QuickAction[]; blocked?: string }) {
   const [open, setOpen] = useState(false);
   return (
     <>
       <button type="button" onClick={() => setOpen(true)}>
         Quick add
       </button>
-      <QuickActions open={open} onClose={() => setOpen(false)} actions={actions} />
+      <QuickActions open={open} onClose={() => setOpen(false)} actions={actions} blocked={blocked} />
     </>
   );
 }
@@ -59,5 +59,30 @@ describe("QuickActions", () => {
     link.addEventListener("click", (event) => event.preventDefault());
     await userEvent.click(link);
     expect(screen.queryByRole("dialog", { name: "Add" })).not.toBeInTheDocument();
+  });
+
+  it("when none can be taken, says why and keeps each in sight, turned off and described by it", async () => {
+    const walkIn = vi.fn();
+    const reason = "Your clinic is view-only until its plan is renewed.";
+    render(
+      <Bar
+        blocked={reason}
+        actions={[
+          { key: "walk-in", label: "Walk-in", icon: Footprints, onClick: walkIn },
+          { key: "patient", label: "Patient", icon: UserPlus, href: "/patients" },
+        ]}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Quick add" }));
+
+    expect(screen.getByRole("dialog", { name: "Add" })).toHaveTextContent(reason);
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
+    const patient = screen.getByRole("button", { name: "Patient" });
+    expect(patient).toHaveAttribute("aria-disabled", "true");
+    expect(patient).toHaveAccessibleDescription(reason);
+
+    await userEvent.click(screen.getByRole("button", { name: "Walk-in" }));
+    expect(walkIn).not.toHaveBeenCalled();
+    expect(screen.getByRole("dialog", { name: "Add" })).toBeInTheDocument();
   });
 });

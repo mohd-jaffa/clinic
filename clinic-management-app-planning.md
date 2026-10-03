@@ -159,6 +159,8 @@ earlier lines are never rewritten.
 | D70 | **Account screens: the land leads** (the user): on a phone the land holds the app's name and its line over a coastline, the form on the ground below; from 1024 px the land fills the left half, its edge a coastline, and the form stands on the right. Sign in, sign up, confirm email, forgot and reset password all share it. | 2026-10-03 |
 | D71 | **The Settings index lists every row now** (the user): You (My account), Clinic setup (`settings.manage`) and Plan and records (owner), then Sign out — each person seeing the rows their permissions allow. A row whose screen a later phase builds opens the not-found screen until then. | 2026-10-03 |
 | D72 | **My account: a sheet per detail** (the user): Name and Mobile are rows, each opening a sheet for that one detail; Change password opens a sheet with the current and the new; Email is shown and not changed (later); the theme is a System · Light · Dark switch on the screen; Sign out asks first. | 2026-10-03 |
+| D73 | **The plan banner is a slim band on top** (the user): across the top of every signed-in screen, above its land — quiet while the plan ends soon, coral once it has ended and while the clinic is view-only; the state in its words and icon, never colour alone. The offline banner (R2.11) is the same kind of band. | 2026-10-03 |
+| D74 | **How to renew leads to the Plan screen** (the user): the banner offers the owner **How to renew**, which opens `/settings/plan` (R11.1); until R11.1 it opens the not-found screen, as the other Settings rows do (D71). | 2026-10-03 |
 
 ## 3. Users and roles
 
@@ -396,8 +398,8 @@ from §6:
 | State | When | What the clinic sees |
 |---|---|---|
 | `ACTIVE` | today ≤ valid_until − warning | Nothing. |
-| `EXPIRING` | valid_until − warning < today ≤ valid_until | Amber banner: "Your plan ends on 12 Nov." + how to renew (owner); a quiet line for others. |
-| `GRACE` | valid_until < today ≤ valid_until + grace | Red banner: "Your plan ended on 12 Nov. The clinic becomes view-only on 19 Nov." Full access. |
+| `EXPIRING` | valid_until − warning < today ≤ valid_until | A quiet banner (D73): "Your plan ends on 12 Nov." + how to renew (owner); a quiet line for others. |
+| `GRACE` | valid_until < today ≤ valid_until + grace | A coral banner: "Your plan ended on 12 Nov. The clinic becomes view-only on 20 Nov." Full access. |
 | `READ_ONLY` | today > valid_until + grace | Persistent banner; every create/edit/delete control is disabled with the reason; the server and the database refuse writes (`CLINIC_PLAN_EXPIRED`, 422). |
 
 **What still works in `READ_ONLY`:** signing in and out; reading and searching
@@ -1804,8 +1806,8 @@ form stands on the right.
 names 3 – 40 characters, ₹0 – ₹10,00,000, thousands of patients (paged).
 Empty: a small lobe, a warm line, one action. Loading: the land draws first,
 content skeletons sized to it. Error: a notice on the ground. Offline: a slim
-coral coast band at the top. Read-only: a pinned capsule on the coast and
-disabled capsules that say why. Sections without permission are absent.
+coral coast band at the top. Read-only: the plan banner, a slim coral band
+on top (D73), and disabled capsules that say why. Sections without permission are absent.
 
 **Assets.** Coastlines are a few authored SVG paths per screen type — static,
 never generated per render. No photographs or illustrations; people are

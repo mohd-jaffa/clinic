@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { settleNavigation, SLOW_MS, startNavigation } from "@/lib/navigation/pending";
-import { authStub } from "@tests/support/auth";
+import { aSession, authStub } from "@tests/support/auth";
 import { Providers } from "@tests/support/providers";
 
 const { auth, place } = vi.hoisted(() => ({
@@ -170,6 +170,36 @@ describe("quick add (D67, D69)", () => {
     await userEvent.click(within(bar).getByRole("button", { name: "Add" }));
 
     expect(names(screen.getByRole("dialog", { name: "Add" }), "link")).toEqual(["Patient"]);
+  });
+});
+
+describe("the plan (plan §7.2, D73)", () => {
+  const { subscription } = aSession();
+  const inState = (state: "ACTIVE" | "READ_ONLY") => {
+    auth.current = authStub({ subscription: { ...subscription!, state } });
+  };
+
+  it("leads the screen with the plan banner while the plan is not active, and has none while it is", () => {
+    inState("READ_ONLY");
+    shell();
+    const main = screen.getByRole("main");
+    expect(main.firstElementChild).toBe(within(main).getByRole("region", { name: "Your plan" }));
+    cleanup();
+
+    inState("ACTIVE");
+    shell();
+    expect(screen.queryByRole("region", { name: "Your plan" })).not.toBeInTheDocument();
+  });
+
+  it("in a view-only clinic, still opens the ＋, each action turned off and saying why", async () => {
+    inState("READ_ONLY");
+    const { bar } = shell();
+    await userEvent.click(within(bar).getByRole("button", { name: "Add" }));
+
+    const lobe = screen.getByRole("dialog", { name: "Add" });
+    expect(lobe).toHaveTextContent("Your clinic is view-only until its plan is renewed.");
+    expect(within(lobe).queryAllByRole("link")).toEqual([]);
+    expect(within(lobe).getByRole("button", { name: "Patient" })).toHaveAttribute("aria-disabled", "true");
   });
 });
 

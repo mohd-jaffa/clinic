@@ -277,6 +277,25 @@ export const UI_TEXT = {
     },
   },
 
+  /**
+   * The plan banner and read-only mode (plan §7.2, D73): the owner is told
+   * how to renew; everyone else, quietly, what is happening to the clinic.
+   */
+  plan: {
+    banner: "Your plan",
+    endsOn: (date: string) => `Your plan ends on ${date}.`,
+    clinicEndsOn: (date: string) => `The clinic’s plan ends on ${date}.`,
+    endedOn: (ended: string, viewOnly: string) =>
+      `Your plan ended on ${ended}. The clinic becomes view-only on ${viewOnly}.`,
+    clinicEndedOn: (ended: string, viewOnly: string) =>
+      `The clinic’s plan ended on ${ended}. It becomes view-only on ${viewOnly}.`,
+    readOnly: "Your clinic is view-only. Renew its plan to make changes.",
+    clinicReadOnly: "The clinic is view-only until its owner renews its plan.",
+    howToRenew: "How to renew",
+    /** Beside every control read-only mode turns off (plan §32.2). */
+    readOnlyReason: "Your clinic is view-only until its plan is renewed.",
+  },
+
   /** My account (plan §5.4, D72): each detail changed in a sheet of its own. */
   account: {
     details: "Your details",

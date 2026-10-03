@@ -1,12 +1,13 @@
 "use client";
 
-import { X, type LucideIcon } from "lucide-react";
+import { Lock, X, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { useId, useRef } from "react";
 
 import { UI_TEXT } from "@/constants/messages";
 
 import { IconButton } from "./button";
+import { cn } from "./cn";
 import { Coastline } from "./coast-header";
 import { Modal } from "./modal";
 
@@ -26,17 +27,24 @@ const ACTION =
  * two side by side from 640 px. Focus goes to the first action; Escape, a tap
  * above it or the close button lets it sink back, and the focus returns to
  * the ＋. Taking an action closes it on the way.
+ *
+ * `blocked` is why none can be taken now — a view-only clinic (plan §7.2):
+ * it is said under the title, and each action stays in sight, turned off,
+ * with that reason as its description.
  */
 export function QuickActions({
   open,
   onClose,
   actions,
+  blocked,
 }: {
   open: boolean;
   onClose: () => void;
   actions: readonly QuickAction[];
+  blocked?: string;
 }) {
   const headingId = useId();
+  const reasonId = useId();
   const list = useRef<HTMLUListElement>(null);
   return (
     <Modal
@@ -57,6 +65,12 @@ export function QuickActions({
             <IconButton icon={X} label={UI_TEXT.actions.close} onClick={onClose} />
           </span>
         </div>
+        {blocked && (
+          <p id={reasonId} className="-mt-1 flex items-start gap-2 pb-3 text-small font-bold">
+            <Lock size={18} strokeWidth={2.25} aria-hidden="true" className="mt-px shrink-0" />
+            {blocked}
+          </p>
+        )}
         <ul ref={list} role="list" className="grid gap-2.5 sm:grid-cols-2 sm:gap-3">
           {actions.map((action) => {
             const { key, label, icon: Icon } = action;
@@ -73,7 +87,16 @@ export function QuickActions({
             );
             return (
               <li key={key} className="min-w-0 sm:last:odd:col-span-2">
-                {action.href ? (
+                {blocked ? (
+                  <button
+                    type="button"
+                    aria-disabled="true"
+                    aria-describedby={reasonId}
+                    className={cn(ACTION, "cursor-not-allowed opacity-60 active:scale-100")}
+                  >
+                    {body}
+                  </button>
+                ) : action.href ? (
                   <Link href={action.href} onClick={onClose} className={ACTION}>
                     {body}
                   </Link>
