@@ -10,7 +10,12 @@ import { UI_TEXT } from "@/constants/messages";
 import { ApiError } from "@/lib/api/client";
 import { formatPhoneDigits } from "@/lib/phone";
 import { useApiMutation } from "@/lib/query/useApiMutation";
-import { profilePhoneSchema, type ProfilePhoneInput, type ProfilePhonePayload } from "@/lib/validation";
+import {
+  FORM_RESET_OPTIONS,
+  profilePhoneSchema,
+  type ProfilePhoneInput,
+  type ProfilePhonePayload,
+} from "@/lib/validation";
 
 import { AuthClient } from "../api.client";
 import { useAuth } from "../AuthProvider";
@@ -38,6 +43,7 @@ export function PhoneSheet({ open, onClose }: { open: boolean; onClose: () => vo
   } = useForm<ProfilePhoneInput, unknown, ProfilePhonePayload>({
     resolver: zodResolver(profilePhoneSchema),
     defaultValues: { phone: national(profile?.phone) },
+    resetOptions: FORM_RESET_OPTIONS,
   });
 
   const { submit, submitting } = useApiMutation(AuthClient.updateProfile, {

@@ -14,7 +14,7 @@ import { SERVICE_CATEGORIES, SERVICE_CATEGORY_LABELS } from "@/constants/statuse
 import { paiseToText } from "@/lib/money";
 import { apiRoutes } from "@/lib/query/keys";
 import { useApiMutation } from "@/lib/query/useApiMutation";
-import { serviceSchema, type ServiceInput, type ServicePayload } from "@/lib/validation";
+import { FORM_RESET_OPTIONS, serviceSchema, type ServiceInput, type ServicePayload } from "@/lib/validation";
 
 import { ServicesClient } from "../api.client";
 import { useCatalogueChange } from "../hooks/useCatalogueChange";
@@ -56,6 +56,7 @@ export function ServiceSheet({
   } = useForm<ServiceInput, unknown, ServicePayload>({
     resolver: zodResolver(serviceSchema),
     defaultValues: formOf(service),
+    resetOptions: FORM_RESET_OPTIONS,
   });
 
   const { submit, submitting } = useApiMutation(

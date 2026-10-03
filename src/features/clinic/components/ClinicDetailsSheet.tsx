@@ -12,7 +12,12 @@ import { CLINIC_TYPE_LABELS, CLINIC_TYPES } from "@/constants/statuses";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { apiRoutes } from "@/lib/query/keys";
 import { useApiMutation } from "@/lib/query/useApiMutation";
-import { clinicDetailsSchema, type ClinicDetailsInput, type ClinicDetailsPayload } from "@/lib/validation";
+import {
+  clinicDetailsSchema,
+  FORM_RESET_OPTIONS,
+  type ClinicDetailsInput,
+  type ClinicDetailsPayload,
+} from "@/lib/validation";
 
 import { ClinicClient } from "../api.client";
 import type { ClinicProfile } from "../types";
@@ -56,6 +61,7 @@ export function ClinicDetailsSheet({
   } = useForm<ClinicDetailsInput, unknown, ClinicDetailsPayload>({
     resolver: zodResolver(clinicDetailsSchema),
     defaultValues: formOf(profile),
+    resetOptions: FORM_RESET_OPTIONS,
   });
 
   const { submit, submitting } = useApiMutation(ClinicClient.update, {

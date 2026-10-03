@@ -8,7 +8,12 @@ import { useResponse } from "@/components/ui/response-card";
 import { TextField } from "@/components/ui/text-field";
 import { UI_TEXT } from "@/constants/messages";
 import { useApiMutation } from "@/lib/query/useApiMutation";
-import { profileNameSchema, type ProfileNameInput, type ProfileNamePayload } from "@/lib/validation";
+import {
+  FORM_RESET_OPTIONS,
+  profileNameSchema,
+  type ProfileNameInput,
+  type ProfileNamePayload,
+} from "@/lib/validation";
 
 import { AuthClient } from "../api.client";
 import { useAuth } from "../AuthProvider";
@@ -32,6 +37,7 @@ export function NameSheet({ open, onClose }: { open: boolean; onClose: () => voi
   } = useForm<ProfileNameInput, unknown, ProfileNamePayload>({
     resolver: zodResolver(profileNameSchema),
     defaultValues: { fullName: profile?.fullName ?? "" },
+    resetOptions: FORM_RESET_OPTIONS,
   });
 
   const { submit, submitting } = useApiMutation(AuthClient.updateProfile, {

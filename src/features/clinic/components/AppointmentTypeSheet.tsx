@@ -10,7 +10,12 @@ import { TEXT_LIMITS } from "@/constants/limits";
 import { UI_TEXT } from "@/constants/messages";
 import { apiRoutes } from "@/lib/query/keys";
 import { useApiMutation } from "@/lib/query/useApiMutation";
-import { appointmentTypeSchema, type AppointmentTypeInput, type AppointmentTypePayload } from "@/lib/validation";
+import {
+  appointmentTypeSchema,
+  FORM_RESET_OPTIONS,
+  type AppointmentTypeInput,
+  type AppointmentTypePayload,
+} from "@/lib/validation";
 
 import { AppointmentTypesClient } from "../api.client";
 import { useCatalogueChange } from "../hooks/useCatalogueChange";
@@ -51,6 +56,7 @@ export function AppointmentTypeSheet({
   } = useForm<AppointmentTypeInput, unknown, AppointmentTypePayload>({
     resolver: zodResolver(appointmentTypeSchema),
     defaultValues: formOf(type),
+    resetOptions: FORM_RESET_OPTIONS,
   });
 
   const { submit, submitting } = useApiMutation(

@@ -9,7 +9,12 @@ import { useResponse } from "@/components/ui/response-card";
 import { UI_TEXT } from "@/constants/messages";
 import { ApiError } from "@/lib/api/client";
 import { useApiMutation } from "@/lib/query/useApiMutation";
-import { changePasswordSchema, type ChangePasswordInput, type ChangePasswordPayload } from "@/lib/validation";
+import {
+  changePasswordSchema,
+  FORM_RESET_OPTIONS,
+  type ChangePasswordInput,
+  type ChangePasswordPayload,
+} from "@/lib/validation";
 
 import { AuthClient } from "../api.client";
 import { useAuth } from "../AuthProvider";
@@ -38,6 +43,7 @@ export function ChangePasswordSheet({ open, onClose }: { open: boolean; onClose:
   } = useForm<ChangePasswordInput, unknown, ChangePasswordPayload>({
     resolver: zodResolver(changePasswordSchema),
     defaultValues: EMPTY,
+    resetOptions: FORM_RESET_OPTIONS,
   });
 
   const { submit, submitting } = useApiMutation(AuthClient.changePassword, {

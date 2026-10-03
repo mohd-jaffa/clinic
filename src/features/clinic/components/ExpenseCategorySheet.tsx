@@ -10,7 +10,12 @@ import { TEXT_LIMITS } from "@/constants/limits";
 import { UI_TEXT } from "@/constants/messages";
 import { apiRoutes } from "@/lib/query/keys";
 import { useApiMutation } from "@/lib/query/useApiMutation";
-import { expenseCategorySchema, type ExpenseCategoryInput, type ExpenseCategoryPayload } from "@/lib/validation";
+import {
+  expenseCategorySchema,
+  FORM_RESET_OPTIONS,
+  type ExpenseCategoryInput,
+  type ExpenseCategoryPayload,
+} from "@/lib/validation";
 
 import { ExpenseCategoriesClient } from "../api.client";
 import { useCatalogueChange } from "../hooks/useCatalogueChange";
@@ -48,6 +53,7 @@ export function ExpenseCategorySheet({
   } = useForm<ExpenseCategoryInput, unknown, ExpenseCategoryPayload>({
     resolver: zodResolver(expenseCategorySchema),
     defaultValues: formOf(category),
+    resetOptions: FORM_RESET_OPTIONS,
   });
 
   const { submit, submitting } = useApiMutation(
