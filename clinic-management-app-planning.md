@@ -2112,7 +2112,7 @@ tests (§34) and its changelog entry.
 | R3.1 | `0009_clinic_profile`: clinic details, paper size, fee timing, the logo upload (D77–D79) | §9 | — | DONE (2026-10-03 · 0de6f85) |
 | R3.2 | `0010_catalogue_rules`; price list, appointment types and expense categories screens (tables from `0007`; D80–D83) | §9 | — | DONE (2026-10-03 · f7b0669) |
 | R3.3 | `0011_closures`: holidays and leave (D84–D87); `GET /api/doctors` for its picker | §9, §30 | — | DONE (2026-10-03 · 528bedf) |
-| R3.4 | `0012_team`: invite with its own token (D63; presets, dependencies, doctor details and fee), invite email, resend, revoke, expiry, and the accept function R3.5 calls (D88–D90) | §8.3, §8.4 | — | TODO |
+| R3.4 | `0012_team`: invite with its own token (D63; presets, dependencies, doctor details and fee), invite email, resend, revoke, expiry, and the accept function R3.5 calls (D88–D90) | §8.3, §8.4 | — | DONE (2026-10-03 · 0b7cf09) |
 | R3.5 | Accept invite screen | §8.5 | — | TODO |
 | R3.6 | `0013_members`; team list and member detail: permissions, job title, doctor details, deactivate/reactivate; escalation and last-owner guards | §8.2, §8.6 | — | TODO |
 | R3.7 | The owner's own doctor profile | §3.1 | — | TODO |

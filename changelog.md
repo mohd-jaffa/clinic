@@ -988,3 +988,62 @@ appended and never rewritten (AGENTS.md §33).
 
 ### Blockers
 - None.
+
+## 2026-10-03 — R3.4, inviting the team
+
+### Added
+- `0012_team.sql` (D63): an invite keeps only the hash of its own token, while
+  it is open, one link to one invite. `invite_member`, `resend_invite`,
+  `revoke_invite`, `find_invite` and `accept_invite` (the accept screen,
+  R3.5) are the server's alone — no client may call them — and each checks
+  again who is acting: the owner, or an active member with `team.manage`, of
+  a clinic that can write; no escalation (only what they hold, and
+  `team.manage` from the owner alone); one clinic per person (D23); no
+  platform account; a former member reactivated, not invited. A link lasts
+  `invite_valid_days`, is replaced by Resend, and is accepted once.
+- `src/features/team` (plan §8.3, §8.4): `inviteMember` — the account made
+  with no password through the admin API, removed again if the invite is
+  refused; the invite email (`MAIL_TEXT.invite`) whose link is the only place
+  the token goes (D90); a failed email keeps the invite and says so —
+  `resendInvite` (a new link, not twice within the cooldown) and
+  `revokeInvite` (the account it made goes with it when never used), each
+  audited; `listTeam`. `GET /api/team`, `POST /api/team/invites`,
+  `POST /api/team/invites/[id]/resend`, `DELETE /api/team/invites/[id]`, for
+  `team.manage`.
+- The team — `/team` (plan §8.4, §8.6): everyone, the owner first and you
+  named; the open invites with how long each link lasts, **Resend** and
+  **Revoke** (asked first); those inactive. **Invite** opens one sheet in
+  sections (D89): name and email; Doctor or Staff, a job title for staff;
+  what they can do — a preset to start from (staff as Receptionist, D88),
+  then every permission by part of the clinic, what one needs ticked with
+  it, what the inviter may not give shown and unchangeable, saying why; and a
+  doctor's details. View-only, it shows the team and changes nothing.
+- `PERMISSION_GROUPS`, `INVITE_ROLES`, `optionalPaiseText`, `inviteSchema`.
+- Plan D88 – D90 (Q19 answered). `0012_team` holds the invite lifecycle; the
+  member functions are `0013_members` (R3.6), and later migrations move up
+  one (D77).
+
+### Changed
+- The invite sheet submits a copy of its values: react-hook-form changes a
+  nested object (the doctor's details) in place.
+- The integration helpers give a test invite a token hash, and remove the
+  accounts the app made for a test clinic's invites.
+
+### Validation
+- Typecheck, lint, format check passed.
+- Unit and integration tests passed (1526), coverage 100% — the integration
+  test against the local Supabase reads the emails from Mailpit: a doctor
+  invited with their details, the link's token kept only as its hash, the
+  expiry from the settings; the team listed; a manager inviting within what
+  they hold, refused team.manage and what they lack; the account removed when
+  the invite is refused; one clinic per person, a former member refused, one
+  who left another clinic invited as themselves, the platform's account
+  refused; resend's new link replacing the old, not twice in a moment; revoke
+  removing the invite and its unused account, and keeping a person's own;
+  accept once, an expired link refused; none of it callable by a client; no
+  invite into a view-only clinic.
+- Build passed; E2E passed (60, phone and desktop), axe clean —
+  `tests/e2e/team.spec.ts`.
+
+### Blockers
+- None.
