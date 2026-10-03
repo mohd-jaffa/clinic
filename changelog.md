@@ -508,3 +508,47 @@ appended and never rewritten (AGENTS.md §33).
 
 ### Blockers
 - None.
+
+## 2026-10-03 — R2.5 closed; R2.6, the system screens
+
+### Changed
+- R2.5 is done: the user looked at the shell's screenshots and was happy
+  with them.
+- The root layout takes the face from `src/app/fonts.ts`, which the global
+  error screen shares.
+
+### Added
+- `src/components/ui/system-screen.tsx`, ported from Brio: a whole-screen
+  stop on the ground, outside the shell (which may be what failed) — the
+  wordmark at its top, a lobe with its mark (land for a page that is not
+  there, coral for a failure), the title, why, a reference to quote, and a
+  way on.
+- `src/app/not-found.tsx`: "This page isn’t here", Go to Home; it names the
+  tab through Next's metadata (one title, not two).
+- `src/app/error.tsx`: a screen that failed — what was saved is safe, the
+  digest as the reference (never the error's words), Try again, Go to Home.
+- `src/app/global-error.tsx`: the root layout failed — its own document,
+  title, face and the person's theme; Try again only.
+- `src/instrumentation.ts`, ported from Brio: what Next catches itself goes to
+  the error log (plan §36) under the digest the error screen shows, the path
+  without its query.
+- The loading skeleton between screens, ported from Brio
+  (`src/lib/navigation/pending.ts`, `src/hooks/useNavigationPending.ts`): a
+  screen still on its way after 150 ms shows its skeleton — the land first,
+  rows under it — in the old one's place, the navigation kept; a quick one
+  shows nothing in between.
+- Words: `UI_TEXT.system`.
+- Tests: unit for each; `tests/e2e/system.spec.ts` — an address the app does
+  not have, signed in, at phone and desktop, axe clean.
+
+### Found while building
+- A `<title>` drawn by a screen came second to the layout's, so the tab kept
+  the app's name; the not-found screen uses Next's metadata instead.
+
+### Validation
+- Typecheck, lint, format check passed.
+- Unit and integration tests passed, coverage 100%.
+- Build passed; E2E passed (18, phone and desktop), axe clean.
+
+### Blockers
+- None.
