@@ -1138,3 +1138,38 @@ appended and never rewritten (AGENTS.md §33).
 
 ### Blockers
 - None.
+
+## 2026-10-03 — R3.7, the owner's own doctor profile
+
+### Added
+- `0014_owner_doctor.sql` (D96, D97): `set_owner_sees_patients` — on makes
+  or brings back the owner's doctor profile, off leaves it inactive, never
+  deleted — and `update_own_doctor`, their details only while they see
+  patients (`OWNER_NOT_DOCTOR`). Both are the owner's alone, as themselves,
+  while the clinic can write.
+- `updateOwnDoctor` (the switch first, so turning it on and filling it in go
+  together; audited as any member's change, `sees_patients` among its
+  values) and `PATCH /api/team/me/doctor`, for the owner.
+- The owner's own page (D96): their row in Team, "Asha Menon (you)", opens
+  it — their contact, that they have every permission, **I also see
+  patients** saved as it is ticked — moving at once, and back if refused (the session read again, so the app knows
+  at once), and, while it is on, their doctor details in the same sheet as any
+  doctor's. A manager opens neither the owner's page nor their own.
+- `ownDoctorSchema`; a member's page knows whether their doctor profile is
+  active (`seesPatients`).
+- Plan D96, D97; `0014_owner_doctor` added, and later migrations move up one
+  (D77).
+
+### Validation
+- Typecheck, lint, format check passed.
+- Unit and integration tests passed (1624), coverage 100% — the integration
+  test against the local Supabase: details changed and audited while the
+  owner sees patients; turned off, the profile kept, out of the doctor list
+  and the session, details refused; turned on, the same profile back as it
+  was; one made for an owner who never saw patients, turned on and filled in
+  at once; a manager refused; nothing in a view-only clinic.
+- Build passed; E2E passed (70, phone and desktop), axe clean —
+  `tests/e2e/members.spec.ts`.
+
+### Blockers
+- None.
