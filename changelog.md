@@ -604,3 +604,57 @@ appended and never rewritten (AGENTS.md §33).
 
 ### Blockers
 - None.
+
+## 2026-10-03 — R2.8, Settings and My account
+
+### Decided
+- D71: the Settings index lists every row now, each to those who may open
+  it; a row whose screen a later phase builds opens the not-found screen
+  until then.
+- D72: My account changes the name, the mobile and the password each in a
+  sheet of its own; the email is shown, not changed (later); the theme
+  switches on the screen.
+
+### Added
+- **Settings** (`/settings`, plan §31.2): the land names it and the clinic;
+  You (My account), Clinic setup (`settings.manage`), Plan and records (the
+  owner), then Sign out, asking first. Two columns from 1024 px.
+  `SETTINGS_GROUPS` and `settingsFor` in `src/constants/navigation.ts`.
+- **My account** (`/settings/account`, plan §5.4): who they are on the land;
+  Name and Mobile number open their sheets (`NameSheet`, `PhoneSheet`), the
+  email shown; **Change password** (`ChangePasswordSheet`) asks for the
+  current one first, says a wrong one beside it, and keeps this device signed
+  in while the others are signed out; the theme — System, Light, Dark — kept
+  on the device (D36); Sign out.
+- The kit's `FormSheet` (ported from Brio): a sheet holding a form, its
+  submit capsule in the foot. `IconChip` takes the coral `attention` tone,
+  for Delete clinic.
+- `profileNameSchema` and `profilePhoneSchema`, from which
+  `updateProfileSchema` is now built. `AuthClient.updateProfile` and
+  `.changePassword`.
+- Words: `UI_TEXT.settings`, `UI_TEXT.account`, `actions.save`/`saving`,
+  `theme.hint`.
+- Tests: unit for each; `tests/e2e/settings.spec.ts` — the owner's index and
+  a member's, the name, mobile and password changed and signed in with, the
+  theme kept from the first paint — at phone and desktop, axe clean.
+
+### Fixed
+- `RowList` is one column no wider than the list: a long line — an email, a
+  hint — was widening the page on a phone instead of ending in "…".
+- A `Row` that opens something (a button) lined up like one that goes
+  somewhere (a link): the button was sitting on a text line, a little low.
+- `Modal` passes over a hidden field when it puts the cursor in the first
+  one (the username a password manager files a new password under).
+
+### Not in this row
+- Read-only mode (R2.9) will disable Name and Mobile number in a view-only
+  clinic and say why; until then the server refuses them with
+  `CLINIC_PLAN_EXPIRED`, on the error card. Change password stays allowed.
+
+### Validation
+- Typecheck, lint, format check passed.
+- Unit and integration tests passed (1133), coverage 100%.
+- Build passed; E2E passed (34, phone and desktop), axe clean.
+
+### Blockers
+- None.
