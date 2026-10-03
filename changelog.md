@@ -1263,3 +1263,67 @@ appended and never rewritten (AGENTS.md §33).
 
 ### Blockers
 - None.
+
+## 2026-10-04 — R4.2, adding and changing a patient
+
+### Added
+- The patient sheet (`PatientSheet`, D105 – D108):
+  - What every patient needs comes first: name, mobile, date of birth or
+    age in years (D100), gender, and their doctor. Alternate phone, email,
+    address, emergency contact and notes wait under **More details**, which
+    opens for an edit that holds any of them and for a refusal inside.
+  - Once ten digits are typed, **Already here?** lists the patients on that
+    mobile (`PatientMatches`), each with Open and the archived marked. A
+    family shares a number, so nothing is refused (D106).
+  - The doctor starts as the adding doctor, or the clinic's only doctor
+    (D108).
+  - An added patient's profile opens, with a card naming their number; the
+    add form leaves the history (D107).
+  - Editing sends only the fields touched, so an untouched age never moves
+    an estimated date of birth.
+- The Patients screen (`/patients`) with **Add patient**, opened too by the
+  ＋'s Patient (`useAddForm`, D67). Closing a form the screen opened steps
+  back, so no dead entry is left. The list is R4.3.
+- `createPatient`, `updatePatient`, `getPatient` and `findPatientMatches`.
+  - `POST /api/patients` takes an Idempotency-Key and adds one patient per
+    key: `0015`'s `create_patient` takes the key, and a repeat finds the
+    first patient.
+  - `GET` and `PATCH /api/patients/[id]`.
+  - `POST /api/patients/matches`: the mobile goes in the body (D98), and a
+    view-only clinic may still ask it.
+- `useApiLookup`: a read whose question is about a patient, asked in a POST
+  body and kept only in memory.
+- The audit trail records a patient's own details by field name alone
+  (`auditedChanges`, and `tenantRecords`' `named` columns). Only the patient
+  number and the assigned doctor are recorded by value (plan §27.6).
+- Kit:
+  - `ChoiceField` (a short set of chips as a form field).
+  - `Disclosure` can be held open by its form.
+  - `ChoiceChips` can be named by a visible label and described by its
+    field's hint.
+  - The date picker's heading jumps to its year's months, then to a page of
+    twelve years, keyboard-complete (D109).
+
+### Changed
+- `0015_patients` (not yet released) gains `patients.idempotency_key`, and
+  `create_patient(p_patient, p_idempotency_key)` returns `(patient_id,
+  created)`.
+- Plan: D105 – D109 recorded.
+- DESIGN.md documents `ChoiceField`, the held `Disclosure` and the
+  calendar's jump.
+
+### Validation
+- Typecheck, lint, format check passed.
+- Unit and integration tests passed (1761), coverage 100%. The integration
+  test covers:
+  - one patient for a key sent twice at once;
+  - the audit row holding field names and no patient value;
+  - reading and changing within the doctor scope;
+  - the mobile's patients as each member may see them.
+- Build passed; E2E passed (76, phone and desktop), axe clean —
+  `tests/e2e/patients.spec.ts`: a receptionist adds a brother to a family
+  from the ＋; the owner gives a 1985 birth date through the jump.
+
+### Blockers
+- None. The profile an added patient opens onto is R4.4. Until then, its
+  address shows the not-found screen.
