@@ -1,15 +1,25 @@
 import {
+  BadgeIndianRupee,
+  Building2,
   CalendarClock,
+  CalendarCog,
   CalendarDays,
+  CalendarOff,
   CalendarPlus,
   ChartColumn,
+  FileDown,
+  FileUp,
   Footprints,
+  History,
   House,
   IdCard,
   IndianRupee,
   ListOrdered,
   ReceiptIndianRupee,
   Settings,
+  Shapes,
+  Tags,
+  Trash2,
   UserPlus,
   UsersRound,
   Wallet,
@@ -38,6 +48,8 @@ export interface NavItem {
 }
 
 const { places, hints } = UI_TEXT.nav;
+
+type Member = Parameters<typeof hasAccess>[0];
 
 const HOME: NavItem = { id: "home", label: places.home, icon: House, href: HOME_ROUTE, access: ROUTE_ACCESS.member };
 const QUEUE: NavItem = {
@@ -115,6 +127,77 @@ const SETTINGS: NavItem = {
 /** Where who is signed in leads: their own name, mobile and password (plan §31.2). */
 export const MY_ACCOUNT_ROUTE = "/settings/account";
 
+/**
+ * A row of the Settings index (plan §31.2, D71): the screen it opens, what
+ * that screen holds, and who may open it — the clinic's setup for
+ * `settings.manage`, the plan and the clinic's records for the owner.
+ */
+export interface SettingsItem {
+  id: keyof typeof UI_TEXT.settings.items;
+  label: string;
+  hint: string;
+  icon: LucideIcon;
+  href: string;
+  access: RouteAccess;
+  /** What lies behind it cannot be undone: its chip is coral (plan §32.1). */
+  attention?: boolean;
+}
+
+export interface SettingsGroup {
+  id: keyof typeof UI_TEXT.settings.groups;
+  title: string;
+  items: readonly SettingsItem[];
+}
+
+const { items: settingsItems, groups: settingsGroups } = UI_TEXT.settings;
+
+const setting = (
+  id: SettingsItem["id"],
+  icon: LucideIcon,
+  access: RouteAccess,
+  slug: string,
+  attention?: boolean,
+): SettingsItem => ({
+  id,
+  ...settingsItems[id],
+  icon,
+  href: `${SETTINGS_ROUTE}/${slug}`,
+  access,
+  ...(attention && { attention }),
+});
+
+export const SETTINGS_GROUPS: readonly SettingsGroup[] = [
+  {
+    id: "clinic",
+    title: settingsGroups.clinic,
+    items: [
+      setting("clinic", Building2, "settings.manage", "clinic"),
+      setting("priceList", Tags, "settings.manage", "price-list"),
+      setting("appointmentTypes", CalendarCog, "settings.manage", "appointment-types"),
+      setting("expenseCategories", Shapes, "settings.manage", "expense-categories"),
+      setting("closures", CalendarOff, "settings.manage", "closures"),
+    ],
+  },
+  {
+    id: "owner",
+    title: settingsGroups.owner,
+    items: [
+      setting("plan", BadgeIndianRupee, ROUTE_ACCESS.owner, "plan"),
+      setting("activity", History, ROUTE_ACCESS.owner, "activity"),
+      setting("import", FileUp, ROUTE_ACCESS.owner, "import"),
+      setting("export", FileDown, ROUTE_ACCESS.owner, "export"),
+      setting("deleteClinic", Trash2, ROUTE_ACCESS.owner, "delete-clinic", true),
+    ],
+  },
+];
+
+/** The Settings groups someone may open, each with only its rows they may; a group left empty is dropped. */
+export function settingsFor(member: Member, groups: readonly SettingsGroup[]): SettingsGroup[] {
+  return groups
+    .map((group) => ({ ...group, items: group.items.filter((item) => hasAccess(member, item.access)) }))
+    .filter((group) => group.items.length > 0);
+}
+
 /** The rail and the sidebar, in three groups: the day's work, the money, the clinic. */
 export const NAV_GROUPS: readonly (readonly NavItem[])[] = [
   [HOME, QUEUE, APPOINTMENTS, PATIENTS, FOLLOW_UPS],
@@ -135,8 +218,6 @@ export const BOTTOM_NAV = { start: [HOME, QUEUE], end: [PATIENTS] } as const sat
 export const MORE_NAV: readonly NavItem[] = ALL_NAV.filter(
   (item) => ![...BOTTOM_NAV.start, ...BOTTOM_NAV.end].includes(item),
 );
-
-type Member = Parameters<typeof hasAccess>[0];
 
 /** The places someone may open, in the order given. */
 export function placesFor(member: Member, items: readonly NavItem[]): NavItem[] {

@@ -11,7 +11,8 @@ import { cn } from "./cn";
  */
 export function RowList({ label, children }: { label?: string; children: ReactNode }) {
   return (
-    <ul role="list" aria-label={label} className="grid gap-2.5">
+    // One column no wider than the list, so a long line is cut short with "…" rather than widening the page.
+    <ul role="list" aria-label={label} className="grid grid-cols-1 gap-2.5">
       {children}
     </ul>
   );
@@ -62,7 +63,7 @@ export function Row({
       {name}
     </Link>
   ) : onClick ? (
-    <button type="button" onClick={onClick} className={cn("w-full", stretched)}>
+    <button type="button" onClick={onClick} className={cn("block w-full", stretched)}>
       {name}
     </button>
   ) : (

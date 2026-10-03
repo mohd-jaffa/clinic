@@ -157,6 +157,8 @@ earlier lines are never rewritten.
 | D68 | **No top bar on a phone** (the user): each screen's land carries its title; the account, the clinic and Settings are reached from More, which opens on who is signed in. | 2026-10-02 |
 | D69 | **＋ on tablet and desktop too** (the user): a round ＋ at the top of the rail and an **Add** capsule at the top of the sidebar open the same Quick Actions. | 2026-10-02 |
 | D70 | **Account screens: the land leads** (the user): on a phone the land holds the app's name and its line over a coastline, the form on the ground below; from 1024 px the land fills the left half, its edge a coastline, and the form stands on the right. Sign in, sign up, confirm email, forgot and reset password all share it. | 2026-10-03 |
+| D71 | **The Settings index lists every row now** (the user): You (My account), Clinic setup (`settings.manage`) and Plan and records (owner), then Sign out — each person seeing the rows their permissions allow. A row whose screen a later phase builds opens the not-found screen until then. | 2026-10-03 |
+| D72 | **My account: a sheet per detail** (the user): Name and Mobile are rows, each opening a sheet for that one detail; Change password opens a sheet with the current and the new; Email is shown and not changed (later); the theme is a System · Light · Dark switch on the screen; Sign out asks first. | 2026-10-03 |
 
 ## 3. Users and roles
 
@@ -305,7 +307,10 @@ uses a link — Q18.)
 
 Full name, mobile, theme (System, Light, Dark — D36; kept per device), change
 password (current + new), sign out (asks first). Changing the sign-in email is
-**later**.
+**later**. Name, mobile and the password each open a sheet of their own; the
+theme switches on the screen (D72). The Settings index (`/settings`) leads to
+it, then to the clinic's setup and the owner's screens, each shown to those
+who may open it (D71).
 
 ### 5.5 Sessions and the proxy
 

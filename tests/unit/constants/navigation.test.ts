@@ -11,6 +11,8 @@ import {
   placesFor,
   QUICK_ADD,
   quickAddFor,
+  SETTINGS_GROUPS,
+  settingsFor,
 } from "@/constants/navigation";
 import { PERMISSIONS } from "@/constants/permissions";
 
@@ -86,5 +88,44 @@ describe("quick add (D67)", () => {
       quickAddFor({ role: "DOCTOR", permissions: ["appointments.create", "expenses.create"] }).map((a) => a.key),
     ).toEqual(["walk-in", "appointment", "expense"]);
     expect(quickAddFor({ role: "STAFF", permissions: [] })).toEqual([]);
+  });
+});
+
+describe("the Settings index (plan §31.2, D71)", () => {
+  it("holds the clinic's setup, then the plan and its records, each row at its screen", () => {
+    expect(SETTINGS_GROUPS.map((group) => [group.id, group.items.map((item) => item.href)])).toEqual([
+      [
+        "clinic",
+        [
+          "/settings/clinic",
+          "/settings/price-list",
+          "/settings/appointment-types",
+          "/settings/expense-categories",
+          "/settings/closures",
+        ],
+      ],
+      [
+        "owner",
+        ["/settings/plan", "/settings/activity", "/settings/import", "/settings/export", "/settings/delete-clinic"],
+      ],
+    ]);
+  });
+
+  it("asks settings.manage of the clinic's setup and the owner of the rest, as their screens do", () => {
+    const [clinic, owner] = SETTINGS_GROUPS;
+    expect(new Set(clinic.items.map((item) => item.access))).toEqual(new Set(["settings.manage"]));
+    expect(new Set(owner.items.map((item) => item.access))).toEqual(new Set(["OWNER"]));
+  });
+
+  it("marks only Delete clinic as what cannot be undone", () => {
+    const marked = SETTINGS_GROUPS.flatMap((group) => group.items).filter((item) => item.attention);
+    expect(ids(marked)).toEqual(["deleteClinic"]);
+  });
+
+  it("shows each person the groups they may open, and drops a group left empty", () => {
+    expect(settingsFor(owner, SETTINGS_GROUPS).map((group) => group.id)).toEqual(["clinic", "owner"]);
+    const manager = { role: "STAFF" as const, permissions: [...PERMISSIONS] };
+    expect(settingsFor(manager, SETTINGS_GROUPS).map((group) => group.id)).toEqual(["clinic"]);
+    expect(settingsFor(receptionist, SETTINGS_GROUPS)).toEqual([]);
   });
 });

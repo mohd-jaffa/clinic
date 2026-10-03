@@ -1,15 +1,17 @@
-import { postJson } from "@/lib/api/client";
+import { patchJson, postJson } from "@/lib/api/client";
 import { apiRoutes } from "@/lib/query/keys";
 import type {
+  ChangePasswordInput,
   ConfirmEmailInput,
   EmailRequestInput,
   LoginInput,
   PasswordResetCompleteInput,
   RegisterInput,
+  UpdateProfileInput,
 } from "@/lib/validation";
 
 import type { Registration } from "./register";
-import type { AuthSessionView } from "./types";
+import type { AuthSessionView, SessionProfile } from "./types";
 
 /**
  * The authentication endpoints the browser calls. None of them takes or
@@ -36,6 +38,12 @@ export const AuthClient = {
   /** The reset link's tokens and the new password, which sign the person in. */
   completePasswordReset: (payload: PasswordResetCompleteInput) =>
     postJson<AuthSessionView>(apiRoutes.auth.passwordResetComplete, payload),
+
+  /** My account's name or mobile (plan §5.4); either may be sent alone. */
+  updateProfile: (payload: UpdateProfileInput) => patchJson<SessionProfile>(apiRoutes.auth.profile, payload),
+
+  /** My account's Change password: the current one, then the new — this device kept signed in, the others not. */
+  changePassword: (payload: ChangePasswordInput) => postJson<AuthSessionView>(apiRoutes.auth.password, payload),
 
   signOut: () => postJson<{ signedOut: boolean }>(apiRoutes.auth.logout),
 };

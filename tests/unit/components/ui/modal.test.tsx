@@ -39,6 +39,20 @@ describe("Modal", () => {
     expect(screen.getByRole("radio", { name: "Evening" })).toHaveFocus();
   });
 
+  it("begins at the first field in sight, passing over one kept hidden for a password manager", () => {
+    render(
+      <Modal open labelledBy="title" motion="sheet">
+        <h2 id="title">Change password</h2>
+        <input type="email" autoComplete="username" defaultValue="asha@example.com" readOnly hidden />
+        <label>
+          Current password
+          <input type="password" />
+        </label>
+      </Modal>,
+    );
+    expect(screen.getByLabelText("Current password")).toHaveFocus();
+  });
+
   it("takes a dialog the browser already opened, or already closed, as it finds it", () => {
     const { rerender } = render(
       <Modal open={false} labelledBy="t" motion="sheet">

@@ -10,6 +10,8 @@ import {
   firstIssue,
   loginSchema,
   passwordResetCompleteSchema,
+  profileNameSchema,
+  profilePhoneSchema,
   registerSchema,
   updateProfileSchema,
 } from "@/lib/validation";
@@ -132,5 +134,19 @@ describe("updateProfileSchema (plan §5.4)", () => {
       fullName: "Asha M",
       phone: "+919876500000",
     });
+  });
+});
+
+describe("profileNameSchema and profilePhoneSchema (D72)", () => {
+  it("each takes its one detail, tidied as the profile's", () => {
+    expect(profileNameSchema.parse({ fullName: " Asha  M " })).toEqual({ fullName: "Asha M" });
+    expect(profilePhoneSchema.parse({ phone: "098765 00000" })).toEqual({ phone: "+919876500000" });
+  });
+
+  it("refuses its detail left empty, in the app's own words", () => {
+    expect(messageOf(profileNameSchema, { fullName: "  " })).toBe(VALIDATION_MESSAGES.required("Your name"));
+    expect(messageOf(profileNameSchema, {})).toBe(VALIDATION_MESSAGES.required("Your name"));
+    expect(messageOf(profilePhoneSchema, { phone: "" })).toBe(VALIDATION_MESSAGES.required("Mobile number"));
+    expect(messageOf(profilePhoneSchema, { phone: "12345" })).toBe(VALIDATION_MESSAGES.phone);
   });
 });

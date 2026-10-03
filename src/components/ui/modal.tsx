@@ -80,7 +80,8 @@ export function Modal({
     document.body.style.overflow = "hidden";
 
     const scope = focusScope?.current ?? element;
-    const firstField = scope.querySelector<HTMLElement>("input, select, textarea");
+    // A field kept out of sight — the username a password manager files a new password under — is passed over.
+    const firstField = scope.querySelector<HTMLElement>("input:not([hidden]), select, textarea");
     const firstControl = scope.querySelector<HTMLElement>(FOCUSABLE);
     (initialFocus?.current ?? firstField ?? firstControl)?.focus();
 

@@ -104,10 +104,19 @@ export const changePasswordSchema = z.object({
 export type ChangePasswordInput = z.input<typeof changePasswordSchema>;
 export type ChangePasswordPayload = z.output<typeof changePasswordSchema>;
 
-/** My account's name and mobile (plan §5.4); either may be left as it is. */
+/** My account's sheets (D72): the name alone, or the mobile alone. */
+export const profileNameSchema = z.object({ fullName: requiredLine("Your name", { max: TEXT_LIMITS.personName }) });
+export type ProfileNameInput = z.input<typeof profileNameSchema>;
+export type ProfileNamePayload = z.output<typeof profileNameSchema>;
+
+export const profilePhoneSchema = z.object({ phone: indianMobile("Mobile number") });
+export type ProfilePhoneInput = z.input<typeof profilePhoneSchema>;
+export type ProfilePhonePayload = z.output<typeof profilePhoneSchema>;
+
+/** My account's name and mobile (plan §5.4), as the route takes them: either may be left as it is. */
 export const updateProfileSchema = z.object({
-  fullName: requiredLine("Your name", { max: TEXT_LIMITS.personName }).optional(),
-  phone: indianMobile("Mobile number").optional(),
+  fullName: profileNameSchema.shape.fullName.optional(),
+  phone: profilePhoneSchema.shape.phone.optional(),
 });
 export type UpdateProfileInput = z.input<typeof updateProfileSchema>;
 export type UpdateProfilePayload = z.output<typeof updateProfileSchema>;

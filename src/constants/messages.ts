@@ -84,6 +84,8 @@ export const UI_TEXT = {
     showMore: "Show more",
     viewAll: "View all",
     cancel: "Cancel",
+    save: "Save",
+    saving: "Saving…",
   },
 
   /** The response card (plan §32.2). */
@@ -253,9 +255,55 @@ export const UI_TEXT = {
     greeting: (firstName: string) => `Hello, ${firstName}`,
   },
 
+  /** The Settings index (plan §31.2, D71): each row says what its screen holds. */
+  settings: {
+    you: "You",
+    accountHint: "Name, mobile, password, theme",
+    groups: {
+      clinic: "Clinic setup",
+      owner: "Plan and records",
+    },
+    items: {
+      clinic: { label: "Clinic details", hint: "Address, logo and paper size" },
+      priceList: { label: "Price list", hint: "Services and what they cost" },
+      appointmentTypes: { label: "Appointment types", hint: "Kinds of visit and durations" },
+      expenseCategories: { label: "Expense categories", hint: "How spending is grouped" },
+      closures: { label: "Holidays and leave", hint: "Closed days and doctors’ leave" },
+      plan: { label: "Plan", hint: "Your plan and its receipts" },
+      activity: { label: "Activity", hint: "Who changed what, and when" },
+      import: { label: "Import patients", hint: "From an Excel or CSV file" },
+      export: { label: "Export", hint: "All records as CSV files" },
+      deleteClinic: { label: "Delete clinic", hint: "Ask to delete the clinic" },
+    },
+  },
+
+  /** My account (plan §5.4, D72): each detail changed in a sheet of its own. */
+  account: {
+    details: "Your details",
+    nameLabel: "Name",
+    phoneLabel: "Mobile number",
+    emailLabel: "Email",
+    noPhone: "Not added yet",
+    password: "Password",
+    changePassword: "Change password",
+    changePasswordHint: "Also signs out other devices",
+    changeName: "Change your name",
+    changePhone: "Change your mobile number",
+    currentPasswordLabel: "Current password",
+    nameSaved: "Name saved",
+    phoneSaved: "Mobile number saved",
+    phoneSavedBody: (phone: string) => `You can now sign in with ${phone}.`,
+    detailsNotSaved: "Your details weren’t changed",
+    phoneTaken: "Another account uses this mobile number.",
+    passwordChanged: "Password changed",
+    passwordChangedBody: "You’re still signed in here, and signed out on your other devices.",
+    passwordNotChanged: "Your password wasn’t changed",
+  },
+
   /** My account's theme switch (D36): kept per device. */
   theme: {
     label: "Theme",
+    hint: "Kept on this device only.",
     system: "System",
     light: "Light",
     dark: "Dark",

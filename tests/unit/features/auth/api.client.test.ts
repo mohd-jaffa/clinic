@@ -38,6 +38,11 @@ describe("AuthClient", () => {
       () => AuthClient.completePasswordReset({ ...tokens, password: " exact " }),
       apiRoutes.auth.passwordResetComplete,
     ],
+    [
+      "changePassword",
+      () => AuthClient.changePassword({ currentPassword: "old", newPassword: "new-password" }),
+      apiRoutes.auth.password,
+    ],
   ])("%s posts to its endpoint and hands back the answer", async (_, call, route) => {
     await expect(call()).resolves.toEqual({ ok: true });
     expect(sent()).toMatchObject({ url: route, method: "POST" });
@@ -46,6 +51,16 @@ describe("AuthClient", () => {
   it("sends the new password exactly as typed", async () => {
     await AuthClient.completePasswordReset({ ...tokens, password: " exact " });
     expect(sent().body).toEqual({ ...tokens, password: " exact " });
+  });
+
+  it("changes the name or mobile on the profile, sending only what changes", async () => {
+    await expect(AuthClient.updateProfile({ fullName: "Asha M" })).resolves.toEqual({ ok: true });
+    expect(sent()).toEqual({ url: apiRoutes.auth.profile, method: "PATCH", body: { fullName: "Asha M" } });
+  });
+
+  it("sends both passwords exactly as typed", async () => {
+    await AuthClient.changePassword({ currentPassword: " old ", newPassword: " new-one " });
+    expect(sent().body).toEqual({ currentPassword: " old ", newPassword: " new-one " });
   });
 
   it("signs out through the logout endpoint, with no token in sight", async () => {
