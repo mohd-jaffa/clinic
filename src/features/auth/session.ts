@@ -3,6 +3,7 @@ import type { Session, SupabaseClient } from "@supabase/supabase-js";
 import { effectivePermissions, type Permission } from "@/constants/permissions";
 import type { ClinicRole, PlatformRole } from "@/constants/roles";
 import type { SubscriptionPlan } from "@/constants/statuses";
+import { logoUrl } from "@/features/clinic/logo";
 import { readOnlyFrom, subscriptionState } from "@/features/subscription/state";
 import { todayKey } from "@/lib/dates/calendar";
 import { authenticationError, authorizationError, fromPostgrestError } from "@/lib/errors";
@@ -18,7 +19,7 @@ interface MembershipRow {
   role: ClinicRole;
   permissions: Permission[];
   job_title: string | null;
-  clinics: { name: string } | null;
+  clinics: { name: string; logo_path: string | null } | null;
   // One doctor profile per membership; PostgREST may hand it back as a list.
   doctors: { id: string; active: boolean } | { id: string; active: boolean }[] | null;
 }
@@ -39,7 +40,7 @@ interface ProfileRow {
  * named by its foreign key.
  */
 const SESSION_COLUMNS =
-  "id, full_name, email, phone, platform_role, clinic_members!clinic_members_user_id_fkey(id, clinic_id, role, permissions, job_title, clinics(name), doctors(id, active))";
+  "id, full_name, email, phone, platform_role, clinic_members!clinic_members_user_id_fkey(id, clinic_id, role, permissions, job_title, clinics(name, logo_path), doctors(id, active))";
 
 function toMembership(row: MembershipRow): SessionMembership {
   const doctor = Array.isArray(row.doctors) ? (row.doctors[0] ?? null) : row.doctors;
@@ -47,6 +48,7 @@ function toMembership(row: MembershipRow): SessionMembership {
     id: row.id,
     clinicId: row.clinic_id,
     clinicName: row.clinics?.name ?? "",
+    clinicLogoUrl: logoUrl(row.clinics?.logo_path ?? null),
     role: row.role,
     permissions: [...effectivePermissions(row.role, row.permissions)],
     doctorId: doctor?.active ? doctor.id : null,

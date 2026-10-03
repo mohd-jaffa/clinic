@@ -3,9 +3,11 @@ import { randomInt, randomUUID } from "node:crypto";
 import type { Permission } from "@/constants/permissions";
 import type { ClinicRole } from "@/constants/roles";
 import type { MemberStatus } from "@/constants/statuses";
+import { LOGO_BUCKET } from "@/constants/uploads";
 import { register } from "@/features/auth/register";
 import { login } from "@/features/auth/session";
 import type { AuthenticatedSession } from "@/features/auth/types";
+import { logoFolder } from "@/features/clinic/logo";
 import { createSupabaseAnonClient, createSupabaseServiceRoleClient } from "@/lib/supabase/server";
 import type { Tenant } from "@/lib/supabase/tenant";
 import { loginSchema, registerSchema, type RegisterInput } from "@/lib/validation";
@@ -215,6 +217,10 @@ export async function removeAll(): Promise<void> {
   for (const { clinic_id } of owned ?? []) if (!clinics.includes(clinic_id)) clinics.push(clinic_id);
 
   for (const clinicId of clinics.splice(0)) {
+    // Its logo files first: Storage keeps them past the row (0009_clinic_profile.sql).
+    const logos = client.storage.from(LOGO_BUCKET);
+    const { data: files } = await logos.list(logoFolder(clinicId));
+    if (files?.length) await logos.remove(files.map((file) => `${logoFolder(clinicId)}/${file.name}`));
     const { error } = await client.from("clinics").delete().eq("id", clinicId);
     if (error) throw new Error(`Could not remove the test clinic ${clinicId}: ${error.message}`);
   }

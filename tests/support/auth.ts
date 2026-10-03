@@ -24,6 +24,7 @@ export function aSession(overrides: Partial<AuthenticatedSession> = {}): Authent
       id: "member-1",
       clinicId: "clinic-1",
       clinicName: "Smile Care",
+      clinicLogoUrl: null,
       role: "OWNER",
       permissions: [],
       doctorId: "doctor-1",

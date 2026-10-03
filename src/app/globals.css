@@ -28,6 +28,9 @@
 :root {
   --ground: #eef3ee;
   --surface: #ffffff;
+  /* The page a bill or prescription prints on: white in every theme, so a
+     clinic's logo is seen as it will print (plan §9). */
+  --paper: #ffffff;
   --ink: #11241a;
   --muted: #46594d;
   --line: #d5e0d7;
@@ -52,6 +55,7 @@
   :root:not([data-theme="light"]) {
     --ground: #0d1813;
     --surface: #14231b;
+    --paper: #ffffff;
     --ink: #e4f1e8;
     --muted: #a7bcae;
     --line: #26392e;
@@ -76,6 +80,7 @@
 :root[data-theme="dark"] {
   --ground: #0d1813;
   --surface: #14231b;
+  --paper: #ffffff;
   --ink: #e4f1e8;
   --muted: #a7bcae;
   --line: #26392e;
@@ -110,6 +115,7 @@
 @theme inline {
   --color-ground: var(--ground);
   --color-surface: var(--surface);
+  --color-paper: var(--paper);
   --color-ink: var(--ink);
   --color-muted: var(--muted);
   --color-line: var(--line);

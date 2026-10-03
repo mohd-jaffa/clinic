@@ -145,6 +145,19 @@ export function optionalPhoneNumber(label: string) {
   );
 }
 
+// The GST number's own shape: state code, PAN, entity, Z, check character — as the clinics CHECK has it.
+export const GSTIN = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
+
+/**
+ * A GSTIN that may be left empty (plan §9): read without its spaces and in
+ * capitals, however it was typed, then held to its shape.
+ */
+export function optionalGstin(label = "GSTIN") {
+  return optionalString(label, 15, { test: (value) => GSTIN.test(value), message: VALIDATION_MESSAGES.gstin }, (text) =>
+    text.replace(/\s+/g, "").toUpperCase(),
+  );
+}
+
 // Digits with spaces, hyphens and brackets, a + only first; is_phone_number() uses the same.
 export const PHONE_NUMBER = /^\+?[0-9(][0-9 ()-]*[0-9]$/;
 

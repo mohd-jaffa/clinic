@@ -5,12 +5,14 @@ import { readScreen, type ScreenRead } from "@/features/auth/session.server";
 import { ServerData } from "@/lib/query/ServerData";
 
 import { AppShell } from "./AppShell";
+import { NoAccess } from "./NoAccess";
 
 /**
  * A signed-in screen, drawn on the server with its first data (AGENTS.md §9):
  * the screen's `queries` and `pages`, keyed as its hooks ask for them, so the
  * page arrives ready to read rather than as placeholders that fill in after
- * it (`readScreen`, `ServerData`), inside the shell.
+ * it (`readScreen`, `ServerData`), inside the shell. A member it is not for
+ * is told so in its place (`NoAccess`).
  */
 export async function AppScreen({
   access,
@@ -27,7 +29,7 @@ export async function AppScreen({
   const data = await readScreen({ access, queries, pages });
   return (
     <ServerData queries={data.queries} pages={data.pages}>
-      <AppShell>{children}</AppShell>
+      <AppShell>{data.refused ? <NoAccess /> : children}</AppShell>
     </ServerData>
   );
 }

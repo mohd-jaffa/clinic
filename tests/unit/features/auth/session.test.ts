@@ -30,7 +30,7 @@ const membership = {
   role: "OWNER",
   permissions: [],
   job_title: null,
-  clinics: { name: "Smile Care" },
+  clinics: { name: "Smile Care", logo_path: "clinics/clinic-1/logo/0b6f5a4e-0c2e-4d8b-9f37-1c2d3e4f5a6b" },
   doctors: [{ id: "doctor-1", active: true }],
 };
 
@@ -85,7 +85,13 @@ describe("loadSessionContext", () => {
       phone: "+919876543210",
       platformRole: null,
     });
-    expect(context.membership).toMatchObject({ clinicId: "clinic-1", clinicName: "Smile Care", doctorId: "doctor-1" });
+    expect(context.membership).toMatchObject({
+      clinicId: "clinic-1",
+      clinicName: "Smile Care",
+      // The logo, read at an address naming its version (plan §31.1).
+      clinicLogoUrl: "/api/clinic/logo?v=0b6f5a4e-0c2e-4d8b-9f37-1c2d3e4f5a6b",
+      doctorId: "doctor-1",
+    });
     expect(context.membership!.permissions).toEqual([...PERMISSIONS]);
     expect(context.subscription).toMatchObject({ plan: "TRIAL", state: "ACTIVE" });
     // Only the active membership is asked for.
@@ -99,6 +105,7 @@ describe("loadSessionContext", () => {
     });
     expect((await loadSessionContext(one.client, "user-1")).membership).toMatchObject({
       clinicName: "",
+      clinicLogoUrl: null,
       doctorId: "d",
       permissions: ["patients.view"],
     });

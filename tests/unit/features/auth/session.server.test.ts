@@ -141,6 +141,8 @@ describe("readScreen", () => {
     expect(await readScreen({ access: "patients.view", queries: { "/api/patients": read } })).toEqual({
       queries: {},
       pages: {},
+      // Told so in the screen's place (NoAccess).
+      refused: true,
     });
     expect(read).not.toHaveBeenCalled();
   });

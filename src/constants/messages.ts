@@ -29,6 +29,9 @@ export const ERROR_MESSAGES = {
   CLINIC_PLAN_EXPIRED: "Your clinic is view-only until its plan is renewed.",
 
   LOGO_TOO_LARGE: "That logo is larger than 500 KB.",
+  LOGO_TYPE_NOT_ALLOWED: "A logo must be a PNG, JPG or WebP image.",
+  LOGO_UPLOAD_FAILED: "The logo couldn't be stored. Please try again.",
+  CLINIC_LOAD_FAILED: "The clinic's details couldn't be loaded.",
 
   // The browser could not reach the server (plan §21, D55): said by the client, never sent by the server.
   NETWORK_OFFLINE: "You're offline. Try again once the connection is back — what you typed is still here.",
@@ -73,6 +76,7 @@ export const VALIDATION_MESSAGES = {
   tooLong: (label: string, max: number) => `${label} can be at most ${max} characters.`,
   tooShort: (label: string, min: number) => `${label} must be at least ${min} characters.`,
   invalid: "That value is not valid.",
+  gstin: "GSTIN must be 15 characters, like 32ABCDE1234F1Z5.",
 } as const;
 
 export const UI_TEXT = {
@@ -252,6 +256,8 @@ export const UI_TEXT = {
     errorTitle: "Something went wrong",
     errorBody: "This screen stopped before it finished loading. Anything you had already saved is safe.",
     toHome: "Go to Home",
+    noAccessTitle: "This screen isn’t open to you",
+    noAccessBody: "Your clinic’s owner can give you access to it.",
   },
 
   /** Home (plan §31.2); its numbers come with its own phase. */
@@ -326,6 +332,49 @@ export const UI_TEXT = {
     passwordChanged: "Password changed",
     passwordChangedBody: "You’re still signed in here, and signed out on your other devices.",
     passwordNotChanged: "Your password wasn’t changed",
+  },
+
+  /**
+   * Clinic details (plan §9, D78, D79): the logo at the top, the details as
+   * rows opening one sheet, paper size and fee timing saved as they are picked.
+   */
+  clinic: {
+    logo: "Logo",
+    logoHint: "PNG, JPG or WebP, up to 500 KB. It heads your bills and prescriptions.",
+    noLogo: "No logo yet",
+    logoAlt: (clinic: string) => `${clinic} logo`,
+    addLogo: "Add logo",
+    changeLogo: "Change logo",
+    removeLogo: "Remove logo",
+    removeLogoTitle: "Remove the logo?",
+    removeLogoBody: "Bills and prescriptions will show the clinic’s name only.",
+    logoSaved: "Logo saved",
+    logoRemoved: "Logo removed",
+    logoNotSaved: "The logo wasn’t changed",
+    details: "Details",
+    changeDetails: "Change clinic details",
+    nameLabel: "Clinic name",
+    typeLabel: "Clinic type",
+    addressLabel: "Address",
+    cityLabel: "City",
+    phoneLabel: "Clinic phone",
+    emailLabel: "Clinic email",
+    gstinLabel: "GSTIN",
+    contact: "Phone and email",
+    noContact: "No phone or email added",
+    noGstin: "No GSTIN added",
+    timezone: "Time zone",
+    timezoneValue: "India (IST)",
+    detailsSaved: "Clinic details saved",
+    detailsNotSaved: "The clinic details weren’t changed",
+    documents: "Bills and prescriptions",
+    paperSize: "Paper size",
+    paperSizeHint: "What bills and prescriptions print on.",
+    paperSizeSaved: (size: string) => `Bills and prescriptions now print on ${size}`,
+    feeTiming: "Consultation fee",
+    feeTimingHint: "When reception collects the doctor’s fee.",
+    feeTimingSaved: (timing: string) => `The consultation fee is now collected ${timing.toLowerCase()}`,
+    choiceNotSaved: "That wasn’t changed",
   },
 
   /** My account's theme switch (D36): kept per device. */

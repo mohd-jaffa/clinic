@@ -19,6 +19,37 @@ export interface FakeSupabaseOptions {
   rpc?: (name: string, args: unknown) => FakeAnswer;
   /** Supabase Auth's methods the test needs, `admin` among them; each a vi.fn() as a rule. */
   auth?: Record<string, unknown>;
+  /** What Storage answers each call with — `upload`, `remove`, `download` — by method. */
+  storage?: (method: string, bucket: string, args: unknown[]) => FakeAnswer;
+}
+
+/** One call to Storage: the method, the bucket and its arguments. */
+export interface RecordedStorageCall {
+  method: string;
+  bucket: string;
+  args: unknown[];
+}
+
+/** A builder whose every method records itself and chains, and which answers once awaited. */
+function chain(calls: [string, ...unknown[]][], settle: () => FakeAnswer): object {
+  const builder: object = new Proxy(
+    {},
+    {
+      get(_, property) {
+        if (property === "then") {
+          return (resolve: (value: unknown) => unknown, reject: (reason: unknown) => unknown) =>
+            Promise.resolve()
+              .then(() => ({ data: null, error: null, count: null, ...settle() }))
+              .then(resolve, reject);
+        }
+        return (...args: unknown[]) => {
+          calls.push([String(property), ...args]);
+          return builder;
+        };
+      },
+    },
+  );
+  return builder;
 }
 
 /**
@@ -28,36 +59,44 @@ export interface FakeSupabaseOptions {
  * `rpcs` to see what was asked, and `find` to pick a query out by a call it
  * made.
  */
-export function fakeSupabase({ answer = () => ({ data: null }), rpc, auth = {} }: FakeSupabaseOptions = {}) {
+export function fakeSupabase({
+  answer = () => ({ data: null }),
+  rpc,
+  auth = {},
+  storage = () => ({ data: null }),
+}: FakeSupabaseOptions = {}) {
   const queries: RecordedQuery[] = [];
   const rpcs: { name: string; args: unknown }[] = [];
+  /** What was chained onto each function call, in the order called: `[["select", "id"]]`. */
+  const rpcChains: [string, ...unknown[]][][] = [];
+  const storageCalls: RecordedStorageCall[] = [];
   const client = {
     auth,
     from(table: string) {
       const query: RecordedQuery = { table, calls: [] };
       queries.push(query);
-      const builder: object = new Proxy(
-        {},
-        {
-          get(_, property) {
-            if (property === "then") {
-              return (resolve: (value: unknown) => unknown, reject: (reason: unknown) => unknown) =>
-                Promise.resolve()
-                  .then(() => ({ data: null, error: null, count: null, ...answer(query) }))
-                  .then(resolve, reject);
-            }
-            return (...args: unknown[]) => {
-              query.calls.push([String(property), ...args]);
-              return builder;
-            };
-          },
-        },
-      );
-      return builder;
+      return chain(query.calls, () => answer(query));
     },
-    async rpc(name: string, args: unknown) {
+    // A function answers once awaited, and chains first when a set-returning one is narrowed (`.select()`).
+    rpc(name: string, args?: unknown) {
+      const calls: [string, ...unknown[]][] = [];
       rpcs.push({ name, args });
-      return { data: null, error: null, ...rpc?.(name, args) };
+      rpcChains.push(calls);
+      return chain(calls, () => rpc?.(name, args) ?? {});
+    },
+    storage: {
+      from: (bucket: string) =>
+        new Proxy(
+          {},
+          {
+            get:
+              (_, method) =>
+              async (...args: unknown[]) => {
+                storageCalls.push({ method: String(method), bucket, args });
+                return { data: null, error: null, ...storage(String(method), bucket, args) };
+              },
+          },
+        ),
     },
   };
 
@@ -77,7 +116,7 @@ export function fakeSupabase({ answer = () => ({ data: null }), rpc, auth = {} }
         ),
     );
 
-  return { client: client as unknown as SupabaseClient, queries, rpcs, argsOf, find };
+  return { client: client as unknown as SupabaseClient, queries, rpcs, rpcChains, storageCalls, argsOf, find };
 }
 
 /** A PostgREST error as supabase-js hands it back. */

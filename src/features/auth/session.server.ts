@@ -53,6 +53,8 @@ export type ScreenRead = (tenant: Tenant) => Promise<unknown>;
 export interface ScreenData {
   queries: Record<string, unknown>;
   pages: Record<string, unknown>;
+  /** A member the screen is not for (plan §31.2): it says so rather than drawing. */
+  refused?: boolean;
 }
 
 const NOTHING: ScreenData = { queries: {}, pages: {} };
@@ -66,9 +68,9 @@ const NOTHING: ScreenData = { queries: {}, pages: {} };
  *
  * - The platform admin is sent to the developer console: they belong to no
  *   clinic and have nothing of one to show (plan §3.2).
- * - Anyone the screen's routes would refuse — no membership, or not the
- *   screen's `access` (plan §31.2) — gets nothing read, and the screen asks
- *   for itself, so the API gives the answer.
+ * - Someone with no membership gets nothing read, and the screen asks for
+ *   itself, so the API gives the answer; a member the screen is not for
+ *   (its `access`, plan §31.2) gets nothing read and is `refused`.
  * - A read that fails is left out and logged, by route alone; its screen asks
  *   for it, and shows its own error if it fails again.
  *
@@ -84,7 +86,8 @@ export async function readScreen(reads: {
   if (!session) return NOTHING;
   if (session.profile.platformRole === "DEV") redirect(ADMIN_ROUTE);
   const { membership } = session;
-  if (!membership || !hasAccess(membership, reads.access ?? ROUTE_ACCESS.member)) return NOTHING;
+  if (!membership) return NOTHING;
+  if (!hasAccess(membership, reads.access ?? ROUTE_ACCESS.member)) return { ...NOTHING, refused: true };
 
   const tenant: Tenant = {
     supabase: createSupabaseAnonClient(session.accessToken),

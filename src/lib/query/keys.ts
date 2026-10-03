@@ -19,6 +19,11 @@ export const apiRoutes = {
     password: "/api/auth/password",
     profile: "/api/auth/profile",
   },
+  // The clinic's profile and logo (plan §9, §30).
+  clinic: {
+    profile: "/api/clinic",
+    logo: "/api/clinic/logo",
+  },
 } as const;
 
 /**

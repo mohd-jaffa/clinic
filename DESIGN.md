@@ -4,6 +4,7 @@ description: The front desk and consulting room of a small Indian clinic, drawn 
 colors:
   ground: "#eef3ee"
   surface: "#ffffff"
+  paper: "#ffffff"
   ink: "#11241a"
   muted: "#46594d"
   line: "#d5e0d7"
@@ -22,6 +23,7 @@ colors:
   scrim: "rgb(17 36 26 / 0.45)"
   ground-dark: "#0d1813"
   surface-dark: "#14231b"
+  paper-dark: "#ffffff"
   ink-dark: "#e4f1e8"
   muted-dark: "#a7bcae"
   line-dark: "#26392e"
@@ -247,6 +249,7 @@ Tailwind's own palette is cleared (`--color-*: initial`), so `bg-land`, `text-in
 ### Neutral
 - **Sage Ground** (`--ground`): the page, the shell's bar, rail and sidebar, menus, and the opening of the `Lake`.
 - **Surface White** (`--surface`): rows that stand on their own (`Row` look `surface`), fields, sheets, cards, popovers, the quiet plan band, and the Quick Actions capsules.
+- **Paper White** (`--paper`): the page a bill or prescription prints on — white in every theme — under the clinic's logo wherever it is shown (`ClinicLogo`), so a logo made for paper is seen as it will print.
 - **Green Ink** (`--ink`): all text on ground and surface, the secondary capsule's outline, bare menu icons.
 - **Moss Muted** (`--muted`): subtitles, hints, captions, idle nav places, the required asterisk, chevrons.
 - **Hairline** (`--line`): dividers between menu rows, the sidebar's edge and group rules, the bottom bar's top edge, sheet foot rules, outline rows, and skeletons.

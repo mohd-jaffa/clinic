@@ -11,6 +11,7 @@ export {
   firstIssue,
   indianMobile,
   optionalEmail,
+  optionalGstin,
   optionalPhoneNumber,
   password,
   optionalLine,
@@ -57,3 +58,12 @@ export {
   type UpdateProfileInput,
   type UpdateProfilePayload,
 } from "./schemas/auth";
+
+export {
+  clinicDetailsSchema,
+  updateClinicSchema,
+  type ClinicDetailsInput,
+  type ClinicDetailsPayload,
+  type UpdateClinicInput,
+  type UpdateClinicPayload,
+} from "./schemas/clinic";

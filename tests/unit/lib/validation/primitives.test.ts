@@ -8,6 +8,7 @@ import {
   indianMobile,
   isPhoneNumber,
   optionalEmail,
+  optionalGstin,
   optionalLine,
   optionalLines,
   optionalPhoneNumber,
@@ -243,6 +244,24 @@ describe("optionalPhoneNumber", () => {
     expect(messageOf(schema, "1".repeat(TEXT_LIMITS.phoneNumber + 1))).toBe(
       VALIDATION_MESSAGES.tooLong("Clinic phone", TEXT_LIMITS.phoneNumber),
     );
+  });
+});
+
+describe("optionalGstin", () => {
+  const schema = optionalGstin();
+
+  it("reads a GSTIN without its spaces and in capitals, and nothing as nothing", () => {
+    expect(schema.parse(" 32abcde1234f1z5 ")).toBe("32ABCDE1234F1Z5");
+    expect(schema.parse("32 ABCDE 1234 F1Z5")).toBe("32ABCDE1234F1Z5");
+    expect(schema.parse("")).toBeNull();
+    expect(schema.parse(undefined)).toBeNull();
+  });
+
+  it("refuses one of the wrong shape, and one too long", () => {
+    for (const typed of ["32ABCDE1234F1X5", "ABCDE1234F1Z532", "32ABCDE1234F0Z5"]) {
+      expect(messageOf(schema, typed), typed).toBe(VALIDATION_MESSAGES.gstin);
+    }
+    expect(messageOf(schema, "32ABCDE1234F1Z55")).toBe(VALIDATION_MESSAGES.tooLong("GSTIN", 15));
   });
 });
 

@@ -39,4 +39,12 @@ describe("AppScreen", () => {
     expect(screen.getByRole("main")).toHaveTextContent("The screen");
     expect(screen.getByText("The screen").closest("[data-keys]")).toHaveAttribute("data-keys", "/api/patients/p-1");
   });
+
+  it("tells a member it is not for so, in its place (plan §31.2)", async () => {
+    readScreen.mockResolvedValueOnce({ queries: {}, pages: {}, refused: true } as never);
+    render(await AppScreen({ access: "settings.manage", children: <p>The screen</p> }));
+
+    expect(screen.queryByText("The screen")).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "This screen isn’t open to you" })).toBeInTheDocument();
+  });
 });

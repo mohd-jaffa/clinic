@@ -44,6 +44,23 @@
         "cssVar": "--surface",
         "theme": "light"
       },
+      "paper": {
+        "role": "neutral",
+        "displayName": "Paper White",
+        "canonical": "oklch(1.000 0.000 89.9)",
+        "tonalRamp": [
+          "oklch(0.15 0.000 89.9)",
+          "oklch(0.26 0.000 89.9)",
+          "oklch(0.37 0.000 89.9)",
+          "oklch(0.48 0.000 89.9)",
+          "oklch(0.6 0.000 89.9)",
+          "oklch(0.72 0.000 89.9)",
+          "oklch(0.84 0.000 89.9)",
+          "oklch(0.95 0.000 89.9)"
+        ],
+        "cssVar": "--paper",
+        "theme": "light"
+      },
       "ink": {
         "role": "neutral",
         "displayName": "Green Ink",

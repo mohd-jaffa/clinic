@@ -47,9 +47,16 @@ describe("the frame", () => {
     expect(within(screen.getByRole("main")).getByRole("heading", { name: "Hello, Asha" })).toBeInTheDocument();
   });
 
-  it("names the clinic at the top of the sidebar", () => {
+  it("names the clinic at the top of the sidebar, with its logo when it has one (plan §31.1)", () => {
     shell();
     expect(screen.getByText("Smile Care")).toBeInTheDocument();
+    expect(screen.queryByRole("img", { name: "Smile Care logo" })).not.toBeInTheDocument();
+    cleanup();
+
+    const { membership } = authStub();
+    auth.current = authStub({ membership: { ...membership!, clinicLogoUrl: "/api/clinic/logo?v=1" } });
+    shell();
+    expect(screen.getByRole("img", { name: "Smile Care logo" })).toHaveAttribute("src", "/api/clinic/logo?v=1");
   });
 });
 

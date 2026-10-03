@@ -163,6 +163,9 @@ earlier lines are never rewritten.
 | D74 | **How to renew leads to the Plan screen** (the user): the banner offers the owner **How to renew**, which opens `/settings/plan` (R11.1); until R11.1 it opens the not-found screen, as the other Settings rows do (D71). | 2026-10-03 |
 | D75 | **Menus are one list on the ground** (the user, at the Phase 2 finish review): Settings, My account and the More sheet list their rows as one continuous list per section, parted by hairlines, each icon bare (coral for Delete clinic) — never a card per row or a tile under an icon (§32.1 Refuses). Separate surface rows stay for lists of people and records (the queue, bills). The response and confirm cards set their icon bare beside the title. | 2026-10-03 |
 | D76 | **Quick Actions drops from its ＋ on tablet and desktop** (the user, at the Phase 2 finish review): from 768 px the lobe opens beside the rail's ＋ and the sidebar's **Add**, at the top, its lower edge the coastline; on a phone it still rises from the bottom. Each action is a capsule with its chip on the trailing edge, as every capsule's at rest. | 2026-10-03 |
+| D77 | **Migrations are numbered in the order they are built** (the user): Phase 3 builds the clinic profile (R3.1) before the team (R3.4), so they are `0009_clinic_profile`, `0010_closures`, `0011_team`. A number is fixed once its migration is committed; none is renumbered after release. | 2026-10-03 |
+| D78 | **Clinic details: rows and sheets, like My account** (the user): the logo at the top with Change and Remove; the details as rows, one sheet holding name, type, address, city, phone, email and GSTIN; paper size and fee timing as choices saved the moment they are picked, like the theme. | 2026-10-03 |
+| D79 | **The logo can be removed** (the user): Remove asks first, deletes the file and leaves the letterhead with the clinic's name only. A new logo still replaces the old only after it is stored. | 2026-10-03 |
 
 ## 3. Users and roles
 
@@ -572,8 +575,10 @@ job title, doctor details; deactivate / reactivate (asks first).
 - **Logo:** the **only file a user uploads** (AGENTS.md §20): ≤ 500 KB, PNG/JPG/
   WebP typed by its first bytes, private bucket `clinic-logos` at
   `clinics/{clinic_id}/logo/{id}`, read back only through the API. A new logo
-  replaces the old only after it is stored. It heads the bill and the
-  prescription.
+  replaces the old only after it is stored; it may be removed, asked first
+  (D79). It heads the bill and the prescription. The screen: the logo at the
+  top, the details as rows opening one sheet, paper size and fee timing saved
+  as they are picked (D78).
 - **Price list — `/settings/price-list`** (`settings.manage`): services with
   name, category (Consultation, Procedure, Investigation, Medicine, Other) and
   price. Archived, never deleted (bills keep their own copy of the line).
@@ -1609,11 +1614,11 @@ Planned order (one or more per tracker row):
 0006_logs                       audit_logs, error_logs, clean_up_logs() + its pg_cron job
 0007_clinic_catalogues          services, appointment_types, expense_categories
 0008_register_clinic            register_clinic (trial claim, seeds from seeds.ts)
-0009_team                       invite_member, accept_invite, update_member, set_member_active,
+0009_clinic_profile             update_clinic_profile (details, paper size, fee timing),
+                                set_clinic_logo, clear_clinic_logo (D79), the clinic-logos bucket
+0010_closures                   clinic_closures
+0011_team                       invite_member, accept_invite, update_member, set_member_active,
                                 doctor consultation fee
-0010_clinic_profile             update_clinic_profile (paper size, fee timing),
-                                set_clinic_logo, the clinic-logos bucket
-0011_closures                   clinic_closures
 0012_patients                   patients + counter, patient_doctors + triggers,
                                 can_see_patient(), patient_alerts, search indexes,
                                 import_patients
@@ -1648,7 +1653,7 @@ take an `Idempotency-Key` header.
 | Area | Routes |
 |---|---|
 | Auth | `POST /api/auth/register` · `POST /api/auth/login` · `POST /api/auth/logout` · `POST /api/auth/refresh` · `GET /api/auth/session` · `POST /api/auth/confirm` · `POST /api/auth/resend-confirmation` · `POST /api/auth/password-reset` · `POST /api/auth/password-reset/complete` · `POST /api/auth/password` · `PATCH /api/auth/profile` · `POST /api/auth/accept-invite` |
-| Clinic | `GET, PATCH /api/clinic` · `GET, POST /api/clinic/logo` · `POST, DELETE /api/clinic/deletion-request` · `GET /api/export/[area]` (CSV) |
+| Clinic | `GET, PATCH /api/clinic` · `GET, POST, DELETE /api/clinic/logo` · `POST, DELETE /api/clinic/deletion-request` · `GET /api/export/[area]` (CSV) |
 | Catalogues | `GET, POST /api/services` · `PATCH /api/services/[id]` · `GET, POST /api/appointment-types` · `PATCH /api/appointment-types/[id]` · `GET, POST /api/expense-categories` · `PATCH /api/expense-categories/[id]` |
 | Closures | `GET, POST /api/closures` · `DELETE /api/closures/[id]` |
 | Team | `GET /api/team` · `POST /api/team/invites` · `POST /api/team/invites/[id]/resend` · `DELETE /api/team/invites/[id]` · `GET, PATCH /api/team/[id]` · `POST /api/team/[id]/active` |
@@ -2086,10 +2091,10 @@ tests (§34) and its changelog entry.
 
 | ID | Work | Source | Waits on | Status |
 |---|---|---|---|---|
-| R3.1 | `0010_clinic_profile`: clinic details, paper size, fee timing, the logo upload | §9 | — | TODO |
+| R3.1 | `0009_clinic_profile`: clinic details, paper size, fee timing, the logo upload (D77–D79) | §9 | — | TODO |
 | R3.2 | Price list, appointment types and expense categories screens (tables from `0007`) | §9 | — | TODO |
-| R3.3 | `0011_closures`: holidays and leave | §9 | — | TODO |
-| R3.4 | `0009_team`: invite with its own token (D63; presets, dependencies, doctor details and fee), invite email, resend, revoke, expiry | §8.3, §8.4 | Q19 | TODO |
+| R3.3 | `0010_closures`: holidays and leave | §9 | — | TODO |
+| R3.4 | `0011_team`: invite with its own token (D63; presets, dependencies, doctor details and fee), invite email, resend, revoke, expiry | §8.3, §8.4 | Q19 | TODO |
 | R3.5 | Accept invite screen | §8.5 | — | TODO |
 | R3.6 | Team list and member detail: permissions, job title, doctor details, deactivate/reactivate; escalation and last-owner guards | §8.2, §8.6 | — | TODO |
 | R3.7 | The owner's own doctor profile | §3.1 | — | TODO |

@@ -18,6 +18,8 @@ export interface SessionMembership {
   id: string;
   clinicId: string;
   clinicName: string;
+  /** Where the clinic's logo is read, naming its version; null while it has none (plan §31.1). */
+  clinicLogoUrl: string | null;
   role: ClinicRole;
   /** What they may do; the owner's are all of them (plan §8.2). */
   permissions: Permission[];

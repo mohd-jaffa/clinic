@@ -20,6 +20,7 @@ import {
 } from "@/constants/navigation";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { RequireAuth } from "@/features/auth/components/RequireAuth";
+import { ClinicLogo } from "@/features/clinic/components/ClinicLogo";
 import { useReadOnly } from "@/features/subscription/hooks/useReadOnly";
 import { useNavigationPending } from "@/hooks/useNavigationPending";
 
@@ -87,7 +88,10 @@ function AppFrame({ children }: { children: ReactNode }) {
         )}
       >
         <div className="safe-top [--safe-pt:1.25rem] grid gap-5 px-2 pb-3 max-lg:justify-items-center lg:px-4">
-          <p className="hidden px-2 text-title font-bold break-words lg:line-clamp-2">{membership?.clinicName}</p>
+          <div className="hidden items-center gap-3 px-2 lg:flex">
+            {membership && <ClinicLogo url={membership.clinicLogoUrl} clinic={membership.clinicName} size="sm" />}
+            <p className="line-clamp-2 min-w-0 text-title font-bold break-words">{membership?.clinicName}</p>
+          </div>
           {adds.length > 0 && (
             <>
               <span className="lg:hidden">
