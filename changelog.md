@@ -863,3 +863,63 @@ appended and never rewritten (AGENTS.md §33).
 
 ### Blockers
 - None. `/privacy` names the logo when it is written (R12.2).
+
+## 2026-10-03 — R3.2, the price list, appointment types and expense categories
+
+### Added
+- `0010_catalogue_rules.sql` (D81, D83): a new appointment type or expense
+  category is placed last by a trigger (the column default removed); a clinic
+  keeps its last active appointment type, its last active expense category
+  and its last active Consultation service — nor can that service leave the
+  Consultation category. The refusal is the database's, under a lock on the
+  clinic row so two archives at once cannot both pass, and reads in words
+  (`APPOINTMENT_TYPE_REQUIRED`, `EXPENSE_CATEGORY_REQUIRED`,
+  `CONSULTATION_SERVICE_REQUIRED`, 422).
+- `src/features/clinic/catalogues.ts` (plan §9): `services`,
+  `appointmentTypes`, `expenseCategories`, each `list`, `add` and `change`
+  (details, archive, restore) — every change audited with its values
+  (`CREATE`, `UPDATE`, `ARCHIVE`, `RESTORE`); a name already in use, whatever
+  its case, is `…_ALREADY_EXISTS` (409). `GET, POST /api/services`,
+  `/api/appointment-types`, `/api/expense-categories` and `PATCH` on each
+  `[id]`: reading for any member, changing for `settings.manage`.
+- The price list — `/settings/price-list` (D82): a section per category in
+  the plan's order, each service's name and price; a search by name; **Add
+  service**; a service opens its sheet (name, category, price) to be changed
+  or archived. From 1024 px the categories stand in two columns.
+- Appointment types — `/settings/appointment-types` — and expense categories
+  — `/settings/expense-categories` — in the clinic's order (D81): each opens
+  its sheet (name and usual length; name) to be changed or archived; **Add**
+  at the foot says where a new one goes.
+- Archived entries (D80): **Show archived (n)** at the foot of each screen,
+  each with **Restore** — refused while an active entry has its name. Archive
+  asks first and says what archiving means. View-only, each screen shows
+  everything and changes nothing, saying why.
+- `src/lib/supabase/records.ts` (ported from Brio): `tenantRecords` — a
+  clinic table read and written within the caller's clinic, its changes
+  audited; `src/lib/audit/changes.ts` (`changedValues`), now also used by the
+  clinic details.
+- `Row`'s `detail`: a value read at the row's end — a price, a length — part
+  of the row's target (`DESIGN.md` updated).
+- `wholeNumberText`, `serviceSchema`, `appointmentTypeSchema`,
+  `expenseCategorySchema` and their change schemas; `paiseToText`.
+- Plan D80 – D83; the migration list and R3.3 onwards renumbered
+  (`0011_closures`, `0012_team`, …).
+
+### Changed
+- The journeys' accessibility check no longer waits for a notice's
+  countdown — whose end starts the notice's fade, which axe then read as
+  low contrast — and checks again if a fade begins while it runs.
+
+### Validation
+- Typecheck, lint, format check passed.
+- Unit and integration tests passed (1378), coverage 100% — the integration
+  test against the local Supabase: the seeds in order, other clinics out of
+  reach, settings.manage only, new entries last, names unique whatever their
+  case, archive and restore audited, a restore refused while the name is in
+  use, the last Consultation, type and category kept, and two archives of the
+  last two at once leaving one.
+- Build passed; E2E passed (52, phone and desktop), axe clean —
+  `tests/e2e/catalogues.spec.ts`.
+
+### Blockers
+- None.

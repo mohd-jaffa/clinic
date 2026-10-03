@@ -2098,7 +2098,7 @@ tests (§34) and its changelog entry.
 | ID | Work | Source | Waits on | Status |
 |---|---|---|---|---|
 | R3.1 | `0009_clinic_profile`: clinic details, paper size, fee timing, the logo upload (D77–D79) | §9 | — | DONE (2026-10-03 · 0de6f85) |
-| R3.2 | `0010_catalogue_rules`; price list, appointment types and expense categories screens (tables from `0007`; D80–D83) | §9 | — | TODO |
+| R3.2 | `0010_catalogue_rules`; price list, appointment types and expense categories screens (tables from `0007`; D80–D83) | §9 | — | DONE (2026-10-03 · f7b0669) |
 | R3.3 | `0011_closures`: holidays and leave | §9 | — | TODO |
 | R3.4 | `0012_team`: invite with its own token (D63; presets, dependencies, doctor details and fee), invite email, resend, revoke, expiry | §8.3, §8.4 | Q19 | TODO |
 | R3.5 | Accept invite screen | §8.5 | — | TODO |
