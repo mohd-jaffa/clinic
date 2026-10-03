@@ -98,11 +98,22 @@ export { FORM_RESET_OPTIONS } from "./forms";
 
 export {
   acceptInviteSchema,
+  doctorDetailsSchema,
   invitePreviewSchema,
   inviteSchema,
+  jobTitleSchema,
+  memberActiveSchema,
+  updateMemberSchema,
   type AcceptInviteInput,
   type AcceptInvitePayload,
+  type DoctorDetailsInput,
+  type DoctorDetailsPayload,
   type InviteInput,
   type InvitePayload,
   type InvitePreviewInput,
+  type JobTitleInput,
+  type JobTitlePayload,
+  type MemberActiveInput,
+  type UpdateMemberInput,
+  type UpdateMemberPayload,
 } from "./schemas/team";

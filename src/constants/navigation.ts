@@ -106,11 +106,14 @@ const REPORTS: NavItem = {
   access: "reports.view",
   hint: hints.reports,
 };
+export const TEAM_ROUTE = "/team";
+/** A member's page (D94). */
+export const memberRoute = (id: string) => `${TEAM_ROUTE}/${id}`;
 const TEAM: NavItem = {
   id: "team",
   label: places.team,
   icon: IdCard,
-  href: "/team",
+  href: TEAM_ROUTE,
   access: "team.manage",
   hint: hints.team,
 };

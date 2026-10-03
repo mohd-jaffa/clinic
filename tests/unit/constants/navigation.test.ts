@@ -6,6 +6,7 @@ import {
   ALL_NAV,
   BOTTOM_NAV,
   isActivePath,
+  memberRoute,
   MORE_NAV,
   NAV_GROUPS,
   placesFor,
@@ -14,6 +15,7 @@ import {
   quickAddFor,
   SETTINGS_GROUPS,
   settingsFor,
+  TEAM_ROUTE,
 } from "@/constants/navigation";
 import { PERMISSIONS } from "@/constants/permissions";
 
@@ -68,6 +70,11 @@ describe("the places (plan §31.1)", () => {
     expect(isActivePath("/patients", "/patients-archive")).toBe(false);
     expect(isActivePath("/settings", "/settings/account")).toBe(true);
     expect(isActivePath("/home", "/queue")).toBe(false);
+  });
+
+  it("give each member a page within the team's (D94)", () => {
+    expect(memberRoute("m-2")).toBe(`${TEAM_ROUTE}/m-2`);
+    expect(isActivePath(TEAM_ROUTE, memberRoute("m-2"))).toBe(true);
   });
 });
 

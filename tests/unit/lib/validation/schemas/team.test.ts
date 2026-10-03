@@ -3,7 +3,16 @@ import type { z } from "zod";
 
 import { TEXT_LIMITS } from "@/constants/limits";
 import { VALIDATION_MESSAGES } from "@/constants/messages";
-import { acceptInviteSchema, firstIssue, invitePreviewSchema, inviteSchema } from "@/lib/validation";
+import {
+  acceptInviteSchema,
+  doctorDetailsSchema,
+  firstIssue,
+  invitePreviewSchema,
+  inviteSchema,
+  jobTitleSchema,
+  memberActiveSchema,
+  updateMemberSchema,
+} from "@/lib/validation";
 
 function messageOf(schema: z.ZodType, value: unknown): string | null {
   const result = schema.safeParse(value);
@@ -83,5 +92,37 @@ describe("acceptInviteSchema (plan §8.5)", () => {
     expect(messageOf(acceptInviteSchema, { ...accept, phone: "12345" })).toBe(VALIDATION_MESSAGES.phone);
     expect(messageOf(invitePreviewSchema, { token: TOKEN.slice(1) })).toBe(VALIDATION_MESSAGES.invalid);
     expect(invitePreviewSchema.parse({ token: TOKEN })).toEqual({ token: TOKEN });
+  });
+});
+
+describe("changing a member (plan §8.6)", () => {
+  it("passes on only what is named, tidied", () => {
+    expect(updateMemberSchema.parse({})).toEqual({});
+    expect(updateMemberSchema.parse({ permissions: ["patients.create", "patients.view"] })).toEqual({
+      permissions: ["patients.view", "patients.create"],
+    });
+    expect(updateMemberSchema.parse({ jobTitle: " " })).toEqual({ jobTitle: null });
+    expect(
+      updateMemberSchema.parse({
+        doctor: { specialization: " Orthodontist ", qualifications: "", registrationNumber: "KL-1", fee: "700" },
+      }),
+    ).toEqual({
+      doctor: { specialization: "Orthodontist", qualifications: null, registrationNumber: "KL-1", fee: 70_000 },
+    });
+    expect(messageOf(updateMemberSchema, { permissions: ["visits.edit"] })).toBe(
+      VALIDATION_MESSAGES.permissionsNeedOthers,
+    );
+  });
+
+  it("reads a job title, a doctor's details, and deactivating, each on its own", () => {
+    expect(jobTitleSchema.parse({ jobTitle: " Nurse " })).toEqual({ jobTitle: "Nurse" });
+    expect(doctorDetailsSchema.parse({})).toEqual({
+      specialization: null,
+      qualifications: null,
+      registrationNumber: null,
+      fee: null,
+    });
+    expect(memberActiveSchema.parse({ active: false })).toEqual({ active: false });
+    expect(messageOf(memberActiveSchema, { active: "no" })).toBe(VALIDATION_MESSAGES.invalid);
   });
 });

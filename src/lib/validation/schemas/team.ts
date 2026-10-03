@@ -21,7 +21,7 @@ const permissionSet = z
   .refine(permissionsAreConsistent, VALIDATION_MESSAGES.permissionsNeedOthers);
 
 /** A doctor's details (plan §8.4): each may wait; the fee, left empty, is the price list's (D26). */
-const doctorDetails = z.object({
+export const doctorDetailsSchema = z.object({
   specialization: optionalLine(team.specializationLabel, TEXT_LIMITS.doctorDetail),
   qualifications: optionalLine(team.qualificationsLabel, TEXT_LIMITS.doctorDetail),
   registrationNumber: optionalLine(team.registrationLabel, TEXT_LIMITS.registrationNumber),
@@ -40,7 +40,7 @@ export const inviteSchema = z
     role: z.enum(INVITE_ROLES, { error: VALIDATION_MESSAGES.choose(team.roleLabel) }),
     jobTitle: optionalLine(team.jobTitleLabel, TEXT_LIMITS.jobTitle),
     permissions: permissionSet,
-    doctor: doctorDetails,
+    doctor: doctorDetailsSchema,
   })
   .transform(({ role, jobTitle, doctor, ...invite }) => ({
     ...invite,
@@ -74,3 +74,29 @@ export const acceptInviteSchema = z.object({
 
 export type AcceptInviteInput = z.input<typeof acceptInviteSchema>;
 export type AcceptInvitePayload = z.output<typeof acceptInviteSchema>;
+
+/**
+ * A change to a member (plan §8.6, D94, D95): what they can do, their job
+ * title (staff), or their doctor's details (a doctor) — only what is named.
+ */
+export const updateMemberSchema = z.object({
+  permissions: permissionSet.optional(),
+  jobTitle: optionalLine(team.jobTitleLabel, TEXT_LIMITS.jobTitle).optional(),
+  doctor: doctorDetailsSchema.optional(),
+});
+
+/** A member of staff's job title (plan §8.4): it may be left empty. */
+export const jobTitleSchema = z.object({ jobTitle: optionalLine(team.jobTitleLabel, TEXT_LIMITS.jobTitle) });
+
+export type DoctorDetailsInput = z.input<typeof doctorDetailsSchema>;
+export type DoctorDetailsPayload = z.output<typeof doctorDetailsSchema>;
+export type JobTitleInput = z.input<typeof jobTitleSchema>;
+export type JobTitlePayload = z.output<typeof jobTitleSchema>;
+
+export type UpdateMemberInput = z.input<typeof updateMemberSchema>;
+export type UpdateMemberPayload = z.output<typeof updateMemberSchema>;
+
+/** Deactivating (`false`) or reactivating (`true`) a member (plan §8.6). */
+export const memberActiveSchema = z.object({ active: z.boolean({ error: VALIDATION_MESSAGES.invalid }) });
+
+export type MemberActiveInput = z.input<typeof memberActiveSchema>;

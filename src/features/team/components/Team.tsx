@@ -12,6 +12,7 @@ import { Row, RowList } from "@/components/ui/row";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { SkeletonRows } from "@/components/ui/skeleton";
 import { UI_TEXT } from "@/constants/messages";
+import { memberRoute } from "@/constants/navigation";
 import { CLINIC_ROLE_LABELS } from "@/constants/roles";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { ReadOnlyNote } from "@/features/subscription/components/ReadOnlyNote";
@@ -77,6 +78,8 @@ function TeamLists({ members }: { members: readonly TeamMember[] }) {
   const [inviting, setInviting] = useState(false);
   const { resend, revoke, busy } = useInviteActions();
   const ids = { people: useId(), invited: useId(), inactive: useId() };
+  // Everyone joined has a page (D94) — but the owner and oneself, whose access no one here changes.
+  const opens = (member: TeamMember) => member.role !== "OWNER" && member.userId !== profile?.id;
   const of = (status: TeamMember["status"]) => members.filter((member) => member.status === status);
   const [active, invited, inactive] = [of("ACTIVE"), of("INVITED"), of("INACTIVE")];
 
@@ -96,6 +99,7 @@ function TeamLists({ members }: { members: readonly TeamMember[] }) {
               leading={<Avatar name={member.name} />}
               title={member.userId === profile?.id ? team.you(member.name) : member.name}
               subtitle={roleOf(member)}
+              href={opens(member) ? memberRoute(member.id) : undefined}
             />
           ))}
         </RowList>
@@ -150,6 +154,7 @@ function TeamLists({ members }: { members: readonly TeamMember[] }) {
                 leading={<Avatar name={member.name} />}
                 title={member.name}
                 subtitle={roleOf(member)}
+                href={memberRoute(member.id)}
               />
             ))}
           </RowList>

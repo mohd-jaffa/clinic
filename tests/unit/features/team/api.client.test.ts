@@ -37,6 +37,15 @@ describe("TeamClient (plan §30)", () => {
     expect(sent()).toMatchObject({ url: "/api/team/invites/m-9", method: "DELETE" });
   });
 
+  it("changes a member at their own address, and deactivates them", async () => {
+    await TeamClient.update({ id: "m-2", jobTitle: "Nurse" });
+    expect(sent()).toMatchObject({ url: "/api/team/m-2", method: "PATCH", body: '{"jobTitle":"Nurse"}' });
+
+    mockFetch.mockClear();
+    await TeamClient.setActive({ id: "m-2", active: false });
+    expect(sent()).toMatchObject({ url: "/api/team/m-2/active", method: "POST", body: '{"active":false}' });
+  });
+
   it("asks what a link opens onto, and accepts it, with the token in the body", async () => {
     await TeamClient.previewInvite("tok");
     expect(sent()).toMatchObject({ url: "/api/auth/accept-invite/preview", method: "POST", body: '{"token":"tok"}' });

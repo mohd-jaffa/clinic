@@ -179,6 +179,9 @@ earlier lines are never rewritten.
 | D90 | **The invite link is only ever emailed** (the user): no link is shown on screen or shared another way; **Resend** sends a new one. The token stays out of chats and screens. | 2026-10-03 |
 | D91 | **Everyone accepting an invite sets a password** (the user): someone who already has an account (they left another clinic) confirms their name, gives their mobile and sets a password like anyone else — the link proves the email, as a reset link does, so their old password is replaced. | 2026-10-03 |
 | D92 | **Accepting an invite signs the invitee in, whoever was signed in** (the user): the accept screen shows as usual on a device where someone else is signed in; accepting replaces that session with the invitee's and lands on Home in a new page load. | 2026-10-03 |
+| D93 | **A manager changes only those within their own access** (the user): a member with `team.manage` who is not the owner may change or deactivate a member only when they hold every permission that member has, and never one with `team.manage`; anyone else is the owner's to change. Never the owner, never themselves (§8.2 rule 5). The database holds the same. | 2026-10-03 |
+| D94 | **A member has a page of their own** (the user): `/team/[id]` — who they are (name, email, mobile, role) at the top; the job title or the doctor's details as a row opening a sheet; what they can do, with the same presets and grouped permissions as the invite, saved with one **Save changes**; **Deactivate** (asked first) or **Reactivate** at the foot. | 2026-10-03 |
+| D95 | **A member's role is fixed in V1** (the user): a member stays the Doctor or Staff they were invited as; their permissions, job title and doctor details change, the role does not — a doctor's records keep a doctor profile that never vanishes. | 2026-10-03 |
 
 ## 3. Users and roles
 
@@ -2116,7 +2119,7 @@ tests (§34) and its changelog entry.
 | R3.3 | `0011_closures`: holidays and leave (D84–D87); `GET /api/doctors` for its picker | §9, §30 | — | DONE (2026-10-03 · 528bedf) |
 | R3.4 | `0012_team`: invite with its own token (D63; presets, dependencies, doctor details and fee), invite email, resend, revoke, expiry, and the accept function R3.5 calls (D88–D90) | §8.3, §8.4 | — | DONE (2026-10-03 · 0b7cf09) |
 | R3.5 | Accept invite screen (D91, D92) | §8.5 | — | DONE (2026-10-03 · c0c1076) |
-| R3.6 | `0013_members`; team list and member detail: permissions, job title, doctor details, deactivate/reactivate; escalation and last-owner guards | §8.2, §8.6 | — | TODO |
+| R3.6 | `0013_members`; team list and member detail: permissions, job title, doctor details, deactivate/reactivate; escalation and last-owner guards (D93–D95) | §8.2, §8.6 | — | TODO |
 | R3.7 | The owner's own doctor profile | §3.1 | — | TODO |
 | R3.8 | Integration + E2E: invite a receptionist and a doctor; each sees only what they may | §34 | — | TODO |
 

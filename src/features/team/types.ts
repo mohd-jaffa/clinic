@@ -53,3 +53,31 @@ export interface InviteOutcome {
   member: TeamMember;
   emailSent: boolean;
 }
+
+/** A doctor's details as their page shows and changes them (plan §8.4). */
+export interface DoctorDetails {
+  specialization: string | null;
+  qualifications: string | null;
+  registrationNumber: string | null;
+  /** Their own consultation fee; none takes the price list's (D26). */
+  feePaise: number | null;
+}
+
+/** A member as their page reads them (plan §8.6): the list's, with their mobile and a doctor's details. */
+export interface MemberDetail extends TeamMember {
+  phone: string | null;
+  doctor: DoctorDetails | null;
+}
+
+/** A `clinic_members` row as a member's page reads it. */
+export interface MemberDetailRow extends Omit<TeamMemberRow, "profile" | "doctors"> {
+  profile: { full_name: string; email: string; phone: string | null };
+  doctors: DoctorRowDetails | DoctorRowDetails[] | null;
+}
+
+interface DoctorRowDetails {
+  specialization: string | null;
+  qualifications: string | null;
+  registration_number: string | null;
+  consultation_fee_paise: number | null;
+}

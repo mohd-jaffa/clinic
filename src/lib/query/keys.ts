@@ -51,6 +51,8 @@ export const apiRoutes = {
   // The team (plan §8, §30): everyone, and the open invites.
   team: {
     list: "/api/team",
+    member: (id: string) => `/api/team/${id}`,
+    active: (id: string) => `/api/team/${id}/active`,
     invites: "/api/team/invites",
     invite: (id: string) => `/api/team/invites/${id}`,
     resend: (id: string) => `/api/team/invites/${id}/resend`,

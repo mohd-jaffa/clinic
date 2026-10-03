@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { PERMISSION_PRESET_SETS, PERMISSIONS } from "@/constants/permissions";
-import { grantable, lockOf, presetOf, presetPermissions, toggled } from "@/features/team/access";
+import { canManage, grantable, lockOf, presetOf, presetPermissions, toggled } from "@/features/team/access";
 
 const owner = { role: "OWNER" as const, permissions: [] };
 const manager = {
@@ -50,5 +50,25 @@ describe("lockOf", () => {
     });
     expect(lockOf("patients.view", ["patients.view", "appointments.view"], PERMISSIONS)).toEqual({ locked: true });
     expect(lockOf("patients.view", ["patients.view"], PERMISSIONS)).toEqual({ locked: false });
+  });
+});
+
+describe("canManage (D93)", () => {
+  const meera = { id: "m-2", role: "STAFF" as const, status: "ACTIVE", permissions: ["patients.view" as const] };
+  const me = { ...manager, memberId: "m-1" };
+
+  it("lets the owner change any joined member but themselves", () => {
+    const theOwner = { ...owner, memberId: "m-0" };
+    expect(canManage(theOwner, meera)).toBe(true);
+    expect(canManage(theOwner, { ...meera, status: "INACTIVE", permissions: [...PERMISSIONS] })).toBe(true);
+    expect(canManage(theOwner, { ...meera, id: "m-0", role: "OWNER" })).toBe(false);
+    expect(canManage(theOwner, { ...meera, status: "INVITED" })).toBe(false);
+  });
+
+  it("lets a manager change only those within their own access, never themselves", () => {
+    expect(canManage(me, meera)).toBe(true);
+    expect(canManage(me, { ...meera, permissions: ["patients.view", "reports.view"] })).toBe(false);
+    expect(canManage(me, { ...meera, permissions: ["team.manage"] })).toBe(false);
+    expect(canManage(me, { ...meera, id: "m-1" })).toBe(false);
   });
 });

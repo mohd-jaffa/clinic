@@ -65,6 +65,11 @@ export const ERROR_MESSAGES = {
   INVITE_INVALID: "This invite link isn't valid any more. Ask the clinic to send you a new one.",
   INVITE_EXPIRED: "This invite link has run out. Ask the clinic to send it again.",
   TEAM_LOAD_FAILED: "The team couldn't be loaded.",
+  TEAM_OWNER_UNCHANGEABLE: "The owner always has all of it — their access can't be changed.",
+  TEAM_NOT_YOURSELF: "You can't change your own access, or deactivate yourself.",
+  TEAM_MEMBER_NOT_YOURS: "Only the owner can change someone who manages the team, or has access you don't.",
+  MEMBER_STILL_INVITED: "They haven't joined yet. Resend or revoke their invite instead.",
+  MEMBER_LOAD_FAILED: "This team member couldn't be loaded.",
 
   // The browser could not reach the server (plan §21, D55): said by the client, never sent by the server.
   NETWORK_OFFLINE: "You're offline. Try again once the connection is back — what you typed is still here.",
@@ -557,6 +562,39 @@ export const UI_TEXT = {
     revokeBody: "Their link stops working. You can invite them again later.",
     revoked: (name: string) => `${name}’s invite revoked`,
     notRevoked: "The invite wasn’t revoked",
+  },
+
+  /** A member's page (plan §8.6, D93 – D95): who they are, what they can do, and whether they still work here. */
+  member: {
+    contact: "Contact",
+    emailLabel: "Email",
+    phoneLabel: "Mobile number",
+    noPhone: "Not added yet",
+    inactive: "Inactive — they can’t sign in.",
+    details: "Details",
+    jobTitle: "Job title",
+    noJobTitle: "Not set",
+    jobTitleSheet: "Change job title",
+    doctorDetails: "Doctor details",
+    doctorSheet: "Change doctor details",
+    noDoctorDetails: "Specialization, qualifications, registration number and fee",
+    registration: (number: string) => `Reg. ${number}`,
+    ownFee: (fee: string) => `Fee ${fee}`,
+    saveAccess: "Save changes",
+    accessSaved: (name: string) => `${name}’s access saved`,
+    detailsSaved: "Saved",
+    notSaved: "That wasn’t saved",
+    readOnly: (name: string) => `Only the owner can change ${name}.`,
+    deactivate: "Deactivate",
+    deactivateTitle: (name: string) => `Deactivate ${name}?`,
+    deactivateBody:
+      "They can’t sign in from their next request. What they did stays, with their name. You can reactivate them.",
+    deactivated: (name: string) => `${name} deactivated`,
+    reactivate: "Reactivate",
+    reactivateTitle: (name: string) => `Reactivate ${name}?`,
+    reactivateBody: "They can sign in again, with the access they had.",
+    reactivated: (name: string) => `${name} reactivated`,
+    notChanged: "That wasn’t changed",
   },
 
   /** Accepting an invite (plan §8.5, D91, D92): the screen the emailed link opens. */

@@ -67,3 +67,20 @@ export function lockOf(
   const needed = permissions.some((held) => PERMISSION_DEPENDENCIES[held]?.includes(permission));
   return { locked: needed };
 }
+
+/**
+ * Whether the person signed in may change a member (D93), as 0013 decides
+ * it: a joined member, not the owner, not themselves — and, for anyone but
+ * the owner, one whose every permission they hold, without team.manage.
+ */
+export function canManage(
+  granter: Granter & { memberId: string },
+  member: { id: string; role: ClinicRole; status: string; permissions: readonly Permission[] },
+): boolean {
+  if (member.role === "OWNER" || member.id === granter.memberId || member.status === "INVITED") return false;
+  if (granter.role === "OWNER") return true;
+  return (
+    !member.permissions.includes(OWNER_ONLY_PERMISSION) &&
+    member.permissions.every((permission) => granter.permissions.includes(permission))
+  );
+}

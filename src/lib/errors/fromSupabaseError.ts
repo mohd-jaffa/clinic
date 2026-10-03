@@ -80,6 +80,11 @@ const BUSINESS_RULES: ReadonlySet<ErrorMessageCode> = new Set<ErrorMessageCode>(
   "TEAM_PERMISSION_NOT_HELD",
   "INVITE_SENT_RECENTLY",
   "INVITE_EXPIRED",
+  // Changing the team (0013, D93): whom, and whose.
+  "TEAM_OWNER_UNCHANGEABLE",
+  "TEAM_NOT_YOURSELF",
+  "TEAM_MEMBER_NOT_YOURS",
+  "MEMBER_STILL_INVITED",
 ]);
 
 /**
