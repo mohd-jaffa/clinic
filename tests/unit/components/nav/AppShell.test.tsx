@@ -1,7 +1,8 @@
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { act, cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { settleNavigation, SLOW_MS, startNavigation } from "@/lib/navigation/pending";
 import { authStub } from "@tests/support/auth";
 import { Providers } from "@tests/support/providers";
 
@@ -186,5 +187,29 @@ describe("while the session is checked", () => {
     expect(screen.getByRole("status", { name: "Checking who is signed in…" })).toBeInTheDocument();
     expect(screen.queryAllByRole("link")).toEqual([]);
     expect(screen.queryByRole("button", { name: "Add" })).not.toBeInTheDocument();
+  });
+});
+
+describe("on the way to another screen", () => {
+  it("shows the next screen's skeleton in this one's place once it is slow, the navigation kept", () => {
+    vi.useFakeTimers();
+    try {
+      const { side } = shell();
+      act(() => {
+        startNavigation();
+        vi.advanceTimersByTime(SLOW_MS);
+      });
+
+      const main = screen.getByRole("main");
+      expect(main).toHaveAttribute("aria-busy", "true");
+      expect(within(main).getByRole("status", { name: "Loading…" })).toBeInTheDocument();
+      expect(within(side).getByRole("link", { name: "Home" })).toBeInTheDocument();
+
+      act(() => settleNavigation());
+      expect(main).not.toHaveAttribute("aria-busy");
+      expect(within(main).queryByRole("status")).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

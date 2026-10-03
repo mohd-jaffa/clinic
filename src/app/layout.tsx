@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import { Figtree } from "next/font/google";
 
 import { ResponseProvider } from "@/components/ui/response-card";
 import { UI_TEXT } from "@/constants/messages";
@@ -9,18 +8,8 @@ import { ThemeProvider } from "@/lib/theme/ThemeProvider";
 import { THEME_BOOT_SCRIPT, THEME_COLORS } from "@/lib/theme/themes";
 import { KeyboardInset } from "@/lib/viewport/KeyboardInset";
 
+import { figtree } from "./fonts";
 import "./globals.css";
-
-/**
- * The app's one face (D64), regular and bold, served from the app itself. The
- * rupee sign is in Figtree's latin-ext subset, so both are loaded.
- */
-const figtree = Figtree({
-  variable: "--font-figtree",
-  subsets: ["latin", "latin-ext"],
-  weight: ["400", "700"],
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   // A screen names itself before the app: "Home · ClinicDesk".

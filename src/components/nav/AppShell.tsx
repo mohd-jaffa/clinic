@@ -7,6 +7,7 @@ import { useState, type ReactNode } from "react";
 
 import { cn } from "@/components/ui/cn";
 import { QuickActions } from "@/components/ui/quick-actions";
+import { ScreenSkeleton } from "@/components/ui/skeleton";
 import { UI_TEXT } from "@/constants/messages";
 import {
   BOTTOM_NAV,
@@ -19,6 +20,7 @@ import {
 } from "@/constants/navigation";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { RequireAuth } from "@/features/auth/components/RequireAuth";
+import { useNavigationPending } from "@/hooks/useNavigationPending";
 
 import { AccountMenu } from "./AccountMenu";
 import { MoreSheet } from "./MoreSheet";
@@ -38,7 +40,8 @@ import { AddButton } from "./QuickAdd";
  *
  * Only the places and quick adds the person may use are shown. The current
  * place is a patch of land behind its icon — or, in the sidebar, behind the
- * whole of it. Every edge pays its safe area. Every screen is drawn inside
+ * whole of it. A screen slow to arrive shows its skeleton in the old one's
+ * place, the navigation kept. Every edge pays its safe area. Every screen is drawn inside
  * this, so the session gate lives here too: no page has to remember it.
  */
 export function AppShell({ children }: { children: ReactNode }) {
@@ -54,6 +57,8 @@ function AppFrame({ children }: { children: ReactNode }) {
   const { membership } = useAuth();
   const [moreOpen, setMoreOpen] = useState(false);
   const [adding, setAdding] = useState(false);
+  // On the way to another screen: its skeleton in this one's place, the navigation kept.
+  const navigating = useNavigationPending(pathname);
 
   // While the session is still being checked the frame is drawn out of sight, with nothing in it yet.
   const may = (items: readonly NavItem[]) => (membership ? placesFor(membership, items) : []);
@@ -107,7 +112,14 @@ function AppFrame({ children }: { children: ReactNode }) {
         </div>
       </aside>
 
-      <main className="min-w-0 flex-1 pb-[calc(var(--bottom-bar-offset)+var(--safe-bottom)+2rem)]">{children}</main>
+      <main
+        aria-busy={navigating || undefined}
+        data-navigating={navigating || undefined}
+        className="min-w-0 flex-1 pb-[calc(var(--bottom-bar-offset)+var(--safe-bottom)+2rem)]"
+      >
+        {navigating && <ScreenSkeleton label={UI_TEXT.states.loading} />}
+        {children}
+      </main>
 
       <nav
         aria-label={UI_TEXT.nav.main}

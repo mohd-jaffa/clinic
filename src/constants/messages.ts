@@ -172,6 +172,15 @@ export const UI_TEXT = {
     checkingSession: "Checking who is signed in…",
   },
 
+  /** The system screens (plan §31.2): a page that is not there, a screen that failed. */
+  system: {
+    notFoundTitle: "This page isn’t here",
+    notFoundBody: "The link may be out of date, or the address mistyped.",
+    errorTitle: "Something went wrong",
+    errorBody: "This screen stopped before it finished loading. Anything you had already saved is safe.",
+    toHome: "Go to Home",
+  },
+
   /** Home (plan §31.2); its numbers come with its own phase. */
   home: {
     greeting: (firstName: string) => `Hello, ${firstName}`,

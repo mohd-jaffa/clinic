@@ -406,6 +406,13 @@
   color: inherit;
 }
 
+/* A screen on its way out waits behind the next one's skeleton, as it was,
+   so a navigation that is cancelled simply shows it again
+   (useNavigationPending). */
+main[data-navigating] > :not([data-screen-skeleton]) {
+  display: none;
+}
+
 /* Reduced motion: instant (plan §32.1). */
 @media (prefers-reduced-motion: reduce) {
   *,
