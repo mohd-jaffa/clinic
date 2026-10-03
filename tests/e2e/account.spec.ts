@@ -1,17 +1,8 @@
 import { expect, test, type Page } from "@playwright/test";
 
 import { UI_TEXT } from "@/constants/messages";
-import { expectAccessible } from "@tests/support/e2e";
-import {
-  admin,
-  aMobileNumber,
-  anEmail,
-  deleteAfter,
-  registerClinic,
-  removeAll,
-  userIdOf,
-} from "@tests/support/integration";
-import { followAuthLink } from "@tests/support/mailpit";
+import { authLinkTo, expectAccessible } from "@tests/support/e2e";
+import { aMobileNumber, anEmail, deleteAfter, registerClinic, removeAll, userIdOf } from "@tests/support/integration";
 
 /**
  * The account screens (plan §5, D70): sign in, sign up, confirm the email,
@@ -22,14 +13,6 @@ import { followAuthLink } from "@tests/support/mailpit";
 test.afterAll(removeAll);
 
 const { auth } = UI_TEXT;
-
-/** A Supabase Auth link for an account, landing on one of the app's screens with its tokens. */
-async function linkTo(type: "magiclink" | "recovery", email: string, landing: string): Promise<string> {
-  const { data, error } = await admin().auth.admin.generateLink({ type, email });
-  if (error) throw error;
-  const { accessToken, refreshToken } = await followAuthLink(data.properties.action_link);
-  return `${landing}#access_token=${accessToken}&refresh_token=${refreshToken}&type=${type}`;
-}
 
 const field = (page: Page, name: RegExp) => page.getByRole("textbox", { name });
 
@@ -83,7 +66,7 @@ test("signing up: you, then your clinic, then Check your email — and the link 
   deleteAfter({ userId: await userIdOf(email) });
   await expectAccessible(page);
 
-  await page.goto(await linkTo("magiclink", email, "/confirm-email"));
+  await page.goto(await authLinkTo("magiclink", email, "/confirm-email"));
   await expect(page).toHaveURL(/\/home$/);
   await expect(page.getByRole("heading", { level: 1, name: UI_TEXT.home.greeting("Asha") })).toBeVisible();
 });
@@ -116,7 +99,7 @@ test("a forgotten password: a link asked for, the new one chosen, and the person
   await expectAccessible(page);
   await sent.getByRole("button", { name: UI_TEXT.actions.close }).click();
 
-  await page.goto(await linkTo("recovery", owner.email, "/reset-password"));
+  await page.goto(await authLinkTo("recovery", owner.email, "/reset-password"));
   await expect(page.getByRole("heading", { level: 1, name: auth.resetTitle })).toBeVisible();
   await expect(page).toHaveURL(/\/reset-password$/);
   await expectAccessible(page);
