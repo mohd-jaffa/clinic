@@ -16,6 +16,14 @@ describe("Coastline", () => {
     expect(svg.querySelector("path")).toHaveAttribute("d", COASTLINES.band.d);
   });
 
+  it("runs down instead, its width kept, for land that stands beside the ground", () => {
+    const { container } = render(<Coastline name="side" />);
+    const svg = container.querySelector("svg")!;
+    expect(svg).toHaveAttribute("viewBox", "0 0 34 1200");
+    expect(svg).toHaveStyle({ width: "34px" });
+    expect(svg).toHaveClass("h-full");
+  });
+
   it("turns over for land that rises from below", () => {
     const { container } = render(<Coastline name="phone" flip />);
     expect(container.querySelector("svg")).toHaveClass("-scale-y-100");

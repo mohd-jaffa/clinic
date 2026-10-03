@@ -6,20 +6,22 @@ import { cn } from "./cn";
 
 /**
  * One coastline drawn (plan §32.1): the land's softly swelling edge, from the
- * authored paths in `src/assets/coastlines.ts`, stretched to its width with
- * its height kept. `flip` turns it over, for land that rises from below — the
+ * authored paths in `src/assets/coastlines.ts`, stretched along the edge with
+ * its depth kept — across, for land above the ground, or down, for an upright
+ * one beside it. `flip` turns it over, for land that rises from below — the
  * Quick Actions lobe.
  */
 export function Coastline({ name, flip = false }: { name: CoastlineName; flip?: boolean }) {
   const { width, height, d } = COASTLINES[name];
+  const upright = height > width;
   return (
     <svg
       aria-hidden="true"
       focusable="false"
       viewBox={`0 0 ${width} ${height}`}
       preserveAspectRatio="none"
-      className={cn("block w-full fill-land", flip && "-scale-y-100")}
-      style={{ height }}
+      className={cn("block fill-land", upright ? "h-full" : "w-full", flip && "-scale-y-100")}
+      style={upright ? { width } : { height }}
     >
       <path d={d} />
     </svg>

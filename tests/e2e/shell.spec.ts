@@ -7,8 +7,8 @@ import { addMember, registerClinic, removeAll, type TestClinic } from "@tests/su
 /**
  * The shell (plan §31.1, D67–D69): every signed-in screen's frame, at a
  * phone's width and a desktop's, for an owner and for a member who may do
- * little. The account screens come with R2.7, so the journey signs in
- * through the API, as the sign-in screen will.
+ * little. It signs in through the API, as the sign-in screen does, to stay
+ * quick; the screen itself is walked in account.spec.ts.
  */
 let clinic: TestClinic;
 

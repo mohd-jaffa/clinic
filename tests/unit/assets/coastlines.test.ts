@@ -17,10 +17,14 @@ function points(d: string): [number, number][] {
 }
 
 describe("the coastlines (plan §32.1)", () => {
-  it.each(Object.entries(COASTLINES))("%s fills the land from its top edge, and closes", (_, coast) => {
-    expect(coast.d.startsWith(`M0 0H${coast.width}V`)).toBe(true);
-    expect(coast.d.endsWith("Z")).toBe(true);
-  });
+  it.each(Object.entries(COASTLINES))(
+    "%s fills the land from its top edge — its left, upright — and closes",
+    (_, coast) => {
+      const start = coast.height > coast.width ? `M0 0V${coast.height}H` : `M0 0H${coast.width}V`;
+      expect(coast.d.startsWith(start)).toBe(true);
+      expect(coast.d.endsWith("Z")).toBe(true);
+    },
+  );
 
   it.each(Object.entries(COASTLINES))("%s stays inside its own box", (_, coast) => {
     for (const [x, y] of points(coast.d)) {

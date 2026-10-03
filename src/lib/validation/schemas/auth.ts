@@ -76,15 +76,23 @@ const linkTokens = {
 };
 
 export const confirmEmailSchema = z.object(linkTokens);
+export type ConfirmEmailInput = z.input<typeof confirmEmailSchema>;
 export type ConfirmEmailPayload = z.output<typeof confirmEmailSchema>;
 
 /** Resend the confirmation, or send a reset link: to an address. */
 export const emailRequestSchema = z.object({ email: requiredEmail("Email") });
+export type EmailRequestInput = z.input<typeof emailRequestSchema>;
 export type EmailRequestPayload = z.output<typeof emailRequestSchema>;
 
 /** The new password chosen on the page a reset link opens (plan §5.3). */
 export const passwordResetCompleteSchema = z.object({ ...linkTokens, password: password("New password") });
+export type PasswordResetCompleteInput = z.input<typeof passwordResetCompleteSchema>;
 export type PasswordResetCompletePayload = z.output<typeof passwordResetCompleteSchema>;
+
+/** The reset screen's form: the new password alone; the link's tokens join it as it is sent. */
+export const newPasswordSchema = passwordResetCompleteSchema.pick({ password: true });
+export type NewPasswordInput = z.input<typeof newPasswordSchema>;
+export type NewPasswordPayload = z.output<typeof newPasswordSchema>;
 
 /** My account's Change password (plan §5.4): the current one, then the new. */
 export const changePasswordSchema = z.object({

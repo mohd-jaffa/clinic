@@ -1,8 +1,8 @@
 "use client";
 
-import { Check } from "lucide-react";
 import { useId } from "react";
 
+import { CHECK_ROW, CheckBox } from "./checkbox";
 import { FieldError, FieldHint } from "./field";
 
 export interface CheckboxOption<T extends string> {
@@ -48,28 +48,15 @@ export function CheckboxGroup<T extends string>({
           const optionLabel = `${id}-${option.value}-label`;
           const optionHint = option.hint ? `${id}-${option.value}-hint` : undefined;
           return (
-            <label
-              key={option.value}
-              className="flex min-h-11 cursor-pointer items-start gap-3 rounded-row px-3 py-2.5 transition-colors hover:bg-ground has-disabled:cursor-not-allowed has-disabled:opacity-60 has-disabled:hover:bg-transparent"
-            >
-              <span className="relative mt-0.5 grid size-6 shrink-0 place-items-center">
-                <input
-                  type="checkbox"
-                  checked={value.includes(option.value)}
-                  disabled={option.disabled}
-                  // Named by its label alone; the hint is its description, not part of its name.
-                  aria-labelledby={optionLabel}
-                  aria-describedby={optionHint}
-                  onChange={(event) => toggle(option.value, event.target.checked)}
-                  className="peer size-6 cursor-[inherit] appearance-none rounded-md border-2 border-edge bg-surface transition-colors checked:border-action checked:bg-action"
-                />
-                <Check
-                  size={16}
-                  strokeWidth={3}
-                  aria-hidden="true"
-                  className="pointer-events-none absolute text-on-action opacity-0 peer-checked:opacity-100"
-                />
-              </span>
+            <label key={option.value} className={CHECK_ROW}>
+              <CheckBox
+                checked={value.includes(option.value)}
+                disabled={option.disabled}
+                // Named by its label alone; the hint is its description, not part of its name.
+                aria-labelledby={optionLabel}
+                aria-describedby={optionHint}
+                onChange={(event) => toggle(option.value, event.target.checked)}
+              />
               <span className="min-w-0">
                 <span id={optionLabel} className="block font-bold text-ink">
                   {option.label}

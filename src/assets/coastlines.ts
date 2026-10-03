@@ -23,6 +23,15 @@ export const COASTLINES = {
     height: 34,
     d: "M0 0H390V12C350 28 300 33 250 25C200 17 170 8 120 14C80 19 50 31 0 26Z",
   },
+  /**
+   * The right edge of land that stands beside the ground rather than above it
+   * — the account screens from 1024 px (D70): the wide swell, turned upright.
+   */
+  side: {
+    width: 34,
+    height: 1200,
+    d: "M0 0V1200H10C26 1130 33 1060 27 980C21 900 6 850 9 760C12 670 30 630 31 540C32 450 15 400 13 310C11 220 28 170 27 90C26 50 20 20 16 0Z",
+  },
   /** The slim band a dense screen keeps, and what the land flattens into on scroll. */
   band: {
     width: 1200,
