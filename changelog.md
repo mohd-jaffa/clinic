@@ -923,3 +923,68 @@ appended and never rewritten (AGENTS.md §33).
 
 ### Blockers
 - None.
+
+## 2026-10-03 — R3.3, holidays and leave
+
+### Added
+- `0011_closures.sql` (D84 – D86): `clinic_closures` — the whole clinic, or
+  one of its doctors (a composite key keeps the doctor in the same clinic),
+  from a first to a last day, with a reason. It starts today or later in the
+  clinic's timezone (a trigger, `CLOSURE_STARTS_BEFORE_TODAY`), ends on or
+  after its start, and lasts at most 366 days (`MAX_CLOSURE_DAYS`, kept equal
+  to the `CHECK`); two for the same people never share a day (exclusion
+  constraints, `CLOSURE_DAYS_TAKEN`, 409), though a doctor's leave may sit
+  inside a clinic holiday. Read by every member, added with
+  `settings.manage` while the clinic can write; never edited; removed only
+  through `remove_closure`, and only while not yet over (`CLOSURE_OVER`, 422).
+- `src/features/clinic/closures.ts` (plan §9): `listClosures`, `addClosure`,
+  `removeClosure` — each change audited with its values (`CREATE`,
+  `DELETE`); `GET, POST /api/closures` and `DELETE /api/closures/[id]`.
+- `src/features/team` begins with `listDoctors` and `GET /api/doctors` (plan
+  §30): the clinic's active doctors of active members, by name, for every
+  picker.
+- Holidays and leave — `/settings/closures` (D84): those not yet over by
+  their first day — why, who, when and how many days — each with **Remove**,
+  asked first on a danger card; the past ones behind **Show past (n)**, the
+  latest first, as a record; an empty state that starts the first. The sheet:
+  who's away (the whole clinic or a doctor), the first and last day (no day
+  before today; the last follows the first), and the reason. View-only, it
+  shows everything and changes nothing, saying why.
+- The kit's `Disclosure` (`DESIGN.md`): what a screen keeps out of the way
+  until asked — archived entries now use it too.
+- `requiredDay`, `closureSchema`; `isDayKey`, `dayCount`, `formatDayRange`
+  ("20 – 22 Oct", the year when it is not this one).
+- Plan D84 – D87; R5.1 lists the appointments on a closure being added
+  (D87).
+
+### Changed
+- `CatalogueScreen` takes its subtitle as words, so holidays and leave can
+  count what is coming up.
+- An exclusion constraint's refusal (23P01) is a conflict; a feature's
+  `taken` code names it as it names a duplicate.
+
+### Fixed
+- A sheet that resets after a save (my name, my mobile, my password, the
+  clinic's details, the price list, appointment types, expense categories)
+  kept no hold on its text fields in the built app: the React Compiler
+  memoizes each `register()`, and a reset forgot them, so a second save from
+  the same sheet found the field empty. Every such form now resets keeping
+  its fields (`FORM_RESET_OPTIONS`, 718561d); the closures journey adds twice from one
+  sheet to keep it so.
+
+### Validation
+- Typecheck, lint, format check passed.
+- Unit and integration tests passed (1445), coverage 100% — the integration
+  test against the local Supabase: the doctors by name, an inactive one left
+  out; settings.manage only; audited with values and who added it; a start
+  before today and more than a year refused, today and exactly 366 days
+  taken; the same people's days refused, a doctor's leave inside a holiday
+  allowed; another clinic's doctor refused; removed while not yet over, a
+  past one kept; nothing edited or deleted through the database's API; a
+  view-only clinic changes nothing. `clinic_closures` has its
+  tenant-isolation row.
+- Build passed; E2E passed (56, phone and desktop), axe clean —
+  `tests/e2e/closures.spec.ts`.
+
+### Blockers
+- None.
