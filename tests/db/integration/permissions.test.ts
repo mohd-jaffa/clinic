@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import type { RouteAccess } from "@/constants/permissions";
 import { withClinicRoute } from "@/features/auth/guard";
+import { todayKey } from "@/lib/dates/calendar";
 import {
   addMember,
   registerClinic,
@@ -12,9 +13,10 @@ import {
 } from "@tests/support/integration";
 
 /**
- * The permission matrix, so far (plan §34.3, R1.11): every permission the
- * schema enforces yet, allowed and refused — by the route guard, and by RLS
- * with the member's own token. Each phase adds the rows its tables bring.
+ * The permission matrix, so far (plan §34.3, R1.11, R3.8): every permission
+ * the schema enforces yet, allowed and refused — by the route guard, and by
+ * RLS or a function with the member's own token. Each phase adds the rows its
+ * tables bring.
  */
 let clinic: TestClinic;
 let manager: SignedIn & { memberId: string };
@@ -121,6 +123,50 @@ describe("settings.manage, by RLS", () => {
       .eq("clinic_id", clinic.clinicId)
       .select("id");
     expect(data ?? []).toEqual([]);
+  });
+});
+
+describe("settings.manage on holidays and leave, by RLS and its function", () => {
+  it("lets a member who holds it add and remove one, and refuses one who does not", async () => {
+    const { data: added, error } = await manager
+      .tenant!.supabase.from("clinic_closures")
+      .insert({ clinic_id: clinic.clinicId, starts_on: todayKey(), ends_on: todayKey(), reason: "Matrix" })
+      .select("id")
+      .single();
+    expect(error).toBeNull();
+
+    const { error: refused } = await receptionist
+      .tenant!.supabase.from("clinic_closures")
+      .insert({ clinic_id: clinic.clinicId, starts_on: todayKey(), ends_on: todayKey(), reason: "Nope" });
+    expect(refused?.code).toBe("42501");
+    const { error: notTheirs } = await receptionist.tenant!.supabase.rpc("remove_closure", { p_closure_id: added!.id });
+    expect(notTheirs?.hint).toBe("AUTH_PERMISSION_DENIED");
+
+    const { error: removed } = await manager.tenant!.supabase.rpc("remove_closure", { p_closure_id: added!.id });
+    expect(removed).toBeNull();
+  });
+});
+
+describe("team.manage, by the route guard and the database", () => {
+  it("lets a member who holds it through, and refuses one who does not", async () => {
+    const lead = await addMember(clinic.clinicId, { permissions: ["team.manage", "patients.view"] });
+    await expect(ask(lead, "team.manage", "GET")).resolves.toMatchObject({ status: 200 });
+    await expect(ask(receptionist, "team.manage", "GET")).resolves.toMatchObject({
+      status: 403,
+      body: { error: { code: "AUTH_PERMISSION_DENIED" } },
+    });
+
+    const junior = await addMember(clinic.clinicId, { permissions: ["patients.view"] });
+    const { error: allowed } = await lead.tenant!.supabase.rpc("update_member", {
+      p_member_id: junior.memberId,
+      p_changes: { job_title: "Front desk" },
+    });
+    expect(allowed).toBeNull();
+    const { error: refused } = await receptionist.tenant!.supabase.rpc("set_member_active", {
+      p_member_id: junior.memberId,
+      p_active: false,
+    });
+    expect(refused?.hint).toBe("AUTH_PERMISSION_DENIED");
   });
 });
 

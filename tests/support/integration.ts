@@ -199,6 +199,21 @@ export async function inviteWithToken(
   return { email, token };
 }
 
+/**
+ * A fresh link for someone's open invite, as Resend would email it — for the
+ * journeys, which send no mail. The old link stops working, as it would.
+ */
+export async function issueInviteToken(email: string): Promise<string> {
+  const token = randomBytes(32).toString("base64url");
+  const { error } = await admin()
+    .from("clinic_members")
+    .update({ invite_token_hash: hashInviteToken(token) })
+    .eq("user_id", await userIdOf(email))
+    .eq("status", "INVITED");
+  if (error) throw error;
+  return token;
+}
+
 /** Changes a membership's status as the team screen will. */
 export async function setMemberStatus(memberId: string, status: MemberStatus): Promise<void> {
   const now = new Date().toISOString();
