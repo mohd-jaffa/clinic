@@ -1091,3 +1091,50 @@ appended and never rewritten (AGENTS.md §33).
 
 ### Blockers
 - None.
+
+## 2026-10-03 — R3.6, a member's page
+
+### Added
+- `0013_members.sql` (D93 – D95): `update_member` (what they can do, a job
+  title for staff, a doctor's details for a doctor — only what is named) and
+  `set_member_active` (deactivate; reactivate unless they have joined another
+  clinic meanwhile). Both are called by the signed-in member as themselves —
+  the actor is `auth.uid()` — and check again: they manage the team of a
+  clinic that can write; the member is joined, of their clinic, never the
+  owner (whose access is all of it, and who is never deactivated — the last
+  owner, §8.2 rule 7), never themselves, and, for anyone but the owner, one
+  whose every permission they hold, without `team.manage` (D93); nothing is
+  given that they do not hold; the role stays what it was (D95).
+- `src/features/team/members.ts`: `getMember`, `updateMember`,
+  `setMemberActive`, each change audited with its values (`UPDATE`,
+  `STATUS_CHANGE`). `GET, PATCH /api/team/[id]` and
+  `POST /api/team/[id]/active`, for `team.manage`.
+- A member's page — `/team/[id]` (D94): who they are (email, mobile, role);
+  their job title, or a doctor's details, each in its sheet; what they can do,
+  with the invite's presets and groups, saved with one **Save changes**;
+  **Deactivate** (asked first, on a danger card) or **Reactivate** (asked
+  first). Someone beyond a manager's own access is shown, not changed, and the
+  page says it is the owner's to change; a view-only clinic changes nothing.
+  The team list opens each member's page — the owner's and one's own aside.
+- `DoctorDetailsSheet` (the owner's own profile, R3.7, will use it too),
+  `JobTitleSheet`; `canManage`; `TEAM_ROUTE`, `memberRoute`;
+  `updateMemberSchema`, `memberActiveSchema`, `doctorDetailsSchema`,
+  `jobTitleSchema`.
+- Plan D93 – D95.
+
+### Validation
+- Typecheck, lint, format check passed.
+- Unit and integration tests passed (1604), coverage 100% — the integration
+  test against the local Supabase: the owner reads a member, changes their
+  access and job title (audited with what changed) and a doctor's details,
+  each role keeping its own fields; deactivates (who did it kept; the member
+  then reaches nothing) and reactivates, audited; no reactivation into a
+  second clinic; the owner never deactivated, an invite never changed; a
+  manager changes those within their access, giving only what they hold, and
+  is refused anyone beyond them, the owner, themselves and another manager;
+  no change without team.manage, or in a view-only clinic.
+- Build passed; E2E passed (68, phone and desktop), axe clean —
+  `tests/e2e/members.spec.ts`.
+
+### Blockers
+- None.

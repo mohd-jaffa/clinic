@@ -2119,7 +2119,7 @@ tests (§34) and its changelog entry.
 | R3.3 | `0011_closures`: holidays and leave (D84–D87); `GET /api/doctors` for its picker | §9, §30 | — | DONE (2026-10-03 · 528bedf) |
 | R3.4 | `0012_team`: invite with its own token (D63; presets, dependencies, doctor details and fee), invite email, resend, revoke, expiry, and the accept function R3.5 calls (D88–D90) | §8.3, §8.4 | — | DONE (2026-10-03 · 0b7cf09) |
 | R3.5 | Accept invite screen (D91, D92) | §8.5 | — | DONE (2026-10-03 · c0c1076) |
-| R3.6 | `0013_members`; team list and member detail: permissions, job title, doctor details, deactivate/reactivate; escalation and last-owner guards (D93–D95) | §8.2, §8.6 | — | TODO |
+| R3.6 | `0013_members`; team list and member detail: permissions, job title, doctor details, deactivate/reactivate; escalation and last-owner guards (D93–D95) | §8.2, §8.6 | — | DONE (2026-10-03 · 0c8b5e2) |
 | R3.7 | The owner's own doctor profile | §3.1 | — | TODO |
 | R3.8 | Integration + E2E: invite a receptionist and a doctor; each sees only what they may | §34 | — | TODO |
 
