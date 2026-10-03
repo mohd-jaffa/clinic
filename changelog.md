@@ -658,3 +658,47 @@ appended and never rewritten (AGENTS.md §33).
 
 ### Blockers
 - None.
+
+## 2026-10-03 — R2.9, the plan banner and read-only mode
+
+### Decided
+- D73: the plan banner is a slim band across the top of every signed-in
+  screen, above its land — quiet while the plan ends soon, coral once it has
+  ended and while the clinic is view-only. Plan §7.2's "amber" and "red"
+  banners and §32.1's read-only line now say so.
+- D74: the owner's **How to renew** opens the Plan screen (`/settings/plan`,
+  R11.1); until then it opens the not-found screen, as D71's rows do.
+
+### Added
+- `src/components/nav/PlanBanner.tsx` (plan §7.2): from the session view, no
+  request of its own. Ending soon: "Your plan ends on 12 Nov." Ended: the day
+  it ended and the day the clinic becomes view-only. View-only: says so, with
+  no date (a clinic with no trial ended before it began). The owner is told
+  of their plan and offered How to renew; a member, of the clinic's. State in
+  words and icon, never colour alone. It stays through a navigation.
+- `useReadOnly()` and `ReadOnlyNote` (`src/features/subscription`): whether
+  the clinic is view-only, and the one reason every turned-off control gives
+  — "Your clinic is view-only until its plan is renewed.", the server's own
+  `CLINIC_PLAN_EXPIRED` words.
+- Read-only in the shell: the ＋ still opens its actions, each turned off and
+  described by the reason (`QuickActions` takes `blocked`). My account's Name
+  and Mobile number no longer open their sheets and say why; Change password,
+  the theme and Sign out still work (plan §7.2).
+- `PLAN_ROUTE`; words in `UI_TEXT.plan`.
+- Tests: unit for each; `tests/e2e/plan.spec.ts` — a clinic's plan moved
+  through ending soon, ended and view-only for its owner, the ＋ and My
+  account turned off, the server refusing the write; a member's banner — at
+  phone and desktop, axe clean.
+
+### Fixed
+- The land (`CoastHeader`) pays the top safe area: on a phone drawn edge to
+  edge, a screen's title sat under the status bar. Under the plan banner, the
+  banner pays it instead.
+
+### Validation
+- Typecheck, lint, format check passed.
+- Unit and integration tests passed (1152), coverage 100%.
+- Build passed; E2E passed (38, phone and desktop), axe clean.
+
+### Blockers
+- None.
