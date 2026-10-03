@@ -156,6 +156,7 @@ earlier lines are never rewritten.
 | D67 | **Quick add takes you there, its form open** (the user): each ＋ action goes to its own screen with its form already open — Walk-in to the Queue, Appointment to the calendar, Patient to Patients, Payment to Billing, Expense to Expenses (`?add=`) — so the outcome is seen in place and Back closes the form. Each screen owns its form; the shell carries none. | 2026-10-02 |
 | D68 | **No top bar on a phone** (the user): each screen's land carries its title; the account, the clinic and Settings are reached from More, which opens on who is signed in. | 2026-10-02 |
 | D69 | **＋ on tablet and desktop too** (the user): a round ＋ at the top of the rail and an **Add** capsule at the top of the sidebar open the same Quick Actions. | 2026-10-02 |
+| D70 | **Account screens: the land leads** (the user): on a phone the land holds the app's name and its line over a coastline, the form on the ground below; from 1024 px the land fills the left half, its edge a coastline, and the form stands on the right. Sign in, sign up, confirm email, forgot and reset password all share it. | 2026-10-03 |
 
 ## 3. Users and roles
 
@@ -1764,6 +1765,11 @@ coastline top edge holding capsule actions: Walk-in, Appointment, Patient,
 Payment, Expense (permission-filtered). Tablet: icon rail. Desktop: sidebar on
 the ground; the land swells behind the page header.
 
+**Account screens (D70).** The land leads: on a phone it holds the wordmark
+and the app's line over a coastline, the form on the ground below; from
+1024 px the land fills the left half, its right edge a coastline, and the
+form stands on the right.
+
 **The five shaped screens** (everything else inherits the world):
 
 - **Queue (phone):** the land owns the top ~40% — clinic, session, a doctor
@@ -2056,7 +2062,7 @@ tests (§34) and its changelog entry.
 | R2.4 | Response card and confirm card (`useResponse`) | §32 | — | DONE (2026-10-02 · eb1b32c) |
 | R2.5 | AppShell: bottom bar + quick add (phone), rail (tablet), sidebar (desktop); permission-filtered navigation; AppScreen + ServerData | §31.1 | — | DONE (2026-10-03 · 2145a1a) |
 | R2.6 | System screens: error, global error, not found, loading skeletons | §31.2 | — | DONE (2026-10-03 · fb4cba5) |
-| R2.7 | Account screens: register (two steps), sign in, confirm email, forgot and reset password | §5 | — | TODO |
+| R2.7 | Account screens: register (two steps), sign in, confirm email, forgot and reset password | §5 | — | DONE (2026-10-03 · fc40357) |
 | R2.8 | Settings index and My account (with the theme switch) | §5.4 | — | TODO |
 | R2.9 | Plan banner and read-only mode in the shell | §7.2 | — | TODO |
 | R2.10 | E2E: sign up → confirm → sign in → Home, phone and desktop, axe clean | §34 | — | TODO |

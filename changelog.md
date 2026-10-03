@@ -434,7 +434,7 @@ appended and never rewritten (AGENTS.md §33).
 
 ### Validation
 - Typecheck, lint, format check passed.
-- Unit and integration tests passed, coverage 100%.
+- Unit and integration tests passed (1082), coverage 100%.
 - Build passed; E2E passed (phone, desktop).
 
 ### Blockers
@@ -547,8 +547,60 @@ appended and never rewritten (AGENTS.md §33).
 
 ### Validation
 - Typecheck, lint, format check passed.
-- Unit and integration tests passed, coverage 100%.
+- Unit and integration tests passed (1082), coverage 100%.
 - Build passed; E2E passed (18, phone and desktop), axe clean.
+
+### Blockers
+- None.
+
+## 2026-10-03 — R2.7, the account screens
+
+### Decided
+- D70 (the user): the account screens are led by the land — above the form
+  on a phone, the left half from 1024 px, its edge a coastline.
+
+### Added
+- `src/features/auth/components/AuthScene.tsx`: the frame every account
+  screen shares (D70), with `OtherWayIn` under the form; `announce` takes the
+  focus to the title of a screen that has just become another.
+- **Sign in** (`/login`, plan §5.2): email or mobile and password; a new page
+  for the account — where they were heading, Home, or the console for the
+  platform admin; refusals in the API's words, and an unconfirmed email
+  offered the link again.
+- **Sign up** (`/register`, plan §5.1): you, then your clinic, each step
+  checked before the next, both sent as one; a taken email or mobile goes
+  back to its field. It becomes **Check your email** — with Send the link
+  again, and, for a mobile that has had a free trial, why the clinic starts
+  view-only (D42).
+- **Confirm email** (`/confirm-email`): the link's tokens confirm and sign in,
+  on a new page at Home; a spent link, or none, is offered the link again to
+  the address typed.
+- **Forgot and reset password** (`/forgot-password`, `/reset-password`, plan
+  §5.3): the same answer whoever asks; the reset link's session is held in
+  memory, the new password saved exactly as typed, and the person signed in.
+- `src/features/auth/link.ts`: a link's tokens read from the address's
+  fragment and wiped from it at once. `PasswordField` (show and hide),
+  `ResendConfirmation`. `AuthClient` gains the account endpoints.
+- The kit's `Checkbox` (one thing on or off), sharing its box with
+  `CheckboxGroup`; an upright coastline (`side`) for land beside the ground.
+- `newPasswordSchema` (the reset form) and input types for the email and
+  link schemas.
+- react-hook-form and @hookform/resolvers, the forms named by the stack.
+- Words: `UI_TEXT.auth` for the five screens.
+- Tests: unit for each; `tests/e2e/account.spec.ts` — sign in (refused, then
+  in, back where they were heading), sign up through Check your email to a
+  confirmation link that signs in, confirm without or with a spent link,
+  forgot and reset by a real recovery link, then sign in with the new
+  password — at phone and desktop, axe clean.
+
+### Found while building
+- A required field's label carries its star, so tests find a field by the
+  start of its name.
+
+### Validation
+- Typecheck, lint, format check passed.
+- Unit and integration tests passed (1082), coverage 100%.
+- Build passed; E2E passed (26, phone and desktop), axe clean.
 
 ### Blockers
 - None.
