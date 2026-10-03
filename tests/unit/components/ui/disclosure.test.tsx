@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { History } from "lucide-react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { Disclosure } from "@/components/ui/disclosure";
 
@@ -27,5 +27,37 @@ describe("Disclosure", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Hide past" }));
     expect(screen.queryByText("Onam leave")).not.toBeVisible();
+  });
+
+  it("is held by its owner when handed `shown`: opened from outside, and asking to change", async () => {
+    const onShownChange = vi.fn();
+    const { rerender } = render(
+      <Disclosure
+        label="More"
+        showLabel="More details"
+        hideLabel="Fewer details"
+        icon={History}
+        shown={false}
+        onShownChange={onShownChange}
+      >
+        <p>Email</p>
+      </Disclosure>,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "More details" }));
+    expect(onShownChange).toHaveBeenCalledWith(true);
+    expect(screen.queryByText("Email")).not.toBeVisible();
+    rerender(
+      <Disclosure
+        label="More"
+        showLabel="More details"
+        hideLabel="Fewer details"
+        icon={History}
+        shown
+        onShownChange={onShownChange}
+      >
+        <p>Email</p>
+      </Disclosure>,
+    );
+    expect(screen.getByText("Email")).toBeVisible();
   });
 });

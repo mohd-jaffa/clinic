@@ -7,8 +7,10 @@ import { Button } from "./button";
 
 /**
  * What a screen keeps out of the way until asked for — archived entries,
- * past holidays: a quiet toggle saying how many wait behind it, and what it
- * opens onto. Its words, not its padding, line up with the rows above it.
+ * past holidays, a form's less-asked fields: a quiet toggle saying what waits
+ * behind it, and what it opens onto. Its words, not its padding, line up with
+ * the rows above it. It keeps its own state, unless `shown` is handed in — a
+ * form opens it on a refused field inside.
  */
 export function Disclosure({
   label,
@@ -16,6 +18,8 @@ export function Disclosure({
   hideLabel,
   icon,
   className,
+  shown: held,
+  onShownChange,
   children,
 }: {
   /** What the section is, for a screen reader: "Archived". */
@@ -26,9 +30,13 @@ export function Disclosure({
   /** The toggle's mark while it is closed; open, it is a chevron up. */
   icon: LucideIcon;
   className?: string;
+  shown?: boolean;
+  onShownChange?: (shown: boolean) => void;
   children: ReactNode;
 }) {
-  const [shown, setShown] = useState(false);
+  const [own, setOwn] = useState(false);
+  const shown = held ?? own;
+  const setShown = onShownChange ?? setOwn;
   const contentId = useId();
   return (
     <section aria-label={label} className={className}>

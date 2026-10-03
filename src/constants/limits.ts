@@ -77,6 +77,9 @@ export const APPOINTMENT_MINUTES = { min: 5, max: 480 } as const;
  */
 export const MAX_PATIENT_AGE = 120;
 
+/** How many patients "Already here?" lists for one mobile (D106): a family, and then some. */
+export const MAX_PATIENT_MATCHES = 10;
+
 /** How long a holiday or a doctor's leave may last, both ends counted (D85). */
 export const MAX_CLOSURE_DAYS = 366;
 

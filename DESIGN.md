@@ -355,7 +355,7 @@ A capsule that only says where something stands ("Waiting", "With the doctor"): 
 - **`StatusPill`:** a small capsule with a dot and a word, in `neutral` (ground, muted, line ring), `live` (`--action-soft`, `--action`) or `attention` (`--coral-soft`, `--coral`) tones from `statuses.ts`.
 - **`AlertChip`:** a clinical alert: `danger` on `--coral-soft` with a warning icon, `note` on ground with an info icon.
 - **`Pin`:** a coral capsule pinned on the coastline at the right of a `CoastHeader`, carrying the one thing not to miss. With `href` its tap area grows to 44 px.
-- **`ChoiceChips`:** a row of 44 px round, bold small choices (a radio group) that scrolls sideways on a phone.
+- **`ChoiceChips`:** a row of 44 px round, bold small choices (a radio group) that scrolls sideways on a phone. **`ChoiceField`** sets a short set of them as a form field — its label (required marked), the chips wrapping, the hint or refusal beside them — with nothing chosen until one is (a patient's gender).
 - **`SegmentedControl`:** round choices on a `--surface` track with a `--line` ring; the chosen thumb is `--chip` and slides on the map's curve (the theme switch in My account).
 
 ### Cards / Containers
@@ -364,7 +364,7 @@ A capsule that only says where something stands ("Waiting", "With the doctor"): 
 - **`Dialog` (cards):** a `--surface` card with `--radius-sheet` and the raised shadow. On a phone it sits at the foot within thumb's reach, actions stacked full-width with the main one on top; from 768 px it is centred, max 28rem, actions in a row with the main one last. Its mark (a bare icon in `--ink`, `--action` or `--coral`) sits beside the title.
 - **Response card (`response-card.tsx`, `useResponse()`):** the one way to report an outcome: a card, a confirm card, or a self-closing notice above the bottom bar whose `--action` line empties as its clock (it keeps time under reduced motion and pauses while held). Error cards show the request reference.
 - **`EmptyState`, `SystemNotice`:** a lobe-shaped mark (`--radius-lobe`) on land, or on `--coral-soft` for failure, a title, a warm line and one action.
-- **`Disclosure`:** what a screen keeps out of the way until asked — archived entries, past holidays: a quiet small toggle ("Show archived (3)", then a chevron up and "Hide archived") whose words line up with the rows above, and the list it opens onto.
+- **`Disclosure`:** what a screen keeps out of the way until asked — archived entries, past holidays, a form's less-asked fields: a quiet small toggle ("Show archived (3)", then a chevron up and "Hide archived") whose words line up with the rows above, and what it opens onto. A form may hold it open (`shown`), as the patient sheet's **More details** does on a refused field inside.
 
 ### Inputs / Fields (`field.tsx`, `text-field.tsx`, `select-field.tsx`, `select-menu.tsx`, `date-picker.tsx`)
 - **Style:** a 48 px capsule well (`FIELD_WELL`): `--surface` fill, 1 px `--edge` border, 20 px side padding, body text, tabular digits. A textarea takes `--radius-row` instead.
@@ -372,7 +372,7 @@ A capsule that only says where something stands ("Waiting", "With the doctor"): 
 - **Focus:** the global 3 px `--action` outline at 3 px offset.
 - **Error:** `--coral` border, and a bold small coral message with an icon below, announced and tied to the field.
 - **Disabled:** 60% opacity, not-allowed cursor.
-- **Pickers (D65):** select and date fields open the app's own popovers, never the browser's: a `--surface` popover with a `--line` border, the raised shadow and `animate-drop-in`. Options are 44 px round rows, the active one on ground, the chosen one bold with an `--action` check. Calendar days are 44 px circles; today has an `--action` ring, the chosen day is `--chip`.
+- **Pickers (D65):** select and date fields open the app's own popovers, never the browser's: a `--surface` popover with a `--line` border, the raised shadow and `animate-drop-in`. Options are 44 px round rows, the active one on ground, the chosen one bold with an `--action` check. Calendar days are 44 px circles; today has an `--action` ring, the chosen day is `--chip`. The calendar's heading jumps (D109): the month's name opens its year's twelve months, the year's a page of twelve years, each a 44 px capsule in rows of three, marked as the days are — the one holding the chosen day `--chip`, the one holding today ringed in `--action`; choosing goes back down to the days.
 
 ### Navigation (`AppShell.tsx`, `QuickAdd.tsx`, `MoreSheet.tsx`, `AccountMenu.tsx`)
 - **Bottom bar and rail:** each place an icon (22 px, stroke 2.25) over a `text-tab` name, `--muted` at rest. The current place gets a 56×32 land patch behind its icon and a bold `--ink` name.

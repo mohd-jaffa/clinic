@@ -30,6 +30,8 @@ export function ChoiceChips<T extends string>({
   onChange,
   wrap = false,
   on = "ground",
+  labelledBy,
+  describedBy,
 }: {
   label: string;
   value: T;
@@ -37,6 +39,10 @@ export function ChoiceChips<T extends string>({
   onChange: (value: T) => void;
   wrap?: boolean;
   on?: keyof typeof ON;
+  /** A visible label that names the group, in place of `label`. */
+  labelledBy?: string;
+  /** A hint or a refusal beside the group. */
+  describedBy?: string;
 }) {
   const keys = useArrowSelection(
     options.map((option) => option.value),
@@ -46,7 +52,9 @@ export function ChoiceChips<T extends string>({
   return (
     <div
       role="radiogroup"
-      aria-label={label}
+      aria-label={labelledBy ? undefined : label}
+      aria-labelledby={labelledBy}
+      aria-describedby={describedBy}
       onKeyDown={keys.onKeyDown}
       className={cn(
         "flex gap-2 py-1",

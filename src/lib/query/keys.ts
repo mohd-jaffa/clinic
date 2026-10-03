@@ -58,6 +58,12 @@ export const apiRoutes = {
     invite: (id: string) => `/api/team/invites/${id}`,
     resend: (id: string) => `/api/team/invites/${id}/resend`,
   },
+  // Patients (plan §10, §30): what is typed about one goes in a body, never here (D98).
+  patients: {
+    list: "/api/patients",
+    matches: "/api/patients/matches",
+    one: (id: string) => `/api/patients/${id}`,
+  },
 } as const;
 
 /**

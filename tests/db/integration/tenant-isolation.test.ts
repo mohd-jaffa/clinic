@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import { createClient } from "@supabase/supabase-js";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
@@ -49,13 +51,16 @@ beforeAll(async () => {
   [a, b] = await Promise.all([registerClinic({ clinicName: "Clinic A" }), registerClinic({ clinicName: "Clinic B" })]);
   await addMember(a.clinicId, { role: "DOCTOR", permissions: ["patients.view"] });
   await addClosure(a.owner.tenant, { doctorId: null, startsOn: todayKey(), endsOn: todayKey(), reason: "Holiday" });
-  const { data: patient, error } = await a.owner.tenant.supabase.rpc("create_patient", {
-    p_patient: { full_name: "Rohan Mehta", phone: "+919876543210", date_of_birth: "1990-04-12", gender: "MALE" },
-  });
+  const { data: patient, error } = await a.owner.tenant.supabase
+    .rpc("create_patient", {
+      p_patient: { full_name: "Rohan Mehta", phone: "+919876543210", date_of_birth: "1990-04-12", gender: "MALE" },
+      p_idempotency_key: randomUUID(),
+    })
+    .single<{ patient_id: string }>();
   if (error) throw error;
   await a.owner.tenant.supabase
     .from("patient_alerts")
-    .insert({ clinic_id: a.clinicId, patient_id: patient.id, kind: "ALLERGY", label: "Penicillin" });
+    .insert({ clinic_id: a.clinicId, patient_id: patient.patient_id, kind: "ALLERGY", label: "Penicillin" });
   developer = await makeDeveloper();
 });
 

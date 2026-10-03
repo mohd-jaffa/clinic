@@ -61,6 +61,12 @@ const LONG_MONTHS = [
   "December",
 ];
 
+/** A month's short name, for a calendar's month grid: "Sep". */
+export function formatMonthName(isoDate: string | null | undefined): string {
+  const match = isoDate ? /^\d{4}-(\d{2})/.exec(isoDate) : null;
+  return match ? MONTHS[Number(match[1]) - 1] : "—";
+}
+
 /** A month in full, for a calendar's heading: "September 2026". */
 export function formatMonthYear(isoDate: string | null | undefined): string {
   const match = isoDate ? /^(\d{4})-(\d{2})/.exec(isoDate) : null;

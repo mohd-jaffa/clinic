@@ -67,11 +67,14 @@ const APPOINTMENTS: NavItem = {
   access: "appointments.view",
   hint: hints.appointments,
 };
+export const PATIENTS_ROUTE = "/patients";
+/** A patient's profile (plan §10.3). */
+export const patientRoute = (id: string) => `${PATIENTS_ROUTE}/${id}`;
 const PATIENTS: NavItem = {
   id: "patients",
   label: places.patients,
   icon: UsersRound,
-  href: "/patients",
+  href: PATIENTS_ROUTE,
   access: "patients.view",
 };
 const FOLLOW_UPS: NavItem = {

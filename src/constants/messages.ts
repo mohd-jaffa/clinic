@@ -78,6 +78,7 @@ export const ERROR_MESSAGES = {
   // Patients (plan §10, D103).
   PATIENT_ARCHIVED: "This patient is archived. Restore them to make changes.",
   PATIENT_BIRTH_DATE_INVALID: `A date of birth can’t be in the future, or more than ${MAX_PATIENT_AGE} years ago.`,
+  PATIENT_LOAD_FAILED: "This patient couldn't be loaded.",
 
   // The browser could not reach the server (plan §21, D55): said by the client, never sent by the server.
   NETWORK_OFFLINE: "You're offline. Try again once the connection is back — what you typed is still here.",
@@ -127,6 +128,7 @@ export const VALIDATION_MESSAGES = {
   endsBeforeStart: (last: string, first: string) => `${last} can’t be before the ${first.toLowerCase()}.`,
   atMostDays: (max: number) => `It can last at most ${max} days.`,
   permissionsNeedOthers: "Some of these need others ticked too.",
+  birthDate: `A date of birth can’t be in the future, or more than ${MAX_PATIENT_AGE} years ago.`,
   invalid: "That value is not valid.",
   gstin: "GSTIN must be 15 characters, like 32ABCDE1234F1Z5.",
 } as const;
@@ -175,6 +177,15 @@ export const UI_TEXT = {
     calendar: (field: string) => `${field}: pick a day`,
     previousMonth: "Previous month",
     nextMonth: "Next month",
+    previousYear: "Previous year",
+    nextYear: "Next year",
+    earlierYears: "Earlier years",
+    laterYears: "Later years",
+    /** The heading that jumps to the months, then the years (D109): its words first, so it is named as it reads. */
+    chooseMonth: (month: string) => `${month}, choose another month`,
+    chooseYear: (year: string) => `${year}, choose another year`,
+    months: (year: string) => `Months of ${year}`,
+    years: (from: number, to: number) => `${from} – ${to}`,
     today: "Today",
     clear: "Clear",
     weekdays: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
@@ -635,6 +646,45 @@ export const UI_TEXT = {
     system: "System",
     light: "Light",
     dark: "Dark",
+  },
+
+  /** Patients (plan §10, D98 – D108). */
+  patients: {
+    /** A patient's number as everyone reads it: P-1001. */
+    number: (number: number) => `P-${number}`,
+    add: "Add patient",
+    addTitle: "Add a patient",
+    editTitle: "Edit patient",
+    nameLabel: "Full name",
+    mobileLabel: "Mobile",
+    bornLabel: "Born",
+    bornAs: { DATE: "Date of birth", AGE: "Age" },
+    dateOfBirthLabel: "Date of birth",
+    ageLabel: "Age in years",
+    ageHint: "For a baby, give the date of birth instead.",
+    genderLabel: "Gender",
+    doctorLabel: "Doctor",
+    doctorHint: "Their doctor sees them — and so does any doctor who treats them.",
+    noDoctor: "No doctor yet",
+    showMore: "More details",
+    hideMore: "Fewer details",
+    moreDetails: "More details",
+    altPhoneLabel: "Alternate phone",
+    altPhoneHint: "Another number for them, mobile or landline.",
+    emailLabel: "Email",
+    addressLabel: "Address",
+    emergencyNameLabel: "Emergency contact",
+    emergencyPhoneLabel: "Emergency contact’s phone",
+    notesLabel: "Notes",
+    notesHint: "Not clinical, like “prefers mornings”. Allergies go in alerts.",
+    matchesTitle: (count: number) =>
+      count === 1 ? "Already here? 1 patient has this mobile" : `Already here? ${count} patients have this mobile`,
+    matchesHint: "Open one, or carry on to add someone new — families often share a number.",
+    archived: "Archived",
+    added: (name: string, number: string) => `${name} added — ${number}`,
+    notAdded: "The patient wasn’t added",
+    saved: (name: string) => `${name} saved`,
+    notSaved: "That wasn’t saved",
   },
 
   /** An age, short enough for a row or a prescription (plan §10.1). */

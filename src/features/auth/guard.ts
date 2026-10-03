@@ -59,7 +59,9 @@ export interface ClinicRouteOptions {
   successStatus?: number;
   /**
    * A write a read-only clinic may still make (plan §7.2): deleting the clinic,
-   * requesting its deletion. Everything else that writes is refused.
+   * requesting its deletion — or a POST that only reads, its question about a
+   * patient in the body rather than the address (D98). Everything else that
+   * writes is refused.
    */
   allowReadOnly?: boolean;
 }

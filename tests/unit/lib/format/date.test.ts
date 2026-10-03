@@ -9,6 +9,7 @@ import {
   formatLongDate,
   formatClock,
   formatMonth,
+  formatMonthName,
   formatMonthYear,
   formatTime,
 } from "@/lib/format/date";
@@ -110,6 +111,13 @@ describe("formatRecent", () => {
     expect(formatRecent("2026-09-25T06:00:00Z", now)).toBe("Yesterday");
     expect(formatRecent("2026-09-23T06:00:00Z", now)).toBe("3 days ago");
     expect(formatRecent("2026-09-12T06:00:00Z", now)).toBe("2 weeks ago");
+  });
+});
+
+describe("formatMonthName", () => {
+  it("names the month short, for a calendar's month grid", () => {
+    expect(formatMonthName("2026-09-14")).toBe("Sep");
+    expect(formatMonthName(null)).toBe("—");
   });
 });
 

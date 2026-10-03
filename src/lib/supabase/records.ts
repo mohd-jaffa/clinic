@@ -3,7 +3,7 @@ import type { PostgrestError, PostgrestMaybeSingleResponse } from "@supabase/sup
 import type { ErrorMessageCode } from "@/constants/messages";
 import type { AuditAction } from "@/constants/statuses";
 import { logActionSafe } from "@/lib/audit/auditLog";
-import { changedValues } from "@/lib/audit/changes";
+import { auditedChanges } from "@/lib/audit/changes";
 import { AppError } from "@/lib/errors/AppError";
 import { fromPostgrestError, kindOf } from "@/lib/errors/fromSupabaseError";
 
@@ -20,8 +20,8 @@ import type { Tenant } from "./tenant";
  * - every write asks for its row back, so a row RLS hides reads as a refusal
  *   and never as success;
  * - every change is audited, the values of the columns it wrote from what to
- *   what, by the tenant's actor. Not for clinical text, whose audit names its
- *   fields only (plan §27.6).
+ *   what, by the tenant's actor — but clinical text and a patient's own
+ *   details (`named`) by their field names only (plan §27.6).
  *
  * A write that runs into a unique name, or a range that overlaps another,
  * answers `taken`, in the feature's own words; a refusal the database raises
@@ -37,6 +37,8 @@ export interface RecordsOptions {
   columns: string;
   /** What a second row with the same unique value, or an overlapping range, is refused as. */
   taken?: ErrorMessageCode;
+  /** The columns audited by their name alone: clinical text, a patient's own details. */
+  named?: readonly string[];
 }
 
 export interface WriteOptions {
@@ -57,7 +59,7 @@ export interface TenantRecords<Row extends { id: string }> {
 export function tenantRecords<Row extends { id: string }>(
   tenant: Tenant,
   table: string,
-  { columns, taken }: RecordsOptions,
+  { columns, taken, named }: RecordsOptions,
 ): TenantRecords<Row> {
   const { supabase, clinicId } = tenant;
 
@@ -99,7 +101,12 @@ export function tenantRecords<Row extends { id: string }>(
           .select(columns)
           .maybeSingle<Row>(),
       );
-      await audit("CREATE", row, changedValues(null, row, Object.keys(values) as (keyof Row & string)[]), requestId);
+      await audit(
+        "CREATE",
+        row,
+        auditedChanges(null, row, Object.keys(values) as (keyof Row & string)[], named),
+        requestId,
+      );
       return row;
     },
 
@@ -110,7 +117,7 @@ export function tenantRecords<Row extends { id: string }>(
       const after = await one(
         supabase.from(table).update(patch).eq("clinic_id", clinicId).eq("id", id).select(columns).maybeSingle<Row>(),
       );
-      const changes = changedValues(before, after, Object.keys(patch) as (keyof Row & string)[]);
+      const changes = auditedChanges(before, after, Object.keys(patch) as (keyof Row & string)[], named);
       if (Object.keys(changes).length > 0) await audit(action, after, changes, requestId);
       return after;
     },

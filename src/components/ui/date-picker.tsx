@@ -1,11 +1,11 @@
 "use client";
 
-import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
+import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { forwardRef, useEffect, useId, useImperativeHandle, useRef, useState, type KeyboardEvent } from "react";
 
 import { UI_TEXT } from "@/constants/messages";
 import { addDaysKey, addMonthsKey, monthWeeks, todayKey, weekStartKey } from "@/lib/dates/calendar";
-import { formatDate, formatLongDate, formatMonthYear } from "@/lib/format/date";
+import { formatDate, formatLongDate, formatMonthName, formatMonthYear } from "@/lib/format/date";
 
 import { useAnchoredPopover } from "./anchored-popover";
 import { IconButton } from "./button";
@@ -23,6 +23,12 @@ const TRIGGERS = {
 /** Tall enough for six weeks, the heading and the footer; it scrolls where the screen is shorter. */
 const MAX_HEIGHT = 470;
 
+/** What the calendar shows: a month's days, a year's months, or a page of years (D109). */
+type View = "days" | "months" | "years";
+
+/** How many years a page of them holds: four rows of three, as the months. */
+const YEARS_SHOWN = 12;
+
 /** The day the keys move to, from the one they are on. */
 function moved(from: string, key: string, shift: boolean): string | null {
   const days: Record<string, number> = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 };
@@ -35,6 +41,28 @@ function moved(from: string, key: string, shift: boolean): string | null {
 }
 
 /**
+ * Where the keys move among months or years, laid out in rows of three: the
+ * arrows one along or a row up and down, Page Up and Page Down a year of
+ * months or a page of years. Counted in months, so the day is kept within
+ * the month it lands in.
+ */
+function movedAmong(view: Exclude<View, "days">, from: string, key: string): string | null {
+  const unit = view === "months" ? 1 : 12;
+  const steps: Record<string, number> = {
+    ArrowLeft: -unit,
+    ArrowRight: unit,
+    ArrowUp: -3 * unit,
+    ArrowDown: 3 * unit,
+    PageUp: -12 * unit,
+    PageDown: 12 * unit,
+  };
+  return key in steps ? addMonthsKey(from, steps[key]) : null;
+}
+
+/** The first year of the page a year is on. */
+const pageStart = (year: number) => year - (year % YEARS_SHOWN);
+
+/**
  * A day, picked from the app's own calendar (D65), never the browser's. It
  * holds a day as a key, "2026-10-02", or "" for none — a day by the clinic's
  * calendar, never an instant.
@@ -45,11 +73,17 @@ function moved(from: string, key: string, shift: boolean): string | null {
  *   (`useAnchoredPopover`): weeks from Monday, the chosen day an ink chip,
  *   today ringed in green. Days before `min` or after `max` cannot be taken.
  *   **Today** takes today, and **Clear**, where the field may be empty, none.
+ * - **The heading jumps** (D109): the month's name opens its year's months,
+ *   and the year's opens a page of twelve years — a date of birth decades
+ *   back is three taps away. Choosing a year shows its months; choosing a
+ *   month, its days. Months and years outside `min` and `max` cannot be taken.
  * - **Keyboard** (WAI-ARIA's date picker dialog): the calendar takes the
  *   focus on the chosen day, or today; the arrows move a day or a week,
  *   Page Up and Page Down a month (with Shift, a year), Home and End the
  *   week's ends; Enter or Space takes the day; Escape closes it, and the focus
- *   goes back to the control. Tabbing out of it closes it too.
+ *   goes back to the control. Tabbing out of it closes it too. Among months
+ *   and years the arrows move one along or a row of three, Page Up and Page
+ *   Down a year or a page.
  */
 export const DatePicker = forwardRef<
   HTMLButtonElement,
@@ -102,10 +136,17 @@ export const DatePicker = forwardRef<
   useImperativeHandle(ref, () => control.current!, []);
 
   const [open, setOpen] = useState(false);
-  // The day the keys are on; the calendar shows its month.
+  const [view, setView] = useState<View>("days");
+  // The day the keys are on; the calendar shows its month, its year, or its page of years.
   const [focused, setFocused] = useState(value || todayKey());
   const today = todayKey();
   const within = (day: string) => !(min && day < min) && !(max && day > max);
+  // A month or a year may be taken while any of its days may.
+  const monthWithin = (month: string) => !(min && month < min.slice(0, 7)) && !(max && month > max.slice(0, 7));
+  const yearWithin = (year: number) =>
+    !(min && year < Number(min.slice(0, 4))) && !(max && year > Number(max.slice(0, 4)));
+  const year = Number(focused.slice(0, 4));
+  const firstYear = pageStart(year);
   const clamp = (day: string) => (min && day < min ? min : max && day > max ? max : day);
 
   // A tap elsewhere closes it, and has left the field.
@@ -120,15 +161,22 @@ export const DatePicker = forwardRef<
     },
   });
 
-  // The keys' day takes the focus as the calendar opens, and as they move it.
+  // The keys' day, month or year takes the focus as the calendar opens, and as they move it.
   useEffect(() => {
     if (!open || !moveFocus.current) return;
     moveFocus.current = false;
-    panel.current?.querySelector<HTMLButtonElement>(`[data-day="${focused}"]`)?.focus();
+    const target =
+      view === "days"
+        ? `[data-day="${focused}"]`
+        : view === "months"
+          ? `[data-month="${focused.slice(0, 7)}"]`
+          : `[data-year="${year}"]`;
+    panel.current?.querySelector<HTMLButtonElement>(target)?.focus();
   });
 
   const show = () => {
     setFocused(clamp(value || today));
+    setView("days");
     moveFocus.current = true;
     setOpen(true);
   };
@@ -144,6 +192,10 @@ export const DatePicker = forwardRef<
     moveFocus.current = true;
     setFocused(clamp(day));
   };
+  const switchTo = (next: View, day: string = focused) => {
+    setView(next);
+    goTo(day);
+  };
 
   // Once the focus has settled: gone from both the control and the calendar,
   // it closes. A day re-drawn for another month hands the focus on first.
@@ -156,7 +208,7 @@ export const DatePicker = forwardRef<
     });
 
   const onGridKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    const next = moved(focused, event.key, event.shiftKey);
+    const next = view === "days" ? moved(focused, event.key, event.shiftKey) : movedAmong(view, focused, event.key);
     if (!next) return;
     event.preventDefault();
     goTo(next);
@@ -214,24 +266,120 @@ export const DatePicker = forwardRef<
         {open && (
           <>
             <div className="flex items-center justify-between gap-2 pb-2">
-              <IconButton
-                icon={ChevronLeft}
-                label={text.previousMonth}
-                disabled={Boolean(min) && focused.slice(0, 7) <= min!.slice(0, 7)}
-                onClick={() => goTo(addMonthsKey(focused, -1))}
-              />
-              <p id={titleId} aria-live="polite" className="text-title font-bold">
-                {formatMonthYear(focused)}
-              </p>
-              <IconButton
-                icon={ChevronRight}
-                label={text.nextMonth}
-                disabled={Boolean(max) && focused.slice(0, 7) >= max!.slice(0, 7)}
-                onClick={() => goTo(addMonthsKey(focused, 1))}
-              />
+              {view === "days" ? (
+                <IconButton
+                  icon={ChevronLeft}
+                  label={text.previousMonth}
+                  disabled={Boolean(min) && focused.slice(0, 7) <= min!.slice(0, 7)}
+                  onClick={() => goTo(addMonthsKey(focused, -1))}
+                />
+              ) : (
+                <IconButton
+                  icon={ChevronLeft}
+                  label={view === "months" ? text.previousYear : text.earlierYears}
+                  disabled={!yearWithin((view === "months" ? year : firstYear) - 1)}
+                  onClick={() => goTo(addMonthsKey(focused, view === "months" ? -12 : -12 * YEARS_SHOWN))}
+                />
+              )}
+              {view === "years" ? (
+                <p id={titleId} aria-live="polite" className="text-title font-bold tabular-nums">
+                  {text.years(firstYear, firstYear + YEARS_SHOWN - 1)}
+                </p>
+              ) : (
+                <button
+                  type="button"
+                  aria-label={
+                    view === "days" ? text.chooseMonth(formatMonthYear(focused)) : text.chooseYear(String(year))
+                  }
+                  onClick={() => switchTo(view === "days" ? "months" : "years")}
+                  className="flex min-h-11 items-center gap-1.5 rounded-full px-3 text-title font-bold transition-colors hover:bg-ground"
+                >
+                  <span id={titleId} aria-live="polite">
+                    {view === "days" ? formatMonthYear(focused) : year}
+                  </span>
+                  <ChevronDown size={18} strokeWidth={2.5} aria-hidden="true" className="text-muted" />
+                </button>
+              )}
+              {view === "days" ? (
+                <IconButton
+                  icon={ChevronRight}
+                  label={text.nextMonth}
+                  disabled={Boolean(max) && focused.slice(0, 7) >= max!.slice(0, 7)}
+                  onClick={() => goTo(addMonthsKey(focused, 1))}
+                />
+              ) : (
+                <IconButton
+                  icon={ChevronRight}
+                  label={view === "months" ? text.nextYear : text.laterYears}
+                  disabled={!yearWithin((view === "months" ? year : firstYear + YEARS_SHOWN - 1) + 1)}
+                  onClick={() => goTo(addMonthsKey(focused, view === "months" ? 12 : 12 * YEARS_SHOWN))}
+                />
+              )}
             </div>
 
-            <div role="grid" aria-labelledby={titleId} onKeyDown={onGridKeyDown} className="space-y-1">
+            {view === "months" && (
+              <div
+                role="group"
+                aria-label={text.months(String(year))}
+                onKeyDown={onGridKeyDown}
+                className="grid grid-cols-3 gap-2 py-1"
+              >
+                {Array.from({ length: 12 }, (_, index) => {
+                  const day = addMonthsKey(focused, index + 1 - Number(focused.slice(5, 7)));
+                  const month = day.slice(0, 7);
+                  return (
+                    <button
+                      key={month}
+                      type="button"
+                      data-month={month}
+                      tabIndex={month === focused.slice(0, 7) ? 0 : -1}
+                      disabled={!monthWithin(month)}
+                      aria-label={formatMonthYear(day)}
+                      aria-current={month === value.slice(0, 7) ? "true" : undefined}
+                      onClick={() => switchTo("days", day)}
+                      className={pickClass(month === value.slice(0, 7), month === today.slice(0, 7))}
+                    >
+                      {formatMonthName(day)}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {view === "years" && (
+              <div
+                role="group"
+                aria-labelledby={titleId}
+                onKeyDown={onGridKeyDown}
+                className="grid grid-cols-3 gap-2 py-1"
+              >
+                {Array.from({ length: YEARS_SHOWN }, (_, index) => {
+                  const shown = firstYear + index;
+                  return (
+                    <button
+                      key={shown}
+                      type="button"
+                      data-year={shown}
+                      tabIndex={shown === year ? 0 : -1}
+                      disabled={!yearWithin(shown)}
+                      aria-current={String(shown) === value.slice(0, 4) ? "true" : undefined}
+                      onClick={() => switchTo("months", addMonthsKey(focused, (shown - year) * 12))}
+                      className={pickClass(String(shown) === value.slice(0, 4), String(shown) === today.slice(0, 4))}
+                    >
+                      {shown}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            <div
+              role="grid"
+              aria-labelledby={titleId}
+              onKeyDown={onGridKeyDown}
+              hidden={view !== "days"}
+              className="space-y-1"
+            >
               <div role="row" className="grid grid-cols-7">
                 {text.weekdaysShort.map((day, index) => (
                   <span
@@ -304,3 +452,15 @@ export const DatePicker = forwardRef<
     </>
   );
 });
+
+/** A month or a year to jump to: the one holding the day an ink chip, the one holding today ringed in green. */
+function pickClass(chosen: boolean, current: boolean) {
+  return cn(
+    "min-h-11 rounded-full text-body tabular-nums transition-colors disabled:cursor-not-allowed disabled:opacity-35",
+    chosen
+      ? "bg-chip font-bold text-on-chip"
+      : current
+        ? "font-bold text-action ring-2 ring-action ring-inset enabled:hover:bg-ground"
+        : "text-ink enabled:hover:bg-ground",
+  );
+}

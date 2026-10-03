@@ -1,10 +1,14 @@
+import { randomUUID } from "node:crypto";
+
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import type { Permission } from "@/constants/permissions";
 import { PLATFORM_SETTING_DEFAULTS } from "@/constants/platform";
 import { FIRST_PATIENT_NUMBER } from "@/constants/seeds";
+import { createPatient, findPatientMatches, getPatient, updatePatient } from "@/features/patients/api";
 import { estimatedBirthDate } from "@/lib/dates/age";
 import { addDaysKey, todayKey } from "@/lib/dates/calendar";
+import { patientSchema, type PatientInput } from "@/lib/validation";
 import {
   addMember,
   admin,
@@ -62,15 +66,20 @@ const patient = (overrides: Record<string, unknown> = {}) => ({
 
 const supabaseOf = (member: SignedIn) => member.tenant!.supabase;
 
+const add = (member: SignedIn, overrides: Record<string, unknown> = {}, key: string = randomUUID()) =>
+  supabaseOf(member)
+    .rpc("create_patient", { p_patient: patient(overrides), p_idempotency_key: key })
+    .single<{ patient_id: string; created: boolean }>();
+
 async function create(member: SignedIn, overrides: Record<string, unknown> = {}): Promise<PatientRow> {
-  const { data, error } = await supabaseOf(member).rpc("create_patient", { p_patient: patient(overrides) });
+  const { data, error } = await add(member, overrides);
   if (error) throw error;
-  return data as PatientRow;
+  const { data: row } = await admin().from("patients").select("*").eq("id", data.patient_id).single<PatientRow>();
+  return row!;
 }
 
 async function refusal(member: SignedIn, overrides: Record<string, unknown>) {
-  const { error } = await supabaseOf(member).rpc("create_patient", { p_patient: patient(overrides) });
-  return error;
+  return (await add(member, overrides)).error;
 }
 
 /** What a member reads of a patient: the row, or null when it is hidden from them. */
@@ -126,6 +135,23 @@ describe("the clinic's own numbers (plan §10.1)", () => {
 
   it("counts each clinic on its own", async () => {
     expect((await create(other.owner)).patient_number).toBe(FIRST_PATIENT_NUMBER);
+  });
+
+  it("adds one patient for one key, however often it is sent, and a key is needed", async () => {
+    const key = randomUUID();
+    const [first, again] = await Promise.all([
+      add(receptionist, { full_name: "Double Tap" }, key),
+      add(receptionist, { full_name: "Double Tap" }, key),
+    ]);
+    expect(first.data!.patient_id).toBe(again.data!.patient_id);
+    expect([first.data!.created, again.data!.created].sort()).toEqual([false, true]);
+    const { data } = await admin().from("patients").select("id").eq("idempotency_key", key);
+    expect(data).toHaveLength(1);
+    const { error } = await supabaseOf(receptionist).rpc("create_patient", {
+      p_patient: patient(),
+      p_idempotency_key: null,
+    });
+    expect(error?.hint).toBe("IDEMPOTENCY_KEY_REQUIRED");
   });
 
   it("never lets a client set a number, or read the counter", async () => {
@@ -245,9 +271,7 @@ describe("what is checked of a patient", () => {
     expect(error).toBeNull();
     expect(data!.assigned_doctor_id).toBe(leavingId);
 
-    const { error: elsewhere } = await supabaseOf(other.owner).rpc("create_patient", {
-      p_patient: patient({ assigned_doctor_id: doctorIds.A }),
-    });
+    const { error: elsewhere } = await add(other.owner, { assigned_doctor_id: doctorIds.A });
     expect(elsewhere?.code).toBe("23503");
   });
 
@@ -474,6 +498,85 @@ describe("an import batch (plan §10.5, D51)", () => {
   it("is the owner's alone", async () => {
     const { error } = await supabaseOf(receptionist).rpc("import_patients", { p_patients: rows(["Not Mine"]) });
     expect(error?.hint).toBe("AUTH_PERMISSION_DENIED");
+  });
+});
+
+describe("through the app's functions (R4.2)", () => {
+  const typed = (overrides: Partial<PatientInput> = {}) =>
+    patientSchema.parse({
+      fullName: "Meena Iyer",
+      phone: "99000 11223",
+      born: { as: "AGE", years: "41" },
+      gender: "FEMALE",
+      ...overrides,
+    });
+
+  const auditOf = async (entityId: string) => {
+    const { data } = await admin()
+      .from("audit_logs")
+      .select("action, actor_id, changes")
+      .eq("entity_id", entityId)
+      .order("created_at");
+    return data!;
+  };
+
+  it("adds a patient once per key, audited once, by the names of their details alone", async () => {
+    const key = randomUUID();
+    const added = await createPatient(doctorA.tenant!, typed({ assignedDoctorId: doctorIds.B }), key, "req_add");
+    expect(added).toMatchObject({
+      name: "Meena Iyer",
+      phone: "+919900011223",
+      dobIsEstimated: true,
+      gender: "FEMALE",
+      assignedDoctorId: doctorIds.B,
+      doctorName: "Test doctor",
+      archived: false,
+    });
+    expect(await createPatient(doctorA.tenant!, typed(), key)).toMatchObject({ id: added.id, number: added.number });
+
+    const audit = await auditOf(added.id);
+    expect(audit).toEqual([
+      {
+        action: "CREATE",
+        actor_id: doctorA.userId,
+        changes: {
+          patient_number: { from: null, to: added.number },
+          assigned_doctor_id: { from: null, to: doctorIds.B },
+          fields: ["full_name", "phone", "date_of_birth", "dob_is_estimated", "gender"],
+        },
+      },
+    ]);
+    expect(JSON.stringify(audit)).not.toMatch(/Meena|9900011223/);
+  });
+
+  it("reads and changes a patient within the doctor scope, audited by name", async () => {
+    const theirs = await createPatient(receptionist.tenant!, typed({ assignedDoctorId: doctorIds.B }), randomUUID());
+    expect(await getPatient(doctorB.tenant!, theirs.id)).toMatchObject({ id: theirs.id });
+    await expect(getPatient(doctorC.tenant!, theirs.id)).rejects.toMatchObject({ code: "RECORD_NOT_FOUND" });
+    await expect(updatePatient(doctorC.tenant!, theirs.id, { fullName: "Changed" })).rejects.toMatchObject({
+      code: "RECORD_NOT_FOUND",
+    });
+
+    const changed = await updatePatient(receptionist.tenant!, theirs.id, { fullName: "Meena R Iyer", email: "m@x.in" });
+    expect(changed).toMatchObject({ name: "Meena R Iyer", email: "m@x.in" });
+    const [, update] = await auditOf(theirs.id);
+    expect(update).toMatchObject({ action: "UPDATE", changes: { fields: ["full_name", "email"] } });
+  });
+
+  it("lists the patients on a mobile that the caller may see (D106)", async () => {
+    const phone = "+919988776655";
+    await createPatient(receptionist.tenant!, typed({ phone, fullName: "Elder Sister" }), randomUUID());
+    await createPatient(
+      receptionist.tenant!,
+      typed({ phone, fullName: "Younger Brother", gender: "MALE", assignedDoctorId: doctorIds.C }),
+      randomUUID(),
+    );
+    expect((await findPatientMatches(receptionist.tenant!, phone)).map(({ name }) => name)).toEqual([
+      "Younger Brother",
+      "Elder Sister",
+    ]);
+    expect((await findPatientMatches(doctorC.tenant!, phone)).map(({ name }) => name)).toEqual(["Younger Brother"]);
+    expect(await findPatientMatches(other.owner.tenant, phone)).toEqual([]);
   });
 });
 

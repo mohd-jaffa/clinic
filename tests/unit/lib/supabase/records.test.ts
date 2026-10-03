@@ -18,7 +18,7 @@ interface Thing {
 
 const thing = (changes: Partial<Thing> = {}): Thing => ({ id: "t-1", name: "Rent", active: true, ...changes });
 
-function recordsWith(options: FakeSupabaseOptions, taken?: ErrorMessageCode) {
+function recordsWith(options: FakeSupabaseOptions, taken?: ErrorMessageCode, named?: readonly string[]) {
   const fake = fakeSupabase(options);
   const tenant: Tenant = {
     supabase: fake.client,
@@ -29,7 +29,11 @@ function recordsWith(options: FakeSupabaseOptions, taken?: ErrorMessageCode) {
     permissions: [],
     doctorId: null,
   };
-  return { ...fake, tenant, records: tenantRecords<Thing>(tenant, "things", { columns: "id, name, active", taken }) };
+  return {
+    ...fake,
+    tenant,
+    records: tenantRecords<Thing>(tenant, "things", { columns: "id, name, active", taken, named }),
+  };
 }
 
 beforeEach(() => logActionSafe.mockReset());
@@ -77,6 +81,17 @@ describe("insert", () => {
       changes: { name: { from: null, to: "Lab fees" } },
       requestId: "req_1",
     });
+  });
+
+  it("audits a column kept to its name by its name alone (plan §27.6)", async () => {
+    const { records, tenant } = recordsWith({ answer: () => ({ data: thing({ name: "Rohan" }) }) }, undefined, [
+      "name",
+    ]);
+    await records.insert({ name: "Rohan", active: true });
+    expect(logActionSafe).toHaveBeenCalledWith(
+      tenant,
+      expect.objectContaining({ changes: { active: { from: null, to: true }, fields: ["name"] } }),
+    );
   });
 
   it("refuses a name already taken in the feature's words, and anything else in the app's", async () => {

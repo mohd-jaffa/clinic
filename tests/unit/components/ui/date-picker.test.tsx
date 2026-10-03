@@ -272,3 +272,111 @@ describe("DatePicker", () => {
     expect(ref.current).toBe(control());
   });
 });
+
+describe("DatePicker's jump to a month or a year (D109)", () => {
+  const button = (name: string | RegExp) => within(calendar()).getByRole("button", { name });
+  const group = (name: string | RegExp) => within(calendar()).getByRole("group", { name });
+  const yearsShown = () => within(calendar()).getByRole("group").getAttribute("aria-labelledby");
+
+  it("goes from the month to its year's months, to a page of years, and back down to the days", async () => {
+    const onChange = vi.fn();
+    render(<Picker onChange={onChange} />);
+    await userEvent.click(control());
+
+    await userEvent.click(button("September 2026, choose another month"));
+    const months = group("Months of 2026");
+    expect(within(months).getByRole("button", { name: "September 2026" })).toHaveAttribute("aria-current", "true");
+    await waitFor(() => expect(within(months).getByRole("button", { name: "September 2026" })).toHaveFocus());
+    expect(within(calendar()).queryByRole("grid")).not.toBeInTheDocument();
+
+    await userEvent.click(button("2026, choose another year"));
+    expect(document.getElementById(yearsShown()!)).toHaveTextContent("2016 – 2027");
+    await waitFor(() => expect(button("2026")).toHaveFocus());
+    expect(button("2026")).toHaveAttribute("aria-current", "true");
+
+    await userEvent.click(button("Earlier years"));
+    expect(document.getElementById(yearsShown()!)).toHaveTextContent("2004 – 2015");
+    await userEvent.click(button("2012"));
+    await userEvent.click(within(group("Months of 2012")).getByRole("button", { name: "March 2012" }));
+    expect(heading()).toBe("March 2012");
+    await waitFor(() => expect(day("Tuesday, 20 Mar 2012")).toHaveFocus());
+
+    await userEvent.click(day("Monday, 12 Mar 2012"));
+    expect(onChange).toHaveBeenCalledWith("2012-03-12");
+  });
+
+  it("moves a year at a time beside a year's months, and opens on the days again", async () => {
+    render(<Picker />);
+    await userEvent.click(control());
+    await userEvent.click(button(/choose another month/));
+    await userEvent.click(button("Previous year"));
+    expect(group("Months of 2025")).toBeInTheDocument();
+    await userEvent.click(button("Next year"));
+    await userEvent.click(button("Next year"));
+    expect(group("Months of 2027")).toBeInTheDocument();
+    await userEvent.click(button("2027, choose another year"));
+    await userEvent.click(button("Later years"));
+    expect(document.getElementById(yearsShown()!)).toHaveTextContent("2028 – 2039");
+
+    await userEvent.keyboard("{Escape}");
+    await userEvent.click(control());
+    expect(heading()).toBe("September 2026");
+  });
+
+  it("moves among months and years by the keys: one along, a row of three, a year or a page", async () => {
+    render(<Picker />);
+    await userEvent.click(control());
+    await userEvent.click(button(/choose another month/));
+    await waitFor(() => expect(button("September 2026")).toHaveFocus());
+
+    await userEvent.keyboard("{ArrowRight}");
+    await waitFor(() => expect(button("October 2026")).toHaveFocus());
+    await userEvent.keyboard("{ArrowDown}");
+    await waitFor(() => expect(button("January 2027")).toHaveFocus());
+    expect(group("Months of 2027")).toBeInTheDocument();
+    await userEvent.keyboard("{ArrowUp}{ArrowLeft}");
+    await waitFor(() => expect(button("September 2026")).toHaveFocus());
+    await userEvent.keyboard("{PageUp}");
+    await waitFor(() => expect(button("September 2025")).toHaveFocus());
+    await userEvent.keyboard("{PageDown}");
+    await waitFor(() => expect(button("September 2026")).toHaveFocus());
+
+    await userEvent.click(button(/choose another year/));
+    await waitFor(() => expect(button("2026")).toHaveFocus());
+    await userEvent.keyboard("{ArrowLeft}");
+    await waitFor(() => expect(button("2025")).toHaveFocus());
+    await userEvent.keyboard("{PageDown}");
+    await waitFor(() => expect(button("2037")).toHaveFocus());
+    expect(document.getElementById(yearsShown()!)).toHaveTextContent("2028 – 2039");
+  });
+
+  it("offers no month or year outside its bounds", async () => {
+    render(<Picker start="2026-09-20" min="1906-09-27" max="2026-09-27" />);
+    await userEvent.click(control());
+    await userEvent.click(button(/choose another month/));
+    expect(button("October 2026")).toBeDisabled();
+    expect(button("September 2026")).toBeEnabled();
+    expect(button("Next year")).toBeDisabled();
+    await userEvent.click(button(/choose another year/));
+    expect(button("2027")).toBeDisabled();
+    expect(button("Later years")).toBeDisabled();
+    for (let page = 0; page < 10; page += 1) await userEvent.click(button("Earlier years"));
+    expect(document.getElementById(yearsShown()!)).toHaveTextContent("1896 – 1907");
+    expect(button("1905")).toBeDisabled();
+    expect(button("Earlier years")).toBeDisabled();
+    await userEvent.click(button("1906"));
+    expect(button("August 1906")).toBeDisabled();
+    expect(button("Previous year")).toBeDisabled();
+  });
+
+  it("marks the month and the year that hold the day chosen, not those that hold today", async () => {
+    render(<Picker start="2025-05-10" />);
+    await userEvent.click(control());
+    await userEvent.click(button(/choose another month/));
+    await userEvent.click(button("Next year"));
+    expect(button("September 2026")).not.toHaveAttribute("aria-current");
+    await userEvent.click(button(/choose another year/));
+    expect(button("2025")).toHaveAttribute("aria-current", "true");
+    expect(button("2026")).not.toHaveAttribute("aria-current");
+  });
+});

@@ -117,11 +117,14 @@ create table public.patients (
   notes text check (public.is_clean_text(notes, 1000)),
   archived_at timestamptz,
   archived_by uuid references public.profiles (id) on delete set null,
+  -- The key the add was sent with: the same add sent twice makes one patient (plan §26).
+  idempotency_key uuid,
   created_by uuid references public.profiles (id) on delete set null,
   updated_by uuid references public.profiles (id) on delete set null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   unique (clinic_id, patient_number),
+  unique (clinic_id, idempotency_key),
   -- What a patient-linked table's composite foreign key points at.
   unique (id, clinic_id),
   -- Only a doctor of the same clinic; the patient keeps no doctor if theirs is ever removed.
@@ -376,37 +379,54 @@ for each row execute function public.set_updated_at();
 -- Needs patients.create and a clinic that can write. Only the fields of a
 -- patient are read from `p_patient`; the number, the clinic and who added
 -- them are the database's. Each column's CHECK, and check_patient, are the
--- last word on the values. Hands back the patient.
-create or replace function public.create_patient(p_patient jsonb)
-returns public.patients
+-- last word on the values. The same key sent again — a double tap, a retry
+-- after the connection dropped — finds the patient the first made and adds
+-- none (plan §26). Hands back the patient, and whether this call added them.
+create or replace function public.create_patient(p_patient jsonb, p_idempotency_key uuid)
+returns table (patient_id uuid, created boolean)
 language plpgsql
 security definer
 set search_path = ''
 as $$
 declare
   clinic uuid := public.current_clinic_id();
-  patient public.patients;
+  added uuid;
 begin
   if clinic is null or not public.has_permission('patients.create') then
     raise exception 'Adding a patient needs patients.create' using hint = 'AUTH_PERMISSION_DENIED';
   end if;
+  if p_idempotency_key is null then
+    raise exception 'An add needs its idempotency key' using hint = 'IDEMPOTENCY_KEY_REQUIRED';
+  end if;
   perform public.require_clinic_write(clinic);
+
+  -- One key, one patient: a second call with the same key waits here for the
+  -- first to finish, then finds its patient.
+  perform pg_advisory_xact_lock(hashtextextended(clinic::text || ':' || p_idempotency_key::text, 0));
+  select patient.id into added
+    from public.patients as patient
+   where patient.clinic_id = clinic and patient.idempotency_key = p_idempotency_key;
+  if added is not null then
+    return query select added, false;
+    return;
+  end if;
 
   insert into public.patients (
     clinic_id, full_name, phone, alt_phone, email, date_of_birth, dob_is_estimated, gender,
-    address, emergency_contact_name, emergency_contact_phone, assigned_doctor_id, notes
+    address, emergency_contact_name, emergency_contact_phone, assigned_doctor_id, notes, idempotency_key
   )
   select clinic, given.full_name, given.phone, given.alt_phone, given.email, given.date_of_birth,
          coalesce(given.dob_is_estimated, false), given.gender, given.address,
-         given.emergency_contact_name, given.emergency_contact_phone, given.assigned_doctor_id, given.notes
+         given.emergency_contact_name, given.emergency_contact_phone, given.assigned_doctor_id, given.notes,
+         p_idempotency_key
     from jsonb_populate_record(null::public.patients, p_patient) as given
-  returning * into patient;
-  return patient;
+  returning id into added;
+  return query select added, true;
 end;
 $$;
 
-revoke all on function public.create_patient(jsonb) from public, anon;
-grant execute on function public.create_patient(jsonb) to authenticated;
+revoke all on function public.create_patient(jsonb, uuid) from public, anon;
+grant execute on function public.create_patient(jsonb, uuid) to authenticated;
 
 -- One batch of an import (plan §10.5, D51): the owner's alone, while the
 -- clinic can write. Each row is a patient as create_patient adds one —

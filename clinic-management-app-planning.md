@@ -191,6 +191,11 @@ earlier lines are never rewritten.
 | D102 | **Adding or editing a patient needs seeing them** (the user): `patients.create` and `patients.edit` both imply `patients.view` (§8.2 rule 2); the editor ticks it and the database refuses a set without it (`0015`). | 2026-10-03 |
 | D103 | **An archived patient is read-only until restored** (the user): their profile and records are read as before, but their details and alerts cannot change, and nothing is booked for them; Restore first. The database refuses it, in words (`PATIENT_ARCHIVED`). | 2026-10-03 |
 | D104 | **The patients list is newest first** (the user): by patient number, the latest at the top, with nothing typed; a search puts the best match first — the patient number, then the mobile, then names that start with the words, hold them, or come close. | 2026-10-03 |
+| D105 | **The patient sheet: what every patient needs first, the rest folded** (the user): name, mobile, date of birth or age, gender and the doctor show at once; alternate phone, email, address, emergency contact and notes wait under **More details**, which opens for an edit when any of them holds a value, and for a refusal inside. | 2026-10-04 |
+| D106 | **"Already here?" lists the patients on a mobile as it is typed** (the user): once ten digits are in, the patients already on that number — name, age, gender, number, the archived marked — each with Open; nothing is refused, so a family shares a number and a sibling is added. | 2026-10-04 |
+| D107 | **An added patient's profile opens** (the user), with a card naming them and their number ("Rohan Mehta added — P-1012"); the add form leaves the history, so Back leads to where they came from. | 2026-10-04 |
+| D108 | **The assigned doctor starts as the adding doctor, or the clinic's only doctor** (the user); otherwise as **No doctor yet**. It can always be changed. | 2026-10-04 |
+| D109 | **A date jumps by month and year** (the user): the calendar's heading opens its year's months, then a page of twelve years — the kit's date picker, for every date field — so a date of birth decades back is a few taps away. | 2026-10-04 |
 
 ## 3. Users and roles
 
@@ -2154,7 +2159,7 @@ tests (§34) and its changelog entry.
 | ID | Work | Source | Waits on | Status |
 |---|---|---|---|---|
 | R4.1 | `0015_patients`: counter, `patient_doctors` + triggers, `can_see_patient`, alerts, search indexes; `create_patient`, `search_patients`, `import_patients` (D98 – D104) | §10, §27.3 | — | DONE (2026-10-03 · 8e2a0e9) |
-| R4.2 | Patient sheet: DOB or age, gender, phones, emergency contact, assigned doctor; mobile-match hint | §10.1 | — | TODO |
+| R4.2 | Patient sheet: DOB or age, gender, phones, emergency contact, assigned doctor; mobile-match hint; added once per idempotency key; the date picker's month and year jump (D105 – D109) | §10.1 | — | TODO |
 | R4.3 | Patients list: search (name, mobile digits, number), tabs, paging; the last visit and Owing come with their phases (D101) | §10.2 | — | TODO |
 | R4.4 | Patient profile: header and details, sections by permission; the next appointment, open treatments, balance and history come with their phases (D101) | §10.3 | — | TODO |
 | R4.5 | Alerts: allergies, conditions, medications | §10.4 | — | TODO |

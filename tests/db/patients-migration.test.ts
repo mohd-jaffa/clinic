@@ -217,8 +217,21 @@ describe("0015 adding a patient, and finding one", () => {
     expect(create).toContain("if clinic is null or not public.has_permission('patients.create') then");
     expect(create).toContain("perform public.require_clinic_write(clinic);");
     expect(create).toContain("from jsonb_populate_record(null::public.patients, p_patient) as given");
-    expect(create).not.toMatch(/given\.(patient_number|clinic_id|archived_at|created_by)/);
-    expect(sql).toContain("grant execute on function public.create_patient(jsonb) to authenticated;");
+    expect(create).not.toMatch(/given\.(patient_number|clinic_id|archived_at|created_by|idempotency_key)/);
+    expect(sql).toContain("grant execute on function public.create_patient(jsonb, uuid) to authenticated;");
+  });
+
+  it("adds one patient per idempotency key, a repeat waiting for the first and finding it (plan §26)", () => {
+    expect(patients).toContain("unique (clinic_id, idempotency_key)");
+    const create = functionBody(sql, "create_patient");
+    expect(create).toContain("returns table (patient_id uuid, created boolean)");
+    expect(create).toContain(
+      "perform pg_advisory_xact_lock(hashtextextended(clinic::text || ':' || p_idempotency_key::text, 0));",
+    );
+    expect(create).toContain("where patient.clinic_id = clinic and patient.idempotency_key = p_idempotency_key;");
+    expect(create).toContain("return query select added, false;");
+    const update = /grant update \(([\s\S]*?)\) on public\.patients to authenticated;/.exec(sql)![1];
+    expect(update).not.toContain("idempotency_key");
   });
 
   it("imports a batch as the owner alone while the clinic can write, numbered in the order given (D51)", () => {
@@ -263,6 +276,7 @@ describe("0015 adding a patient, and finding one", () => {
       "PATIENT_BIRTH_DATE_INVALID",
       "DOCTOR_INACTIVE",
       "AUTH_PERMISSION_DENIED",
+      "IDEMPOTENCY_KEY_REQUIRED",
     ]);
     for (const code of codes) expect(isErrorMessageCode(code), code).toBe(true);
   });

@@ -15,3 +15,41 @@ export function changedValues<Row extends object>(
       .map((column) => [column, { from: before === null ? null : before[column], to: after[column] }]),
   );
 }
+
+/**
+ * Which of `columns` changed, by name alone — for clinical text and a
+ * patient's own details, whose words never reach the trail (plan §27.6). With
+ * no `before`, those given a value.
+ */
+export function changedFields<Row extends object>(
+  before: Row | null,
+  after: Row,
+  columns: readonly (keyof Row & string)[],
+): string[] {
+  return columns.filter((column) => (before === null ? after[column] !== null : before[column] !== after[column]));
+}
+
+/**
+ * An audit row's changes for a write of `columns`: the values of each, except
+ * those in `named`, listed by name alone under `fields` when any changed.
+ */
+export function auditedChanges<Row extends object>(
+  before: Row | null,
+  after: Row,
+  columns: readonly (keyof Row & string)[],
+  named: readonly string[] = [],
+): Record<string, unknown> {
+  const fields = changedFields(
+    before,
+    after,
+    columns.filter((column) => named.includes(column)),
+  );
+  return {
+    ...changedValues(
+      before,
+      after,
+      columns.filter((column) => !named.includes(column)),
+    ),
+    ...(fields.length > 0 && { fields }),
+  };
+}
