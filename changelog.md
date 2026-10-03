@@ -702,3 +702,28 @@ appended and never rewritten (AGENTS.md §33).
 
 ### Blockers
 - None.
+
+## 2026-10-03 — R2.10, the sign-up journey
+
+### Added
+- `tests/e2e/journey.spec.ts` (plan §34, Phase 2's exit): an owner signs up
+  through the two steps, is turned away at sign-in until the email is
+  confirmed — with the link offered again — confirms by the link the app
+  emails and lands on Home, signs out from Settings (asked first), signs in
+  again with their mobile number typed with a leading 0 and a space, and
+  lands on Home inside the shell. Home is then checked at 360, 390 and 414 px
+  (the phone project) and 768, 1024, 1280 and 1440 px (the desktop project),
+  each in light and dark — the theme really drawn, the bar or the rail and
+  sidebar in place, nothing wider than the screen, axe clean.
+
+### Changed
+- `authLinkTo` (`tests/support/e2e.ts`): the email link, made as the app
+  makes it, moved out of `account.spec.ts` so both journeys share it.
+
+### Validation
+- Typecheck, lint, format check passed.
+- Unit and integration tests unchanged (1152), coverage 100%.
+- E2E passed (40, phone and desktop), axe clean at every width and theme.
+
+### Blockers
+- None.

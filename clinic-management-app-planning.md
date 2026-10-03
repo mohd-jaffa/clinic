@@ -2072,7 +2072,7 @@ tests (§34) and its changelog entry.
 | R2.7 | Account screens: register (two steps), sign in, confirm email, forgot and reset password | §5 | — | DONE (2026-10-03 · fc40357) |
 | R2.8 | Settings index and My account (with the theme switch) | §5.4 | — | DONE (2026-10-03 · 6c90d1b) |
 | R2.9 | Plan banner and read-only mode in the shell | §7.2 | — | DONE (2026-10-03 · ad8e932) |
-| R2.10 | E2E: sign up → confirm → sign in → Home, phone and desktop, axe clean | §34 | — | TODO |
+| R2.10 | E2E: sign up → confirm → sign in → Home, phone and desktop, axe clean | §34 | — | DONE (2026-10-03 · 394e3b5) |
 | R2.11 | Online-only, nothing lost: the offline banner; saves wait and retry with their key; forms keep their content in memory | §21, D55 | — | TODO |
 
 ### Phase 3 — Clinic setup and team
