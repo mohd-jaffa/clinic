@@ -1173,3 +1173,28 @@ appended and never rewritten (AGENTS.md §33).
 
 ### Blockers
 - None.
+
+## 2026-10-03 — R3.8, Phase 3's journey: each sees only what they may
+
+### Added
+- `tests/e2e/team-journey.spec.ts` (plan §34, Phase 3's exit): the owner
+  invites a receptionist and a doctor (with their own fee) from the team
+  screen; each follows their link on a device of their own, joins and lands
+  on Home; each finds exactly the places their preset allows — the sidebar's
+  on a desktop, More's on a phone — and neither the team nor the clinic's
+  setup opens for them by its address; the owner then sees both on the team,
+  the doctor's fee on their page.
+- The permission matrix (`tests/db/integration/permissions.test.ts`) gains
+  its Phase 3 rows: `settings.manage` on holidays and leave (by RLS and
+  `remove_closure`) and `team.manage` (by the route guard and the team's
+  functions), each allowed and refused.
+- `issueInviteToken` (tests): a fresh link for an open invite, as Resend
+  would email it, for the journeys, which send no mail.
+
+### Validation
+- Typecheck, lint, format check passed.
+- Unit and integration tests passed (1626), coverage 100%.
+- Build passed; E2E passed (72, phone and desktop), axe clean.
+
+### Blockers
+- None. Phase 3 is done.
