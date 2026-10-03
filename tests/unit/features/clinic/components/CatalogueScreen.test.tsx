@@ -3,15 +3,17 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "@/lib/api/client";
-import { CatalogueScreen } from "@/features/clinic/components/CatalogueScreen";
+import { activeCount, CatalogueScreen } from "@/features/clinic/components/CatalogueScreen";
 import { Providers } from "@tests/support/providers";
 
-const draw = (query: Parameters<typeof CatalogueScreen<{ id: string }>>[0]["query"]) =>
+type Entry = { id: string; active: boolean };
+
+const draw = (query: Parameters<typeof CatalogueScreen<Entry>>[0]["query"]) =>
   render(
     <Providers>
-      <CatalogueScreen<{ id: string }>
+      <CatalogueScreen<Entry>
         title="Price list"
-        count={(active) => `${active} services`}
+        subtitle={query.data && `${activeCount(query.data)} services`}
         query={query}
         loadFailed="SERVICES_LOAD_FAILED"
       >

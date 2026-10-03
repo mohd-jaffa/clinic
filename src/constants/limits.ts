@@ -46,6 +46,8 @@ export const TEXT_LIMITS = {
   serviceName: 100,
   /** An appointment type's or an expense category's name: a chip, not a sentence. */
   catalogueName: 60,
+  /** What a closure is for: "Diwali", "Dental conference" — a row's title. */
+  closureReason: 100,
   /** A payment's reference: a UPI transaction id, a cheque number. */
   reference: 100,
   /** Why something was done by hand: a plan date set, a void. */
@@ -62,6 +64,9 @@ export const PHONE_NUMBER_DIGITS = { min: 6, max: 15 } as const;
 
 /** Each appointment type's default length, in minutes (plan §28.2). */
 export const APPOINTMENT_MINUTES = { min: 5, max: 480 } as const;
+
+/** How long a holiday or a doctor's leave may last, both ends counted (D85). */
+export const MAX_CLOSURE_DAYS = 366;
 
 /**
  * How long before another confirmation or password-reset email may go to the

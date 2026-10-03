@@ -8,7 +8,7 @@ import { useCatalogueChange } from "../hooks/useCatalogueChange";
 import { useEntryEditor } from "../hooks/useEntryEditor";
 import { useExpenseCategories } from "../hooks/useExpenseCategories";
 import type { ExpenseCategory } from "../types";
-import { CatalogueScreen } from "./CatalogueScreen";
+import { activeCount, CatalogueScreen } from "./CatalogueScreen";
 import { ExpenseCategorySheet } from "./ExpenseCategorySheet";
 import { OrderedCatalogue } from "./OrderedCatalogue";
 
@@ -26,7 +26,7 @@ export function ExpenseCategories() {
   return (
     <CatalogueScreen
       title={title}
-      count={expenseCategories.count}
+      subtitle={query.data && expenseCategories.count(activeCount(query.data))}
       query={query}
       loadFailed="EXPENSE_CATEGORIES_LOAD_FAILED"
     >

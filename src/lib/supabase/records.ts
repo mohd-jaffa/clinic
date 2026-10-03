@@ -23,8 +23,9 @@ import type { Tenant } from "./tenant";
  *   what, by the tenant's actor. Not for clinical text, whose audit names its
  *   fields only (plan §27.6).
  *
- * A write that runs into a unique name answers `taken`, in the feature's own
- * words; a refusal the database raises (a trigger's hint) keeps its code.
+ * A write that runs into a unique name, or a range that overlaps another,
+ * answers `taken`, in the feature's own words; a refusal the database raises
+ * (a trigger's hint) keeps its code.
  */
 export interface OrderBy {
   column: string;
@@ -34,7 +35,7 @@ export interface OrderBy {
 export interface RecordsOptions {
   /** The columns read and handed back. */
   columns: string;
-  /** What a second row with the same unique value is refused as. */
+  /** What a second row with the same unique value, or an overlapping range, is refused as. */
   taken?: ErrorMessageCode;
 }
 
@@ -61,7 +62,7 @@ export function tenantRecords<Row extends { id: string }>(
   const { supabase, clinicId } = tenant;
 
   const refusal = (error: PostgrestError) =>
-    taken && error.code === "23505"
+    taken && (error.code === "23505" || error.code === "23P01")
       ? new AppError({ kind: kindOf(taken), code: taken, cause: error })
       : fromPostgrestError(error);
 

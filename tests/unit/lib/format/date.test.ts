@@ -3,6 +3,7 @@ import {
   formatDate,
   formatDateTime,
   formatDayMonth,
+  formatDayRange,
   formatDaysAgo,
   formatRecent,
   formatLongDate,
@@ -136,5 +137,29 @@ describe("formatClock", () => {
     expect(formatClock("")).toBe("—");
     expect(formatClock(undefined)).toBe("—");
     expect(formatClock("6pm")).toBe("—");
+  });
+});
+
+describe("formatDayRange", () => {
+  const today = "2026-10-03";
+
+  it("says a run of days as short as it reads clearly, within this year", () => {
+    expect(formatDayRange("2026-10-20", "2026-10-20", today)).toBe("20 Oct");
+    expect(formatDayRange("2026-10-20", "2026-10-22", today)).toBe("20 – 22 Oct");
+    expect(formatDayRange("2026-10-30", "2026-11-02", today)).toBe("30 Oct – 2 Nov");
+  });
+
+  it("adds the year when it is not this one", () => {
+    expect(formatDayRange("2027-01-05", "2027-01-05", today)).toBe("5 Jan 2027");
+    expect(formatDayRange("2027-01-05", "2027-01-07", today)).toBe("5 – 7 Jan 2027");
+    expect(formatDayRange("2025-11-30", "2025-12-02", today)).toBe("30 Nov – 2 Dec 2025");
+    expect(formatDayRange("2026-12-28", "2027-01-03", today)).toBe("28 Dec 2026 – 3 Jan 2027");
+  });
+
+  it("is a dash for days it cannot read, and counts this year from today by default", () => {
+    expect(formatDayRange("soon", "2026-10-20", today)).toBe("—");
+    expect(formatDayRange("2026-10-20", "", today)).toBe("—");
+    const year = new Date().getFullYear();
+    expect(formatDayRange(`${year}-06-01`, `${year}-06-02`)).toBe("1 – 2 Jun");
   });
 });

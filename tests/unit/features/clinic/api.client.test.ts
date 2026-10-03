@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   AppointmentTypesClient,
   ClinicClient,
+  ClosuresClient,
   ExpenseCategoriesClient,
   ServicesClient,
 } from "@/features/clinic/api.client";
@@ -70,5 +71,20 @@ describe("the catalogue clients (plan §30)", () => {
       method: "PATCH",
       body: '{"details":{"name":"Lease"}}',
     });
+  });
+});
+
+describe("ClosuresClient (plan §30)", () => {
+  it("adds a holiday or leave as typed, and removes one at its own address", async () => {
+    await ClosuresClient.add({ who: "CLINIC", startsOn: "2026-10-20", endsOn: "2026-10-22", reason: "Diwali" });
+    expect(sent()).toMatchObject({
+      url: apiRoutes.closures.list,
+      method: "POST",
+      body: '{"who":"CLINIC","startsOn":"2026-10-20","endsOn":"2026-10-22","reason":"Diwali"}',
+    });
+
+    mockFetch.mockClear();
+    await ClosuresClient.remove("c-1");
+    expect(sent()).toMatchObject({ url: "/api/closures/c-1", method: "DELETE" });
   });
 });

@@ -37,6 +37,15 @@ export const apiRoutes = {
     list: "/api/expense-categories",
     one: (id: string) => `/api/expense-categories/${id}`,
   },
+  // Holidays and leave (plan §9, §30).
+  closures: {
+    list: "/api/closures",
+    one: (id: string) => `/api/closures/${id}`,
+  },
+  // The clinic's active doctors, for every picker (plan §30).
+  doctors: {
+    list: "/api/doctors",
+  },
 } as const;
 
 /**

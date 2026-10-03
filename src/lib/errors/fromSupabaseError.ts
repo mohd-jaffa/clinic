@@ -24,6 +24,8 @@ const POSTGRES_ERRORS: Record<string, { kind: ErrorKind; code: ErrorMessageCode 
   "22023": { kind: "VALIDATION", code: "VALIDATION_ERROR" },
   // A duplicate key: the constraint name is in the message, so it is mapped.
   "23505": { kind: "CONFLICT", code: "CONFLICT" },
+  // An exclusion constraint: a range that overlaps one already there.
+  "23P01": { kind: "CONFLICT", code: "CONFLICT" },
   // Something still referenced, or a reference to something gone.
   "23503": { kind: "CONFLICT", code: "CONFLICT" },
   // A CHECK the database enforces.
@@ -69,6 +71,8 @@ const BUSINESS_RULES: ReadonlySet<ErrorMessageCode> = new Set<ErrorMessageCode>(
   "CONSULTATION_SERVICE_REQUIRED",
   "APPOINTMENT_TYPE_REQUIRED",
   "EXPENSE_CATEGORY_REQUIRED",
+  // Removing a holiday or leave that is over (0011, D84).
+  "CLOSURE_OVER",
 ]);
 
 /**
@@ -79,7 +83,7 @@ export function kindOf(code: ErrorMessageCode): ErrorKind {
   if (code === "AUTH_SESSION_REQUIRED" || code === "AUTH_SESSION_INVALID") return "AUTHENTICATION";
   if (code === "AUTH_PERMISSION_DENIED") return "AUTHORIZATION";
   if (code === "NOT_FOUND" || code === "RECORD_NOT_FOUND") return "NOT_FOUND";
-  if (/^CONFLICT$|_ALREADY_EXISTS$|_CHANGED$/.test(code)) return "CONFLICT";
+  if (/^CONFLICT$|_ALREADY_EXISTS$|_CHANGED$|_TAKEN$/.test(code)) return "CONFLICT";
   if (BUSINESS_RULES.has(code)) return "BUSINESS_RULE";
   if (code === "EXTERNAL_SERVICE_ERROR") return "EXTERNAL_SERVICE";
   if (code === "INTERNAL_ERROR" || code === "CONFIG_INVALID") return "INTERNAL";

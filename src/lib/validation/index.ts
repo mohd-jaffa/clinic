@@ -19,6 +19,7 @@ export {
   paiseAmount,
   paiseText,
   quantity,
+  requiredDay,
   requiredEmail,
   requiredLine,
   requiredLines,
@@ -89,5 +90,7 @@ export {
   type ServiceInput,
   type ServicePayload,
 } from "./schemas/catalogues";
+
+export { closureSchema, WHOLE_CLINIC, type ClosureInput, type ClosurePayload } from "./schemas/closures";
 
 export { FORM_RESET_OPTIONS } from "./forms";

@@ -9,7 +9,7 @@ import { useCatalogueChange } from "../hooks/useCatalogueChange";
 import { useEntryEditor } from "../hooks/useEntryEditor";
 import type { AppointmentType } from "../types";
 import { AppointmentTypeSheet } from "./AppointmentTypeSheet";
-import { CatalogueScreen } from "./CatalogueScreen";
+import { activeCount, CatalogueScreen } from "./CatalogueScreen";
 import { OrderedCatalogue } from "./OrderedCatalogue";
 
 const { appointmentTypes } = UI_TEXT;
@@ -29,7 +29,7 @@ export function AppointmentTypes() {
   return (
     <CatalogueScreen
       title={title}
-      count={appointmentTypes.count}
+      subtitle={query.data && appointmentTypes.count(activeCount(query.data))}
       query={query}
       loadFailed="APPOINTMENT_TYPES_LOAD_FAILED"
     >

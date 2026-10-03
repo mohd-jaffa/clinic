@@ -1,6 +1,8 @@
 import { createClient } from "@supabase/supabase-js";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import { addClosure } from "@/features/clinic/closures";
+import { todayKey } from "@/lib/dates/calendar";
 import { getServerEnv } from "@/lib/env/server";
 import {
   addMember,
@@ -27,6 +29,7 @@ const CLINIC_TABLES: readonly { table: string; column: string }[] = [
   { table: "services", column: "clinic_id" },
   { table: "appointment_types", column: "clinic_id" },
   { table: "expense_categories", column: "clinic_id" },
+  { table: "clinic_closures", column: "clinic_id" },
   { table: "audit_logs", column: "clinic_id" },
 ];
 
@@ -40,6 +43,7 @@ let developer: SignedIn;
 beforeAll(async () => {
   [a, b] = await Promise.all([registerClinic({ clinicName: "Clinic A" }), registerClinic({ clinicName: "Clinic B" })]);
   await addMember(a.clinicId, { role: "DOCTOR", permissions: ["patients.view"] });
+  await addClosure(a.owner.tenant, { doctorId: null, startsOn: todayKey(), endsOn: todayKey(), reason: "Holiday" });
   developer = await makeDeveloper();
 });
 

@@ -90,6 +90,18 @@ export function monthWeeks(key: string): (string | null)[][] {
   return Array.from({ length: cells.length / 7 }, (_, week) => cells.slice(week * 7, week * 7 + 7));
 }
 
+/** Whether a text is a day of the calendar as a key: "2026-02-28", never "2026-02-30". */
+export function isDayKey(text: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) return false;
+  const date = new Date(`${text}T00:00:00Z`);
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === text;
+}
+
+/** How many days a run covers, both ends counted: 20 to 22 Oct is 3. */
+export function dayCount(from: string, to: string): number {
+  return Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000) + 1;
+}
+
 /** Every day from one to another, both included, as keys. */
 export function daysFrom(from: string, to: string): string[] {
   const days: string[] = [];

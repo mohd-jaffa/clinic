@@ -45,6 +45,14 @@ export const ERROR_MESSAGES = {
   APPOINTMENT_TYPES_LOAD_FAILED: "The appointment types couldn't be loaded.",
   EXPENSE_CATEGORIES_LOAD_FAILED: "The expense categories couldn't be loaded.",
 
+  // Holidays and leave (plan §9, D84 – D86).
+  CLOSURE_STARTS_BEFORE_TODAY: "A holiday or leave starts today or later.",
+  CLOSURE_DAYS_TAKEN:
+    "Those days overlap a holiday or leave already set for the same people. Remove that one first, or choose other days.",
+  CLOSURE_OVER: "That’s already over — it stays as a record.",
+  CLOSURES_LOAD_FAILED: "Holidays and leave couldn't be loaded.",
+  DOCTORS_LOAD_FAILED: "The clinic's doctors couldn't be loaded.",
+
   // The browser could not reach the server (plan §21, D55): said by the client, never sent by the server.
   NETWORK_OFFLINE: "You're offline. Try again once the connection is back — what you typed is still here.",
   NETWORK_UNREACHABLE: "ClinicDesk couldn't be reached. Check the connection and try again.",
@@ -88,6 +96,10 @@ export const VALIDATION_MESSAGES = {
   tooLong: (label: string, max: number) => `${label} can be at most ${max} characters.`,
   tooShort: (label: string, min: number) => `${label} must be at least ${min} characters.`,
   between: (label: string, min: number, max: number) => `${label} must be from ${min} to ${max}.`,
+  day: (label: string) => `${label} must be a date.`,
+  notBeforeToday: (label: string) => `${label} can’t be before today.`,
+  endsBeforeStart: (last: string, first: string) => `${last} can’t be before the ${first.toLowerCase()}.`,
+  atMostDays: (max: number) => `It can last at most ${max} days.`,
   invalid: "That value is not valid.",
   gstin: "GSTIN must be 15 characters, like 32ABCDE1234F1Z5.",
 } as const;
@@ -455,6 +467,35 @@ export const UI_TEXT = {
     archiveTitle: (name: string) => `Archive ${name}?`,
     archiveBody: "New expenses won’t offer it. Expenses filed under it keep it. You can restore it from Archived.",
     order: "New categories join the end of the list.",
+  },
+
+  /** Holidays and leave (plan §9, D84 – D87): the days the clinic, or one doctor, is away. */
+  closures: {
+    count: (count: number) => (count === 0 ? "None coming up" : `${count} coming up`),
+    upcoming: "Coming up",
+    add: "Add holiday or leave",
+    addTitle: "Add a holiday or leave",
+    whoLabel: "Who’s away",
+    wholeClinic: "Whole clinic",
+    firstDayLabel: "First day",
+    lastDayLabel: "Last day",
+    datesHint: "Booking refuses these days.",
+    reasonLabel: "Reason",
+    reasonHint: "Like Diwali, a conference or annual leave.",
+    days: (count: number) => (count === 1 ? "1 day" : `${count} days`),
+    added: (reason: string) => `${reason} added`,
+    notSaved: "That wasn’t saved",
+    removeNamed: (reason: string) => `Remove ${reason}`,
+    removeTitle: (reason: string) => `Remove ${reason}?`,
+    removeBody: "Booking opens on those days again.",
+    remove: "Remove",
+    removed: (reason: string) => `${reason} removed`,
+    notRemoved: "That wasn’t removed",
+    past: "Past",
+    showPast: (count: number) => `Show past (${count})`,
+    hidePast: "Hide past",
+    emptyTitle: "No days off coming up",
+    emptyHint: "Add a holiday or a doctor’s leave, and booking will refuse those days.",
   },
 
   /** My account's theme switch (D36): kept per device. */

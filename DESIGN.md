@@ -364,6 +364,7 @@ A capsule that only says where something stands ("Waiting", "With the doctor"): 
 - **`Dialog` (cards):** a `--surface` card with `--radius-sheet` and the raised shadow. On a phone it sits at the foot within thumb's reach, actions stacked full-width with the main one on top; from 768 px it is centred, max 28rem, actions in a row with the main one last. Its mark (a bare icon in `--ink`, `--action` or `--coral`) sits beside the title.
 - **Response card (`response-card.tsx`, `useResponse()`):** the one way to report an outcome: a card, a confirm card, or a self-closing notice above the bottom bar whose `--action` line empties as its clock (it keeps time under reduced motion and pauses while held). Error cards show the request reference.
 - **`EmptyState`, `SystemNotice`:** a lobe-shaped mark (`--radius-lobe`) on land, or on `--coral-soft` for failure, a title, a warm line and one action.
+- **`Disclosure`:** what a screen keeps out of the way until asked — archived entries, past holidays: a quiet small toggle ("Show archived (3)", then a chevron up and "Hide archived") whose words line up with the rows above, and the list it opens onto.
 
 ### Inputs / Fields (`field.tsx`, `text-field.tsx`, `select-field.tsx`, `select-menu.tsx`, `date-picker.tsx`)
 - **Style:** a 48 px capsule well (`FIELD_WELL`): `--surface` fill, 1 px `--edge` border, 20 px side padding, body text, tabular digits. A textarea takes `--radius-row` instead.

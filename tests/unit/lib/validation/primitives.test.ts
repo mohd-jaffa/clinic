@@ -16,6 +16,7 @@ import {
   paiseText,
   password,
   quantity,
+  requiredDay,
   requiredEmail,
   requiredLine,
   requiredLines,
@@ -142,6 +143,22 @@ describe("wholeNumberText", () => {
     expect(messageOf(minutes, "ten")).toBe(VALIDATION_MESSAGES.wholeNumber("Length"));
     expect(messageOf(minutes, "4")).toBe(VALIDATION_MESSAGES.between("Length", 5, 480));
     expect(messageOf(minutes, "481")).toBe(VALIDATION_MESSAGES.between("Length", 5, 480));
+  });
+});
+
+describe("requiredDay", () => {
+  const day = requiredDay("First day");
+
+  it("takes a day of the calendar as the date field holds it", () => {
+    expect(day.parse("2026-10-20")).toBe("2026-10-20");
+    expect(day.parse(" 2028-02-29 ")).toBe("2028-02-29");
+  });
+
+  it("says, in words, that a day is missing or is not one", () => {
+    expect(messageOf(day, "")).toBe(VALIDATION_MESSAGES.required("First day"));
+    expect(messageOf(day, undefined)).toBe(VALIDATION_MESSAGES.required("First day"));
+    expect(messageOf(day, "2026-02-30")).toBe(VALIDATION_MESSAGES.day("First day"));
+    expect(messageOf(day, "20 Oct")).toBe(VALIDATION_MESSAGES.day("First day"));
   });
 });
 

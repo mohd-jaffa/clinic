@@ -25,6 +25,7 @@ describe("apiRoutes", () => {
     expect(apiRoutes.services.one("s-1")).toBe("/api/services/s-1");
     expect(apiRoutes.appointmentTypes.one("a-1")).toBe("/api/appointment-types/a-1");
     expect(apiRoutes.expenseCategories.one("c-1")).toBe("/api/expense-categories/c-1");
+    expect(apiRoutes.closures.one("h-1")).toBe("/api/closures/h-1");
   });
 
   it("names only routes that exist", () => {

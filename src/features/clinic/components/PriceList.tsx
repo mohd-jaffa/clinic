@@ -20,7 +20,7 @@ import { useEntryEditor } from "../hooks/useEntryEditor";
 import { useServices } from "../hooks/useServices";
 import type { Service } from "../types";
 import { ArchivedEntries } from "./ArchivedEntries";
-import { CatalogueScreen } from "./CatalogueScreen";
+import { activeCount, CatalogueScreen } from "./CatalogueScreen";
 import { ServiceSheet } from "./ServiceSheet";
 
 const { priceList } = UI_TEXT;
@@ -43,7 +43,7 @@ export function PriceList() {
   return (
     <CatalogueScreen
       title={UI_TEXT.settings.items.priceList.label}
-      count={priceList.count}
+      subtitle={query.data && priceList.count(activeCount(query.data))}
       query={query}
       loadFailed="SERVICES_LOAD_FAILED"
     >

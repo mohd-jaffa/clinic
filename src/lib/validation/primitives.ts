@@ -2,6 +2,7 @@ import * as z from "zod";
 
 import { MAX_AMOUNT_PAISE, MAX_QUANTITY, PASSWORD_LENGTH, PHONE_NUMBER_DIGITS, TEXT_LIMITS } from "@/constants/limits";
 import { VALIDATION_MESSAGES } from "@/constants/messages";
+import { isDayKey } from "@/lib/dates/calendar";
 import { formatPaise } from "@/lib/format/currency";
 import { parseRupees } from "@/lib/money";
 import { toE164India } from "@/lib/phone";
@@ -248,6 +249,24 @@ export function wholeNumberText(label: string, { min, max }: { min: number; max:
       const value = Number(text);
       if (value < min || value > max) return refuse(VALIDATION_MESSAGES.between(label, min, max));
       return value;
+    });
+}
+
+/**
+ * A day a date field holds — "2026-10-20" — that must be given, and must be
+ * a day of the calendar: "2026-02-30" is refused in words, not moved on.
+ */
+export function requiredDay(label: string) {
+  return z
+    .string({ error: VALIDATION_MESSAGES.required(label) })
+    .trim()
+    .transform((text, ctx) => {
+      if (text !== "" && isDayKey(text)) return text;
+      ctx.addIssue({
+        code: "custom",
+        message: text === "" ? VALIDATION_MESSAGES.required(label) : VALIDATION_MESSAGES.day(label),
+      });
+      return z.NEVER;
     });
 }
 

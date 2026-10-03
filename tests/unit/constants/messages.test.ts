@@ -23,4 +23,9 @@ describe("the app's words", () => {
     expect([1, 4].map(UI_TEXT.appointmentTypes.count)).toEqual(["1 kind of visit", "4 kinds of visit"]);
     expect([1, 4].map(UI_TEXT.expenseCategories.count)).toEqual(["1 category", "4 categories"]);
   });
+
+  it("counts holidays and leave coming up, and their days", () => {
+    expect([0, 3].map(UI_TEXT.closures.count)).toEqual(["None coming up", "3 coming up"]);
+    expect([1, 3].map(UI_TEXT.closures.days)).toEqual(["1 day", "3 days"]);
+  });
 });

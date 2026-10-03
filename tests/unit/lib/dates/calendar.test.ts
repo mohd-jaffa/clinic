@@ -4,11 +4,13 @@ import {
   addDaysKey,
   addMonthsKey,
   clinicHour,
+  dayCount,
   dayHour,
   dayKey,
   dayStart,
   daysFrom,
   financialYear,
+  isDayKey,
   monthStartKey,
   monthWeeks,
   nextDayKey,
@@ -118,5 +120,23 @@ describe("financialYear", () => {
 
   it("writes the century's turn as two digits", () => {
     expect(financialYear("2099-12-31")).toBe("2099-00");
+  });
+});
+
+describe("isDayKey", () => {
+  it("knows a day of the calendar from text that only looks like one", () => {
+    for (const day of ["2026-10-20", "2028-02-29", "2026-12-31"]) expect(isDayKey(day), day).toBe(true);
+    for (const text of ["2026-02-30", "2027-02-29", "2026-13-01", "2026-1-5", "20 Oct", ""]) {
+      expect(isDayKey(text), text).toBe(false);
+    }
+  });
+});
+
+describe("dayCount", () => {
+  it("counts a run of days with both ends, across months and years", () => {
+    expect(dayCount("2026-10-20", "2026-10-20")).toBe(1);
+    expect(dayCount("2026-10-20", "2026-10-22")).toBe(3);
+    expect(dayCount("2026-12-30", "2027-01-02")).toBe(4);
+    expect(dayCount("2026-10-01", "2027-10-01")).toBe(366);
   });
 });

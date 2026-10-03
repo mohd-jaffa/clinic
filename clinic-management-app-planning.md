@@ -170,6 +170,10 @@ earlier lines are never rewritten.
 | D81 | **New appointment types and expense categories join the end; no reordering** (the user): the seeded order stays, each new one is placed last (`0010`), and the plan names no way to move one. | 2026-10-03 |
 | D82 | **The price list is grouped by category, with a search** (the user): a section per category in the plan's order — Consultation, Procedure, Investigation, Medicine, Other — each row a name and its price; the search finds a service by name; **Add service** beside it. | 2026-10-03 |
 | D83 | **A clinic keeps one of each** (the user): the last active appointment type (booking needs one), the last active expense category (an expense needs one) and the last active service in Consultation (a bill starts from it) cannot be archived — nor that service moved to another category. The database refuses it (`0010`), in words. Migrations from closures on move up one: `0011_closures`, `0012_team`, … | 2026-10-03 |
+| D84 | **Past closures are kept, behind Show past** (the user): Holidays and leave lists the closures not yet over, by date; the past ones wait behind **Show past (n)**, read-only, as a record. Only a closure not yet over can be removed, asked first; it is never edited — removed and added again. | 2026-10-03 |
+| D85 | **A closure starts today or later and lasts at most a year** (the user): it ends on or after its start, within 366 days of it (a column-protecting bound in `limits.ts`, kept equal to the table's `CHECK`). A start before today, in the clinic's timezone, is refused by the database — booking is never in the past, so it would change nothing. | 2026-10-03 |
+| D86 | **Closures for the same people do not overlap** (the user): two whole-clinic closures, or two of the same doctor's, may not share a day — the database refuses it (an exclusion constraint), in words. A doctor's leave inside a clinic holiday is allowed: they say different things. | 2026-10-03 |
+| D87 | **The appointments a closure falls on are listed in R5.1** (the user): R3.3 builds closures and their screen; R5.1, which brings appointments and the booking check, adds the list of appointments on the days of a closure being added (not cancelled). | 2026-10-03 |
 
 ## 3. Users and roles
 
@@ -595,7 +599,10 @@ job title, doctor details; deactivate / reactivate (asks first).
 - **Holidays and leave — `/settings/closures`** (`settings.manage`): a date
   range, the whole clinic or one doctor, and a reason. Booking refuses those
   days. Adding a closure over existing appointments lists them (it does not
-  cancel them).
+  cancel them; built with appointments in R5.1, D87). A closure starts today
+  or later and lasts at most 366 days (D85); closures for the same people do
+  not overlap (D86); past ones are kept behind **Show past**, and only one not
+  yet over is removed, asked first (D84).
 - **Import patients — `/settings/import`** (owner, D51): see §10.5.
 - **Export — `/settings/export`** (owner, D41): one CSV per area — patients,
   appointments, visits (with vitals and diagnosis), prescriptions,
@@ -1622,7 +1629,8 @@ Planned order (one or more per tracker row):
                                 set_clinic_logo, clear_clinic_logo (D79), the clinic-logos bucket
 0010_catalogue_rules            new appointment types and expense categories placed last (D81);
                                 one of each kept, and one Consultation (D83)
-0011_closures                   clinic_closures
+0011_closures                   clinic_closures (no two for the same people on a day, D86),
+                                remove_closure (D84)
 0012_team                       invite_member, accept_invite, update_member, set_member_active,
                                 doctor consultation fee
 0013_patients                   patients + counter, patient_doctors + triggers,
@@ -2099,7 +2107,7 @@ tests (§34) and its changelog entry.
 |---|---|---|---|---|
 | R3.1 | `0009_clinic_profile`: clinic details, paper size, fee timing, the logo upload (D77–D79) | §9 | — | DONE (2026-10-03 · 0de6f85) |
 | R3.2 | `0010_catalogue_rules`; price list, appointment types and expense categories screens (tables from `0007`; D80–D83) | §9 | — | DONE (2026-10-03 · f7b0669) |
-| R3.3 | `0011_closures`: holidays and leave | §9 | — | TODO |
+| R3.3 | `0011_closures`: holidays and leave (D84–D87); `GET /api/doctors` for its picker | §9, §30 | — | TODO |
 | R3.4 | `0012_team`: invite with its own token (D63; presets, dependencies, doctor details and fee), invite email, resend, revoke, expiry | §8.3, §8.4 | Q19 | TODO |
 | R3.5 | Accept invite screen | §8.5 | — | TODO |
 | R3.6 | Team list and member detail: permissions, job title, doctor details, deactivate/reactivate; escalation and last-owner guards | §8.2, §8.6 | — | TODO |
@@ -2123,7 +2131,7 @@ tests (§34) and its changelog entry.
 
 | ID | Work | Source | Waits on | Status |
 |---|---|---|---|---|
-| R5.1 | `0014_appointments`: table (clinic's appointment types), exclusion, transitions, closures check, tokens, functions | §11, §28.4 | — | TODO |
+| R5.1 | `0014_appointments`: table (clinic's appointment types), exclusion, transitions, closures check, the appointments on a closure being added listed (D87), tokens, functions | §11, §28.4 | — | TODO |
 | R5.2 | Booking sheet: patient search/quick add, doctor, date, time, type → duration; clash card | §11.1 | — | TODO |
 | R5.3 | Calendar: day (list / columns per doctor), week, doctor filter, closures shaded; the kit's calendar grid (D66) | §11.5 | — | TODO |
 | R5.4 | Appointment detail: confirm, reschedule, cancel (reason), no-show | §11.2 | — | TODO |

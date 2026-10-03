@@ -1,8 +1,14 @@
 import { deleteJson, patchJson, postFile, postJson } from "@/lib/api/client";
 import { apiRoutes } from "@/lib/query/keys";
-import type { AppointmentTypeInput, ExpenseCategoryInput, ServiceInput, UpdateClinicInput } from "@/lib/validation";
+import type {
+  AppointmentTypeInput,
+  ClosureInput,
+  ExpenseCategoryInput,
+  ServiceInput,
+  UpdateClinicInput,
+} from "@/lib/validation";
 
-import type { AppointmentType, ClinicProfile, ExpenseCategory, Service } from "./types";
+import type { AppointmentType, ClinicProfile, Closure, ExpenseCategory, Service } from "./types";
 
 /** The clinic endpoints the browser calls (plan §9, §30). Each answers with the clinic as it now is. */
 export const ClinicClient = {
@@ -38,3 +44,9 @@ export const AppointmentTypesClient = catalogueClient<AppointmentType, Appointme
 export const ExpenseCategoriesClient = catalogueClient<ExpenseCategory, ExpenseCategoryInput>(
   apiRoutes.expenseCategories,
 );
+
+/** Holidays and leave (plan §30): add one; remove one not yet over (D84). Each answers with the closure. */
+export const ClosuresClient = {
+  add: (input: ClosureInput) => postJson<Closure>(apiRoutes.closures.list, input),
+  remove: (id: string) => deleteJson<Closure>(apiRoutes.closures.one(id)),
+};

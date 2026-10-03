@@ -1,4 +1,4 @@
-import type { AppointmentType, ClinicProfile, ExpenseCategory, Service } from "@/features/clinic/types";
+import type { AppointmentType, ClinicProfile, Closure, ExpenseCategory, Service } from "@/features/clinic/types";
 
 /** A clinic's profile as the API answers it, for a component test. */
 export function aClinicProfile(overrides: Partial<ClinicProfile> = {}): ClinicProfile {
@@ -39,4 +39,17 @@ export function anAppointmentType(overrides: Partial<AppointmentType> = {}): App
 /** An expense category, for a component test. */
 export function anExpenseCategory(overrides: Partial<ExpenseCategory> = {}): ExpenseCategory {
   return { id: "c-1", name: "Rent", active: true, ...overrides };
+}
+
+/** A holiday or leave, for a component test: the whole clinic, unless a doctor is named. */
+export function aClosure(overrides: Partial<Closure> = {}): Closure {
+  return {
+    id: "h-1",
+    doctorId: null,
+    doctorName: null,
+    startsOn: "2026-10-20",
+    endsOn: "2026-10-22",
+    reason: "Diwali",
+    ...overrides,
+  };
 }

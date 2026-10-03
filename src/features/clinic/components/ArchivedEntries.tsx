@@ -1,9 +1,9 @@
 "use client";
 
-import { Archive, ArchiveRestore, ChevronUp } from "lucide-react";
-import { useId, useState } from "react";
+import { Archive, ArchiveRestore } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Disclosure } from "@/components/ui/disclosure";
 import { Row, RowList } from "@/components/ui/row";
 import { UI_TEXT } from "@/constants/messages";
 
@@ -33,49 +33,39 @@ export function ArchivedEntries<Entry extends CatalogueEntry>({
   restoring?: string | null;
   className?: string;
 }) {
-  const [shown, setShown] = useState(false);
-  const listId = useId();
   if (entries.length === 0) return null;
 
   return (
-    <section aria-label={catalogues.archived} className={className}>
-      {/* Its words, not its padding, line up with the rows. */}
-      <div className="-ml-3.5">
-        <Button
-          label={shown ? catalogues.hideArchived : catalogues.showArchived(entries.length)}
-          icon={shown ? ChevronUp : Archive}
-          variant="quiet"
-          size="sm"
-          aria-expanded={shown}
-          aria-controls={listId}
-          onClick={() => setShown(!shown)}
-        />
-      </div>
-      <div id={listId} hidden={!shown} className="mt-3">
-        <RowList look="menu" label={catalogues.archived}>
-          {entries.map((entry) => (
-            <Row
-              key={entry.id}
-              look="menu"
-              title={entry.name}
-              subtitle={describe?.(entry)}
-              trailing={
-                onRestore && (
-                  <Button
-                    label={catalogues.restore}
-                    aria-label={catalogues.restoreNamed(entry.name)}
-                    icon={ArchiveRestore}
-                    variant="quiet"
-                    size="sm"
-                    loading={restoring === entry.id}
-                    onClick={() => onRestore(entry)}
-                  />
-                )
-              }
-            />
-          ))}
-        </RowList>
-      </div>
-    </section>
+    <Disclosure
+      label={catalogues.archived}
+      showLabel={catalogues.showArchived(entries.length)}
+      hideLabel={catalogues.hideArchived}
+      icon={Archive}
+      className={className}
+    >
+      <RowList look="menu" label={catalogues.archived}>
+        {entries.map((entry) => (
+          <Row
+            key={entry.id}
+            look="menu"
+            title={entry.name}
+            subtitle={describe?.(entry)}
+            trailing={
+              onRestore && (
+                <Button
+                  label={catalogues.restore}
+                  aria-label={catalogues.restoreNamed(entry.name)}
+                  icon={ArchiveRestore}
+                  variant="quiet"
+                  size="sm"
+                  loading={restoring === entry.id}
+                  onClick={() => onRestore(entry)}
+                />
+              )
+            }
+          />
+        ))}
+      </RowList>
+    </Disclosure>
   );
 }

@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { ErrorMessageCode } from "@/constants/messages";
 import type { Tenant } from "@/lib/supabase/tenant";
 import { fakeSupabase, postgrestError, type FakeSupabaseOptions } from "@tests/support/supabase";
 
@@ -17,7 +18,7 @@ interface Thing {
 
 const thing = (changes: Partial<Thing> = {}): Thing => ({ id: "t-1", name: "Rent", active: true, ...changes });
 
-function recordsWith(options: FakeSupabaseOptions, taken?: "EXPENSE_CATEGORY_ALREADY_EXISTS") {
+function recordsWith(options: FakeSupabaseOptions, taken?: ErrorMessageCode) {
   const fake = fakeSupabase(options);
   const tenant: Tenant = {
     supabase: fake.client,
@@ -91,6 +92,14 @@ describe("insert", () => {
       recordsWith({ answer: () => ({ error: postgrestError("23505") }) }).records.insert({ name: "Rent" }),
     ).rejects.toMatchObject({ code: "CONFLICT" });
     expect(logActionSafe).not.toHaveBeenCalled();
+  });
+
+  it("refuses days that overlap others in the feature's words too", async () => {
+    const overlap = recordsWith({ answer: () => ({ error: postgrestError("23P01") }) }, "CLOSURE_DAYS_TAKEN");
+    await expect(overlap.records.insert({ starts_on: "2026-10-20" })).rejects.toMatchObject({
+      code: "CLOSURE_DAYS_TAKEN",
+      kind: "CONFLICT",
+    });
   });
 });
 

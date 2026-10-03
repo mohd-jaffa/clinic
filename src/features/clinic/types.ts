@@ -89,3 +89,24 @@ export interface CatalogueEntry {
   name: string;
   active: boolean;
 }
+
+/** A `clinic_closures` row as it is read, with the doctor's name through their membership. */
+export interface ClosureRow {
+  id: string;
+  doctor_id: string | null;
+  starts_on: string;
+  ends_on: string;
+  reason: string;
+  doctor: { member: { profile: { full_name: string } | null } | null } | null;
+}
+
+/** A holiday (the whole clinic) or one doctor's leave (plan §9): its days, both ends included. */
+export interface Closure {
+  id: string;
+  /** None for the whole clinic. */
+  doctorId: string | null;
+  doctorName: string | null;
+  startsOn: string;
+  endsOn: string;
+  reason: string;
+}

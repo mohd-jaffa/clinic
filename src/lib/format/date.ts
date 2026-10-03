@@ -83,6 +83,23 @@ export function formatDayMonth(isoDate: string | null | undefined): string {
   return `${Number(match[3])} ${MONTHS[Number(match[2]) - 1]}`;
 }
 
+/**
+ * A run of days, as short as it reads clearly: "20 Oct", "20 – 22 Oct",
+ * "30 Oct – 2 Nov", the year added when it is not this one — "5 – 7 Jan
+ * 2027", "28 Dec 2026 – 3 Jan 2027".
+ */
+export function formatDayRange(from: string, to: string, today: string = todayKey()): string {
+  const [first, last] = [formatDate(from), formatDate(to)];
+  if (first === "—" || last === "—") return "—";
+  const [fromDay, fromMonth, fromYear] = first.split(" ");
+  const [, toMonth, toYear] = last.split(" ");
+  const year = fromYear === today.slice(0, 4) ? "" : ` ${fromYear}`;
+  if (fromYear !== toYear) return `${first} – ${last}`;
+  if (from === to) return `${fromDay} ${fromMonth}${year}`;
+  if (fromMonth === toMonth) return `${fromDay} – ${last.slice(0, -5)}${year}`;
+  return `${fromDay} ${fromMonth} – ${last.slice(0, -5)}${year}`;
+}
+
 const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 /** A day in full, for a heading: "Saturday, 26 Sep 2026". */

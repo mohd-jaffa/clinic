@@ -17,7 +17,9 @@ describe("kindOf", () => {
     ["NOT_FOUND", "NOT_FOUND"],
     ["RECORD_NOT_FOUND", "NOT_FOUND"],
     ["CONFLICT", "CONFLICT"],
+    ["CLOSURE_DAYS_TAKEN", "CONFLICT"],
     ["CLINIC_PLAN_EXPIRED", "BUSINESS_RULE"],
+    ["CLOSURE_OVER", "BUSINESS_RULE"],
     ["EXTERNAL_SERVICE_ERROR", "EXTERNAL_SERVICE"],
     ["INTERNAL_ERROR", "INTERNAL"],
     ["CONFIG_INVALID", "INTERNAL"],
@@ -34,8 +36,9 @@ describe("fromPostgrestError", () => {
     expect(error.httpStatus).toBe(403);
   });
 
-  it("reads a duplicate key as a conflict", () => {
+  it("reads a duplicate key, or a range overlapping another, as a conflict", () => {
     expect(fromPostgrestError(postgrest({ code: "23505" })).kind).toBe("CONFLICT");
+    expect(fromPostgrestError(postgrest({ code: "23P01" })).kind).toBe("CONFLICT");
   });
 
   it("reads a broken CHECK as a refused value, and an argument a function does not take as invalid", () => {

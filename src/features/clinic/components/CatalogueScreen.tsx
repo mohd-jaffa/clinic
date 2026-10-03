@@ -9,37 +9,36 @@ import { SkeletonRows } from "@/components/ui/skeleton";
 import { UI_TEXT, type ErrorMessageCode } from "@/constants/messages";
 import { SETTINGS_ROUTE } from "@/constants/navigation";
 
+/** How many of a catalogue's entries are offered: the archived ones are not. */
+export const activeCount = (entries: readonly { active: boolean }[]) => entries.filter((entry) => entry.active).length;
+
 /**
- * A catalogue's screen (plan §9): the land with its title, how many it holds
- * and the way back to Settings; on the ground, its entries once they are
- * here, rows standing in while they load, or why they could not and
- * **Try again**. The price list, appointment types and expense categories
- * share it.
+ * A list the clinic keeps in Settings (plan §9): the land with its title, how
+ * many it holds and the way back to Settings; on the ground, its entries once
+ * they are here, rows standing in while they load, or why they could not and
+ * **Try again**. The price list, appointment types, expense categories and
+ * holidays and leave share it.
  */
 export function CatalogueScreen<Entry>({
   title,
-  count,
+  subtitle,
   query,
   loadFailed,
   children,
 }: {
   title: string;
-  /** How many are offered, in words — "12 services". */
-  count: (active: number) => string;
-  query: ListQuery & { data?: readonly (Entry & { active: boolean })[] };
+  /** How many it holds, in words, once they are here — "12 services", "3 coming up". */
+  subtitle?: string;
+  query: ListQuery & { data?: readonly Entry[] };
   loadFailed: ErrorMessageCode;
-  children: (entries: readonly (Entry & { active: boolean })[]) => ReactNode;
+  children: (entries: readonly Entry[]) => ReactNode;
 }) {
   const entries = query.data;
   return (
     <>
       <CoastHeader>
         <div className="pb-6">
-          <PageHeader
-            title={title}
-            subtitle={entries && count(entries.filter((entry) => entry.active).length)}
-            back={SETTINGS_ROUTE}
-          />
+          <PageHeader title={title} subtitle={subtitle} back={SETTINGS_ROUTE} />
         </div>
       </CoastHeader>
       <div className="px-4 pt-4 md:px-8">
