@@ -439,3 +439,72 @@ appended and never rewritten (AGENTS.md §33).
 
 ### Blockers
 - None.
+
+## 2026-10-03 — R2.5, the app shell
+
+### Added
+- `src/constants/navigation.ts`: the ten places (plan §31.1), each with its
+  icon and who may open it (the same access as its screen, plan §31.2), in
+  three groups; the phone's bar (Home · Queue · ＋ · Patients · More) and
+  what lives behind More; `placesFor` and `quickAddFor` filter by the
+  member's permissions. Quick add (D67) goes to each action's own screen with
+  its form named by `?add=` (`ADD_PARAM`, `ADD_FORMS`).
+- `src/components/nav/AppShell.tsx`, the frame of every signed-in screen,
+  behind the session gate:
+  - phone: no top bar (D68); a bottom bar on the ground, each place in a
+    fixed column so the ＋ stays in the middle, the current one on a patch of
+    land; the ＋ a round land-green chip rising out of the bar; More marked
+    while a screen behind it is shown;
+  - tablet: an icon rail, each name under its icon, the round ＋ at its top
+    (D69), the account at its foot;
+  - desktop: the sidebar on the ground — the clinic's name, the **Add**
+    capsule (D69), the places in three groups, the account at its foot.
+- `MoreSheet` (opens on who is signed in, leading to My account, then the
+  places behind More with a line on each, then Sign out), `AccountMenu` (the
+  rail's and sidebar's account: where they work, My account, Sign out),
+  `AddButton` (the three ＋), `AppScreen` (a signed-in screen drawn on the
+  server with its first data).
+- `src/features/auth/AuthProvider.tsx` (ported from Brio): who is signed in —
+  profile, membership, plan — read once and shared, arriving with the page;
+  each account's reads in a cache of their own; sign out forgets everything
+  and loads a new page. `useSignOut` asks first on a confirm card;
+  `SignOutRow`; `RequireAuth` (signed out → sign in, remembering where they
+  were going; the platform admin → the console; while checking, the land
+  draws first).
+- `src/features/auth/session.server.ts` (ported from Brio): the session read
+  once per request; `readInitialSession` for the root layout;
+  `readScreen` builds the `Tenant` and reads a screen's first data, only for
+  those the screen is for (its `access`), never for the platform admin.
+- `/home`: the land greets the person, their clinic under it; Home's own
+  content comes with its phase. Each screen now names itself in the title
+  ("Home · ClinicDesk").
+- The kit's `IconChip`, a menu row's icon; the `--text-tab` size for the
+  bar's and the rail's names; `--bottom-bar-offset` set while the bar is on
+  screen, so a notice and a screen's last row clear it and its ＋.
+- Words: `UI_TEXT.nav`, `UI_TEXT.auth`, `UI_TEXT.home`, the quick actions'
+  names.
+- Tests: unit for every piece; `tests/e2e/shell.spec.ts` — an owner's places,
+  account and quick add, signing out (asked first, then out and staying out),
+  and a member who sees only what they may open — at phone and desktop, axe
+  clean.
+
+### Changed
+- The E2E accessibility check waits for what is still fading in, and names
+  the elements at fault.
+
+### Found while building
+- The raised ＋ made the bar's row taller than the bar, pushing every name
+  down; the bar is one fixed row, and the ＋ rises out of it.
+- Sign out from the account menu left the focus nowhere once the question was
+  answered "stay"; the menu now gives way to the question with the focus on
+  the account button.
+- The quick-add screens (Queue, Calendar, Patients, Billing, Expenses) are
+  not built yet, so their links lead to not-found until their phases.
+
+### Validation
+- Typecheck, lint, format check passed.
+- Unit and integration tests passed (1012), coverage 100%.
+- Build passed; E2E passed (16, phone and desktop), axe clean.
+
+### Blockers
+- None.
