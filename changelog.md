@@ -727,3 +727,42 @@ appended and never rewritten (AGENTS.md §33).
 
 ### Blockers
 - None.
+
+## 2026-10-03 — R2.11, online-only, nothing lost
+
+### Added
+- The offline banner (`src/components/nav/OfflineBanner.tsx`, plan §21,
+  D55): when the connection drops, a slim coral band across the top of every
+  signed-in screen — the same kind as the plan banner (D73), above it when
+  both show — says so, and that what is being typed stays until it can be
+  saved. It goes by itself when the connection is back. Its place is always
+  there and polite, so the words are read out as they arrive.
+- `src/lib/network/connection.ts` (`isOnline`, `onConnectionChange`,
+  `backOnline`, `NETWORK_RETRY_DELAYS_MS`) and `useOnline`
+  (`src/hooks/useOnline.ts`): the connection as the browser knows it; the
+  server draws every page as online.
+- `NETWORK_OFFLINE` and `NETWORK_UNREACHABLE` in `ERROR_MESSAGES`, and
+  `UI_TEXT.offline.banner`.
+- Q25 in the plan (a default, R2.11): which saves wait for the connection.
+- The offline band has the plan band's rhythm: 16 px above and below its words.
+
+### Changed
+- `src/lib/api/client.ts`: a save that carries an idempotency key waits while
+  the device is offline and goes when the connection returns, and is tried
+  again after 1, 2 and 4 s if the server cannot be reached while online —
+  its key makes it land once. Any other request that cannot reach the server
+  is refused at once with `NETWORK_OFFLINE` or `NETWORK_UNREACHABLE`, shown on
+  the error card; the sheet stays open with what was typed (D55).
+- A band across the top is marked `data-band` (was `data-plan-banner`): the
+  first one pays the top safe area, and every band stays while the next
+  screen's skeleton shows.
+
+### Validation
+- Typecheck, lint, format check passed.
+- Unit and integration tests passed (1169), coverage 100%.
+- Build passed; E2E passed (42, phone and desktop), axe clean —
+  `tests/e2e/offline.spec.ts`: the band, a save refused offline with the name
+  kept in its sheet, then saved once the connection is back.
+
+### Blockers
+- None.
