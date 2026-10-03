@@ -1198,3 +1198,68 @@ appended and never rewritten (AGENTS.md §33).
 
 ### Blockers
 - None. Phase 3 is done.
+
+## 2026-10-03 — R4.1, patients in the database
+
+### Added
+- `0015_patients.sql` (plan §10, §27.3, §28.3; D98 – D104):
+  - `patients`, numbered per clinic from `FIRST_PATIENT_NUMBER` (1001,
+    shown P-1001) by `patient_counters` under a row lock, never by a client.
+    The mobile is required and not unique, so a family shares one (Q7). A
+    date of birth from today back `MAX_PATIENT_AGE` years, in the clinic's
+    timezone. An assigned doctor only from the clinic's active doctors
+    (`DOCTOR_INACTIVE`). Archived, never deleted, and read-only until
+    restored (`PATIENT_ARCHIVED`, D103); archiving and restoring are
+    stamped with when and by whom.
+  - The doctor scope: `patient_doctors`, grown by trigger with the assigned
+    doctor and the doctor who added the patient (D99), and never shrunk. No
+    client reads or writes it. `sees_every_patient()`,
+    `doctor_patient_ids()` and `can_see_patient()`; the policies read the
+    scope once per statement.
+  - `patient_alerts` (allergies, conditions, medications): read with
+    `visits.view` and written with `visits.edit`, within the scope. One
+    active alert per label and kind; turned off, never deleted.
+  - `create_patient` (the number, the patient and the access list, in one
+    transaction); `import_patients`, the owner's batch numbered in file
+    order, all or none (the plan's R4.8 function, so no later migration
+    renumbers); `search_patients`, run as the caller, best match first —
+    number, mobile digits, then names that start with the words, hold them,
+    or come close by trigram — and newest first with nothing typed (D104).
+  - Trigram indexes on the name and the mobile, beside `(clinic_id, phone)`
+    and `(clinic_id, archived_at)`.
+- Constants: `GENDERS`, `ALERT_KINDS` (statuses), `FIRST_PATIENT_NUMBER`
+  (seeds), `MAX_PATIENT_AGE` and the notes and alert text limits (limits),
+  with their error wordings.
+
+### Changed
+- Adding or editing a patient needs seeing them (D102):
+  `PERMISSION_DEPENDENCIES` and `permissions_are_valid` both gain
+  `patients.create`/`patients.edit` → `patients.view`. Memberships that held
+  either without it are given it. The catalogue's contract test now reads
+  the latest definition (`latestFunctionBody`).
+- Plan: D98 – D104 recorded.
+  - §8.2 rule 2, §10.1 – §10.3, §27.3, §27.4, §28.3, §29 and §30 updated.
+    Search and the mobile match travel in the body (D98).
+  - The later phases' rows now name their part of the patients list and
+    profile (D101), and R5.1 refuses booking an archived patient.
+
+### Validation
+- Typecheck, lint, format check passed.
+- Unit and integration tests passed (1684), coverage 100%. The integration
+  test against the local Supabase covers:
+  - numbers in order, once each when added at the same moment, per clinic;
+  - families sharing a mobile;
+  - the doctor scope: assigned, adder, others; owner and staff; `can_see_patient`;
+    only growing;
+  - the date of birth and assigned-doctor checks;
+  - archive, read-only and restore;
+  - search order, fuzzy, digits, number, paging and the doctor's own;
+  - alerts by permission and scope, unique while active;
+  - import order, all or none, owner only;
+  - a view-only clinic writing nothing.
+- Tenant isolation covers `patients` and `patient_alerts`, and the counter
+  and access list stay unreachable.
+- Build passed; E2E passed (team screens, phone and desktop), axe clean.
+
+### Blockers
+- None.
