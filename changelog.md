@@ -1047,3 +1047,47 @@ appended and never rewritten (AGENTS.md §33).
 
 ### Blockers
 - None.
+
+## 2026-10-03 — R3.5, accepting an invite
+
+### Added
+- Accept an invite — `/accept-invite` (plan §8.5, D91, D92): the emailed
+  link carries its token in the address's fragment — never sent to a server,
+  never in a log — and the screen takes it and wipes it from the address at
+  once. It names the clinic and the role; the person confirms their name,
+  adds their mobile and chooses a password (an existing account too, D91),
+  and lands on Home signed in as themselves, whoever was signed in on the
+  device before (D92). A link spent, revoked or run out says so, with the way
+  back to sign in; one that could not be opened offers Try again.
+- `src/features/team/accept.ts`: `previewInvite`, and `acceptInvite` — the
+  mobile checked against every other account first (Auth's own refusal says
+  only that it failed), the password and mobile set and the email confirmed
+  through the admin API, `accept_invite`, the audit row (`STATUS_CHANGE`), and
+  a fresh session with every other one ended. `POST /api/auth/accept-invite`
+  (through `withSessionRoute`: cookies, never a token in the body) and
+  `POST /api/auth/accept-invite/preview` (the token in the body), added to
+  plan §30.
+- `acceptInviteSchema`, `invitePreviewSchema`; `tenantOf` (the tenant a
+  session acts as, now also what `withClinicRoute` builds); `freshSession`
+  shared from the password module.
+- Plan D91, D92.
+
+### Changed
+- The invite email's link carries its token in the fragment (`#token=`), not
+  the query string.
+
+### Validation
+- Typecheck, lint, format check passed.
+- Unit and integration tests passed (1551), coverage 100% — the integration
+  test against the local Supabase: the link names the clinic, the role and
+  the person; accepting sets the password and mobile, joins with the invited
+  permissions and job title, audits it, and signs in by email and by mobile —
+  once; an existing account's old password stops working and the new one
+  works (D91); a link run out, and a mobile another account has, refused in
+  words, the invite still open after.
+- Build passed; E2E passed (64, phone and desktop), axe clean —
+  `tests/e2e/accept-invite.spec.ts`: the invitee joins on a device the owner
+  was signed in on, and lands on Home as themselves.
+
+### Blockers
+- None.
