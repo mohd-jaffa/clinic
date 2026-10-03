@@ -1,0 +1,829 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-03T07:06:08.685Z",
+  "title": "Design System: ClinicDesk",
+  "extensions": {
+    "themes": {
+      "light": ":root",
+      "darkDevice": "@media (prefers-color-scheme: dark) { :root:not([data-theme=\"light\"]) }",
+      "darkChosen": ":root[data-theme=\"dark\"]",
+      "note": "Frontmatter -dark keys are the dark values of the same CSS variables; the two dark blocks are kept identical by tests/contract/design-tokens.test.ts."
+    },
+    "colorMeta": {
+      "ground": {
+        "role": "neutral",
+        "displayName": "Sage Ground",
+        "canonical": "oklch(0.959 0.008 145.5)",
+        "tonalRamp": [
+          "oklch(0.15 0.008 145.5)",
+          "oklch(0.26 0.008 145.5)",
+          "oklch(0.37 0.008 145.5)",
+          "oklch(0.48 0.008 145.5)",
+          "oklch(0.6 0.008 145.5)",
+          "oklch(0.72 0.008 145.5)",
+          "oklch(0.84 0.008 145.5)",
+          "oklch(0.95 0.008 145.5)"
+        ],
+        "cssVar": "--ground",
+        "theme": "light"
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Surface White",
+        "canonical": "oklch(1.000 0.000 89.9)",
+        "tonalRamp": [
+          "oklch(0.15 0.000 89.9)",
+          "oklch(0.26 0.000 89.9)",
+          "oklch(0.37 0.000 89.9)",
+          "oklch(0.48 0.000 89.9)",
+          "oklch(0.6 0.000 89.9)",
+          "oklch(0.72 0.000 89.9)",
+          "oklch(0.84 0.000 89.9)",
+          "oklch(0.95 0.000 89.9)"
+        ],
+        "cssVar": "--surface",
+        "theme": "light"
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Green Ink",
+        "canonical": "oklch(0.240 0.032 159.8)",
+        "tonalRamp": [
+          "oklch(0.15 0.032 159.8)",
+          "oklch(0.26 0.032 159.8)",
+          "oklch(0.37 0.032 159.8)",
+          "oklch(0.48 0.032 159.8)",
+          "oklch(0.6 0.032 159.8)",
+          "oklch(0.72 0.032 159.8)",
+          "oklch(0.84 0.032 159.8)",
+          "oklch(0.95 0.032 159.8)"
+        ],
+        "cssVar": "--ink",
+        "theme": "light"
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Moss Muted",
+        "canonical": "oklch(0.444 0.030 157.2)",
+        "tonalRamp": [
+          "oklch(0.15 0.030 157.2)",
+          "oklch(0.26 0.030 157.2)",
+          "oklch(0.37 0.030 157.2)",
+          "oklch(0.48 0.030 157.2)",
+          "oklch(0.6 0.030 157.2)",
+          "oklch(0.72 0.030 157.2)",
+          "oklch(0.84 0.030 157.2)",
+          "oklch(0.95 0.030 157.2)"
+        ],
+        "cssVar": "--muted",
+        "theme": "light"
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "oklch(0.896 0.017 151.1)",
+        "tonalRamp": [
+          "oklch(0.15 0.017 151.1)",
+          "oklch(0.26 0.017 151.1)",
+          "oklch(0.37 0.017 151.1)",
+          "oklch(0.48 0.017 151.1)",
+          "oklch(0.6 0.017 151.1)",
+          "oklch(0.72 0.017 151.1)",
+          "oklch(0.84 0.017 151.1)",
+          "oklch(0.95 0.017 151.1)"
+        ],
+        "cssVar": "--line",
+        "theme": "light"
+      },
+      "land": {
+        "role": "primary",
+        "displayName": "Leaf Land",
+        "canonical": "oklch(0.794 0.099 155.2)",
+        "tonalRamp": [
+          "oklch(0.15 0.099 155.2)",
+          "oklch(0.26 0.099 155.2)",
+          "oklch(0.37 0.099 155.2)",
+          "oklch(0.48 0.099 155.2)",
+          "oklch(0.6 0.099 155.2)",
+          "oklch(0.72 0.099 155.2)",
+          "oklch(0.84 0.099 155.2)",
+          "oklch(0.95 0.099 155.2)"
+        ],
+        "cssVar": "--land",
+        "theme": "light"
+      },
+      "land-muted": {
+        "role": "primary",
+        "displayName": "Land Muted",
+        "canonical": "oklch(0.395 0.073 156.6)",
+        "tonalRamp": [
+          "oklch(0.15 0.073 156.6)",
+          "oklch(0.26 0.073 156.6)",
+          "oklch(0.37 0.073 156.6)",
+          "oklch(0.48 0.073 156.6)",
+          "oklch(0.6 0.073 156.6)",
+          "oklch(0.72 0.073 156.6)",
+          "oklch(0.84 0.073 156.6)",
+          "oklch(0.95 0.073 156.6)"
+        ],
+        "cssVar": "--land-muted",
+        "theme": "light"
+      },
+      "action": {
+        "role": "primary",
+        "displayName": "Clinic Green",
+        "canonical": "oklch(0.467 0.097 157.5)",
+        "tonalRamp": [
+          "oklch(0.15 0.097 157.5)",
+          "oklch(0.26 0.097 157.5)",
+          "oklch(0.37 0.097 157.5)",
+          "oklch(0.48 0.097 157.5)",
+          "oklch(0.6 0.097 157.5)",
+          "oklch(0.72 0.097 157.5)",
+          "oklch(0.84 0.097 157.5)",
+          "oklch(0.95 0.097 157.5)"
+        ],
+        "cssVar": "--action",
+        "theme": "light"
+      },
+      "coral": {
+        "role": "tertiary",
+        "displayName": "Attention Coral",
+        "canonical": "oklch(0.536 0.166 32.0)",
+        "tonalRamp": [
+          "oklch(0.15 0.160 32.0)",
+          "oklch(0.26 0.160 32.0)",
+          "oklch(0.37 0.160 32.0)",
+          "oklch(0.48 0.160 32.0)",
+          "oklch(0.6 0.160 32.0)",
+          "oklch(0.72 0.160 32.0)",
+          "oklch(0.84 0.160 32.0)",
+          "oklch(0.95 0.160 32.0)"
+        ],
+        "cssVar": "--coral",
+        "theme": "light"
+      },
+      "coral-soft": {
+        "role": "tertiary",
+        "displayName": "Coral Wash",
+        "canonical": "oklch(0.940 0.023 34.3)",
+        "tonalRamp": [
+          "oklch(0.15 0.023 34.3)",
+          "oklch(0.26 0.023 34.3)",
+          "oklch(0.37 0.023 34.3)",
+          "oklch(0.48 0.023 34.3)",
+          "oklch(0.6 0.023 34.3)",
+          "oklch(0.72 0.023 34.3)",
+          "oklch(0.84 0.023 34.3)",
+          "oklch(0.95 0.023 34.3)"
+        ],
+        "cssVar": "--coral-soft",
+        "theme": "light"
+      },
+      "action-soft": {
+        "role": "primary",
+        "displayName": "Action Wash",
+        "canonical": "oklch(0.938 0.011 167.8)",
+        "tonalRamp": [
+          "oklch(0.15 0.011 167.8)",
+          "oklch(0.26 0.011 167.8)",
+          "oklch(0.37 0.011 167.8)",
+          "oklch(0.48 0.011 167.8)",
+          "oklch(0.6 0.011 167.8)",
+          "oklch(0.72 0.011 167.8)",
+          "oklch(0.84 0.011 167.8)",
+          "oklch(0.95 0.011 167.8)"
+        ],
+        "cssVar": "--action-soft",
+        "theme": "light"
+      },
+      "edge": {
+        "role": "neutral",
+        "displayName": "Field Edge",
+        "canonical": "oklch(0.611 0.034 158.5)",
+        "tonalRamp": [
+          "oklch(0.15 0.034 158.5)",
+          "oklch(0.26 0.034 158.5)",
+          "oklch(0.37 0.034 158.5)",
+          "oklch(0.48 0.034 158.5)",
+          "oklch(0.6 0.034 158.5)",
+          "oklch(0.72 0.034 158.5)",
+          "oklch(0.84 0.034 158.5)",
+          "oklch(0.95 0.034 158.5)"
+        ],
+        "cssVar": "--edge",
+        "theme": "light"
+      },
+      "ground-dark": {
+        "role": "neutral",
+        "displayName": "Sage Ground (dark)",
+        "canonical": "oklch(0.196 0.019 164.5)",
+        "tonalRamp": [
+          "oklch(0.15 0.019 164.5)",
+          "oklch(0.26 0.019 164.5)",
+          "oklch(0.37 0.019 164.5)",
+          "oklch(0.48 0.019 164.5)",
+          "oklch(0.6 0.019 164.5)",
+          "oklch(0.72 0.019 164.5)",
+          "oklch(0.84 0.019 164.5)",
+          "oklch(0.95 0.019 164.5)"
+        ],
+        "cssVar": "--ground",
+        "theme": "dark"
+      },
+      "surface-dark": {
+        "role": "neutral",
+        "displayName": "Surface White (dark)",
+        "canonical": "oklch(0.240 0.026 160.3)",
+        "tonalRamp": [
+          "oklch(0.15 0.026 160.3)",
+          "oklch(0.26 0.026 160.3)",
+          "oklch(0.37 0.026 160.3)",
+          "oklch(0.48 0.026 160.3)",
+          "oklch(0.6 0.026 160.3)",
+          "oklch(0.72 0.026 160.3)",
+          "oklch(0.84 0.026 160.3)",
+          "oklch(0.95 0.026 160.3)"
+        ],
+        "cssVar": "--surface",
+        "theme": "dark"
+      },
+      "ink-dark": {
+        "role": "neutral",
+        "displayName": "Green Ink (dark)",
+        "canonical": "oklch(0.946 0.018 155.8)",
+        "tonalRamp": [
+          "oklch(0.15 0.018 155.8)",
+          "oklch(0.26 0.018 155.8)",
+          "oklch(0.37 0.018 155.8)",
+          "oklch(0.48 0.018 155.8)",
+          "oklch(0.6 0.018 155.8)",
+          "oklch(0.72 0.018 155.8)",
+          "oklch(0.84 0.018 155.8)",
+          "oklch(0.95 0.018 155.8)"
+        ],
+        "cssVar": "--ink",
+        "theme": "dark"
+      },
+      "muted-dark": {
+        "role": "neutral",
+        "displayName": "Moss Muted (dark)",
+        "canonical": "oklch(0.775 0.030 156.4)",
+        "tonalRamp": [
+          "oklch(0.15 0.030 156.4)",
+          "oklch(0.26 0.030 156.4)",
+          "oklch(0.37 0.030 156.4)",
+          "oklch(0.48 0.030 156.4)",
+          "oklch(0.6 0.030 156.4)",
+          "oklch(0.72 0.030 156.4)",
+          "oklch(0.84 0.030 156.4)",
+          "oklch(0.95 0.030 156.4)"
+        ],
+        "cssVar": "--muted",
+        "theme": "dark"
+      },
+      "line-dark": {
+        "role": "neutral",
+        "displayName": "Hairline (dark)",
+        "canonical": "oklch(0.324 0.031 158.7)",
+        "tonalRamp": [
+          "oklch(0.15 0.031 158.7)",
+          "oklch(0.26 0.031 158.7)",
+          "oklch(0.37 0.031 158.7)",
+          "oklch(0.48 0.031 158.7)",
+          "oklch(0.6 0.031 158.7)",
+          "oklch(0.72 0.031 158.7)",
+          "oklch(0.84 0.031 158.7)",
+          "oklch(0.95 0.031 158.7)"
+        ],
+        "cssVar": "--line",
+        "theme": "dark"
+      },
+      "land-dark": {
+        "role": "primary",
+        "displayName": "Leaf Land (dark)",
+        "canonical": "oklch(0.474 0.084 156.3)",
+        "tonalRamp": [
+          "oklch(0.15 0.084 156.3)",
+          "oklch(0.26 0.084 156.3)",
+          "oklch(0.37 0.084 156.3)",
+          "oklch(0.48 0.084 156.3)",
+          "oklch(0.6 0.084 156.3)",
+          "oklch(0.72 0.084 156.3)",
+          "oklch(0.84 0.084 156.3)",
+          "oklch(0.95 0.084 156.3)"
+        ],
+        "cssVar": "--land",
+        "theme": "dark"
+      },
+      "land-muted-dark": {
+        "role": "primary",
+        "displayName": "Land Muted (dark)",
+        "canonical": "oklch(0.905 0.040 156.8)",
+        "tonalRamp": [
+          "oklch(0.15 0.040 156.8)",
+          "oklch(0.26 0.040 156.8)",
+          "oklch(0.37 0.040 156.8)",
+          "oklch(0.48 0.040 156.8)",
+          "oklch(0.6 0.040 156.8)",
+          "oklch(0.72 0.040 156.8)",
+          "oklch(0.84 0.040 156.8)",
+          "oklch(0.95 0.040 156.8)"
+        ],
+        "cssVar": "--land-muted",
+        "theme": "dark"
+      },
+      "action-dark": {
+        "role": "primary",
+        "displayName": "Clinic Green (dark)",
+        "canonical": "oklch(0.799 0.110 156.2)",
+        "tonalRamp": [
+          "oklch(0.15 0.110 156.2)",
+          "oklch(0.26 0.110 156.2)",
+          "oklch(0.37 0.110 156.2)",
+          "oklch(0.48 0.110 156.2)",
+          "oklch(0.6 0.110 156.2)",
+          "oklch(0.72 0.110 156.2)",
+          "oklch(0.84 0.110 156.2)",
+          "oklch(0.95 0.110 156.2)"
+        ],
+        "cssVar": "--action",
+        "theme": "dark"
+      },
+      "coral-dark": {
+        "role": "tertiary",
+        "displayName": "Attention Coral (dark)",
+        "canonical": "oklch(0.760 0.145 33.4)",
+        "tonalRamp": [
+          "oklch(0.15 0.145 33.4)",
+          "oklch(0.26 0.145 33.4)",
+          "oklch(0.37 0.145 33.4)",
+          "oklch(0.48 0.145 33.4)",
+          "oklch(0.6 0.145 33.4)",
+          "oklch(0.72 0.145 33.4)",
+          "oklch(0.84 0.145 33.4)",
+          "oklch(0.95 0.145 33.4)"
+        ],
+        "cssVar": "--coral",
+        "theme": "dark"
+      },
+      "on-coral-dark": {
+        "role": "tertiary",
+        "displayName": "on-coral (dark)",
+        "canonical": "oklch(0.205 0.051 35.7)",
+        "tonalRamp": [
+          "oklch(0.15 0.051 35.7)",
+          "oklch(0.26 0.051 35.7)",
+          "oklch(0.37 0.051 35.7)",
+          "oklch(0.48 0.051 35.7)",
+          "oklch(0.6 0.051 35.7)",
+          "oklch(0.72 0.051 35.7)",
+          "oklch(0.84 0.051 35.7)",
+          "oklch(0.95 0.051 35.7)"
+        ],
+        "cssVar": "--on-coral",
+        "theme": "dark"
+      },
+      "coral-soft-dark": {
+        "role": "tertiary",
+        "displayName": "Coral Wash (dark)",
+        "canonical": "oklch(0.293 0.033 31.1)",
+        "tonalRamp": [
+          "oklch(0.15 0.033 31.1)",
+          "oklch(0.26 0.033 31.1)",
+          "oklch(0.37 0.033 31.1)",
+          "oklch(0.48 0.033 31.1)",
+          "oklch(0.6 0.033 31.1)",
+          "oklch(0.72 0.033 31.1)",
+          "oklch(0.84 0.033 31.1)",
+          "oklch(0.95 0.033 31.1)"
+        ],
+        "cssVar": "--coral-soft",
+        "theme": "dark"
+      },
+      "action-soft-dark": {
+        "role": "primary",
+        "displayName": "Action Wash (dark)",
+        "canonical": "oklch(0.317 0.037 158.6)",
+        "tonalRamp": [
+          "oklch(0.15 0.037 158.6)",
+          "oklch(0.26 0.037 158.6)",
+          "oklch(0.37 0.037 158.6)",
+          "oklch(0.48 0.037 158.6)",
+          "oklch(0.6 0.037 158.6)",
+          "oklch(0.72 0.037 158.6)",
+          "oklch(0.84 0.037 158.6)",
+          "oklch(0.95 0.037 158.6)"
+        ],
+        "cssVar": "--action-soft",
+        "theme": "dark"
+      },
+      "edge-dark": {
+        "role": "neutral",
+        "displayName": "Field Edge (dark)",
+        "canonical": "oklch(0.536 0.041 157.1)",
+        "tonalRamp": [
+          "oklch(0.15 0.041 157.1)",
+          "oklch(0.26 0.041 157.1)",
+          "oklch(0.37 0.041 157.1)",
+          "oklch(0.48 0.041 157.1)",
+          "oklch(0.6 0.041 157.1)",
+          "oklch(0.72 0.041 157.1)",
+          "oklch(0.84 0.041 157.1)",
+          "oklch(0.95 0.041 157.1)"
+        ],
+        "cssVar": "--edge",
+        "theme": "dark"
+      },
+      "land-ink": {
+        "role": "primary",
+        "displayName": "Land Ink",
+        "cssVar": "--land-ink",
+        "theme": "light",
+        "note": "Same value as ink in light."
+      },
+      "land-ink-dark": {
+        "role": "primary",
+        "displayName": "Land Ink (dark)",
+        "cssVar": "--land-ink",
+        "theme": "dark"
+      },
+      "chip": {
+        "role": "secondary",
+        "displayName": "Ink Chip",
+        "cssVar": "--chip",
+        "theme": "light",
+        "canonical": "oklch(0.240 0.032 159.8)",
+        "tonalRamp": [
+          "oklch(0.15 0.032 159.8)",
+          "oklch(0.26 0.032 159.8)",
+          "oklch(0.37 0.032 159.8)",
+          "oklch(0.48 0.032 159.8)",
+          "oklch(0.6 0.032 159.8)",
+          "oklch(0.72 0.032 159.8)",
+          "oklch(0.84 0.032 159.8)",
+          "oklch(0.95 0.032 159.8)"
+        ]
+      },
+      "chip-dark": {
+        "role": "secondary",
+        "displayName": "Ink Chip (dark)",
+        "cssVar": "--chip",
+        "theme": "dark",
+        "canonical": "oklch(0.946 0.018 155.8)",
+        "tonalRamp": [
+          "oklch(0.15 0.018 155.8)",
+          "oklch(0.26 0.018 155.8)",
+          "oklch(0.37 0.018 155.8)",
+          "oklch(0.48 0.018 155.8)",
+          "oklch(0.6 0.018 155.8)",
+          "oklch(0.72 0.018 155.8)",
+          "oklch(0.84 0.018 155.8)",
+          "oklch(0.95 0.018 155.8)"
+        ]
+      },
+      "on-action": {
+        "role": "neutral",
+        "displayName": "Text on action",
+        "cssVar": "--on-action",
+        "theme": "light"
+      },
+      "on-chip": {
+        "role": "neutral",
+        "displayName": "Text on chip",
+        "cssVar": "--on-chip",
+        "theme": "light"
+      },
+      "on-coral": {
+        "role": "neutral",
+        "displayName": "Text on coral",
+        "cssVar": "--on-coral",
+        "theme": "light"
+      },
+      "on-action-dark": {
+        "role": "neutral",
+        "displayName": "Text on action (dark)",
+        "cssVar": "--on-action",
+        "theme": "dark"
+      },
+      "on-chip-dark": {
+        "role": "neutral",
+        "displayName": "Text on chip (dark)",
+        "cssVar": "--on-chip",
+        "theme": "dark"
+      },
+      "scrim": {
+        "role": "neutral",
+        "displayName": "Scrim",
+        "cssVar": "--scrim",
+        "theme": "light"
+      },
+      "scrim-dark": {
+        "role": "neutral",
+        "displayName": "Scrim (dark)",
+        "cssVar": "--scrim",
+        "theme": "dark"
+      }
+    },
+    "typographyMeta": {
+      "display-lg": {
+        "displayName": "Display large",
+        "purpose": "The Lake token numeral."
+      },
+      "display": {
+        "displayName": "Display",
+        "purpose": "Page title from 768 px; numbers on the land; account titles and line from 1024 px."
+      },
+      "token": {
+        "displayName": "Token",
+        "purpose": "A row lead numeral (RowToken)."
+      },
+      "heading": {
+        "displayName": "Heading",
+        "purpose": "Page title on a phone; stat on the ground; SystemNotice title."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Section headings, sheet and card titles."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Everything read; typed text; capsule labels. 17 px."
+      },
+      "small": {
+        "displayName": "Small",
+        "purpose": "Row subtitles, field labels, hints, errors, bands, the Pin."
+      },
+      "caption": {
+        "displayName": "Caption",
+        "purpose": "Status pills, calendar weekday heads, request references."
+      },
+      "tab": {
+        "displayName": "Tab",
+        "purpose": "Place names in the bottom bar and rail."
+      }
+    },
+    "fonts": [
+      {
+        "family": "Figtree",
+        "source": "next/font/google (src/app/fonts.ts)",
+        "variable": "--font-figtree",
+        "weights": [400, 700],
+        "subsets": ["latin", "latin-ext"]
+      }
+    ],
+    "shadows": [
+      {
+        "name": "raised",
+        "value": "0 18px 40px -18px rgb(var(--shadow-tone) / 0.35)",
+        "purpose": "Top-layer only: Sheet, Dialog, response notice, SelectMenu, DatePicker and AccountMenu popovers."
+      }
+    ],
+    "motion": [
+      {
+        "name": "duration-map",
+        "value": "260ms",
+        "purpose": "The one duration for every transition and arrival."
+      },
+      {
+        "name": "ease-map",
+        "value": "cubic-bezier(0.22, 1, 0.36, 1)",
+        "purpose": "The one curve; no overshoot."
+      },
+      {
+        "name": "rise-in",
+        "value": "translateY(100%) -> 0",
+        "purpose": "Phone sheets and the phone Quick Actions lobe."
+      },
+      {
+        "name": "panel-in",
+        "value": "translateX(100%) -> 0",
+        "purpose": "Sheets as side panels from 768 px."
+      },
+      {
+        "name": "card-in / card-out",
+        "value": "opacity 0, translateY(12px)",
+        "purpose": "Dialog cards and the response notice."
+      },
+      {
+        "name": "drop-in",
+        "value": "opacity 0, translateY(-4px)",
+        "purpose": "Popovers and the Quick Actions lobe from 768 px."
+      },
+      {
+        "name": "notice-countdown",
+        "value": "scaleX(1 -> 0), linear, --notice-life",
+        "purpose": "The notice clock; kept under reduced motion."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "0.01ms",
+        "purpose": "Everything instant under prefers-reduced-motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "640px"
+      },
+      {
+        "name": "md",
+        "value": "768px (48rem)"
+      },
+      {
+        "name": "lg",
+        "value": "1024px"
+      }
+    ],
+    "coastlines": {
+      "source": "src/assets/coastlines.ts",
+      "paths": {
+        "phone": "390x34",
+        "wide": "1200x34",
+        "side": "34x1200",
+        "band": "1200x12"
+      }
+    },
+    "device": {
+      "safeArea": ["--safe-top", "--safe-right", "--safe-bottom", "--safe-left"],
+      "keyboard": "--keyboard-inset",
+      "bottomBar": "--bottom-bar-offset (5.5rem under 768 px when the bottom bar is present)"
+    }
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Button variant primary: the green capsule with its ink chip trailing; the one thing to do.",
+      "html": "<button class=\"ds-btn-primary\">Sign in<span class=\"ds-chip\" aria-hidden=\"true\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M5 12h14\"/><path d=\"m12 5 7 7-7 7\"/></svg></span></button>",
+      "css": ".ds-btn-primary{position:relative;display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 49px 0 18px;border:0;border-radius:9999px;background:var(--action);color:var(--on-action);font:700 1.0625rem/1.5 var(--font-sans,Figtree,system-ui,sans-serif);white-space:nowrap;cursor:pointer;transition:padding 260ms cubic-bezier(0.22,1,0.36,1),transform 260ms cubic-bezier(0.22,1,0.36,1)}.ds-btn-primary .ds-chip{position:absolute;top:50%;left:calc(100% - 39px);transform:translateY(-50%);display:grid;place-items:center;width:34px;height:34px;border-radius:9999px;background:var(--chip);color:var(--on-chip);transition:left 260ms cubic-bezier(0.22,1,0.36,1)}.ds-btn-primary:active{transform:scale(.98)}.ds-btn-primary:focus-visible{outline:3px solid var(--action);outline-offset:3px}"
+    },
+    {
+      "name": "Danger Button",
+      "kind": "button",
+      "refersTo": "button-danger",
+      "description": "Button variant danger: the coral capsule, for what cannot be undone.",
+      "html": "<button class=\"ds-btn-danger\">Sign out<span class=\"ds-chip\" aria-hidden=\"true\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M5 12h14\"/><path d=\"m12 5 7 7-7 7\"/></svg></span></button>",
+      "css": ".ds-btn-danger{position:relative;display:inline-flex;align-items:center;min-height:44px;padding:0 49px 0 18px;border:0;border-radius:9999px;background:var(--coral);color:var(--on-coral);font:700 1.0625rem/1.5 var(--font-sans,Figtree,system-ui,sans-serif);cursor:pointer;transition:transform 260ms cubic-bezier(0.22,1,0.36,1)}.ds-btn-danger .ds-chip{position:absolute;top:50%;left:calc(100% - 39px);transform:translateY(-50%);display:grid;place-items:center;width:34px;height:34px;border-radius:9999px;background:var(--on-coral);color:var(--coral)}.ds-btn-danger:active{transform:scale(.98)}.ds-btn-danger:focus-visible{outline:3px solid var(--action);outline-offset:3px}"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Button variant secondary: the ink outline capsule beside a primary.",
+      "html": "<button class=\"ds-btn-secondary\">Set up your clinic</button>",
+      "css": ".ds-btn-secondary{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 18px;border:0;border-radius:9999px;background:transparent;color:var(--ink);box-shadow:inset 0 0 0 2px var(--ink);font:700 1.0625rem/1.5 var(--font-sans,Figtree,system-ui,sans-serif);cursor:pointer;transition:background-color 260ms cubic-bezier(0.22,1,0.36,1)}.ds-btn-secondary:hover{background:color-mix(in srgb,var(--ink) 5%,transparent)}.ds-btn-secondary:focus-visible{outline:3px solid var(--action);outline-offset:3px}"
+    },
+    {
+      "name": "Quiet Button",
+      "kind": "button",
+      "refersTo": "button-quiet",
+      "description": "Button variant quiet: words alone, for a way out.",
+      "html": "<button class=\"ds-btn-quiet\">Cancel</button>",
+      "css": ".ds-btn-quiet{display:inline-flex;align-items:center;min-height:44px;padding:0 18px;border:0;border-radius:9999px;background:transparent;color:var(--action);font:700 1.0625rem/1.5 var(--font-sans,Figtree,system-ui,sans-serif);cursor:pointer;transition:background-color 260ms cubic-bezier(0.22,1,0.36,1)}.ds-btn-quiet:hover{background:var(--action-soft)}.ds-btn-quiet:focus-visible{outline:3px solid var(--action);outline-offset:3px}"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "field",
+      "description": "TextField in the FIELD_WELL capsule: surface, edge border, coral when invalid.",
+      "html": "<label class=\"ds-field\"><span class=\"ds-field-label\">Email or mobile number <span class=\"ds-req\">*</span></span><input class=\"ds-field-input\" type=\"text\"></label>",
+      "css": ".ds-field{display:block;font-family:var(--font-sans,Figtree,system-ui,sans-serif)}.ds-field-label{display:block;margin-bottom:6px;font-size:.9375rem;font-weight:700;color:var(--ink)}.ds-req{color:var(--muted)}.ds-field-input{width:100%;min-height:48px;padding:10px 20px;border:1px solid var(--edge);border-radius:9999px;background:var(--surface);color:var(--ink);font-size:1.0625rem;font-variant-numeric:tabular-nums;caret-color:var(--action);transition:border-color 150ms}.ds-field-input:focus-visible{outline:3px solid var(--action);outline-offset:3px}.ds-field-input[aria-invalid=true]{border-color:var(--coral)}"
+    },
+    {
+      "name": "Menu List",
+      "kind": "nav",
+      "refersTo": "row-menu",
+      "description": "RowList look menu with Row look menu and bare RowIcon (D75): one list on the ground, parted by hairlines.",
+      "html": "<ul class=\"ds-menu\"><li class=\"ds-menu-row\"><svg class=\"ds-menu-icon\" width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.25\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12.6 2.6A2 2 0 0 0 11.2 2H4a2 2 0 0 0-2 2v7.2a2 2 0 0 0 .6 1.4l8.7 8.7a2.4 2.4 0 0 0 3.4 0l6.6-6.6a2.4 2.4 0 0 0 0-3.4z\"/></svg><span class=\"ds-menu-text\"><b>Price list</b><small>Services and what they cost</small></span><span class=\"ds-chev\">&#8250;</span></li><li class=\"ds-menu-row\"><svg class=\"ds-menu-icon ds-coral\" width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.25\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M3 6h18\"/><path d=\"M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6\"/><path d=\"M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2\"/></svg><span class=\"ds-menu-text\"><b>Delete clinic</b><small>Ask to delete the clinic</small></span><span class=\"ds-chev\">&#8250;</span></li></ul>",
+      "css": ".ds-menu{list-style:none;margin:0;padding:0;border-block:1px solid var(--line);background:var(--ground);font-family:var(--font-sans,Figtree,system-ui,sans-serif)}.ds-menu-row{display:flex;align-items:center;gap:12px;min-height:64px;padding:8px 4px 8px 0;color:var(--ink);cursor:pointer;transition:background-color 150ms}.ds-menu-row+.ds-menu-row{border-top:1px solid var(--line)}.ds-menu-row:hover{background:color-mix(in srgb,var(--ink) 5%,transparent)}.ds-menu-icon{width:44px;flex-shrink:0;color:var(--ink)}.ds-coral{color:var(--coral)}.ds-menu-text{flex:1;display:flex;flex-direction:column}.ds-menu-text small{font-size:.9375rem;color:var(--muted)}.ds-chev{margin-right:6px;font-size:1.5rem;color:var(--muted)}"
+    },
+    {
+      "name": "Surface Row",
+      "kind": "card",
+      "refersTo": "row-surface",
+      "description": "Row look surface: a person or record standing on the ground, with a token lead.",
+      "html": "<div class=\"ds-row\"><span class=\"ds-token\">07</span><span class=\"ds-row-text\"><b>Rohan Mehta</b><small>Walk-in · 6 min</small></span></div>",
+      "css": ".ds-row{display:flex;align-items:center;gap:12px;min-height:64px;padding:10px 8px 10px 14px;border-radius:1.375rem;background:var(--surface);color:var(--ink);font-family:var(--font-sans,Figtree,system-ui,sans-serif);transition:box-shadow 150ms}.ds-row:hover{box-shadow:inset 0 0 0 2px var(--line)}.ds-token{min-width:40px;font-size:1.875rem;line-height:.95;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums}.ds-row-text{display:flex;flex-direction:column}.ds-row-text small{font-size:.9375rem;color:var(--muted);font-variant-numeric:tabular-nums}"
+    },
+    {
+      "name": "Coast Header with Pin",
+      "kind": "custom",
+      "refersTo": "land-header",
+      "description": "CoastHeader: the land leading a screen, its edge an authored coastline, a coral Pin on the coastline.",
+      "html": "<div class=\"ds-coast\"><div class=\"ds-land\"><h1>Good morning, Asha</h1><p>Smile Care Dental</p></div><div class=\"ds-edge\"><svg viewBox=\"0 0 390 34\" preserveAspectRatio=\"none\"><path d=\"M0 0H390V12C350 28 300 33 250 25C200 17 170 8 120 14C80 19 50 31 0 26Z\"/></svg><span class=\"ds-pin\">3 to bill</span></div></div>",
+      "css": ".ds-coast{font-family:var(--font-sans,Figtree,system-ui,sans-serif);background:var(--ground)}.ds-land{background:var(--land);color:var(--land-ink);padding:20px 16px 8px}.ds-land h1{margin:0;font-size:1.625rem;line-height:1.15;font-weight:700;letter-spacing:-.01em}.ds-land p{margin:6px 0 16px;color:var(--land-muted)}.ds-edge{position:relative}.ds-edge svg{display:block;width:100%;height:34px;fill:var(--land)}.ds-pin{position:absolute;right:16px;top:4px;display:inline-flex;align-items:center;min-height:32px;padding:4px 14px 4px 10px;border-radius:9999px;background:var(--coral);color:var(--on-coral);font-size:.9375rem;font-weight:700}"
+    },
+    {
+      "name": "Bottom Bar with Centre Plus",
+      "kind": "nav",
+      "refersTo": "add-button-bar",
+      "description": "AppShell phone bottom bar: four places and the raised land ＋ in the centre; the current place on a land patch.",
+      "html": "<nav class=\"ds-bar\"><a class=\"ds-place ds-on\"><span class=\"ds-patch\"><svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.25\"><path d=\"M3 10l9-7 9 7v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z\"/></svg></span>Home</a><a class=\"ds-place\"><span class=\"ds-patch\"><svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.25\"><path d=\"M10 6h11M10 12h11M10 18h11M4 6h1M4 12h1M4 18h1\"/></svg></span>Queue</a><button class=\"ds-add\"><span class=\"ds-plus\"><svg width=\"28\" height=\"28\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\"><path d=\"M12 5v14M5 12h14\"/></svg></span>Add</button><a class=\"ds-place\"><span class=\"ds-patch\"><svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.25\"><circle cx=\"9\" cy=\"7\" r=\"4\"/><path d=\"M2 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2\"/></svg></span>Patients</a><a class=\"ds-place\"><span class=\"ds-patch\"><svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.25\" stroke-linecap=\"round\"><path d=\"M4 6h16M4 12h16M4 18h16\"/></svg></span>More</a></nav>",
+      "css": ".ds-bar{display:grid;grid-template-columns:repeat(5,1fr);height:64px;border-top:1px solid var(--line);background:var(--ground);font-family:var(--font-sans,Figtree,system-ui,sans-serif);font-size:.75rem;line-height:1}.ds-place{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:var(--muted);text-decoration:none;cursor:pointer}.ds-patch{display:grid;place-items:center;width:56px;height:32px;border-radius:9999px;transition:background-color 260ms cubic-bezier(0.22,1,0.36,1)}.ds-on{color:var(--ink);font-weight:700}.ds-on .ds-patch{background:var(--land);color:var(--land-ink)}.ds-place:hover .ds-patch{color:var(--ink)}.ds-add{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;padding:0 0 8px;border:0;background:none;color:var(--ink);font:inherit;font-weight:700;cursor:pointer}.ds-plus{display:grid;place-items:center;width:60px;height:60px;border-radius:9999px;background:var(--land);color:var(--land-ink);box-shadow:0 0 0 6px var(--ground);transition:transform 260ms cubic-bezier(0.22,1,0.36,1)}.ds-add:active .ds-plus{transform:scale(.95)}.ds-add:focus-visible,.ds-place:focus-visible{outline:3px solid var(--action);outline-offset:3px}"
+    },
+    {
+      "name": "Status Pill",
+      "kind": "chip",
+      "refersTo": "status-pill-live",
+      "description": "StatusPill: a dot and a word, toned from statuses.ts.",
+      "html": "<span class=\"ds-pill ds-live\"><i></i>Active</span> <span class=\"ds-pill ds-att\"><i></i>View-only</span>",
+      "css": ".ds-pill{display:inline-flex;align-items:center;gap:6px;padding:2px 10px;border-radius:9999px;font:700 .8125rem/1.35 var(--font-sans,Figtree,system-ui,sans-serif)}.ds-pill i{width:6px;height:6px;border-radius:9999px;background:currentColor}.ds-live{background:var(--action-soft);color:var(--action)}.ds-att{background:var(--coral-soft);color:var(--coral)}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Clinic Map",
+    "overview": "Each screen is a guide map. One flat field of leaf green, the **land**, leads the screen and holds its one key fact: a greeting, a screen's title, the app's own line on the account screens. Its edge is a softly swelling **coastline**, never a straight card edge. Everything else sits on the **ground**, a pale sage water in light and a deep green-black in dark. The reader should know in under a second what needs them now, in glare, on a budget phone, with little practice with software.\n\nControls are **capsules**. A primary capsule is green with a round ink **chip** riding its trailing edge; when the thing is live the chip crosses to the leading edge, so the chip's place repeats what the label says. Coral is kept for attention only: an allergy, an amount owed, an ended plan, an action that cannot be undone. The page is flat. Depth appears only on what floats over it in the top layer: sheets, cards, popovers.\n\nThe world refuses the category's white-cards-and-pastel-icon-tiles grid, and cold grey ERP tables. It has no photographs or illustrations; people are initials.",
+    "keyCharacteristics": [
+      "The land leads every signed-in screen and every account screen; its edge is an authored coastline.",
+      "Ground and surface carry everything else; menus are one list on the ground, parted by hairlines.",
+      "Capsule controls with a travelling chip; everything you tap is round-ended and at least 44 px.",
+      "Green, ink and one coral. No yellow, gold, blue or lilac.",
+      "Figtree in two weights; display numerals big, bold and tight.",
+      "One duration (`--duration-map`) and one curve (`--ease-map`), no overshoot; instant under reduced motion.",
+      "Light and dark ship together; every text pair is held to WCAG AA by `tests/contract/design-tokens.test.ts`."
+    ],
+    "rules": [
+      {
+        "name": "The Coral Is Attention Rule",
+        "body": "Coral marks only what must not be missed: an allergy, money owed or to bill, an ended plan or view-only clinic, no connection, an error, an action that cannot be undone. A required-field asterisk is muted, not coral. If a screen's coral is not one of these, remove it.",
+        "section": "colors"
+      },
+      {
+        "name": "The No Gold Rule",
+        "body": "No yellow, gold, blue or lilac anywhere, in either theme (the user's fixed constraint). Warnings use coral and their words, not amber.",
+        "section": "colors"
+      },
+      {
+        "name": "The Never Colour Alone Rule",
+        "body": "Every state that has a colour also has words and an icon or a position: the status pill carries a dot and its word, the band carries its icon and sentence, the capsule's chip changes side. The tone of a status comes from `src/constants/statuses.ts` (`neutral`, `live`, `attention`), never from the screen.",
+        "section": "colors"
+      },
+      {
+        "name": "The Two Weights Rule",
+        "body": "Regular (400) and bold (700) only. Hierarchy comes from size and weight, never from a third weight, italics or capitals. No uppercase labels, no letter-spaced kickers.",
+        "section": "typography"
+      },
+      {
+        "name": "The Tight Numeral Rule",
+        "body": "Numbers that matter (tokens, rupees, counts) are bold, at token size or larger, line-height 0.95, slightly negative tracking, and `tabular-nums`. Any amount, time, phone number or date in a row or field is `tabular-nums`.",
+        "section": "typography"
+      },
+      {
+        "name": "The Sixteen Pixel Floor",
+        "body": "Inputs never fall below 16 px (`font-size: max(1rem, 1em)` in the base layer) so iOS does not zoom.",
+        "section": "typography"
+      },
+      {
+        "name": "The Centre Plus Rule",
+        "body": "On a phone the ＋ is the middle of the bottom bar, a 60 px land chip raised out of its top edge and ringed with ground. It is never moved, hidden by a missing neighbour, or replaced by a floating button. On tablet and desktop the same Quick Actions open from the rail's round ＋ and the sidebar's **Add** (D69).",
+        "section": "layout"
+      },
+      {
+        "name": "The Land Leads Rule",
+        "body": "A signed-in screen begins with its land (`CoastHeader` holding `PageHeader`), after any band. Its title lives on the land; there is no separate top bar.",
+        "section": "layout"
+      },
+      {
+        "name": "The Raised Only In The Top Layer Rule",
+        "body": "A shadow means \"this floats over the page and will go away\". Rows, fields, stat tiles, the land and the shell never cast one. A surface row is set apart by its fill on the ground, an outline row by a `--line` ring.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Capsule Rule",
+        "body": "If a person can tap it or type in it, it is round-ended. Square corners and small radii do not appear on controls.",
+        "section": "shapes"
+      },
+      {
+        "name": "The Coastline Edge Rule",
+        "body": "Land ends in a coastline from `COASTLINES`, never in a straight edge or a card radius, and never in a path generated at render time. Only the `Pin` sits on the coastline; no other text crosses it.",
+        "section": "shapes"
+      }
+    ],
+    "dos": [
+      "**Do** start every signed-in screen with its land (`CoastHeader` + `PageHeader`), and every account screen with `AuthScene`.",
+      "**Do** use `Button` for every button and pick the variant by meaning: one `primary` per view, `danger` only for the irreversible, `secondary` beside a primary, `quiet` for the way out.",
+      "**Do** list menus (Settings, My account, More) as `RowList look=\"menu\"` with `Row look=\"menu\"` and a bare `RowIcon` (D75); use `surface` rows for people and records, `quiet` rows for records not yet in play.",
+      "**Do** name colours, sizes, radii and the shadow only by their tokens (`bg-land`, `text-title`, `rounded-row`, `shadow-raised`).",
+      "**Do** put every create or edit form in a `Sheet`, every outcome through `useResponse()`, and every irreversible action behind a confirm card.",
+      "**Do** set money, times, tokens and phone numbers in `tabular-nums`, and the numbers that matter at token or display size.",
+      "**Do** check every screen in light and dark, at phone, tablet and desktop, with no axe violations.",
+      "**Do** keep every target at least 44 px and every input at 16 px or more."
+    ],
+    "donts": [
+      "**Don't** use yellow, gold, blue or lilac, in either theme.",
+      "**Don't** use coral for anything that is not attention (allergy, owed or to bill, ended plan, offline, error, irreversible).",
+      "**Don't** let colour carry a state alone; add its word and its icon or chip position.",
+      "**Don't** give a menu row its own card, or set an icon on a tile, tinted square or circle under it (§32.1 Refuses, D75).",
+      "**Don't** build the white-cards-and-pastel-icon-tiles dashboard grid or a grey ERP table.",
+      "**Don't** end land in a straight edge, draw a coastline at render time, or let text other than the `Pin` cross a coastline.",
+      "**Don't** put a shadow on anything that sits on the page; `--shadow-raised` is for the top layer only.",
+      "**Don't** add a third font weight, uppercase or letter-spaced labels, or eyebrows above titles.",
+      "**Don't** use the browser's native select, date or time pickers (D65).",
+      "**Don't** add a top bar on a phone, move the ＋ off the centre of the bottom bar, or replace it with a floating button.",
+      "**Don't** add photographs or illustrations; people are initials (`Avatar`).",
+      "**Don't** use bounce, spring or overshoot, or a second duration or curve."
+    ]
+  }
+}

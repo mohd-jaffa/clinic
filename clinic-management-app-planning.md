@@ -2080,6 +2080,7 @@ tests (§34) and its changelog entry.
 | R2.9 | Plan banner and read-only mode in the shell | §7.2 | — | DONE (2026-10-03 · ad8e932) |
 | R2.10 | E2E: sign up → confirm → sign in → Home, phone and desktop, axe clean | §34 | — | DONE (2026-10-03 · 394e3b5) |
 | R2.11 | Online-only, nothing lost: the offline banner; saves wait and retry with their key; forms keep their content in memory | §21, D55 | — | DONE (2026-10-03 · 4136bd0) |
+| R2.12 | The Impeccable finish review (D75, D76) and `DESIGN.md` from the built world | §32.1 | — | DONE (2026-10-03 · d35eb89) |
 
 ### Phase 3 — Clinic setup and team
 

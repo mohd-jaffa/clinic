@@ -766,3 +766,53 @@ appended and never rewritten (AGENTS.md §33).
 
 ### Blockers
 - None.
+
+## 2026-10-03 — R2.12, the Phase 2 finish review and DESIGN.md
+
+### Changed
+- The Impeccable finish review of the built world (the kit, the shell and the
+  account screens; 68 captures at phone and desktop, light and dark; the
+  design detector found nothing) asked for eight fixes. All eight were made
+  and scored resolved on recapture; disposition **ship**.
+  - Menus are one list on the ground (D75, the user): Settings, My account
+    and the More sheet list each section as one continuous list parted by
+    hairlines, each icon bare — `RowList look="menu"`, `Row look="menu"` and
+    `RowIcon` (`src/components/ui/row.tsx`); `IconChip` is gone. The
+    response, confirm and notice cards set their icon bare beside the title.
+  - Quick Actions drops from its ＋ on tablet and desktop (D76, the user):
+    beside the rail's ＋ or the sidebar's **Add**, at the top, its lower edge
+    the coastline; on a phone it still rises from the bottom. Each action's
+    chip rides the trailing edge, as every capsule's at rest.
+  - The not-found screen stands inside the shell for someone signed in
+    (`src/components/nav/NotFoundScreen.tsx`, `SystemNotice`).
+  - The More sheet fits a 390 × 844 phone whole, Sign out included.
+  - The line under a land heading steps up from 768 px (20 px, a clear gap).
+  - A required field's asterisk is muted: coral is kept for attention.
+  - The textarea has no browser resize grip, and grows with its text where
+    the browser can.
+
+### Added
+- `DESIGN.md` and its sidecar `.impeccable/design.json`, written from the
+  shipped code by the Impeccable documenter: the tokens of both themes, type,
+  shapes, depth, motion, each component by its file and export, and the
+  rules. From now on it is the design system's authority (AGENTS.md §23).
+- Plan D75 and D76; tracker row R2.12.
+
+### Known gaps (found by the documenter, not repaired)
+- The coastline does not yet reshape between screens or flatten on scroll
+  (§32.1 Motion).
+- The offline and coral plan bands are straight-edged, where §32.1 says
+  "coast band".
+- `Lake`, `Pin` and `Capsule` wait for their screens (the Queue, patients).
+- `checkbox.tsx` uses a radius outside the tokens; Quick Actions builds its
+  capsule by hand rather than from `capsuleClasses`.
+
+### Validation
+- Typecheck, lint, format check passed.
+- Unit and integration tests passed (1173), coverage 100%.
+- Build passed; E2E passed (42, phone and desktop), axe clean.
+- The tablet path (820 px, the rail's ＋ lobe) checked by screenshot, light
+  and dark.
+
+### Blockers
+- None.
