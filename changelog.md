@@ -1327,3 +1327,70 @@ appended and never rewritten (AGENTS.md §33).
 ### Blockers
 - None. The profile an added patient opens onto is R4.4. Until then, its
   address shows the not-found screen.
+
+## 2026-10-04 — R4.3, the patients list
+
+### Added
+- The patients list (`/patients`, plan §10.2, D104, D110 – D112):
+  - Searched by name, mobile or patient number — debounced, and sent in the
+    body of `POST /api/patients/search`, never the address (D98). Newest
+    first with nothing typed, best match first otherwise; a page at a time
+    with **Show more**.
+  - Each row opens the profile and carries a round **Call**. On a phone the
+    line is age · gender · number and leaves the mobile to the button; from
+    a tablet's width the mobile joins the line (D110). Rows on every width
+    (D111).
+  - **All** and **Archived** tabs for those with `patients.edit`; the
+    archived tab is refused to anyone else, by the route as well.
+  - A doctor sees only their own patients, under "Your patients", with an
+    empty state of their own.
+  - A search that finds no one says so and, on the All tab, for those who
+    may add, offers **Add patient** with what was typed: a mobile's digits
+    as the mobile, words as the name (D112, `PatientSheet`'s `prefill`).
+  - The first page arrives with the screen.
+- `listPatients` reads a page through `search_patients` as the caller, so
+  the doctor scope holds, with `searchTerms` reading the search as words, a
+  phone's digits and a record's number (`src/lib/supabase/search.ts`,
+  ported from Brio).
+- `useApiPages`' `post` option asks each page as a POST, the key's query as
+  its body, the key kept in memory only. `usePatients` and `patientsKey`
+  use it.
+- `useDebouncedValue` (ported from Brio).
+- Kit: `IconLink`, a round label-less link (the row's Call). `ListScreen`'s
+  no-match state takes words, or words and what to do instead.
+
+### Changed
+- `ListScreen` shows its empty state whenever nothing is searched, even when
+  the screen passes its search's empty words as the no-match state.
+- Adding or changing a patient refreshes the list (`/api/patients/search`)
+  and the mobile matches.
+- Plan: D110 – D112 recorded; §10.2 says how a row reads and what a search
+  that finds no one offers; §30 lists the list as `POST
+  /api/patients/search`, with no `GET /api/patients`.
+- DESIGN.md documents `IconLink`.
+
+### Validation
+- Typecheck, lint, format check passed.
+- Unit and integration tests passed (1804), coverage 100%. The integration
+  test reads the list through `listPatients`: newest first, a page from a
+  cursor, a mobile however typed, a patient number first, the archived on
+  their own tab, a doctor's own patients only, and the archived tab refused
+  without `patients.edit`.
+- Build passed. E2E: 75 of 80 passed on the full run. Four failures were
+  `patients.spec.ts` setups:
+  - an empty clinic showed **Add patient** twice, so the empty state's copy
+    was dropped;
+  - an import sets no doctor (§10.5), so the doctor test now adds through
+    `createPatient`.
+  The fifth was the desktop password change, which timed out on the local
+  auth server; it passed on phone in the same run. After the fixes,
+  `patients.spec.ts` and `settings.spec.ts` passed again (16, phone and
+  desktop), axe clean. `tests/e2e/patients.spec.ts` adds:
+  - a receptionist pages to the 21st patient, finds one by name, mobile and
+    number, checks Call, adds "Zoya Khan" from a search that found no one,
+    and opens the archived;
+  - a doctor finds only their own patient.
+
+### Blockers
+- None. The profile a row opens is R4.4; until then its address shows the
+  not-found screen.
