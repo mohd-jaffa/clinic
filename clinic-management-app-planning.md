@@ -2185,7 +2185,7 @@ tests (§34) and its changelog entry.
 | R4.3 | Patients list: search (name, mobile digits, number), tabs, paging; Call on each row; a search that finds no one offers Add patient; the last visit and Owing come with their phases (D101, D110 – D112) | §10.2 | — | DONE (2026-10-04 · 04b6a76) |
 | R4.4 | Patient profile: header and details, sections by permission; the next appointment, open treatments, balance and history come with their phases (D101, D113 – D116) | §10.3 | — | DONE (2026-10-04 · 1b07f6f) |
 | R4.5 | Alerts: allergies, conditions, medications (D117 – D120) | §10.4 | — | DONE (2026-10-04 · 45f61d5) |
-| R4.6 | Archive and restore | §10.1 | — | TODO |
+| R4.6 | Archive and restore (D122 – D125) | §10.1 | — | DONE (2026-10-04 · 8096bfa) |
 | R4.7 | Integration: the doctor scope; staff without `patients.view`; isolation rows | §34 | — | TODO |
 | R4.8 | Patient import: parse CSV/Excel in the browser, map, preview (errors, duplicates), batches, summary, refused rows as CSV | §10.5 | — | TODO |
 

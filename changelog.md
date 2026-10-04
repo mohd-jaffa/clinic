@@ -1535,3 +1535,51 @@ appended and never rewritten (AGENTS.md §33).
 
 ### Blockers
 - None.
+
+## 2026-10-04 — R4.6 Archive and restore patients
+
+### Added
+- Archive and restore a patient (plan §10.1, D103), for `patients.edit`
+  within the doctor scope, audited as ARCHIVE and RESTORE:
+  - `POST /api/patients/[id]/archive` and `/restore`, with
+    `archivePatient` and `restorePatient` in `features/patients/api.ts`.
+    The database stamps when and by whom (0015's `check_patient`). A second
+    archive is refused as `PATIENT_ARCHIVED`; restoring a patient who is not
+    archived leaves them as they are, with nothing audited.
+  - A patient now carries `archivedAt` and `archivedBy` (the archiver's name,
+    read through the teammates policy) in place of `archived`.
+- The design, as the user chose it (D122 – D125):
+  - **Archive** sits at the foot of the patient's edit sheet, under a
+    hairline, as on a catalogue entry's sheet. It asks first.
+  - The profile stays after archiving. Its header shows a notice: "Archived
+    on 4 Oct 2026 by Asha Menon", that the profile is read-only until
+    restored, and **Restore** for `patients.edit` while the clinic may
+    write.
+  - Restore asks nothing.
+  - The patient leaves the list and search for the Archived tab. Edit and
+    changing alerts stay off until they are restored.
+- `usePatientArchive` (confirm, mutations, notices) and `PatientArchived`
+  (the notice).
+
+### Changed
+- Kit: the catalogues' `ArchiveEntryButton` moved to
+  `src/components/ui/archive-button.tsx` as `ArchiveButton`, now used by two
+  features. "Archive" and "Restore" moved to `UI_TEXT.actions`.
+- Plan: D122 – D125 recorded; §10.1 and §10.3 updated. DESIGN.md:
+  `ArchiveButton`, the archived notice, and the header's rows.
+
+### Validation
+- Typecheck, lint, format check passed. Unit and integration tests passed
+  (1892), coverage 100%.
+- Integration: archived and restored through the app's functions. Refused
+  to staff without `patients.edit`, to another doctor and to another
+  clinic. The audit rows, the list and Archived tabs, and the read-only
+  refusals are checked.
+- Build passed; E2E passed (88, phone and desktop), axe clean. The new
+  journey: a receptionist archives a patient from the edit sheet after
+  confirming, stays on the profile with the notice, finds them under
+  Archived, and restores them.
+
+### Blockers
+- None. What happens to an archived patient's future appointments comes
+  with Phase 5 (R5.1 already refuses booking for one, D103).
