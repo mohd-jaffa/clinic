@@ -2170,7 +2170,7 @@ tests (§34) and its changelog entry.
 | R4.1 | `0015_patients`: counter, `patient_doctors` + triggers, `can_see_patient`, alerts, search indexes; `create_patient`, `search_patients`, `import_patients` (D98 – D104) | §10, §27.3 | — | DONE (2026-10-03 · 8e2a0e9) |
 | R4.2 | Patient sheet: DOB or age, gender, phones, emergency contact, assigned doctor; mobile-match hint; added once per idempotency key; the date picker's month and year jump (D105 – D109) | §10.1 | — | DONE (2026-10-04 · f1d155b) |
 | R4.3 | Patients list: search (name, mobile digits, number), tabs, paging; Call on each row; a search that finds no one offers Add patient; the last visit and Owing come with their phases (D101, D110 – D112) | §10.2 | — | DONE (2026-10-04 · 04b6a76) |
-| R4.4 | Patient profile: header and details, sections by permission; the next appointment, open treatments, balance and history come with their phases (D101) | §10.3 | — | TODO |
+| R4.4 | Patient profile: header and details, sections by permission; the next appointment, open treatments, balance and history come with their phases (D101, D113 – D116) | §10.3 | — | DONE (2026-10-04 · 1b07f6f) |
 | R4.5 | Alerts: allergies, conditions, medications | §10.4 | — | TODO |
 | R4.6 | Archive and restore | §10.1 | — | TODO |
 | R4.7 | Integration: the doctor scope; staff without `patients.view`; isolation rows | §34 | — | TODO |

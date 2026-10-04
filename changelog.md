@@ -1394,3 +1394,52 @@ appended and never rewritten (AGENTS.md §33).
 ### Blockers
 - None. The profile a row opens is R4.4; until then its address shows the
   not-found screen.
+
+## 2026-10-04 — R4.4, a patient's profile
+
+### Added
+- A patient's profile (`/patients/[id]`, plan §10.3, D113 – D116), for
+  `patients.view`; a doctor sees only their own patients (D3):
+  - The header gives the name; age · gender · number; and their doctor, or
+    "No doctor yet". Under them sit **Call** and **WhatsApp**; WhatsApp opens
+    a chat with nothing typed (D115).
+  - A **Details** card lists only what holds a value: the mobile, the date
+    of birth when it was given as a date, alternate phone, email, address,
+    emergency contact and notes (D113, D116).
+  - **Edit** opens the patient sheet, for those with `patients.edit`. It is
+    not offered for an archived patient (D103) or in a view-only clinic,
+    which says why.
+  - One column on every width until history arrives (D114). A patient who
+    can't be loaded, or isn't the caller's to see, is said so, with
+    **Try again**.
+  - The patient and the doctors arrive with the screen.
+- `usePatient`.
+- Kit: `DetailList`, a card of a record's facts. `PageHeader` takes a
+  `detail` line and `actions` under the title.
+
+### Changed
+- `sheet.test.tsx` focuses a `Link`, not an `<a>`. Next's link rule flags an
+  `<a>` to `/patients` now that a page sits under it.
+- Plan: D113 – D116 recorded.
+- DESIGN.md documents `DetailList` and `PageHeader`'s detail line and
+  actions.
+
+### Validation
+- Typecheck, lint, format check passed.
+- Unit and integration tests passed (1819), coverage 100%. Reading a patient
+  within the doctor scope is R4.2's integration test; R4.4 adds no server
+  function.
+- Build passed. E2E: 80 of 84 passed on the full run. The four failures were
+  the two new profile tests on both widths, whose locators also matched:
+  - the closed edit sheet's "No doctor yet";
+  - Next's route announcer, which is also an alert.
+  Narrowed, `patients.spec.ts` passed (12, phone and desktop), axe clean.
+  It adds:
+  - a receptionist opens a patient from the list, reads their details,
+    checks Call and WhatsApp, and changes their email;
+  - a doctor is told another doctor's patient can't be found.
+  The R4.2 tests now also read the added patient's profile.
+
+### Blockers
+- None. Alerts on the header are R4.5. Archive, restore and an archived
+  patient's notice are R4.6.
