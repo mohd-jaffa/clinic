@@ -1443,3 +1443,68 @@ appended and never rewritten (AGENTS.md §33).
 ### Blockers
 - None. Alerts on the header are R4.5. Archive, restore and an archived
   patient's notice are R4.6.
+
+## 2026-10-04 — R4.5, a patient's alerts
+
+### Added
+- A patient's alerts (plan §10.4, D117 – D120): allergies, conditions and
+  current medications.
+  - The profile header shows a chip for each active alert, allergies first
+    in the danger tone; a screen reader hears its kind ("Allergy:
+    Penicillin"). "No alerts" when there are none. **Alerts** follows the
+    chips and opens the alerts sheet.
+  - The alerts sheet lists each with its kind and note:
+    - **Add alert** and **Edit** open the alert sheet over it. A kind is
+      chosen once; the name and note can be changed later (D119).
+    - **Turn off** asks first (D118).
+    - Turned-off alerts are folded at the foot, read only (D120).
+  - Read with `visits.view`; changed with `visits.edit` within the doctor
+    scope. Never changed while the patient is archived (D103) or the clinic
+    is view-only, which says why. Without `visits.view` nothing of them
+    shows.
+  - The alerts arrive with the profile.
+- `listAlerts`, `addAlert` and `updateAlert` (`src/features/patients/alerts.ts`):
+  - The patient is found first, so one out of reach is not found.
+  - A second active alert of the same name and kind is refused as
+    `ALERT_ALREADY_EXISTS`.
+  - The audit names the words written, never the words themselves.
+- Routes: `GET` and `POST /api/patients/[id]/alerts`; `PATCH
+  /api/patients/[id]/alerts/[alertId]`, which takes a name, a note, or
+  turning off, never turning on again.
+- `alertSchema`, `updateAlertSchema`, `AlertsClient`, `useAlerts`,
+  `AlertSheet`, `PatientAlerts`; `ALERT_ALREADY_EXISTS` and
+  `ALERTS_LOAD_FAILED`.
+- Kit: `AlertChip` takes a `kind` said to a screen reader. `PageHeader`'s
+  actions stack a row each.
+
+### Changed
+- Plan: D117 – D120 recorded.
+- DESIGN.md documents `AlertChip`'s kind and the header's chip row.
+- The route-existence test fills each route parameter by its own name, so
+  `alert(id, alertId)` resolves to `[id]/alerts/[alertId]`.
+
+### Validation
+- Typecheck, lint, format check passed.
+- Unit and integration tests passed (1866), coverage 100%. The integration
+  test covers adding within the doctor scope, the audit naming fields only,
+  a duplicate refused, listing by permission and scope, changing and
+  turning off, adding again after, another patient's alert not found, and
+  an archived patient refused.
+- Build passed. E2E: 84 of 86 passed on the full run; the new alerts
+  journey failed on both widths because its locators also matched the
+  closed sheet's "No alerts yet" and a notice's close button. On a phone a
+  notice over the sheet's foot also blocked the next tap. The test now
+  matches exactly and closes the notice. Then `patients.spec.ts` passed
+  (14, phone and desktop), axe clean. The journey: a doctor adds a
+  condition and an allergy, notes the allergy, turns the condition off
+  after confirming, and finds it folded; the header shows the allergy; a
+  receptionist without `visits.view` sees no alerts.
+- Your dev server (port 3000) answered the new alert route without running
+  its schema: an empty note reached the database and was refused. The same
+  route answers correctly through the integration harness and in the
+  production build, so its compiled modules look stale. Restarting it
+  clears that. Screenshots were taken from the production build.
+
+### Blockers
+- None. Alerts at the top of a visit and above the prescription come with
+  Phase 6.
