@@ -15,6 +15,9 @@ const { auth, query, sheet } = vi.hoisted(() => ({
 }));
 vi.mock("@/features/auth/AuthProvider", () => ({ useAuth: () => auth.current }));
 vi.mock("@/features/patients/hooks/usePatient", () => ({ usePatient: () => query.current }));
+vi.mock("@/features/patients/components/PatientAlerts", () => ({
+  PatientAlerts: ({ patient }: { patient: Patient }) => <p>{`${patient.name}'s alerts`}</p>,
+}));
 vi.mock("@/features/patients/components/PatientSheet", () => ({
   PatientSheet: ({ open, onClose, patient }: { open: boolean; onClose: () => void; patient: Patient }) => {
     sheet.patient = patient;
@@ -60,6 +63,11 @@ describe("PatientProfile's header (plan §10.3, D115)", () => {
     expect(screen.getByText("34 y · Male · P-1012")).toBeInTheDocument();
     expect(screen.getByText("Doctor · Rahul Nair")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Go back" })).toHaveAttribute("href", "/patients");
+  });
+
+  it("carries their alerts (D117)", () => {
+    draw();
+    expect(screen.getByText("Rohan Mehta's alerts")).toBeInTheDocument();
   });
 
   it("calls them, or opens a WhatsApp chat with nothing typed", () => {

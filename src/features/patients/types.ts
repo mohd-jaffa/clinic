@@ -1,4 +1,4 @@
-import type { Gender } from "@/constants/statuses";
+import type { AlertKind, Gender } from "@/constants/statuses";
 
 /** A patient as the database reads them (0015), with their doctor's name. */
 export interface PatientRow {
@@ -61,4 +61,23 @@ export interface PatientListItem {
   phone: string;
   dateOfBirth: string;
   gender: Gender;
+}
+
+/** An alert as the database holds it (plan §10.4). */
+export interface AlertRow {
+  id: string;
+  patient_id: string;
+  kind: AlertKind;
+  label: string;
+  note: string | null;
+  active: boolean;
+}
+
+/** An alert as the screens read it: an allergy, a condition or a medication. */
+export interface PatientAlert {
+  id: string;
+  kind: AlertKind;
+  label: string;
+  note: string | null;
+  active: boolean;
 }

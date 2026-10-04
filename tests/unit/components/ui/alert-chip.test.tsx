@@ -15,4 +15,10 @@ describe("AlertChip", () => {
     render(<AlertChip label="Diabetic" />);
     expect(screen.getByText("Diabetic").parentElement).toHaveClass("text-ink");
   });
+
+  it("says what the alert is before its name to a screen reader, the mark saying it to the eye", () => {
+    render(<AlertChip label="Penicillin" kind="Allergy" tone="danger" />);
+    expect(screen.getByText("Allergy:", { exact: false })).toHaveClass("sr-only");
+    expect(screen.getByText("Penicillin", { exact: false })).toHaveTextContent("Allergy: Penicillin");
+  });
 });

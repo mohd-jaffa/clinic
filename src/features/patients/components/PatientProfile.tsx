@@ -22,6 +22,7 @@ import { callHref, formatPhoneDigits, whatsAppHref } from "@/lib/phone";
 import { describePatient } from "../describe";
 import { usePatient } from "../hooks/usePatient";
 import type { Patient } from "../types";
+import { PatientAlerts } from "./PatientAlerts";
 import { PatientSheet } from "./PatientSheet";
 
 const { patients } = UI_TEXT;
@@ -45,9 +46,9 @@ function detailsOf(patient: Patient): Detail[] {
 }
 
 /**
- * A patient's profile (plan §10.3, D113 – D116), for `patients.view` — a
+ * A patient's profile (plan §10.3, D113 – D117), for `patients.view` — a
  * doctor's own only (D3): who they are — age, gender, number and their
- * doctor — with **Call** and **WhatsApp** (a chat, nothing typed); then
+ * doctor — their alerts, and **Call** and **WhatsApp** (a chat, nothing typed); then
  * their details, only what holds a value, notes included, with **Edit** for
  * those who may change them. One column until history arrives (D114); each
  * later phase adds its part (D101).
@@ -63,7 +64,14 @@ export function PatientProfile({ id }: { id: string }) {
             title={patient?.name ?? UI_TEXT.nav.places.patients}
             subtitle={patient && describePatient(patient)}
             detail={patient && (patient.doctorName ? patients.doctorLine(patient.doctorName) : patients.noDoctor)}
-            actions={patient && <Reach patient={patient} />}
+            actions={
+              patient && (
+                <>
+                  <PatientAlerts patient={patient} />
+                  <Reach patient={patient} />
+                </>
+              )
+            }
             back={PATIENTS_ROUTE}
           />
         </div>
@@ -86,7 +94,7 @@ export function PatientProfile({ id }: { id: string }) {
 /** Call, and a WhatsApp chat with nothing typed (D115). */
 function Reach({ patient }: { patient: Patient }) {
   return (
-    <>
+    <div className="flex flex-wrap gap-2">
       <LinkButton
         href={callHref(patient.phone)}
         label={patients.callLabel}
@@ -103,7 +111,7 @@ function Reach({ patient }: { patient: Patient }) {
         size="sm"
         newTab
       />
-    </>
+    </div>
   );
 }
 

@@ -13,7 +13,16 @@ const TONES = {
  * mark; any other alert is a quiet note (plan §10.3). The words carry it, the
  * mark and the colour repeat it.
  */
-export function AlertChip({ label, tone = "note" }: { label: string; tone?: keyof typeof TONES }) {
+export function AlertChip({
+  label,
+  kind,
+  tone = "note",
+}: {
+  label: string;
+  /** What the alert is — "Allergy" — said before its label to a screen reader; the mark carries it to the eye. */
+  kind?: string;
+  tone?: keyof typeof TONES;
+}) {
   const { className, icon: Icon } = TONES[tone];
   return (
     <span
@@ -23,7 +32,10 @@ export function AlertChip({ label, tone = "note" }: { label: string; tone?: keyo
       )}
     >
       <Icon size={16} strokeWidth={2.25} aria-hidden="true" className="shrink-0" />
-      <span className="truncate">{label}</span>
+      <span className="truncate">
+        {kind && <span className="sr-only">{`${kind}: `}</span>}
+        {label}
+      </span>
     </span>
   );
 }

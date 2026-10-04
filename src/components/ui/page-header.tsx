@@ -23,7 +23,7 @@ export function PageHeader({
   subtitle?: string;
   /** A second line under the subtitle: a patient's doctor. */
   detail?: string;
-  /** What to do with whom the title names, under its lines: a patient's Call and WhatsApp. */
+  /** What to do with whom the title names, under its lines, a row each: a patient's alerts, then Call and WhatsApp. */
   actions?: ReactNode;
   /** Where the back arrow goes; none on a top-level screen. */
   back?: string;
@@ -45,7 +45,7 @@ export function PageHeader({
           <h1 className="text-heading font-bold tracking-[-0.01em] md:text-display">{title}</h1>
           {subtitle && <p className="mt-1.5 text-land-muted md:mt-3 md:text-title">{subtitle}</p>}
           {detail && <p className="mt-0.5 text-land-muted md:mt-1">{detail}</p>}
-          {actions && <div className="mt-4 flex flex-wrap gap-2">{actions}</div>}
+          {actions && <div className="mt-4 grid justify-items-start gap-3">{actions}</div>}
         </div>
       </div>
       {children && <div className="flex shrink-0 flex-wrap items-center gap-2">{children}</div>}

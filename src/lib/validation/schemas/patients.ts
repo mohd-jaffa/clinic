@@ -2,7 +2,7 @@ import * as z from "zod";
 
 import { MAX_PATIENT_AGE, TEXT_LIMITS } from "@/constants/limits";
 import { UI_TEXT, VALIDATION_MESSAGES } from "@/constants/messages";
-import { GENDERS } from "@/constants/statuses";
+import { ALERT_KINDS, GENDERS } from "@/constants/statuses";
 import { estimatedBirthDate } from "@/lib/dates/age";
 import { todayKey } from "@/lib/dates/calendar";
 
@@ -144,3 +144,31 @@ export const patientListSchema = z.object({
 
 export type PatientListQuery = z.input<typeof patientListSchema>;
 export type PatientListPayload = z.output<typeof patientListSchema>;
+
+const { alerts } = UI_TEXT;
+
+/** An alert's own words (plan §10.4): what it is, and a note. */
+const alertFields = {
+  label: requiredLine(alerts.labelLabel, { max: TEXT_LIMITS.alertLabel }),
+  note: optionalLine(alerts.noteLabel, TEXT_LIMITS.alertNote),
+};
+
+/** A new alert (plan §10.4): an allergy, a condition or a medication, by name, with an optional note. */
+export const alertSchema = z.object({
+  kind: z.enum(ALERT_KINDS, { error: VALIDATION_MESSAGES.choose(alerts.kindLabel) }),
+  ...alertFields,
+});
+
+export type AlertInput = z.input<typeof alertSchema>;
+export type AlertPayload = z.output<typeof alertSchema>;
+
+/**
+ * A change to an alert (D118, D119): its name or note — never its kind — or
+ * turning it off. A turned-off alert is not turned on again; it is added again.
+ */
+export const updateAlertSchema = z
+  .object({ ...alertFields, active: z.literal(false, { error: VALIDATION_MESSAGES.invalid }) })
+  .partial();
+
+export type UpdateAlertInput = z.input<typeof updateAlertSchema>;
+export type UpdateAlertPayload = z.output<typeof updateAlertSchema>;

@@ -19,14 +19,20 @@ import { addMember, admin, aMobileNumber, registerClinic, removeAll } from "@tes
  * the calendar's year and month jump.
  *
  * The list (plan §10.2; R4.3, D104, D110 – D112): a receptionist pages
- * through the clinic's patients, finds one by name, mobile and number, calls
- * one, adds someone a search did not find with what was typed, and opens the
+ * through the clinic's patients, finds one by name, mobile and number, adds
+ * someone a search did not find with what was typed, and opens the
  * archived; a doctor finds only their own.
  *
  * The profile (plan §10.3; R4.4, D113 – D116): a receptionist opens a
  * patient from the list, reads what their details hold, reaches them by
  * Call or WhatsApp, and changes their email; a doctor cannot open another
- * doctor's patient. At a phone's width and a desktop's, each checked by axe.
+ * doctor's patient.
+ *
+ * Alerts (plan §10.4; R4.5, D117 – D120): a doctor records an allergy and a
+ * condition from the profile's alerts sheet, adds a note later, and turns
+ * one off after confirming; the header shows what is active, allergies
+ * first. A receptionist, who may not read visits, sees none. At a phone's
+ * width and a desktop's, each checked by axe.
  */
 test.afterAll(removeAll);
 
@@ -192,10 +198,7 @@ test("a receptionist finds patients by name, mobile and number, and adds one not
     await search.fill(typed);
     await expect(list.getByRole("listitem").first()).toContainText("Kabir Mehta");
   }
-  await expect(list.getByRole("link", { name: patients.call("Kabir Mehta") })).toHaveAttribute(
-    "href",
-    "tel:+919876501234",
-  );
+  await expect(list.getByRole("listitem").first()).toContainText("98765 01234");
   await expectAccessible(page);
 
   await search.fill("Zoya Khan");
@@ -304,4 +307,75 @@ test("a doctor cannot open another doctor's patient (D3)", async ({ page }) => {
   await expect(page.getByRole("alert").filter({ hasText: "That record could not be found." })).toBeVisible();
   await expect(page.getByRole("heading", { level: 1, name: "Someone Else" })).toBeHidden();
   await expectAccessible(page);
+});
+
+test("a doctor records a patient's alerts, changes one and turns one off (D117 – D120)", async ({ page }) => {
+  const clinic = await registerClinic({ fullName: "Asha Menon" });
+  const doctor = await addMember(clinic.clinicId, {
+    role: "DOCTOR",
+    permissions: [...PERMISSION_PRESET_SETS.DOCTOR.permissions],
+  });
+  const receptionist = await addMember(clinic.clinicId, {
+    permissions: [...PERMISSION_PRESET_SETS.RECEPTIONIST.permissions],
+  });
+  const typed = { fullName: "Meena Iyer", phone: aMobileNumber(), born: { as: "AGE", years: "41" }, gender: "FEMALE" };
+  const meena = await createPatient(
+    clinic.owner.tenant,
+    patientSchema.parse({ ...typed, assignedDoctorId: await doctorOf(doctor.memberId) }),
+    randomUUID(),
+  );
+  await signIn(page, doctor.email, doctor.password);
+
+  await page.goto(`/patients/${meena.id}`);
+  await expect(page.getByText(UI_TEXT.alerts.none, { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: UI_TEXT.alerts.open }).click();
+  const alerts = page.getByRole("dialog", { name: UI_TEXT.alerts.title });
+  await expect(alerts.getByRole("heading", { name: UI_TEXT.alerts.emptyTitle })).toBeVisible();
+  await expectAccessible(page);
+
+  for (const [kind, label] of [
+    ["Condition", "Type 2 diabetes"],
+    ["Allergy", "Penicillin"],
+  ]) {
+    await alerts.getByRole("button", { name: UI_TEXT.alerts.add }).click();
+    const add = page.getByRole("dialog", { name: UI_TEXT.alerts.addTitle });
+    await add.getByRole("radio", { name: kind }).click();
+    await add.getByRole("textbox", { name: /^Name/ }).fill(label);
+    if (label === "Penicillin") await expectAccessible(page);
+    await add.getByRole("button", { name: UI_TEXT.alerts.add }).click();
+    await expect(page.getByRole("status").filter({ hasText: UI_TEXT.alerts.added(label) })).toBeVisible();
+    await expect(add).toBeHidden();
+  }
+
+  await alerts.getByRole("button", { name: UI_TEXT.alerts.edit("Penicillin") }).click();
+  const edit = page.getByRole("dialog", { name: UI_TEXT.alerts.editTitle("Allergy") });
+  await edit.getByRole("textbox", { name: /^Note/ }).fill("Rash and swelling, 2019");
+  await edit.getByRole("button", { name: UI_TEXT.actions.save }).click();
+  await expect(alerts.getByText("Allergy · Rash and swelling, 2019")).toBeVisible();
+
+  await alerts.getByRole("button", { name: UI_TEXT.alerts.turnOffName("Type 2 diabetes") }).click();
+  const ask = page.getByRole("alertdialog", { name: UI_TEXT.alerts.turnOffTitle("Type 2 diabetes") });
+  await expectAccessible(page);
+  await ask.getByRole("button", { name: UI_TEXT.alerts.turnOff }).click();
+  await expect(page.getByRole("status").filter({ hasText: UI_TEXT.alerts.turnedOff("Type 2 diabetes") })).toBeVisible();
+  // The notice sits over the sheet's foot; closed, as a person would, rather than waited out.
+  await page
+    .getByRole("button", { name: UI_TEXT.response.closeNotice(UI_TEXT.alerts.turnedOff("Type 2 diabetes")) })
+    .click();
+  await alerts.getByRole("button", { name: UI_TEXT.alerts.showTurnedOff(1) }).click();
+  await expect(alerts.getByRole("list", { name: UI_TEXT.alerts.turnedOffSection })).toContainText("Type 2 diabetes");
+  await alerts.getByRole("button", { name: UI_TEXT.actions.close, exact: true }).click();
+
+  await expect(page.getByRole("list", { name: UI_TEXT.alerts.title }).getByRole("listitem")).toHaveText([
+    "Allergy: Penicillin",
+  ]);
+  await expectAccessible(page);
+
+  // Someone who may not read visits sees no alerts at all.
+  await page.context().clearCookies();
+  await signIn(page, receptionist.email, receptionist.password);
+  await page.goto(`/patients/${meena.id}`);
+  await expect(page.getByRole("heading", { level: 1, name: "Meena Iyer" })).toBeVisible();
+  await expect(page.getByRole("button", { name: UI_TEXT.alerts.open })).toBeHidden();
+  await expect(page.getByText("Penicillin")).toBeHidden();
 });

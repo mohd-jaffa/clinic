@@ -64,6 +64,8 @@ export const apiRoutes = {
     search: "/api/patients/search",
     matches: "/api/patients/matches",
     one: (id: string) => `/api/patients/${id}`,
+    alerts: (id: string) => `/api/patients/${id}/alerts`,
+    alert: (id: string, alertId: string) => `/api/patients/${id}/alerts/${alertId}`,
   },
 } as const;
 

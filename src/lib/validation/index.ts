@@ -30,12 +30,16 @@ export {
 export { cursorParam, listQuerySchema, searchParam, type ListQuery } from "./schemas/list";
 
 export {
+  alertSchema,
   BORN_AS,
   PATIENT_TABS,
   patientListSchema,
   patientMatchesSchema,
   patientSchema,
+  updateAlertSchema,
   updatePatientSchema,
+  type AlertInput,
+  type AlertPayload,
   type BornAs,
   type PatientListPayload,
   type PatientListQuery,
@@ -44,6 +48,8 @@ export {
   type PatientMatchesInput,
   type PatientMatchesPayload,
   type PatientPayload,
+  type UpdateAlertInput,
+  type UpdateAlertPayload,
   type UpdatePatientInput,
   type UpdatePatientPayload,
 } from "./schemas/patients";

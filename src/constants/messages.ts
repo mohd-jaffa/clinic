@@ -80,6 +80,8 @@ export const ERROR_MESSAGES = {
   PATIENT_BIRTH_DATE_INVALID: `A date of birth can’t be in the future, or more than ${MAX_PATIENT_AGE} years ago.`,
   PATIENT_LOAD_FAILED: "This patient couldn't be loaded.",
   PATIENTS_LOAD_FAILED: "The patients couldn't be loaded.",
+  ALERT_ALREADY_EXISTS: "This patient already has that alert.",
+  ALERTS_LOAD_FAILED: "The alerts couldn't be loaded.",
 
   // The browser could not reach the server (plan §21, D55): said by the client, never sent by the server.
   NETWORK_OFFLINE: "You're offline. Try again once the connection is back — what you typed is still here.",
@@ -707,6 +709,38 @@ export const UI_TEXT = {
     details: "Details",
     edit: "Edit",
     editName: (name: string) => `Edit ${name}`,
+  },
+
+  /** A patient's alerts (plan §10.4, D117 – D120). */
+  alerts: {
+    title: "Alerts",
+    open: "Alerts",
+    none: "No alerts",
+    add: "Add alert",
+    addTitle: "Add an alert",
+    editTitle: (kind: string) => `Edit ${kind.toLowerCase()}`,
+    kindLabel: "Kind",
+    labelLabel: "Name",
+    labelHint: "Like Penicillin, Diabetes or Metformin 500 mg.",
+    noteLabel: "Note",
+    noteHint: "Like the reaction, or since when.",
+    emptyTitle: "No alerts yet",
+    emptyHint:
+      "Allergies, conditions and current medications show at the top of the profile, at visits and on prescriptions.",
+    edit: (label: string) => `Edit ${label}`,
+    turnOff: "Turn off",
+    turnOffName: (label: string) => `Turn off ${label}`,
+    turnOffTitle: (label: string) => `Turn off ${label}?`,
+    turnOffBody: "It stops showing on the profile, at visits and on prescriptions. Add it again if it comes back.",
+    turnedOff: (label: string) => `${label} turned off`,
+    notTurnedOff: "That wasn’t turned off",
+    added: (label: string) => `${label} added`,
+    notAdded: "The alert wasn’t added",
+    saved: (label: string) => `${label} saved`,
+    notSaved: "That wasn’t saved",
+    turnedOffSection: "Turned off",
+    showTurnedOff: (count: number) => `Show turned off (${count})`,
+    hideTurnedOff: "Hide turned off",
   },
 
   /** An age, short enough for a row or a prescription (plan §10.1). */

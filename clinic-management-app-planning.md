@@ -203,6 +203,10 @@ earlier lines are never rewritten.
 | D114 | **The profile is one column until history arrives** (the user): on a desktop, a single column at reading width in Phase 4; the history column on the right comes with the first visits in Phase 6. | 2026-10-04 |
 | D115 | **The profile's WhatsApp opens a chat with nothing typed** (the user): `wa.me` on the patient's number, no message — §22.1 has none for the profile, and the desk writes what it needs. | 2026-10-04 |
 | D116 | **A patient's notes show to everyone who may see them** (the user): desk notes, not clinical, so `patients.view` reads them on the profile with the other details. | 2026-10-04 |
+| D117 | **Alerts show as chips in the profile header and are managed in a sheet** (the user): allergies first, in the danger tone, then conditions and medications; **Alerts** beside them opens a sheet listing each with its note — **Add alert**, **Edit** and **Turn off** for `visits.edit`, read only for `visits.view`. | 2026-10-04 |
+| D118 | **Turning an alert off asks first** (the user): a confirm card says it stops showing on the profile, at visits and on prescriptions, so a stray tap never hides an allergy. | 2026-10-04 |
+| D119 | **An alert's label and note can be changed; its kind cannot** (the user): the add sheet opens on it, so a note is added later or a spelling fixed, and an allergy never quietly becomes a note. | 2026-10-04 |
+| D120 | **Turned-off alerts are folded in the alerts sheet** (the user): "Show turned off (2)" at its foot, read only; nothing clinical is deleted, and the label may be added again. | 2026-10-04 |
 
 ## 3. Users and roles
 

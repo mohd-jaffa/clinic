@@ -5,10 +5,11 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { Permission } from "@/constants/permissions";
 import { PLATFORM_SETTING_DEFAULTS } from "@/constants/platform";
 import { FIRST_PATIENT_NUMBER } from "@/constants/seeds";
+import { addAlert, listAlerts, updateAlert } from "@/features/patients/alerts";
 import { createPatient, findPatientMatches, getPatient, listPatients, updatePatient } from "@/features/patients/api";
 import { estimatedBirthDate } from "@/lib/dates/age";
 import { addDaysKey, todayKey } from "@/lib/dates/calendar";
-import { patientSchema, type PatientInput } from "@/lib/validation";
+import { alertSchema, patientSchema, type PatientInput } from "@/lib/validation";
 import {
   addMember,
   admin,
@@ -600,6 +601,77 @@ describe("through the app's functions (R4.2)", () => {
     ]);
     expect((await findPatientMatches(doctorC.tenant!, phone)).map(({ name }) => name)).toEqual(["Younger Brother"]);
     expect(await findPatientMatches(other.owner.tenant, phone)).toEqual([]);
+  });
+});
+
+describe("alerts through the app's functions (R4.5, D117 – D120)", () => {
+  let theirs: PatientRow;
+  const typed = (label: string, overrides: Record<string, unknown> = {}) =>
+    alertSchema.parse({ kind: "ALLERGY", label, ...overrides });
+  const labels = async (member: SignedIn) =>
+    (await listAlerts(member.tenant!, theirs.id)).map(({ label, active }) => `${label}${active ? "" : " (off)"}`);
+
+  beforeAll(async () => {
+    theirs = await create(receptionist, { full_name: "Alerted Patient", assigned_doctor_id: doctorIds.B });
+  });
+
+  it("adds one within the doctor scope, audited by the names of its words alone", async () => {
+    const added = await addAlert(doctorB.tenant!, theirs.id, typed("Sulfa drugs", { note: "Hives" }), "req_alert");
+    expect(added).toMatchObject({ kind: "ALLERGY", label: "Sulfa drugs", note: "Hives", active: true });
+    const { data: audit } = await admin()
+      .from("audit_logs")
+      .select("action, actor_id, changes")
+      .eq("entity_id", added.id)
+      .single();
+    expect(audit).toEqual({
+      action: "CREATE",
+      actor_id: doctorB.userId,
+      changes: {
+        patient_id: { from: null, to: theirs.id },
+        kind: { from: null, to: "ALLERGY" },
+        fields: ["label", "note"],
+      },
+    });
+    expect(JSON.stringify(audit)).not.toMatch(/Sulfa|Hives/);
+    await expect(addAlert(doctorC.tenant!, theirs.id, typed("Latex"))).rejects.toMatchObject({
+      code: "RECORD_NOT_FOUND",
+    });
+  });
+
+  it("refuses the same name twice while it is active, in the app's words", async () => {
+    await expect(addAlert(assistant.tenant!, theirs.id, typed("sulfa DRUGS"))).rejects.toMatchObject({
+      code: "ALERT_ALREADY_EXISTS",
+    });
+  });
+
+  it("lists them to those who may read visits, within the doctor scope", async () => {
+    expect(await labels(assistant)).toEqual(["Sulfa drugs"]);
+    expect(await labels(doctorB)).toEqual(["Sulfa drugs"]);
+    await expect(listAlerts(doctorC.tenant!, theirs.id)).rejects.toMatchObject({ code: "RECORD_NOT_FOUND" });
+    await expect(listAlerts(receptionist.tenant!, theirs.id)).rejects.toMatchObject({ kind: "AUTHORIZATION" });
+  });
+
+  it("changes a name and note, turns one off, and takes the name again after", async () => {
+    const [sulfa] = await listAlerts(assistant.tenant!, theirs.id);
+    expect(await updateAlert(assistant.tenant!, theirs.id, sulfa.id, { note: null })).toMatchObject({ note: null });
+    expect(await updateAlert(assistant.tenant!, theirs.id, sulfa.id, { active: false })).toMatchObject({
+      active: false,
+    });
+    await addAlert(assistant.tenant!, theirs.id, typed("Sulfa drugs"));
+    expect(await labels(assistant)).toEqual(["Sulfa drugs (off)", "Sulfa drugs"]);
+    const [, again] = await listAlerts(assistant.tenant!, theirs.id);
+    await expect(updateAlert(assistant.tenant!, "another-patient", again.id, { active: false })).rejects.toMatchObject({
+      code: "RECORD_NOT_FOUND",
+    });
+  });
+
+  it("changes nothing of an archived patient's (D103)", async () => {
+    const archived = await create(receptionist, { full_name: "Archived Alerted" });
+    await update(receptionist, archived.id, { archived_at: new Date().toISOString() });
+    await expect(addAlert(assistant.tenant!, archived.id, typed("Latex"))).rejects.toMatchObject({
+      code: "PATIENT_ARCHIVED",
+    });
+    expect(await listAlerts(assistant.tenant!, archived.id)).toEqual([]);
   });
 });
 

@@ -31,8 +31,14 @@ describe("apiRoutes", () => {
   });
 
   it("names only routes that exist", () => {
+    // A route of an id — or of an id and another's — at the folders named for its parameters: [id], [alertId].
+    const folders = (named: (...ids: string[]) => string) =>
+      /^\(?([^)=]*)\)?\s*=>/
+        .exec(named.toString())![1]
+        .split(",")
+        .map((name) => `[${name.trim()}]`);
     for (const named of Object.values(apiRoutes).flatMap(Object.values)) {
-      const route = typeof named === "function" ? named("[id]") : named;
+      const route = typeof named === "function" ? named(...folders(named)) : named;
       expect(existsSync(join(process.cwd(), "src/app", route, "route.ts")), route).toBe(true);
     }
   });

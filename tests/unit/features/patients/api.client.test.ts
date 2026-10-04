@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { PatientsClient } from "@/features/patients/api.client";
+import { AlertsClient, PatientsClient } from "@/features/patients/api.client";
 import type { PatientInput } from "@/lib/validation";
 
 const mockFetch = vi.fn();
@@ -30,6 +30,26 @@ describe("PatientsClient (plan §30)", () => {
       url: "/api/patients/p-1",
       method: "PATCH",
       body: JSON.stringify({ fullName: "Rohan M" }),
+    });
+  });
+});
+
+describe("AlertsClient (plan §10.4)", () => {
+  it("adds an alert to the patient", async () => {
+    await AlertsClient.add({ patientId: "p-1", kind: "ALLERGY", label: "Peanuts", note: "" });
+    expect(sent()).toMatchObject({
+      url: "/api/patients/p-1/alerts",
+      method: "POST",
+      body: JSON.stringify({ kind: "ALLERGY", label: "Peanuts", note: "" }),
+    });
+  });
+
+  it("changes one, or turns it off, at its own address", async () => {
+    await AlertsClient.update({ patientId: "p-1", alertId: "a-1", active: false });
+    expect(sent()).toMatchObject({
+      url: "/api/patients/p-1/alerts/a-1",
+      method: "PATCH",
+      body: JSON.stringify({ active: false }),
     });
   });
 });

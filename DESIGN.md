@@ -354,7 +354,7 @@ A capsule that only says where something stands ("Waiting", "With the doctor"): 
 
 ### Chips and pills
 - **`StatusPill`:** a small capsule with a dot and a word, in `neutral` (ground, muted, line ring), `live` (`--action-soft`, `--action`) or `attention` (`--coral-soft`, `--coral`) tones from `statuses.ts`.
-- **`AlertChip`:** a clinical alert: `danger` on `--coral-soft` with a warning icon, `note` on ground with an info icon.
+- **`AlertChip`:** a clinical alert: `danger` on `--coral-soft` with a warning icon, `note` on ground with an info icon. Its `kind` ("Allergy") is said before the label to a screen reader; the mark says it to the eye. A patient's chips run in one row with **Alerts** after the last (D117), allergies first.
 - **`Pin`:** a coral capsule pinned on the coastline at the right of a `CoastHeader`, carrying the one thing not to miss. With `href` its tap area grows to 44 px.
 - **`ChoiceChips`:** a row of 44 px round, bold small choices (a radio group) that scrolls sideways on a phone. **`ChoiceField`** sets a short set of them as a form field — its label (required marked), the chips wrapping, the hint or refusal beside them — with nothing chosen until one is (a patient's gender).
 - **`SegmentedControl`:** round choices on a `--surface` track with a `--line` ring; the chosen thumb is `--chip` and slides on the map's curve (the theme switch in My account).
@@ -389,7 +389,7 @@ Every create and edit form opens in a `Sheet`: a bottom sheet on a phone (rounde
 The signature of the shell. On a phone, a lobe of land rises from the bottom with a flipped `phone` coastline as its top edge. From 768 px it drops beside the rail's ＋ or the sidebar's Add, 22rem wide, rounded top corners and the coastline as its lower edge (D76). Each action is a 56 px surface capsule with its 44 px `--chip` chip on the trailing edge: one per line on a phone, two-up from 640 px, one per line again beside the rail. In a view-only clinic every action stays visible, turned off, with the reason under the title.
 
 ### Land pieces (`coast-header.tsx`: `CoastHeader`, `Coastline`; `page-header.tsx`: `PageHeader`; `lake.tsx`: `Lake`)
-- **`CoastHeader`:** size `lead` (generous padding, the `phone` coastline under 768 px, `wide` above) or `band` (slim, the `band` coastline). Pays the top safe area. Holds a `PageHeader` (heading on a phone, display from 768 px, land-muted subtitle, an optional land-muted `detail` line — a patient's doctor — and `actions` under them, aligned with the title — a patient's Call and WhatsApp, small capsules) and an optional `Pin`.
+- **`CoastHeader`:** size `lead` (generous padding, the `phone` coastline under 768 px, `wide` above) or `band` (slim, the `band` coastline). Pays the top safe area. Holds a `PageHeader` (heading on a phone, display from 768 px, land-muted subtitle, an optional land-muted `detail` line — a patient's doctor — and `actions` under them, aligned with the title, a row each — a patient's alert chips, then Call and WhatsApp as small capsules) and an optional `Pin`.
 - **`Lake`:** an opening in the land, `--ground` showing through, `--radius-lake`, holding the patient now with the doctor: a display-large token, the name in title, a detail line, and their actions side by side. Built in the kit for the Queue (a later phase).
 
 ### Bands (`OfflineBanner.tsx`, `PlanBanner.tsx`)

@@ -4,10 +4,12 @@ import type { z } from "zod";
 import { TEXT_LIMITS } from "@/constants/limits";
 import { VALIDATION_MESSAGES } from "@/constants/messages";
 import {
+  alertSchema,
   firstIssue,
   patientListSchema,
   patientMatchesSchema,
   patientSchema,
+  updateAlertSchema,
   updatePatientSchema,
   type PatientInput,
 } from "@/lib/validation";
@@ -191,5 +193,38 @@ describe("patientListSchema (plan §10.2, D98)", () => {
 
   it("refuses a tab it does not know", () => {
     expect(messageOf(patientListSchema, { tab: "OWING" })).toBe(VALIDATION_MESSAGES.invalid);
+  });
+});
+
+describe("alertSchema (plan §10.4)", () => {
+  it("reads a kind, a tidied name and a note, blank as none", () => {
+    expect(alertSchema.parse({ kind: "ALLERGY", label: "  Penicillin ", note: "  " })).toEqual({
+      kind: "ALLERGY",
+      label: "Penicillin",
+      note: null,
+    });
+    expect(alertSchema.parse({ kind: "MEDICATION", label: "Metformin 500 mg", note: "Twice a day" })).toMatchObject({
+      note: "Twice a day",
+    });
+  });
+
+  it("asks for a kind and a name, each bounded", () => {
+    expect(messageOf(alertSchema, { kind: "HABIT", label: "Smoking" })).toBe(VALIDATION_MESSAGES.choose("Kind"));
+    expect(messageOf(alertSchema, { kind: "ALLERGY", label: "" })).toBe(VALIDATION_MESSAGES.required("Name"));
+    expect(messageOf(alertSchema, { kind: "ALLERGY", label: "x".repeat(TEXT_LIMITS.alertLabel + 1) })).toBe(
+      VALIDATION_MESSAGES.tooLong("Name", TEXT_LIMITS.alertLabel),
+    );
+    expect(
+      messageOf(alertSchema, { kind: "ALLERGY", label: "Dust", note: "x".repeat(TEXT_LIMITS.alertNote + 1) }),
+    ).toBe(VALIDATION_MESSAGES.tooLong("Note", TEXT_LIMITS.alertNote));
+  });
+});
+
+describe("updateAlertSchema (D118, D119)", () => {
+  it("takes a name, a note, or turning off — never a kind, never turning on", () => {
+    expect(updateAlertSchema.parse({ label: "Amoxicillin", note: "" })).toEqual({ label: "Amoxicillin", note: null });
+    expect(updateAlertSchema.parse({ active: false })).toEqual({ active: false });
+    expect(updateAlertSchema.parse({ kind: "CONDITION" })).toEqual({});
+    expect(messageOf(updateAlertSchema, { active: true })).toBe(VALIDATION_MESSAGES.invalid);
   });
 });
