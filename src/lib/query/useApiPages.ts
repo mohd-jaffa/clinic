@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import useSWRInfinite from "swr/infinite";
 
-import { fetcher } from "@/lib/api/client";
+import { fetcher, postJson } from "@/lib/api/client";
 import type { Page } from "@/lib/api/pagination";
 
 import { withQuery } from "./keys";
@@ -29,8 +29,12 @@ import { useSeeded } from "./useSeeded";
  *
  * A first page the page arrived with (`ServerData`) is shown at once and not
  * asked for again on mount.
+ *
+ * `post`: a list searched for a patient (D98) — its key is held in memory
+ * only, and each page is asked as a POST with the key's query as its body,
+ * so what was typed never reaches an address.
  */
-export function useApiPages<T, P extends Page<T> = Page<T>>(key: string | null) {
+export function useApiPages<T, P extends Page<T> = Page<T>>(key: string | null, { post = false } = {}) {
   const seeded = useSeeded(key === null ? null : pageKey(key));
   const { data, error, isLoading, isValidating, mutate, size, setSize } = useSWRInfinite<P>(
     (index, previous: P | null) => {
@@ -38,7 +42,7 @@ export function useApiPages<T, P extends Page<T> = Page<T>>(key: string | null) 
       if (index === 0) return key;
       return previous?.nextCursor ? withQuery(key, { cursor: previous.nextCursor }) : null;
     },
-    fetcher,
+    post ? posted : fetcher,
     { revalidateAll: true, keepPreviousData: true, ...(seeded && { revalidateOnMount: false }) },
   );
 
@@ -58,4 +62,10 @@ export function useApiPages<T, P extends Page<T> = Page<T>>(key: string | null) 
       if (hasMore) void setSize(size + 1);
     },
   };
+}
+
+/** A page asked as a POST: the key's route, its query as the body. */
+function posted<T>(key: string): Promise<T> {
+  const [route, query] = key.split("?");
+  return postJson<T>(route, Object.fromEntries(new URLSearchParams(query)));
 }

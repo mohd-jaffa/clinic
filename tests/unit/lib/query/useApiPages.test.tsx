@@ -5,8 +5,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useApiPages } from "@/lib/query/useApiPages";
 
-const fetcher = vi.hoisted(() => vi.fn());
-vi.mock("@/lib/api/client", () => ({ fetcher }));
+const { fetcher, postJson } = vi.hoisted(() => ({ fetcher: vi.fn(), postJson: vi.fn() }));
+vi.mock("@/lib/api/client", () => ({ fetcher, postJson }));
 
 function wrapper({ children }: { children: ReactNode }) {
   return (
@@ -24,6 +24,7 @@ const pages: Record<string, { items: string[]; nextCursor: string | null }> = {
 beforeEach(() => {
   fetcher.mockReset();
   fetcher.mockImplementation(async (key: string) => pages[key]);
+  postJson.mockReset();
 });
 
 describe("useApiPages", () => {
@@ -95,5 +96,27 @@ describe("useApiPages", () => {
     fetcher.mockRejectedValue(new Error("offline"));
     const { result } = renderHook(() => useApiPages<string>("/api/appointments"), { wrapper });
     await waitFor(() => expect(result.current.error).toBeInstanceOf(Error));
+  });
+
+  it("asks each page of a searched list as a POST, what was typed in the body and never the address (D98)", async () => {
+    postJson.mockImplementation(async (_route: string, body: { cursor?: string }) =>
+      body.cursor ? { items: ["Rohan"], nextCursor: null } : { items: ["Riya"], nextCursor: "20" },
+    );
+    const { result } = renderHook(() => useApiPages<string>("/api/patients/search?search=Mehta", { post: true }), {
+      wrapper,
+    });
+    await waitFor(() => expect(result.current.data).toEqual(["Riya"]));
+    act(() => result.current.loadMore());
+    await waitFor(() => expect(result.current.data).toEqual(["Riya", "Rohan"]));
+    expect(postJson).toHaveBeenCalledWith("/api/patients/search", { search: "Mehta" });
+    expect(postJson).toHaveBeenCalledWith("/api/patients/search", { search: "Mehta", cursor: "20" });
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
+  it("posts an empty body for a list asked with nothing", async () => {
+    postJson.mockResolvedValue({ items: [], nextCursor: null });
+    const { result } = renderHook(() => useApiPages<string>("/api/patients/search", { post: true }), { wrapper });
+    await waitFor(() => expect(result.current.data).toEqual([]));
+    expect(postJson).toHaveBeenCalledWith("/api/patients/search", {});
   });
 });

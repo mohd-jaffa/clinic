@@ -31,10 +31,15 @@ export { cursorParam, listQuerySchema, searchParam, type ListQuery } from "./sch
 
 export {
   BORN_AS,
+  PATIENT_TABS,
+  patientListSchema,
   patientMatchesSchema,
   patientSchema,
   updatePatientSchema,
   type BornAs,
+  type PatientListPayload,
+  type PatientListQuery,
+  type PatientTab,
   type PatientInput,
   type PatientMatchesInput,
   type PatientMatchesPayload,

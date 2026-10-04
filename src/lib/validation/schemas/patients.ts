@@ -16,6 +16,7 @@ import {
   requiredLine,
   wholeNumberText,
 } from "../primitives";
+import { cursorParam, searchParam } from "./list";
 
 const { patients } = UI_TEXT;
 
@@ -126,3 +127,20 @@ export const patientMatchesSchema = z.object({ phone: indianMobile(patients.mobi
 
 export type PatientMatchesInput = z.input<typeof patientMatchesSchema>;
 export type PatientMatchesPayload = z.output<typeof patientMatchesSchema>;
+
+/** The patients list's tabs (plan §10.2): everyone, or the archived. Owing comes with Phase 8 (D101). */
+export const PATIENT_TABS = ["ALL", "ARCHIVED"] as const;
+export type PatientTab = (typeof PATIENT_TABS)[number];
+
+/**
+ * A page of the patients list (plan §10.2, D98, D104): what is searched for,
+ * the tab, and where the page starts — sent in the body, never the address.
+ */
+export const patientListSchema = z.object({
+  search: searchParam,
+  tab: z.enum(PATIENT_TABS, { error: VALIDATION_MESSAGES.invalid }).default("ALL"),
+  cursor: cursorParam,
+});
+
+export type PatientListQuery = z.input<typeof patientListSchema>;
+export type PatientListPayload = z.output<typeof patientListSchema>;

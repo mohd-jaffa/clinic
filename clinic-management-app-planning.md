@@ -196,6 +196,9 @@ earlier lines are never rewritten.
 | D107 | **An added patient's profile opens** (the user), with a card naming them and their number ("Rohan Mehta added — P-1012"); the add form leaves the history, so Back leads to where they came from. | 2026-10-04 |
 | D108 | **The assigned doctor starts as the adding doctor, or the clinic's only doctor** (the user); otherwise as **No doctor yet**. It can always be changed. | 2026-10-04 |
 | D109 | **A date jumps by month and year** (the user): the calendar's heading opens its year's months, then a page of twelve years — the kit's date picker, for every date field — so a date of birth decades back is a few taps away. | 2026-10-04 |
+| D110 | **Each row of the patients list carries Call** (the user): a round call button beside the row, which opens the profile. On a phone the row's line is age · gender · number and leaves the mobile to the button; from a tablet's width the mobile joins the line. | 2026-10-04 |
+| D111 | **The patients list is rows on a desktop too** (the user): the same rows as on a phone, in a column of reading width — no table. | 2026-10-04 |
+| D112 | **A search that finds no one offers to add them** (the user): "No patient matches …" with **Add patient**, for those who may add, on the All tab; the sheet opens with what was typed — a mobile's digits as the mobile, words as the name. | 2026-10-04 |
 
 ## 3. Users and roles
 
@@ -681,11 +684,13 @@ Search by name (fuzzy, trigram), mobile (on its digits however typed), or
 patient number — sent in the request's body, never its address (D98); the
 best match first, and newest first with nothing typed (D104). Each row: name,
 age and gender, mobile, patient number, last
-visit ("Last visit: 28 Sep"), and a balance chip when they owe. Paged
-(**Show more**, `PAGE_SIZE`). Tabs: All · Owing (`payments.view`) · Archived
-(`patients.edit`). A doctor sees only their own patients, without a filter to
-choose. The last visit comes with Phase 6, the Owing tab and the balance chip
-with Phase 8 (D101).
+visit ("Last visit: 28 Sep"), and a balance chip when they owe; **Call**
+beside it, the mobile in the line from a tablet's width (D110). Rows on every
+width (D111). Paged (**Show more**, `PAGE_SIZE`). Tabs: All · Owing
+(`payments.view`) · Archived (`patients.edit`). A doctor sees only their own
+patients, without a filter to choose. A search that finds no one offers
+**Add patient** with what was typed (D112). The last visit comes with Phase
+6, the Owing tab and the balance chip with Phase 8 (D101).
 
 ### 10.3 Patient profile — `/patients/[id]`
 
@@ -1713,7 +1718,7 @@ take an `Idempotency-Key` header.
 | Team | `GET /api/team` · `POST /api/team/invites` · `POST /api/team/invites/[id]/resend` · `DELETE /api/team/invites/[id]` · `GET, PATCH /api/team/[id]` · `POST /api/team/[id]/active` |
 | Doctors | `GET /api/doctors` (active doctors, for pickers) |
 | Subscription | `GET /api/subscription` (state, dates, prices, contact, history — owner) · `GET /api/subscription/payments/[id]/receipt.pdf` |
-| Patients | `GET, POST /api/patients` · `POST /api/patients/search` (the words in the body, D98) · `POST /api/patients/matches` (the mobile in the body, D98) · `GET, PATCH /api/patients/[id]` · `POST /api/patients/[id]/archive` · `POST /api/patients/[id]/restore` · `GET /api/patients/[id]/summary` · `GET /api/patients/[id]/timeline` · `GET /api/patients/[id]/last-prescription` · `POST /api/patients/import` · `GET, POST /api/patients/[id]/alerts` · `PATCH /api/patients/[id]/alerts/[alertId]` |
+| Patients | `POST /api/patients` · `POST /api/patients/search` (the list, a page at a time: the words, the tab and the cursor in the body, D98) · `POST /api/patients/matches` (the mobile in the body, D98) · `GET, PATCH /api/patients/[id]` · `POST /api/patients/[id]/archive` · `POST /api/patients/[id]/restore` · `GET /api/patients/[id]/summary` · `GET /api/patients/[id]/timeline` · `GET /api/patients/[id]/last-prescription` · `POST /api/patients/import` · `GET, POST /api/patients/[id]/alerts` · `PATCH /api/patients/[id]/alerts/[alertId]` |
 | Appointments | `GET, POST /api/appointments` · `GET, PATCH /api/appointments/[id]` · `POST /api/appointments/[id]/status` · `POST /api/appointments/[id]/arrived` · `POST /api/appointments/[id]/reminded` · `POST /api/appointments/walk-in` |
 | Queue | `GET /api/queue` · `POST /api/queue/send-in` · `POST /api/queue/done` · `POST /api/queue/next` |
 | Visits | `POST /api/visits` · `GET, PATCH /api/visits/[id]` · `PUT /api/visits/[id]/vitals` · `POST /api/visits/[id]/no-charge` |

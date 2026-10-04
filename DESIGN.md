@@ -335,7 +335,7 @@ The page is flat: land, ground and surface are tonal layers with no shadows, gra
 
 ## Components
 
-### Buttons (`button.tsx`: `Button`, `LinkButton`, `IconButton`; `capsule.tsx`)
+### Buttons (`button.tsx`: `Button`, `LinkButton`, `IconButton`, `IconLink`; `capsule.tsx`)
 Firm, round and unmistakable: one look per variant, declared once.
 - **Shape:** fully round, 44 px minimum height at both sizes (`md` body text, `sm` small text).
 - **Primary:** `--action` fill, `--on-action` bold label, and a 34 px `--chip` chip (30 px small) on the trailing edge holding an icon, an arrow by default. One primary per view: the one thing to do.
@@ -347,6 +347,7 @@ Firm, round and unmistakable: one look per variant, declared once.
 - **Press / disabled:** scale to 0.98 on press; 50% opacity and a not-allowed cursor when disabled.
 - **`IconButton`:** a 44 px round, label-less action (close, next month) in `plain`, `outline` or `danger` tone; its label is required.
 - **`LinkButton`:** the same capsules as an anchor, for navigation, `tel:` and `wa.me`.
+- **`IconLink`:** a 44 px round, label-less link beside a row that opens — a patient's Call (D110): the icon in `--action` on `--action-soft`, filling `--action` on hover; its label is required.
 
 ### Capsule state (`capsule.tsx`: `Capsule`)
 A capsule that only says where something stands ("Waiting", "With the doctor"): `surface` tone with a `--line` ring by default, the chip trailing and leading once live. The words carry the state; the chip's side repeats it.

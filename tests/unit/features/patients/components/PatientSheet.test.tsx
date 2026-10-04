@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { PatientPrefill } from "@/features/patients/components/PatientSheet";
 import type { Patient } from "@/features/patients/types";
 import { ApiError } from "@/lib/api/client";
 import { authStub } from "@tests/support/auth";
@@ -41,19 +42,19 @@ beforeEach(() => {
 });
 afterEach(() => vi.useRealTimers());
 
-function Harness({ patient }: { patient?: Patient }) {
+function Harness({ patient, prefill }: { patient?: Patient; prefill?: PatientPrefill }) {
   const [open, setOpen] = useState(true);
   const close = () => {
     onClose();
     setOpen(false);
   };
-  return <PatientSheet open={open} onClose={close} patient={patient} />;
+  return <PatientSheet open={open} onClose={close} patient={patient} prefill={prefill} />;
 }
 
-const draw = (patient?: Patient) =>
+const draw = (patient?: Patient, prefill?: PatientPrefill) =>
   render(
     <Providers>
-      <Harness patient={patient} />
+      <Harness patient={patient} prefill={prefill} />
     </Providers>,
   );
 
@@ -138,6 +139,12 @@ describe("PatientSheet adding a patient (plan §10.1, D105 – D108)", () => {
     doctors.current = [ASHA, RAHUL];
     draw();
     expect(doctor()).toHaveTextContent("No doctor yet");
+  });
+
+  it("starts with what a search that found no one typed (D112)", () => {
+    draw(undefined, { phone: "98765 43210" });
+    expect(field(/^Mobile/)).toHaveValue("98765 43210");
+    expect(field(/^Full name/)).toHaveValue("");
   });
 
   it("keeps the rest under More details, and opens it on a refusal inside (D105)", async () => {

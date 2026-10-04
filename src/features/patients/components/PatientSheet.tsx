@@ -44,6 +44,9 @@ const { patients } = UI_TEXT;
 const GENDER_OPTIONS = GENDERS.map((gender) => ({ value: gender, label: GENDER_LABELS[gender] }));
 const BORN_OPTIONS = BORN_AS.map((as) => ({ value: as, label: patients.bornAs[as] }));
 
+/** What a search that found no one fills a new patient with (D112). */
+export type PatientPrefill = Partial<Pick<PatientInput, "fullName" | "phone">>;
+
 /** The fields kept under More details (D105). */
 const MORE = ["altPhone", "email", "address", "emergencyContactName", "emergencyContactPhone", "notes"] as const;
 
@@ -100,18 +103,21 @@ export function PatientSheet({
   open,
   onClose,
   patient,
+  prefill,
 }: {
   open: boolean;
   onClose: () => void;
   /** The patient being changed; none to add one. */
   patient?: Patient;
+  /** What a new patient starts with, beside the blanks. */
+  prefill?: PatientPrefill;
 }) {
   const respond = useResponse();
   const router = useRouter();
   const { membership } = useAuth();
   const doctors = useDoctors().data ?? [];
   const only = doctors.length === 1 ? doctors[0].id : "";
-  const initial = patient ? fromPatient(patient) : blank(membership?.doctorId ?? only);
+  const initial = patient ? fromPatient(patient) : { ...blank(membership?.doctorId ?? only), ...prefill };
   const [keys] = useState(requestKeys);
   const [more, setMore] = useState(() => MORE.some((field) => initial[field] !== ""));
 
@@ -130,7 +136,7 @@ export function PatientSheet({
   const [phone, bornAs] = useWatch({ control, name: ["phone", "born.as"] });
 
   const added = useApiMutation(PatientsClient.create, {
-    revalidate: [apiRoutes.patients.list, apiRoutes.patients.matches],
+    revalidate: [apiRoutes.patients.search, apiRoutes.patients.matches],
     onSuccess: (saved) => {
       keys.settle();
       reset(initial);
@@ -141,7 +147,11 @@ export function PatientSheet({
     onError: (failure) => respond.failure(failure, { title: patients.notAdded }),
   });
   const changed = useApiMutation(PatientsClient.update, {
-    revalidate: [apiRoutes.patients.list, ...(patient ? [apiRoutes.patients.one(patient.id)] : [])],
+    revalidate: [
+      apiRoutes.patients.search,
+      apiRoutes.patients.matches,
+      ...(patient ? [apiRoutes.patients.one(patient.id)] : []),
+    ],
     onSuccess: (saved) => {
       onClose();
       respond.success({ title: patients.saved(saved.name) });

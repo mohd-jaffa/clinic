@@ -4,7 +4,7 @@ import { Check, Plus, Trash2 } from "lucide-react";
 import { createRef } from "react";
 import { describe, expect, it, vi } from "vitest";
 
-import { Button, IconButton, LinkButton } from "@/components/ui/button";
+import { Button, IconButton, IconLink, LinkButton } from "@/components/ui/button";
 
 const chipOf = (button: HTMLElement) => button.querySelector("[data-chip]");
 
@@ -168,5 +168,14 @@ describe("IconButton", () => {
     await userEvent.click(screen.getByRole("button", { name: "Previous month" }));
     expect(screen.getByRole("button", { name: "Previous month" })).toBeDisabled();
     expect(onClick).not.toHaveBeenCalled();
+  });
+});
+
+describe("IconLink", () => {
+  it("names where it leads, because the icon alone says nothing", () => {
+    render(<IconLink icon={Trash2} href="tel:+919876543210" label="Call Rohan Mehta" />);
+    const link = screen.getByRole("link", { name: "Call Rohan Mehta" });
+    expect(link).toHaveAttribute("href", "tel:+919876543210");
+    expect(link).toHaveAttribute("title", "Call Rohan Mehta");
   });
 });

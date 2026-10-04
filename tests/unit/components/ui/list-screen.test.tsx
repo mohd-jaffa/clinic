@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Users } from "lucide-react";
+import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { EmptyState } from "@/components/ui/empty-state";
@@ -13,7 +14,7 @@ interface Patient {
   name: string;
 }
 
-function list({ query, data, noMatches }: { query?: Partial<ListQuery>; data?: Patient[]; noMatches?: string }) {
+function list({ query, data, noMatches }: { query?: Partial<ListQuery>; data?: Patient[]; noMatches?: ReactNode }) {
   return render(
     <ListScreen<Patient>
       query={{ isLoading: false, error: undefined, mutate: vi.fn(), ...query }}
@@ -69,6 +70,17 @@ describe("ListScreen", () => {
     unmount();
     list({ data: [], noMatches: "No one matches “Ro”." });
     expect(screen.getByText("No one matches “Ro”.")).toBeInTheDocument();
+  });
+
+  it("says what is missing while nothing is searched, though the screen passes its search's words", () => {
+    list({ data: [], noMatches: "" });
+    expect(screen.getByRole("heading", { name: "No patients yet" })).toBeInTheDocument();
+  });
+
+  it("shows what to do instead when nothing matches, given more than words", () => {
+    list({ data: [], noMatches: <button type="button">Add patient</button> });
+    expect(screen.getByRole("button", { name: "Add patient" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "No patients yet" })).not.toBeInTheDocument();
   });
 
   it("shows the rows, what is below them, and Show more while another page follows", async () => {

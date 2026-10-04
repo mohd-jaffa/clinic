@@ -5,7 +5,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { Permission } from "@/constants/permissions";
 import { PLATFORM_SETTING_DEFAULTS } from "@/constants/platform";
 import { FIRST_PATIENT_NUMBER } from "@/constants/seeds";
-import { createPatient, findPatientMatches, getPatient, updatePatient } from "@/features/patients/api";
+import { createPatient, findPatientMatches, getPatient, listPatients, updatePatient } from "@/features/patients/api";
 import { estimatedBirthDate } from "@/lib/dates/age";
 import { addDaysKey, todayKey } from "@/lib/dates/calendar";
 import { patientSchema, type PatientInput } from "@/lib/validation";
@@ -405,6 +405,29 @@ describe("the search (plan §10.2; D104)", () => {
 
   it("finds nothing of another clinic", async () => {
     expect(await find(clinic.owner, { words: "Ramesh" })).toEqual([]);
+  });
+
+  it("is listed a page at a time through the app's function, as each member may see (R4.3)", async () => {
+    const names = async (member: SignedIn, query: Parameters<typeof listPatients>[1]) =>
+      (await listPatients(member.tenant!, query)).items.map(({ name }) => name);
+    expect(await names(search.owner, { search: null, tab: "ALL" })).toEqual([
+      "Rameshwari Devi",
+      "Priya Nair",
+      "Suresh Raman",
+      "Ramesh Kumar",
+    ]);
+    expect(await listPatients(search.owner.tenant, { search: null, tab: "ALL", cursor: 2 })).toMatchObject({
+      items: [{ name: "Suresh Raman" }, { name: "Ramesh Kumar", phone: "+919812345678", gender: "MALE" }],
+      nextCursor: null,
+    });
+    expect(await names(search.owner, { search: "+91 98000 11122", tab: "ALL" })).toEqual(["Priya Nair"]);
+    expect((await names(search.owner, { search: `P-${numbers["Ramesh Kumar"]}`, tab: "ALL" }))[0]).toBe("Ramesh Kumar");
+    expect(await names(search.owner, { search: "Old", tab: "ARCHIVED" })).toEqual(["Old Friend"]);
+    expect(await names(doctor, { search: "ram", tab: "ALL" })).toEqual(["Rameshwari Devi", "Suresh Raman"]);
+    expect(await names(doctor, { search: null, tab: "ARCHIVED" })).toEqual([]);
+    await expect(listPatients(assistant.tenant!, { search: null, tab: "ARCHIVED" })).rejects.toMatchObject({
+      kind: "AUTHORIZATION",
+    });
   });
 });
 

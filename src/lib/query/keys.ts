@@ -61,6 +61,7 @@ export const apiRoutes = {
   // Patients (plan §10, §30): what is typed about one goes in a body, never here (D98).
   patients: {
     list: "/api/patients",
+    search: "/api/patients/search",
     matches: "/api/patients/matches",
     one: (id: string) => `/api/patients/${id}`,
   },

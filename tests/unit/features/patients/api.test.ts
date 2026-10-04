@@ -9,10 +9,10 @@ import { fakeSupabase, postgrestError, type FakeSupabaseOptions } from "@tests/s
 const { logActionSafe } = vi.hoisted(() => ({ logActionSafe: vi.fn() }));
 vi.mock("@/lib/audit/auditLog", () => ({ logActionSafe }));
 
-const { createPatient, findPatientMatches, getPatient, toPatient, updatePatient } =
+const { createPatient, findPatientMatches, getPatient, listPatients, toPatient, updatePatient } =
   await import("@/features/patients/api");
 
-function tenantWith(options: FakeSupabaseOptions) {
+function tenantWith(options: FakeSupabaseOptions, member: Partial<Tenant> = {}) {
   const fake = fakeSupabase(options);
   const tenant: Tenant = {
     supabase: fake.client,
@@ -22,6 +22,7 @@ function tenantWith(options: FakeSupabaseOptions) {
     role: "OWNER",
     permissions: [],
     doctorId: null,
+    ...member,
   };
   return { ...fake, tenant };
 }
@@ -231,5 +232,75 @@ describe("findPatientMatches (D106)", () => {
     await expect(
       findPatientMatches(tenantWith({ answer: () => ({ error: postgrestError("42501") }) }).tenant, "+91"),
     ).rejects.toMatchObject({ code: "AUTH_PERMISSION_DENIED" });
+  });
+});
+
+describe("listPatients (plan §10.2, D104)", () => {
+  const row = (number: number) => ({
+    id: `p-${number}`,
+    patient_number: number,
+    full_name: "Rohan Mehta",
+    phone: "+919876543210",
+    date_of_birth: "1990-04-12",
+    gender: "MALE",
+  });
+
+  it("asks search_patients as the caller for a page and one more, so it knows another follows", async () => {
+    const rows = Array.from({ length: 21 }, (_, index) => row(1100 - index));
+    const { tenant, rpcs, rpcChains } = tenantWith({ rpc: () => ({ data: rows }) });
+    const page = await listPatients(tenant, { search: null, tab: "ALL" });
+    expect(rpcs).toEqual([
+      {
+        name: "search_patients",
+        args: { p_words: null, p_digits: null, p_number: null, p_archived: false, p_offset: 0, p_limit: 21 },
+      },
+    ]);
+    expect(rpcChains[0]).toEqual([["select", "id, patient_number, full_name, phone, date_of_birth, gender"]]);
+    expect(page.items).toHaveLength(20);
+    expect(page.items[0]).toEqual({
+      id: "p-1100",
+      number: 1100,
+      name: "Rohan Mehta",
+      phone: "+919876543210",
+      dateOfBirth: "1990-04-12",
+      gender: "MALE",
+    });
+    expect(page.nextCursor).toBe("20");
+  });
+
+  it("reads a search as words, a mobile's digits and a number, from where the page starts", async () => {
+    const { tenant, rpcs } = tenantWith({ rpc: () => ({ data: [row(1012)] }) });
+    const page = await listPatients(tenant, { search: "1012", tab: "ALL", cursor: 20 });
+    expect(rpcs[0].args).toEqual({
+      p_words: "1012",
+      p_digits: "1012",
+      p_number: 1012,
+      p_archived: false,
+      p_offset: 20,
+      p_limit: 21,
+    });
+    expect(page.nextCursor).toBeNull();
+  });
+
+  it("reads the archived for those who may restore them, and refuses them to anyone else", async () => {
+    const editor = tenantWith({ rpc: () => ({ data: null }) }, { role: "STAFF", permissions: ["patients.edit"] });
+    expect(await listPatients(editor.tenant, { search: null, tab: "ARCHIVED" })).toEqual({
+      items: [],
+      nextCursor: null,
+    });
+    expect(editor.rpcs[0].args).toMatchObject({ p_archived: true });
+
+    const viewer = tenantWith({ rpc: () => ({ data: [] }) }, { role: "STAFF", permissions: ["patients.view"] });
+    await expect(listPatients(viewer.tenant, { search: null, tab: "ARCHIVED" })).rejects.toMatchObject({
+      kind: "AUTHORIZATION",
+    });
+    expect(viewer.rpcs).toEqual([]);
+  });
+
+  it("refuses in the app's words", async () => {
+    const { tenant } = tenantWith({ rpc: () => ({ error: postgrestError("42501") }) });
+    await expect(listPatients(tenant, { search: "Rohan", tab: "ALL" })).rejects.toMatchObject({
+      code: "AUTH_PERMISSION_DENIED",
+    });
   });
 });

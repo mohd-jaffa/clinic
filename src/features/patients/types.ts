@@ -52,3 +52,13 @@ export interface PatientMatch {
   gender: Gender;
   archived: boolean;
 }
+
+/** A row of the patients list (plan §10.2): who, and the number to call. */
+export interface PatientListItem {
+  id: string;
+  number: number;
+  name: string;
+  phone: string;
+  dateOfBirth: string;
+  gender: Gender;
+}

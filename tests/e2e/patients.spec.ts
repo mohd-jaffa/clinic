@@ -6,6 +6,7 @@ import { UI_TEXT } from "@/constants/messages";
 import { PERMISSION_PRESET_SETS } from "@/constants/permissions";
 import { createPatient } from "@/features/patients/api";
 import { formatLongDate } from "@/lib/format/date";
+import type { Tenant } from "@/lib/supabase/tenant";
 import { patientSchema } from "@/lib/validation";
 import { expectAccessible } from "@tests/support/e2e";
 import { addMember, admin, aMobileNumber, registerClinic, removeAll } from "@tests/support/integration";
@@ -15,12 +16,35 @@ import { addMember, admin, aMobileNumber, registerClinic, removeAll } from "@tes
  * from the ＋, finds the family already on the mobile typed, adds a brother
  * by his age, and lands on his profile with his number — Back leads to the
  * list, not the form. The owner gives a date of birth decades back through
- * the calendar's year and month jump. At a phone's width and a desktop's,
- * each checked by axe.
+ * the calendar's year and month jump.
+ *
+ * The list (plan §10.2; R4.3, D104, D110 – D112): a receptionist pages
+ * through the clinic's patients, finds one by name, mobile and number, calls
+ * one, adds someone a search did not find with what was typed, and opens the
+ * archived; a doctor finds only their own. At a phone's width and a
+ * desktop's, each checked by axe.
  */
 test.afterAll(removeAll);
 
 const { patients, quickActions, datePicker } = UI_TEXT;
+
+/** The doctor's row a member's profile hangs from. */
+async function doctorOf(memberId: string) {
+  const { data } = await admin().from("doctors").select("id").eq("member_id", memberId).single();
+  return data!.id as string;
+}
+
+/** Patients added at once, as an import does, numbered from 1001 in the order given. */
+async function imported(tenant: Tenant, people: { name: string; phone?: string }[]) {
+  const rows = people.map(({ name, phone }) => ({
+    full_name: name,
+    phone: phone ?? `+91${aMobileNumber()}`,
+    date_of_birth: "1990-04-12",
+    gender: "FEMALE",
+  }));
+  const { error } = await tenant.supabase.rpc("import_patients", { p_patients: rows });
+  expect(error).toBeNull();
+}
 
 async function signIn(page: Page, identifier: string, password: string) {
   const answer = await page.request.post("/api/auth/login", { data: { identifier, password } });
@@ -122,4 +146,90 @@ test("the owner gives a date of birth decades back through the calendar's jump (
   await page.goBack();
   await expect(page).toHaveURL(/\/patients$/);
   await expect(page.getByRole("dialog", { name: patients.addTitle })).toBeHidden();
+});
+
+test("a receptionist finds patients by name, mobile and number, and adds one not found", async ({ page }) => {
+  const clinic = await registerClinic({ fullName: "Asha Menon", clinicName: "Smile Care" });
+  const receptionist = await addMember(clinic.clinicId, {
+    permissions: [...PERMISSION_PRESET_SETS.RECEPTIONIST.permissions],
+  });
+  // Kabir is the first added, so the last listed: past the first page.
+  await imported(clinic.owner.tenant, [
+    { name: "Kabir Mehta", phone: "+919876501234" },
+    ...Array.from({ length: 21 }, (_, index) => ({ name: `Walk-in ${String(index + 2).padStart(2, "0")}` })),
+  ]);
+  const { data: archived } = await admin()
+    .from("patients")
+    .select("id")
+    .eq("clinic_id", clinic.clinicId)
+    .eq("full_name", "Walk-in 02")
+    .single();
+  await clinic.owner.tenant.supabase
+    .from("patients")
+    .update({ archived_at: new Date().toISOString() })
+    .eq("id", archived!.id);
+  await signIn(page, receptionist.email, receptionist.password);
+
+  await page.goto("/patients");
+  const list = page.getByRole("list", { name: UI_TEXT.nav.places.patients });
+  await expect(list.getByRole("listitem")).toHaveCount(20);
+  await expect(list.getByRole("listitem").first()).toContainText("Walk-in 22");
+  await expectAccessible(page);
+  await page.getByRole("button", { name: UI_TEXT.actions.showMore }).click();
+  await expect(list.getByRole("listitem")).toHaveCount(21);
+  await expect(list.getByRole("listitem").last()).toContainText("Kabir Mehta");
+  await expect(page.getByRole("button", { name: UI_TEXT.actions.showMore })).toBeHidden();
+
+  const search = page.getByRole("searchbox", { name: patients.searchPlaceholder });
+  for (const typed of ["kabir", "98765 01234", "P-1001"]) {
+    await search.fill(typed);
+    await expect(list.getByRole("listitem").first()).toContainText("Kabir Mehta");
+  }
+  await expect(list.getByRole("link", { name: patients.call("Kabir Mehta") })).toHaveAttribute(
+    "href",
+    "tel:+919876501234",
+  );
+  await expectAccessible(page);
+
+  await search.fill("Zoya Khan");
+  await expect(page.getByText(patients.noMatches("Zoya Khan"))).toBeVisible();
+  await expectAccessible(page);
+  await page.getByRole("button", { name: patients.add }).last().click();
+  const sheet = page.getByRole("dialog", { name: patients.addTitle });
+  await expect(sheet.getByRole("textbox", { name: /^Full name/ })).toHaveValue("Zoya Khan");
+  await sheet.getByRole("button", { name: UI_TEXT.actions.close }).click();
+  await expect(sheet).toBeHidden();
+
+  await search.fill("");
+  await page.getByRole("tab", { name: patients.tabs.ARCHIVED }).click();
+  const shelf = page.getByRole("tabpanel");
+  await expect(shelf.getByRole("listitem")).toHaveCount(1);
+  await expect(shelf.getByRole("listitem")).toContainText("Walk-in 02");
+  await expectAccessible(page);
+});
+
+test("a doctor finds only their own patients (D3)", async ({ page }) => {
+  const clinic = await registerClinic({ fullName: "Asha Menon" });
+  const doctor = await addMember(clinic.clinicId, {
+    role: "DOCTOR",
+    permissions: [...PERMISSION_PRESET_SETS.DOCTOR.permissions],
+  });
+  const theirs = await doctorOf(doctor.memberId);
+  for (const [fullName, assignedDoctorId] of [
+    ["Meena Iyer", theirs],
+    ["Someone Else", ""],
+  ]) {
+    const typed = { fullName, phone: aMobileNumber(), born: { as: "AGE", years: "41" }, gender: "FEMALE" };
+    await createPatient(clinic.owner.tenant, patientSchema.parse({ ...typed, assignedDoctorId }), randomUUID());
+  }
+  await signIn(page, doctor.email, doctor.password);
+
+  await page.goto("/patients");
+  await expect(page.getByText(patients.yours)).toBeVisible();
+  const list = page.getByRole("list", { name: UI_TEXT.nav.places.patients });
+  await expect(list.getByRole("listitem")).toHaveCount(1);
+  await expect(list.getByRole("listitem")).toContainText("Meena Iyer");
+  await page.getByRole("searchbox", { name: patients.searchPlaceholder }).fill("Someone");
+  await expect(page.getByText(patients.noMatches("Someone"))).toBeVisible();
+  await expectAccessible(page);
 });

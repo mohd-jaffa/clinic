@@ -5,6 +5,7 @@ import { TEXT_LIMITS } from "@/constants/limits";
 import { VALIDATION_MESSAGES } from "@/constants/messages";
 import {
   firstIssue,
+  patientListSchema,
   patientMatchesSchema,
   patientSchema,
   updatePatientSchema,
@@ -172,5 +173,23 @@ describe("patientMatchesSchema (D98, D106)", () => {
   it("reads the mobile as it is stored", () => {
     expect(patientMatchesSchema.parse({ phone: "098765 43210" })).toEqual({ phone: "+919876543210" });
     expect(messageOf(patientMatchesSchema, { phone: "98765" })).toBe(VALIDATION_MESSAGES.phone);
+  });
+});
+
+describe("patientListSchema (plan §10.2, D98)", () => {
+  it("reads a page of the list: what was searched, normalised, the tab, and where it starts", () => {
+    expect(patientListSchema.parse({ search: "  Rohan   Mehta ", tab: "ARCHIVED", cursor: "20" })).toEqual({
+      search: "Rohan Mehta",
+      tab: "ARCHIVED",
+      cursor: 20,
+    });
+  });
+
+  it("starts at everyone's first page, with nothing searched", () => {
+    expect(patientListSchema.parse({})).toEqual({ search: null, tab: "ALL" });
+  });
+
+  it("refuses a tab it does not know", () => {
+    expect(messageOf(patientListSchema, { tab: "OWING" })).toBe(VALIDATION_MESSAGES.invalid);
   });
 });

@@ -64,8 +64,8 @@ export function ListScreen<T>({
   data: readonly T[] | undefined;
   /** Shown when the clinic has none of these yet — usually an EmptyState. */
   empty: ReactNode;
-  /** Shown when there are some, but none match the current search. */
-  noMatches?: string;
+  /** Shown when none match the current search: its words, or words and what to do instead. */
+  noMatches?: ReactNode;
   /** The rows themselves — a RowList on a phone, a table on a desktop. */
   renderList: (items: readonly T[]) => ReactNode;
   /** Anything below the rows. */
@@ -82,8 +82,16 @@ export function ListScreen<T>({
   if (query.error != null && data === undefined) return <LoadFailed query={query} loadFailed={loadFailed} />;
 
   if (!data || data.length === 0) {
+    // Nothing searched (no words, or none yet): the empty state.
+    if (!noMatches) return <section>{empty}</section>;
     return (
-      <section>{noMatches ? <p className="py-10 text-center font-bold text-muted">{noMatches}</p> : empty}</section>
+      <section>
+        {typeof noMatches === "string" ? (
+          <p className="py-10 text-center font-bold text-muted">{noMatches}</p>
+        ) : (
+          noMatches
+        )}
+      </section>
     );
   }
 

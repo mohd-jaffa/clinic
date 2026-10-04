@@ -1,12 +1,15 @@
 import { MAX_PATIENT_MATCHES } from "@/constants/limits";
+import { hasAccess } from "@/constants/permissions";
+import { pageWindow, toPage, type Page } from "@/lib/api/pagination";
 import { logActionSafe } from "@/lib/audit/auditLog";
 import { auditedChanges } from "@/lib/audit/changes";
-import { fromPostgrestError } from "@/lib/errors";
+import { authorizationError, fromPostgrestError } from "@/lib/errors";
 import { tenantRecords } from "@/lib/supabase/records";
+import { searchTerms } from "@/lib/supabase/search";
 import type { Tenant } from "@/lib/supabase/tenant";
-import type { PatientPayload, UpdatePatientPayload } from "@/lib/validation";
+import type { PatientListPayload, PatientPayload, UpdatePatientPayload } from "@/lib/validation";
 
-import type { Patient, PatientMatch, PatientRow } from "./types";
+import type { Patient, PatientListItem, PatientMatch, PatientRow } from "./types";
 
 /**
  * Patients (plan §10.1): added through `create_patient` — numbered, on the
@@ -148,4 +151,46 @@ export async function findPatientMatches(tenant: Tenant, phone: string): Promise
     gender: row.gender,
     archived: row.archived_at !== null,
   }));
+}
+
+/**
+ * A page of the patients list (plan §10.2, D104): through `search_patients`,
+ * as the caller — so a doctor finds only their own — newest first, or best
+ * match first for a search read as words, a mobile's digits or a number.
+ * The archived wait on their own tab, for those who may restore them.
+ */
+export async function listPatients(
+  tenant: Tenant,
+  { search, tab, cursor }: PatientListPayload,
+): Promise<Page<PatientListItem>> {
+  if (tab === "ARCHIVED" && !hasAccess(tenant, "patients.edit")) throw authorizationError();
+  const start = cursor ?? 0;
+  const { from, to } = pageWindow(start);
+  const { words, digits, number } = searchTerms(search);
+  const { data, error } = await tenant.supabase
+    .rpc("search_patients", {
+      p_words: words,
+      p_digits: digits,
+      p_number: number,
+      p_archived: tab === "ARCHIVED",
+      p_offset: from,
+      p_limit: to - from + 1,
+    })
+    .select("id, patient_number, full_name, phone, date_of_birth, gender");
+  if (error) throw fromPostgrestError(error);
+  const rows = (data ?? []) as Pick<
+    PatientRow,
+    "id" | "patient_number" | "full_name" | "phone" | "date_of_birth" | "gender"
+  >[];
+  return toPage(
+    rows.map((row) => ({
+      id: row.id,
+      number: row.patient_number,
+      name: row.full_name,
+      phone: row.phone,
+      dateOfBirth: row.date_of_birth,
+      gender: row.gender,
+    })),
+    start,
+  );
 }

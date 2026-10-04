@@ -79,6 +79,7 @@ export const ERROR_MESSAGES = {
   PATIENT_ARCHIVED: "This patient is archived. Restore them to make changes.",
   PATIENT_BIRTH_DATE_INVALID: `A date of birth can’t be in the future, or more than ${MAX_PATIENT_AGE} years ago.`,
   PATIENT_LOAD_FAILED: "This patient couldn't be loaded.",
+  PATIENTS_LOAD_FAILED: "The patients couldn't be loaded.",
 
   // The browser could not reach the server (plan §21, D55): said by the client, never sent by the server.
   NETWORK_OFFLINE: "You're offline. Try again once the connection is back — what you typed is still here.",
@@ -685,6 +686,19 @@ export const UI_TEXT = {
     notAdded: "The patient wasn’t added",
     saved: (name: string) => `${name} saved`,
     notSaved: "That wasn’t saved",
+    /** The list (plan §10.2, D110 – D112). */
+    yours: "Your patients",
+    searchPlaceholder: "Search by name, mobile or number",
+    tabsLabel: "Which patients",
+    tabs: { ALL: "All", ARCHIVED: "Archived" },
+    call: (name: string) => `Call ${name}`,
+    emptyTitle: "No patients yet",
+    emptyHint: "Patients you add appear here, the newest first.",
+    emptyHintDoctor: "Patients assigned to you, or booked with you, appear here.",
+    archivedEmptyTitle: "No archived patients",
+    archivedEmptyHint: "A patient archived from their profile waits here, to be restored.",
+    noMatches: (search: string) => `No patient matches “${search}”`,
+    noMatchesHint: "Add them now — what you typed is filled in.",
   },
 
   /** An age, short enough for a row or a prescription (plan §10.1). */
