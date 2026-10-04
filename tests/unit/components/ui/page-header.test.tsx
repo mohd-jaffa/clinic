@@ -20,4 +20,17 @@ describe("PageHeader", () => {
     expect(screen.getByRole("link", { name: "Go back" })).toHaveAttribute("href", "/patients");
     expect(screen.getByRole("button", { name: "Edit" })).toBeInTheDocument();
   });
+
+  it("adds a second line, and what to do with whom it names, under the title", () => {
+    render(
+      <PageHeader
+        title="Rohan Mehta"
+        subtitle="34 y · Male · P-1012"
+        detail="Doctor · Rahul Nair"
+        actions={<a href="tel:+919876543210">Call</a>}
+      />,
+    );
+    expect(screen.getByText("Doctor · Rahul Nair")).toHaveClass("text-land-muted");
+    expect(screen.getByRole("link", { name: "Call" })).toHaveAttribute("href", "tel:+919876543210");
+  });
 });

@@ -699,6 +699,14 @@ export const UI_TEXT = {
     archivedEmptyHint: "A patient archived from their profile waits here, to be restored.",
     noMatches: (search: string) => `No patient matches “${search}”`,
     noMatchesHint: "Add them now — what you typed is filled in.",
+    /** The profile (plan §10.3, D113 – D116). */
+    doctorLine: (name: string) => `Doctor · ${name}`,
+    callLabel: "Call",
+    whatsAppLabel: "WhatsApp",
+    whatsAppTo: (name: string) => `WhatsApp ${name}`,
+    details: "Details",
+    edit: "Edit",
+    editName: (name: string) => `Edit ${name}`,
   },
 
   /** An age, short enough for a row or a prescription (plan §10.1). */

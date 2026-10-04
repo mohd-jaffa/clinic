@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import Link from "next/link";
 import { useRef, useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 
@@ -104,7 +105,7 @@ describe("Sheet", () => {
 
     render(
       <Sheet open onClose={vi.fn()} title="Menu">
-        <a href="/patients">Patients</a>
+        <Link href="/patients">Patients</Link>
       </Sheet>,
     );
     expect(screen.getByRole("link", { name: "Patients" })).toHaveFocus();

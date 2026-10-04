@@ -14,11 +14,17 @@ import { UI_TEXT } from "@/constants/messages";
 export function PageHeader({
   title,
   subtitle,
+  detail,
+  actions,
   back,
   children,
 }: {
   title: string;
   subtitle?: string;
+  /** A second line under the subtitle: a patient's doctor. */
+  detail?: string;
+  /** What to do with whom the title names, under its lines: a patient's Call and WhatsApp. */
+  actions?: ReactNode;
   /** Where the back arrow goes; none on a top-level screen. */
   back?: string;
   children?: ReactNode;
@@ -38,6 +44,8 @@ export function PageHeader({
         <div className="min-w-0 flex-1 pt-1">
           <h1 className="text-heading font-bold tracking-[-0.01em] md:text-display">{title}</h1>
           {subtitle && <p className="mt-1.5 text-land-muted md:mt-3 md:text-title">{subtitle}</p>}
+          {detail && <p className="mt-0.5 text-land-muted md:mt-1">{detail}</p>}
+          {actions && <div className="mt-4 flex flex-wrap gap-2">{actions}</div>}
         </div>
       </div>
       {children && <div className="flex shrink-0 flex-wrap items-center gap-2">{children}</div>}

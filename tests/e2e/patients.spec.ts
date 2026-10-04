@@ -21,8 +21,12 @@ import { addMember, admin, aMobileNumber, registerClinic, removeAll } from "@tes
  * The list (plan §10.2; R4.3, D104, D110 – D112): a receptionist pages
  * through the clinic's patients, finds one by name, mobile and number, calls
  * one, adds someone a search did not find with what was typed, and opens the
- * archived; a doctor finds only their own. At a phone's width and a
- * desktop's, each checked by axe.
+ * archived; a doctor finds only their own.
+ *
+ * The profile (plan §10.3; R4.4, D113 – D116): a receptionist opens a
+ * patient from the list, reads what their details hold, reaches them by
+ * Call or WhatsApp, and changes their email; a doctor cannot open another
+ * doctor's patient. At a phone's width and a desktop's, each checked by axe.
  */
 test.afterAll(removeAll);
 
@@ -51,7 +55,7 @@ async function signIn(page: Page, identifier: string, password: string) {
   expect(answer.ok()).toBe(true);
 }
 
-/** The patient the profile's address names, as the database holds them — the profile itself is R4.4. */
+/** The patient the profile's address names, as the database holds them. */
 async function added(page: Page) {
   await expect(page).toHaveURL(/\/patients\/[0-9a-f-]{36}$/);
   const id = new URL(page.url()).pathname.split("/").pop();
@@ -106,6 +110,8 @@ test("a receptionist adds a brother to a family already on file, from the ＋", 
     dob_is_estimated: true,
     gender: "MALE",
   });
+  await expect(page.getByRole("heading", { level: 1, name: "Kabir Mehta" })).toBeVisible();
+  await expect(page.getByText("9 y · Male · P-1003")).toBeVisible();
   await page.goBack();
   await expect(page).toHaveURL(/\/home$/);
 });
@@ -142,6 +148,7 @@ test("the owner gives a date of birth decades back through the calendar's jump (
     dob_is_estimated: false,
     gender: "FEMALE",
   });
+  await expect(page.getByRole("definition").filter({ hasText: "12 Apr 1985" })).toBeVisible();
   // The add form is gone from where Back leads.
   await page.goBack();
   await expect(page).toHaveURL(/\/patients$/);
@@ -231,5 +238,70 @@ test("a doctor finds only their own patients (D3)", async ({ page }) => {
   await expect(list.getByRole("listitem")).toContainText("Meena Iyer");
   await page.getByRole("searchbox", { name: patients.searchPlaceholder }).fill("Someone");
   await expect(page.getByText(patients.noMatches("Someone"))).toBeVisible();
+  await expectAccessible(page);
+});
+
+test("a receptionist opens a patient's profile from the list and changes their details", async ({ page }) => {
+  const clinic = await registerClinic({ fullName: "Asha Menon" });
+  const receptionist = await addMember(clinic.clinicId, {
+    permissions: [...PERMISSION_PRESET_SETS.RECEPTIONIST.permissions],
+  });
+  const typed = {
+    fullName: "Meena Iyer",
+    phone: "99000 11223",
+    born: { as: "DATE", date: "1985-04-12" },
+    gender: "FEMALE",
+    address: "Flat 4B, Lotus Residency\n12 MG Road, Kochi",
+    emergencyContactName: "Ravi Iyer",
+    notes: "Prefers mornings",
+  };
+  await createPatient(clinic.owner.tenant, patientSchema.parse(typed), randomUUID());
+  await signIn(page, receptionist.email, receptionist.password);
+
+  await page.goto("/patients");
+  await page.getByRole("link", { name: /^Meena Iyer/ }).click();
+  await expect(page).toHaveURL(/\/patients\/[0-9a-f-]{36}$/);
+  await expect(page.getByRole("heading", { level: 1, name: "Meena Iyer" })).toBeVisible();
+  await expect(page.getByRole("paragraph").filter({ hasText: patients.noDoctor })).toBeVisible();
+  await expect(page.getByRole("link", { name: patients.call("Meena Iyer") })).toHaveAttribute(
+    "href",
+    "tel:+919900011223",
+  );
+  await expect(page.getByRole("link", { name: patients.whatsAppTo("Meena Iyer") })).toHaveAttribute(
+    "href",
+    "https://wa.me/919900011223",
+  );
+  await expect(page.getByRole("term")).toHaveText([
+    patients.mobileLabel,
+    patients.dateOfBirthLabel,
+    patients.addressLabel,
+    patients.emergencyNameLabel,
+    patients.notesLabel,
+  ]);
+  await expectAccessible(page);
+
+  await page.getByRole("button", { name: patients.editName("Meena Iyer") }).click();
+  const sheet = page.getByRole("dialog", { name: patients.editTitle });
+  await sheet.getByRole("textbox", { name: /^Email/ }).fill("meena@mail.in");
+  await expectAccessible(page);
+  await sheet.getByRole("button", { name: UI_TEXT.actions.save }).click();
+  await expect(page.getByRole("status").filter({ hasText: patients.saved("Meena Iyer") })).toBeVisible();
+  await expect(sheet).toBeHidden();
+  await expect(page.getByRole("definition").filter({ hasText: "meena@mail.in" })).toBeVisible();
+});
+
+test("a doctor cannot open another doctor's patient (D3)", async ({ page }) => {
+  const clinic = await registerClinic({ fullName: "Asha Menon" });
+  const doctor = await addMember(clinic.clinicId, {
+    role: "DOCTOR",
+    permissions: [...PERMISSION_PRESET_SETS.DOCTOR.permissions],
+  });
+  const typed = { fullName: "Someone Else", phone: aMobileNumber(), born: { as: "AGE", years: "41" }, gender: "MALE" };
+  const theirs = await createPatient(clinic.owner.tenant, patientSchema.parse(typed), randomUUID());
+  await signIn(page, doctor.email, doctor.password);
+
+  await page.goto(`/patients/${theirs.id}`);
+  await expect(page.getByRole("alert").filter({ hasText: "That record could not be found." })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Someone Else" })).toBeHidden();
   await expectAccessible(page);
 });

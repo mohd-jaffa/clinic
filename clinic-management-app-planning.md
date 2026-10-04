@@ -199,6 +199,10 @@ earlier lines are never rewritten.
 | D110 | **Each row of the patients list carries Call** (the user): a round call button beside the row, which opens the profile. On a phone the row's line is age · gender · number and leaves the mobile to the button; from a tablet's width the mobile joins the line. | 2026-10-04 |
 | D111 | **The patients list is rows on a desktop too** (the user): the same rows as on a phone, in a column of reading width — no table. | 2026-10-04 |
 | D112 | **A search that finds no one offers to add them** (the user): "No patient matches …" with **Add patient**, for those who may add, on the All tab; the sheet opens with what was typed — a mobile's digits as the mobile, words as the name. | 2026-10-04 |
+| D113 | **A patient's details are a card of what is filled** (the user): below the header, a **Details** card lists only the details that hold a value — mobile, date of birth (when given as a date, not an age), alternate phone, email, address, emergency contact, notes — with one **Edit** opening the patient sheet. The header holds the name, age · gender · number, their doctor, and **Call** and **WhatsApp** under them. | 2026-10-04 |
+| D114 | **The profile is one column until history arrives** (the user): on a desktop, a single column at reading width in Phase 4; the history column on the right comes with the first visits in Phase 6. | 2026-10-04 |
+| D115 | **The profile's WhatsApp opens a chat with nothing typed** (the user): `wa.me` on the patient's number, no message — §22.1 has none for the profile, and the desk writes what it needs. | 2026-10-04 |
+| D116 | **A patient's notes show to everyone who may see them** (the user): desk notes, not clinical, so `patients.view` reads them on the profile with the other details. | 2026-10-04 |
 
 ## 3. Users and roles
 
