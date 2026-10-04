@@ -19,6 +19,7 @@ export function aPatientRow(overrides: Partial<PatientRow> = {}): PatientRow {
     notes: null,
     archived_at: null,
     doctor: { member: { profile: { full_name: "Rahul Nair" } } },
+    archiver: null,
     ...overrides,
   };
 }
@@ -41,7 +42,8 @@ export function aPatient(overrides: Partial<Patient> = {}): Patient {
     assignedDoctorId: "d-1",
     doctorName: "Rahul Nair",
     notes: null,
-    archived: false,
+    archivedAt: null,
+    archivedBy: null,
     ...overrides,
   };
 }

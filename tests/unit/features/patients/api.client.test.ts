@@ -32,6 +32,14 @@ describe("PatientsClient (plan §30)", () => {
       body: JSON.stringify({ fullName: "Rohan M" }),
     });
   });
+
+  it("archives and restores one, with nothing in the body (D103)", async () => {
+    await PatientsClient.archive("p-1");
+    expect(sent()).toMatchObject({ url: "/api/patients/p-1/archive", method: "POST", body: undefined });
+    mockFetch.mockClear();
+    await PatientsClient.restore("p-1");
+    expect(sent()).toMatchObject({ url: "/api/patients/p-1/restore", method: "POST", body: undefined });
+  });
 });
 
 describe("AlertsClient (plan §10.4)", () => {

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Controller, useForm, useWatch, type FieldErrors } from "react-hook-form";
 
+import { ArchiveButton } from "@/components/ui/archive-button";
 import { ChoiceField } from "@/components/ui/choice-field";
 import { DateField } from "@/components/ui/date-field";
 import { Disclosure } from "@/components/ui/disclosure";
@@ -37,6 +38,7 @@ import {
 } from "@/lib/validation";
 
 import { PatientsClient } from "../api.client";
+import { usePatientArchive } from "../hooks/usePatientArchive";
 import type { Patient } from "../types";
 import { PatientMatches } from "./PatientMatches";
 
@@ -97,7 +99,8 @@ function changesFrom(initial: PatientInput, values: PatientInput): UpdatePatient
  * mobile is typed, the patients already on it are listed under it to open
  * instead — a family shares one, so nothing is refused (D106). The doctor
  * starts as the doctor adding them, or the clinic's only doctor (D108). An
- * added patient's profile opens (D107); an add sent twice makes one.
+ * added patient's profile opens (D107); an add sent twice makes one. A
+ * patient being changed may be archived from the foot (D122).
  */
 export function PatientSheet({
   open,
@@ -347,6 +350,13 @@ export function PatientSheet({
           />
         </div>
       </Disclosure>
+      {patient && <ArchivePatient patient={patient} onArchived={onClose} />}
     </FormSheet>
   );
+}
+
+/** **Archive**, at the foot of a patient's edit sheet (D122); it asks first, and the sheet closes once archived. */
+function ArchivePatient({ patient, onArchived }: { patient: Patient; onArchived: () => void }) {
+  const { archive, archiving } = usePatientArchive(patient);
+  return <ArchiveButton archive={archive} archiving={archiving} onArchived={onArchived} />;
 }

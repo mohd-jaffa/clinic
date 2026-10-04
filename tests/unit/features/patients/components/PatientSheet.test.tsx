@@ -12,7 +12,7 @@ import { Providers } from "@tests/support/providers";
 
 const { auth, client, doctors, router } = vi.hoisted(() => ({
   auth: { current: {} as ReturnType<typeof authStub> },
-  client: { create: vi.fn(), update: vi.fn() },
+  client: { create: vi.fn(), update: vi.fn(), archive: vi.fn() },
   doctors: { current: [] as { id: string; name: string }[] },
   router: { replace: vi.fn(), push: vi.fn() },
 }));
@@ -207,6 +207,33 @@ describe("PatientSheet changing a patient", () => {
     await userEvent.click(within(sheet("Edit patient")).getByRole("button", { name: "Save" }));
     expect(await screen.findByText("That wasn’t saved")).toBeInTheDocument();
     expect(client.update).toHaveBeenCalledWith({ id: "p-1", gender: "OTHER" });
+  });
+
+  it("archives them from the foot, once asked, and then closes (D122, D124)", async () => {
+    client.archive.mockResolvedValue({ ...rohan, archivedAt: "2026-10-03T06:00:00Z" });
+    draw(rohan);
+    const edit = sheet("Edit patient");
+    await userEvent.click(within(edit).getByRole("button", { name: "Archive" }));
+    const ask = screen.getByRole("alertdialog", { name: "Archive Rohan Mehta?" });
+    await userEvent.click(within(ask).getByRole("button", { name: "Cancel" }));
+    expect(client.archive).not.toHaveBeenCalled();
+    expect(onClose).not.toHaveBeenCalled();
+
+    await userEvent.click(within(edit).getByRole("button", { name: "Archive" }));
+    await userEvent.click(
+      within(screen.getByRole("alertdialog", { name: "Archive Rohan Mehta?" })).getByRole("button", {
+        name: "Archive",
+      }),
+    );
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(client.archive).toHaveBeenCalledWith("p-1");
+    expect(client.update).not.toHaveBeenCalled();
+    expect(screen.getByRole("status")).toHaveTextContent("Rohan Mehta archived");
+  });
+
+  it("offers no Archive to a patient being added", () => {
+    draw();
+    expect(within(sheet()).queryByRole("button", { name: "Archive" })).not.toBeInTheDocument();
   });
 
   it("leaves an age blank when there is none to read, and doctors blank until they come", () => {

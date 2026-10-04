@@ -23,6 +23,7 @@ import { describePatient } from "../describe";
 import { usePatient } from "../hooks/usePatient";
 import type { Patient } from "../types";
 import { PatientAlerts } from "./PatientAlerts";
+import { PatientArchived } from "./PatientArchived";
 import { PatientSheet } from "./PatientSheet";
 
 const { patients } = UI_TEXT;
@@ -46,11 +47,11 @@ function detailsOf(patient: Patient): Detail[] {
 }
 
 /**
- * A patient's profile (plan §10.3, D113 – D117), for `patients.view` — a
- * doctor's own only (D3): who they are — age, gender, number and their
- * doctor — their alerts, and **Call** and **WhatsApp** (a chat, nothing typed); then
- * their details, only what holds a value, notes included, with **Edit** for
- * those who may change them. One column until history arrives (D114); each
+ * A patient's profile (plan §10.3, D113 – D117, D123), for `patients.view` —
+ * a doctor's own only (D3): who they are — age, gender, number and their
+ * doctor — whether they are archived, their alerts, and **Call** and
+ * **WhatsApp** (a chat, nothing typed); then their details, only what holds a
+ * value, notes included, with **Edit** for those who may change them. One column until history arrives (D114); each
  * later phase adds its part (D101).
  */
 export function PatientProfile({ id }: { id: string }) {
@@ -67,6 +68,7 @@ export function PatientProfile({ id }: { id: string }) {
             actions={
               patient && (
                 <>
+                  {patient.archivedAt && <PatientArchived patient={patient} archivedAt={patient.archivedAt} />}
                   <PatientAlerts patient={patient} />
                   <Reach patient={patient} />
                 </>
@@ -122,7 +124,7 @@ function Details({ patient }: { patient: Patient }) {
   const [editing, setEditing] = useState(false);
   const headingId = useId();
   const mayEdit = membership !== null && hasAccess(membership, "patients.edit");
-  const edits = mayEdit && !readOnly && !patient.archived;
+  const edits = mayEdit && !readOnly && patient.archivedAt === null;
 
   return (
     <div className="grid max-w-3xl grid-cols-1 gap-6">

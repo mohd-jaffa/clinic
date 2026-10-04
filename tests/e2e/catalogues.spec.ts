@@ -65,13 +65,10 @@ test("the owner keeps the price list", async ({ page }) => {
 
   // The last Consultation stays (D83).
   await page.getByRole("region", { name: "Consultation" }).getByRole("button", { name: "Consultation" }).click();
-  await page
-    .getByRole("dialog", { name: priceList.editTitle })
-    .getByRole("button", { name: catalogues.archive })
-    .click();
+  await page.getByRole("dialog", { name: priceList.editTitle }).getByRole("button", { name: actions.archive }).click();
   await page
     .getByRole("alertdialog", { name: priceList.archiveTitle("Consultation") })
-    .getByRole("button", { name: catalogues.archive })
+    .getByRole("button", { name: actions.archive })
     .click();
   await expect(page.getByRole("alertdialog", { name: catalogues.notChanged })).toContainText(
     "The price list keeps at least one Consultation",
@@ -85,13 +82,10 @@ test("the owner keeps the price list", async ({ page }) => {
 
   // Archived, asked first, and restored (D80).
   await procedures.getByRole("button", { name: "Root canal" }).click();
-  await page
-    .getByRole("dialog", { name: priceList.editTitle })
-    .getByRole("button", { name: catalogues.archive })
-    .click();
+  await page.getByRole("dialog", { name: priceList.editTitle }).getByRole("button", { name: actions.archive }).click();
   await page
     .getByRole("alertdialog", { name: priceList.archiveTitle("Root canal") })
-    .getByRole("button", { name: catalogues.archive })
+    .getByRole("button", { name: actions.archive })
     .click();
   await expect(notice(page, catalogues.archivedNote("Root canal"))).toBeVisible();
   await expect(page.getByRole("region", { name: "Procedure" })).toHaveCount(0);

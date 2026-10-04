@@ -3,6 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 
+import { ArchiveButton } from "@/components/ui/archive-button";
 import { FormSheet } from "@/components/ui/form-sheet";
 import { useResponse } from "@/components/ui/response-card";
 import { TextField } from "@/components/ui/text-field";
@@ -20,7 +21,6 @@ import {
 import { ExpenseCategoriesClient } from "../api.client";
 import { useCatalogueChange } from "../hooks/useCatalogueChange";
 import type { ExpenseCategory } from "../types";
-import { ArchiveEntryButton } from "./ArchiveEntryButton";
 
 const { expenseCategories, catalogues } = UI_TEXT;
 
@@ -95,7 +95,7 @@ export function ExpenseCategorySheet({
         {...register("name")}
       />
       {category && (
-        <ArchiveEntryButton
+        <ArchiveButton
           archive={() =>
             archive(category, {
               title: expenseCategories.archiveTitle(category.name),

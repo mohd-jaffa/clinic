@@ -9,8 +9,16 @@ import { fakeSupabase, postgrestError, type FakeSupabaseOptions } from "@tests/s
 const { logActionSafe } = vi.hoisted(() => ({ logActionSafe: vi.fn() }));
 vi.mock("@/lib/audit/auditLog", () => ({ logActionSafe }));
 
-const { createPatient, findPatientMatches, getPatient, listPatients, toPatient, updatePatient } =
-  await import("@/features/patients/api");
+const {
+  archivePatient,
+  createPatient,
+  findPatientMatches,
+  getPatient,
+  listPatients,
+  restorePatient,
+  toPatient,
+  updatePatient,
+} = await import("@/features/patients/api");
 
 function tenantWith(options: FakeSupabaseOptions, member: Partial<Tenant> = {}) {
   const fake = fakeSupabase(options);
@@ -44,7 +52,7 @@ const payload: PatientPayload = {
 beforeEach(() => logActionSafe.mockReset());
 
 describe("toPatient", () => {
-  it("reads a row as the screens do, its doctor by name, archived or not", () => {
+  it("reads a row as the screens do, its doctor by name, archived or not and by whom", () => {
     expect(toPatient(aPatientRow())).toEqual({
       id: "p-1",
       number: 1012,
@@ -61,12 +69,14 @@ describe("toPatient", () => {
       assignedDoctorId: "d-1",
       doctorName: "Rahul Nair",
       notes: null,
-      archived: false,
+      archivedAt: null,
+      archivedBy: null,
     });
-    expect(toPatient(aPatientRow({ doctor: null, archived_at: "2026-10-01T00:00:00Z" }))).toMatchObject({
-      doctorName: null,
-      archived: true,
-    });
+    expect(
+      toPatient(
+        aPatientRow({ doctor: null, archived_at: "2026-10-01T00:00:00Z", archiver: { full_name: "Asha Rao" } }),
+      ),
+    ).toMatchObject({ doctorName: null, archivedAt: "2026-10-01T00:00:00Z", archivedBy: "Asha Rao" });
     expect(toPatient(aPatientRow({ doctor: { member: null } })).doctorName).toBeNull();
   });
 });
@@ -188,6 +198,72 @@ describe("updatePatient", () => {
       code: "PATIENT_ARCHIVED",
       kind: "BUSINESS_RULE",
     });
+  });
+});
+
+describe("archivePatient and restorePatient (D103)", () => {
+  const ARCHIVED_AT = "2026-10-04T05:00:00.000Z";
+
+  it("archives a patient — the database stamps when and by whom — audited as an archive", async () => {
+    vi.useFakeTimers({ now: new Date(ARCHIVED_AT), toFake: ["Date"] });
+    const { tenant, queries, argsOf } = tenantWith({
+      answer: (query) => ({
+        data: query.calls.some(([method]) => method === "update")
+          ? aPatientRow({ archived_at: ARCHIVED_AT, archiver: { full_name: "Asha Rao" } })
+          : aPatientRow(),
+      }),
+    });
+    expect(await archivePatient(tenant, "p-1", "req_3")).toMatchObject({
+      archivedAt: ARCHIVED_AT,
+      archivedBy: "Asha Rao",
+    });
+    vi.useRealTimers();
+    const write = queries.find((query) => argsOf(query, "update").length > 0)!;
+    expect(argsOf(write, "update")).toEqual([[{ archived_at: ARCHIVED_AT }]]);
+    expect(logActionSafe).toHaveBeenCalledWith(
+      tenant,
+      expect.objectContaining({
+        action: "ARCHIVE",
+        entityType: "patients",
+        entityId: "p-1",
+        changes: { archived_at: { from: null, to: ARCHIVED_AT } },
+        requestId: "req_3",
+      }),
+    );
+  });
+
+  it("refuses to archive one already archived, in the app's words", async () => {
+    const { tenant } = tenantWith({
+      answer: (query) =>
+        query.calls.some(([method]) => method === "update")
+          ? { error: { ...postgrestError("P0001"), hint: "PATIENT_ARCHIVED" } }
+          : { data: aPatientRow({ archived_at: ARCHIVED_AT }) },
+    });
+    await expect(archivePatient(tenant, "p-1")).rejects.toMatchObject({ code: "PATIENT_ARCHIVED" });
+    expect(logActionSafe).not.toHaveBeenCalled();
+  });
+
+  it("restores a patient, audited as a restore", async () => {
+    const { tenant, queries, argsOf } = tenantWith({
+      answer: (query) => ({
+        data: query.calls.some(([method]) => method === "update")
+          ? aPatientRow()
+          : aPatientRow({ archived_at: ARCHIVED_AT, archiver: { full_name: "Asha Rao" } }),
+      }),
+    });
+    expect(await restorePatient(tenant, "p-1", "req_4")).toMatchObject({ archivedAt: null, archivedBy: null });
+    const write = queries.find((query) => argsOf(query, "update").length > 0)!;
+    expect(argsOf(write, "update")).toEqual([[{ archived_at: null }]]);
+    expect(logActionSafe).toHaveBeenCalledWith(
+      tenant,
+      expect.objectContaining({ action: "RESTORE", changes: { archived_at: { from: ARCHIVED_AT, to: null } } }),
+    );
+  });
+
+  it("leaves one who is not archived as they are, with nothing audited", async () => {
+    const { tenant } = tenantWith({ answer: () => ({ data: aPatientRow() }) });
+    expect(await restorePatient(tenant, "p-1")).toMatchObject({ archivedAt: null });
+    expect(logActionSafe).not.toHaveBeenCalled();
   });
 });
 

@@ -3,6 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 
+import { ArchiveButton } from "@/components/ui/archive-button";
 import { FormSheet } from "@/components/ui/form-sheet";
 import { useResponse } from "@/components/ui/response-card";
 import { TextField } from "@/components/ui/text-field";
@@ -20,7 +21,6 @@ import {
 import { AppointmentTypesClient } from "../api.client";
 import { useCatalogueChange } from "../hooks/useCatalogueChange";
 import type { AppointmentType } from "../types";
-import { ArchiveEntryButton } from "./ArchiveEntryButton";
 
 const { appointmentTypes, catalogues } = UI_TEXT;
 
@@ -106,7 +106,7 @@ export function AppointmentTypeSheet({
         {...register("minutes")}
       />
       {type && (
-        <ArchiveEntryButton
+        <ArchiveButton
           archive={() =>
             archive(type, { title: appointmentTypes.archiveTitle(type.name), message: appointmentTypes.archiveBody })
           }

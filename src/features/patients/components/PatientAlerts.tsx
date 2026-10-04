@@ -50,7 +50,7 @@ export function PatientAlerts({ patient }: { patient: Patient }) {
   if (!mayRead) return null;
 
   const active = (query.data ?? []).filter((alert) => alert.active).sort(byKind);
-  const edits = mayEdit && !readOnly && !patient.archived;
+  const edits = mayEdit && !readOnly && patient.archivedAt === null;
 
   return (
     <div className="flex flex-wrap items-center gap-2">

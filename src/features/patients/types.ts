@@ -1,6 +1,6 @@
 import type { AlertKind, Gender } from "@/constants/statuses";
 
-/** A patient as the database reads them (0015), with their doctor's name. */
+/** A patient as the database reads them (0015), with their doctor's name and who archived them. */
 export interface PatientRow {
   id: string;
   patient_number: number;
@@ -18,6 +18,7 @@ export interface PatientRow {
   notes: string | null;
   archived_at: string | null;
   doctor: { member: { profile: { full_name: string } | null } | null } | null;
+  archiver: { full_name: string } | null;
 }
 
 /** A patient (plan §10.1), as the screens read them. */
@@ -40,7 +41,10 @@ export interface Patient {
   assignedDoctorId: string | null;
   doctorName: string | null;
   notes: string | null;
-  archived: boolean;
+  /** When they were archived (D103), or null while they are not. */
+  archivedAt: string | null;
+  /** Who archived them, while their profile lasts. */
+  archivedBy: string | null;
 }
 
 /** One of the patients "Already here?" lists for a mobile (D106). */

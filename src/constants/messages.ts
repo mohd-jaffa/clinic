@@ -151,6 +151,8 @@ export const UI_TEXT = {
     cancel: "Cancel",
     save: "Save",
     saving: "Saving…",
+    archive: "Archive",
+    restore: "Restore",
   },
 
   /** The response card (plan §32.2). */
@@ -452,8 +454,6 @@ export const UI_TEXT = {
     archived: "Archived",
     showArchived: (count: number) => `Show archived (${count})`,
     hideArchived: "Hide archived",
-    archive: "Archive",
-    restore: "Restore",
     restoreNamed: (name: string) => `Restore ${name}`,
     archivedNote: (name: string) => `${name} archived`,
     restoredNote: (name: string) => `${name} restored`,
@@ -709,6 +709,17 @@ export const UI_TEXT = {
     details: "Details",
     edit: "Edit",
     editName: (name: string) => `Edit ${name}`,
+    /** Archive and restore (plan §10.1, D103, D122 – D125). */
+    archiveTitle: (name: string) => `Archive ${name}?`,
+    archiveBody:
+      "They leave the patients list and search. Their records are kept, read-only, and they can be restored from Archived.",
+    archivedNote: (name: string) => `${name} archived`,
+    notArchived: "That patient wasn’t archived",
+    archivedOn: (date: string, by: string | null) => (by ? `Archived on ${date} by ${by}` : `Archived on ${date}`),
+    archivedHint: "Their profile is read-only until they are restored.",
+    restoreName: (name: string) => `Restore ${name}`,
+    restoredNote: (name: string) => `${name} restored`,
+    notRestored: "That patient wasn’t restored",
   },
 
   /** A patient's alerts (plan §10.4, D117 – D120). */

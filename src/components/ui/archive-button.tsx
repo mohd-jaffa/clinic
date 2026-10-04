@@ -2,15 +2,17 @@
 
 import { Archive } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
 import { UI_TEXT } from "@/constants/messages";
 
+import { Button } from "./button";
+
 /**
- * **Archive**, at the foot of an entry's sheet (D80), under a hairline so it
- * stands apart from the details. `archive` asks first and answers whether it
- * was archived; then the sheet closes.
+ * **Archive**, at the foot of a record's edit sheet — a catalogue entry's
+ * (D80), a patient's (D122) — under a hairline so it stands apart from the
+ * details. `archive` asks first and answers whether it was archived; then the
+ * sheet closes.
  */
-export function ArchiveEntryButton({
+export function ArchiveButton({
   archive,
   archiving,
   onArchived,
@@ -22,7 +24,7 @@ export function ArchiveEntryButton({
   return (
     <div className="border-t border-line pt-5">
       <Button
-        label={UI_TEXT.catalogues.archive}
+        label={UI_TEXT.actions.archive}
         icon={Archive}
         variant="secondary"
         size="sm"

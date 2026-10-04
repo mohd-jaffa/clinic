@@ -44,7 +44,7 @@ export function useCatalogueChange<Entry extends CatalogueEntry>({
   const archive = async (entry: Entry, card: { title: string; message: string }): Promise<boolean> => {
     const sure = await respond.confirm({
       ...card,
-      confirmLabel: catalogues.archive,
+      confirmLabel: UI_TEXT.actions.archive,
       confirmIcon: Archive,
     });
     if (!sure) return false;

@@ -53,7 +53,7 @@ export function ArchivedEntries<Entry extends CatalogueEntry>({
             trailing={
               onRestore && (
                 <Button
-                  label={catalogues.restore}
+                  label={UI_TEXT.actions.restore}
                   aria-label={catalogues.restoreNamed(entry.name)}
                   icon={ArchiveRestore}
                   variant="quiet"

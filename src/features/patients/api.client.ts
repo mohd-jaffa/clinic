@@ -6,7 +6,8 @@ import type { Patient, PatientAlert } from "./types";
 
 /**
  * The patients' endpoints the browser calls (plan §30): adding one — once per
- * key, however often it is sent — and changing one. What is looked up about
+ * key, however often it is sent — changing one, and archiving and restoring
+ * one (D103). What is looked up about
  * a patient goes through `useApiLookup`, in a body (D98).
  */
 export const PatientsClient = {
@@ -14,6 +15,8 @@ export const PatientsClient = {
     postOnce<Patient>(apiRoutes.patients.list, input, key),
   update: ({ id, ...changes }: UpdatePatientInput & { id: string }) =>
     patchJson<Patient>(apiRoutes.patients.one(id), changes),
+  archive: (id: string) => postJson<Patient>(apiRoutes.patients.archive(id)),
+  restore: (id: string) => postJson<Patient>(apiRoutes.patients.restore(id)),
 };
 
 /** A patient's alerts (plan §10.4): adding one, and changing or turning one off. */

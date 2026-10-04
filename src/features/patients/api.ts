@@ -22,9 +22,12 @@ import type { Patient, PatientListItem, PatientMatch, PatientRow } from "./types
  */
 const TABLE = "patients";
 
-/** The doctor's name comes through their membership's profile (0003's teammates policy). */
+/**
+ * The doctor's name comes through their membership's profile, and the name of
+ * whoever archived them through theirs (0003's teammates policy).
+ */
 const COLUMNS =
-  "id, patient_number, full_name, phone, alt_phone, email, date_of_birth, dob_is_estimated, gender, address, emergency_contact_name, emergency_contact_phone, assigned_doctor_id, notes, archived_at, doctor:doctors!patients_assigned_doctor_id_clinic_id_fkey(member:clinic_members(profile:profiles!clinic_members_user_id_fkey(full_name)))";
+  "id, patient_number, full_name, phone, alt_phone, email, date_of_birth, dob_is_estimated, gender, address, emergency_contact_name, emergency_contact_phone, assigned_doctor_id, notes, archived_at, doctor:doctors!patients_assigned_doctor_id_clinic_id_fkey(member:clinic_members(profile:profiles!clinic_members_user_id_fkey(full_name))), archiver:profiles!patients_archived_by_fkey(full_name)";
 
 /** A patient's own details: in the audit trail by name, never by value. */
 const PERSONAL = [
@@ -59,7 +62,8 @@ export const toPatient = (row: PatientRow): Patient => ({
   assignedDoctorId: row.assigned_doctor_id,
   doctorName: row.doctor?.member?.profile?.full_name ?? null,
   notes: row.notes,
-  archived: row.archived_at !== null,
+  archivedAt: row.archived_at,
+  archivedBy: row.archiver?.full_name ?? null,
 });
 
 /** The columns a patient's fields are written to: only the fields given. */
@@ -127,6 +131,22 @@ export async function updatePatient(
   requestId?: string,
 ): Promise<Patient> {
   return toPatient(await records(tenant).update(id, toColumns(changes), { requestId }));
+}
+
+/**
+ * Archives a patient (plan §10.1, D103): they leave the lists and search, keep
+ * every record, and are read-only until restored. The database stamps when
+ * and by whom, whatever is sent; one already archived is refused
+ * (`PATIENT_ARCHIVED`). Audited as an archive.
+ */
+export async function archivePatient(tenant: Tenant, id: string, requestId?: string): Promise<Patient> {
+  const patch = { archived_at: new Date().toISOString() };
+  return toPatient(await records(tenant).update(id, patch, { action: "ARCHIVE", requestId }));
+}
+
+/** Brings an archived patient back (D103), audited as a restore; one not archived is left as they are. */
+export async function restorePatient(tenant: Tenant, id: string, requestId?: string): Promise<Patient> {
+  return toPatient(await records(tenant).update(id, { archived_at: null }, { action: "RESTORE", requestId }));
 }
 
 /**

@@ -5,7 +5,8 @@ import { expect, test, type Page } from "@playwright/test";
 import { UI_TEXT } from "@/constants/messages";
 import { PERMISSION_PRESET_SETS } from "@/constants/permissions";
 import { createPatient } from "@/features/patients/api";
-import { formatLongDate } from "@/lib/format/date";
+import { todayKey } from "@/lib/dates/calendar";
+import { formatDate, formatLongDate } from "@/lib/format/date";
 import type { Tenant } from "@/lib/supabase/tenant";
 import { patientSchema } from "@/lib/validation";
 import { expectAccessible } from "@tests/support/e2e";
@@ -31,8 +32,13 @@ import { addMember, admin, aMobileNumber, registerClinic, removeAll } from "@tes
  * Alerts (plan §10.4; R4.5, D117 – D120): a doctor records an allergy and a
  * condition from the profile's alerts sheet, adds a note later, and turns
  * one off after confirming; the header shows what is active, allergies
- * first. A receptionist, who may not read visits, sees none. At a phone's
- * width and a desktop's, each checked by axe.
+ * first. A receptionist, who may not read visits, sees none.
+ *
+ * Archive and restore (plan §10.1; R4.6, D122 – D125): a receptionist
+ * archives a patient from the foot of their edit sheet after confirming,
+ * stays on the profile, which says when and by whom; finds them under
+ * Archived, not on the list; and restores them at once. At a phone's width
+ * and a desktop's, each checked by axe.
  */
 test.afterAll(removeAll);
 
@@ -378,4 +384,49 @@ test("a doctor records a patient's alerts, changes one and turns one off (D117 �
   await expect(page.getByRole("heading", { level: 1, name: "Meena Iyer" })).toBeVisible();
   await expect(page.getByRole("button", { name: UI_TEXT.alerts.open })).toBeHidden();
   await expect(page.getByText("Penicillin")).toBeHidden();
+});
+
+test("a receptionist archives a patient, finds them under Archived and restores them (D122 – D125)", async ({
+  page,
+}) => {
+  const clinic = await registerClinic({ fullName: "Asha Menon" });
+  const receptionist = await addMember(clinic.clinicId, {
+    permissions: [...PERMISSION_PRESET_SETS.RECEPTIONIST.permissions],
+  });
+  const typed = { fullName: "Meena Iyer", phone: aMobileNumber(), born: { as: "AGE", years: "41" }, gender: "FEMALE" };
+  const meena = await createPatient(clinic.owner.tenant, patientSchema.parse(typed), randomUUID());
+  await signIn(page, receptionist.email, receptionist.password);
+
+  await page.goto(`/patients/${meena.id}`);
+  await page.getByRole("button", { name: patients.editName("Meena Iyer") }).click();
+  const sheet = page.getByRole("dialog", { name: patients.editTitle });
+  await sheet.getByRole("button", { name: UI_TEXT.actions.archive }).click();
+  const ask = page.getByRole("alertdialog", { name: patients.archiveTitle("Meena Iyer") });
+  await expect(ask).toContainText(patients.archiveBody);
+  await expectAccessible(page);
+  await ask.getByRole("button", { name: UI_TEXT.actions.archive }).click();
+  await expect(page.getByRole("status").filter({ hasText: patients.archivedNote("Meena Iyer") })).toBeVisible();
+  await expect(sheet).toBeHidden();
+
+  // The profile stays, read-only, saying when and by whom (D123, D124).
+  await expect(page).toHaveURL(new RegExp(`/patients/${meena.id}$`));
+  await expect(page.getByText(patients.archivedOn(formatDate(todayKey()), "Test staff"))).toBeVisible();
+  await expect(page.getByText(patients.archivedHint)).toBeVisible();
+  await expect(page.getByRole("button", { name: patients.editName("Meena Iyer") })).toBeHidden();
+  await expectAccessible(page);
+
+  await page.getByRole("link", { name: UI_TEXT.actions.back }).click();
+  await expect(page.getByRole("heading", { name: patients.emptyTitle })).toBeVisible();
+  await page.getByRole("tab", { name: patients.tabs.ARCHIVED }).click();
+  await page
+    .getByRole("tabpanel")
+    .getByRole("link", { name: /^Meena Iyer/ })
+    .click();
+
+  // Restore asks nothing (D125); the profile can be changed again.
+  await page.getByRole("button", { name: patients.restoreName("Meena Iyer") }).click();
+  await expect(page.getByRole("status").filter({ hasText: patients.restoredNote("Meena Iyer") })).toBeVisible();
+  await expect(page.getByText(patients.archivedHint)).toBeHidden();
+  await expect(page.getByRole("button", { name: patients.editName("Meena Iyer") })).toBeVisible();
+  await expectAccessible(page);
 });

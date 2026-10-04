@@ -6,7 +6,15 @@ import type { Permission } from "@/constants/permissions";
 import { PLATFORM_SETTING_DEFAULTS } from "@/constants/platform";
 import { FIRST_PATIENT_NUMBER } from "@/constants/seeds";
 import { addAlert, listAlerts, updateAlert } from "@/features/patients/alerts";
-import { createPatient, findPatientMatches, getPatient, listPatients, updatePatient } from "@/features/patients/api";
+import {
+  archivePatient,
+  createPatient,
+  findPatientMatches,
+  getPatient,
+  listPatients,
+  restorePatient,
+  updatePatient,
+} from "@/features/patients/api";
 import { estimatedBirthDate } from "@/lib/dates/age";
 import { addDaysKey, todayKey } from "@/lib/dates/calendar";
 import { alertSchema, patientSchema, type PatientInput } from "@/lib/validation";
@@ -26,9 +34,10 @@ import {
  * member going straight at it with their own token, as the routes will: the
  * clinic's own numbers; the doctor scope — the assigned doctor and the one
  * who added the patient, the list only growing; an archived patient
- * read-only until restored; the date of birth and the assigned doctor
- * checked; the search, best match first; alerts within the scope; and
- * nothing written while the clinic is view-only.
+ * read-only until restored, and archived and restored through the app; the
+ * date of birth and the assigned doctor checked; the search, best match
+ * first; alerts within the scope; and nothing written while the clinic is
+ * view-only.
  */
 type Member = SignedIn & { memberId: string };
 interface PatientRow {
@@ -554,7 +563,8 @@ describe("through the app's functions (R4.2)", () => {
       gender: "FEMALE",
       assignedDoctorId: doctorIds.B,
       doctorName: "Test doctor",
-      archived: false,
+      archivedAt: null,
+      archivedBy: null,
     });
     expect(await createPatient(doctorA.tenant!, typed(), key)).toMatchObject({ id: added.id, number: added.number });
 
@@ -601,6 +611,75 @@ describe("through the app's functions (R4.2)", () => {
     ]);
     expect((await findPatientMatches(doctorC.tenant!, phone)).map(({ name }) => name)).toEqual(["Younger Brother"]);
     expect(await findPatientMatches(other.owner.tenant, phone)).toEqual([]);
+  });
+});
+
+describe("archive and restore through the app's functions (R4.6, D103, D122 – D125)", () => {
+  let theirs: PatientRow;
+  const named = async (member: SignedIn, tab: "ALL" | "ARCHIVED") =>
+    (await listPatients(member.tenant!, { search: "Archive Me", tab })).items.map(({ name }) => name);
+  const auditOf = async (entityId: string) => {
+    const { data } = await admin()
+      .from("audit_logs")
+      .select("action, actor_id, changes")
+      .eq("entity_id", entityId)
+      .in("action", ["ARCHIVE", "RESTORE"])
+      .order("created_at");
+    return data!;
+  };
+
+  beforeAll(async () => {
+    theirs = await create(receptionist, { full_name: "Archive Me", assigned_doctor_id: doctorIds.B });
+  });
+
+  it("is refused to someone without patients.edit, and to a doctor not theirs", async () => {
+    await expect(archivePatient(assistant.tenant!, theirs.id)).rejects.toMatchObject({ code: "RECORD_NOT_FOUND" });
+    await expect(archivePatient(doctorC.tenant!, theirs.id)).rejects.toMatchObject({ code: "RECORD_NOT_FOUND" });
+    await expect(archivePatient(other.owner.tenant, theirs.id)).rejects.toMatchObject({ code: "RECORD_NOT_FOUND" });
+    expect(await auditOf(theirs.id)).toEqual([]);
+  });
+
+  it("archives them, by whom it says, audited as an archive — off the list, onto Archived", async () => {
+    const archived = await archivePatient(receptionist.tenant!, theirs.id, "req_archive");
+    expect(archived).toMatchObject({ id: theirs.id, archivedBy: "Test staff" });
+    expect(archived.archivedAt).not.toBeNull();
+    expect(await getPatient(doctorB.tenant!, theirs.id)).toMatchObject({ archivedBy: "Test staff" });
+    expect(await auditOf(theirs.id)).toEqual([
+      {
+        action: "ARCHIVE",
+        actor_id: receptionist.userId,
+        changes: { archived_at: { from: null, to: expect.any(String) } },
+      },
+    ]);
+    expect(await named(receptionist, "ALL")).toEqual([]);
+    expect(await named(receptionist, "ARCHIVED")).toEqual(["Archive Me"]);
+  });
+
+  it("keeps them read-only until restored: archived again or changed is refused, in words", async () => {
+    await expect(archivePatient(receptionist.tenant!, theirs.id)).rejects.toMatchObject({ code: "PATIENT_ARCHIVED" });
+    await expect(updatePatient(receptionist.tenant!, theirs.id, { fullName: "Changed" })).rejects.toMatchObject({
+      code: "PATIENT_ARCHIVED",
+    });
+  });
+
+  it("is restored by their doctor, audited as a restore, and on the list again", async () => {
+    expect(await restorePatient(doctorB.tenant!, theirs.id, "req_restore")).toMatchObject({
+      archivedAt: null,
+      archivedBy: null,
+    });
+    const [, restore] = await auditOf(theirs.id);
+    expect(restore).toEqual({
+      action: "RESTORE",
+      actor_id: doctorB.userId,
+      changes: { archived_at: { from: expect.any(String), to: null } },
+    });
+    expect(await named(receptionist, "ALL")).toEqual(["Archive Me"]);
+    expect(await named(receptionist, "ARCHIVED")).toEqual([]);
+  });
+
+  it("leaves one not archived as they are, with nothing audited", async () => {
+    expect(await restorePatient(receptionist.tenant!, theirs.id)).toMatchObject({ archivedAt: null });
+    expect(await auditOf(theirs.id)).toHaveLength(2);
   });
 });
 

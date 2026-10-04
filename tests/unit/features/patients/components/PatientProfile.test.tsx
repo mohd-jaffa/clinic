@@ -18,6 +18,11 @@ vi.mock("@/features/patients/hooks/usePatient", () => ({ usePatient: () => query
 vi.mock("@/features/patients/components/PatientAlerts", () => ({
   PatientAlerts: ({ patient }: { patient: Patient }) => <p>{`${patient.name}'s alerts`}</p>,
 }));
+vi.mock("@/features/patients/components/PatientArchived", () => ({
+  PatientArchived: ({ patient, archivedAt }: { patient: Patient; archivedAt: string }) => (
+    <p>{`${patient.name} archived at ${archivedAt}`}</p>
+  ),
+}));
 vi.mock("@/features/patients/components/PatientSheet", () => ({
   PatientSheet: ({ open, onClose, patient }: { open: boolean; onClose: () => void; patient: Patient }) => {
     sheet.patient = patient;
@@ -68,6 +73,15 @@ describe("PatientProfile's header (plan §10.3, D115)", () => {
   it("carries their alerts (D117)", () => {
     draw();
     expect(screen.getByText("Rohan Mehta's alerts")).toBeInTheDocument();
+  });
+
+  it("says when they are archived, and nothing when they are not (D123)", () => {
+    const { unmount } = draw();
+    expect(screen.queryByText(/archived at/)).not.toBeInTheDocument();
+    unmount();
+    query.current = { data: aPatient({ archivedAt: "2026-10-01T05:00:00Z" }), isLoading: false };
+    draw();
+    expect(screen.getByText("Rohan Mehta archived at 2026-10-01T05:00:00Z")).toBeInTheDocument();
   });
 
   it("calls them, or opens a WhatsApp chat with nothing typed", () => {
@@ -151,7 +165,7 @@ describe("PatientProfile's Edit", () => {
   });
 
   it("is not there for an archived patient (D103), nor for someone with no clinic", () => {
-    query.current = { data: aPatient({ archived: true }), isLoading: false };
+    query.current = { data: aPatient({ archivedAt: "2026-10-01T05:00:00Z" }), isLoading: false };
     const { unmount } = draw();
     expect(screen.queryByRole("button", { name: /^Edit/ })).not.toBeInTheDocument();
     unmount();

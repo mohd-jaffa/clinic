@@ -208,6 +208,10 @@ earlier lines are never rewritten.
 | D119 | **An alert's label and note can be changed; its kind cannot** (the user): the add sheet opens on it, so a note is added later or a spelling fixed, and an allergy never quietly becomes a note. | 2026-10-04 |
 | D120 | **Turned-off alerts are folded in the alerts sheet** (the user): "Show turned off (2)" at its foot, read only; nothing clinical is deleted, and the label may be added again. | 2026-10-04 |
 | D121 | **No Call on the patients list** (the user, asking for what is production grade; replaces D110): the list is for finding a patient, and Call and WhatsApp are on the profile a tap away, with the patient's name and alerts in view. A call button on every row invited a dialled mis-tap. Each row gives age · gender · number, and the mobile too from 640 px; on a phone it would only be cut short. | 2026-10-04 |
+| D122 | **Archive patient sits at the foot of their edit sheet** (the user): under a hairline, as on a catalogue entry's sheet (D80), so a rare act stays off the profile until someone is editing; it asks first — they leave the list and search, their records are kept, and Archived brings them back. | 2026-10-04 |
+| D123 | **An archived profile says so in its header** (the user): a notice — "Archived on 4 Oct 2026 by Asha Rao" (by whom while their profile lasts) and that the profile is read-only until restored — with **Restore** for `patients.edit` while the clinic may write. Edit and changing alerts are not offered meanwhile (D103). | 2026-10-04 |
+| D124 | **Archiving leaves the person on the profile** (the user): the sheet closes, "Meena Iyer archived" is said, and the notice with Restore is there at once if it was a mistake. | 2026-10-04 |
+| D125 | **Restore asks nothing** (the user): it only brings a patient back and is undone by archiving again, as a catalogue entry's Restore (D80). | 2026-10-04 |
 
 ## 3. Users and roles
 
@@ -685,7 +689,10 @@ Patient number (`P-1001`, a per-clinic counter, never reused), and:
   (D99).
 - **Archived, never deleted** (`archived_at`, `archived_by`): an archived
   patient leaves the lists and search, keeps every record, and can be
-  restored. Until then they are read-only (D103).
+  restored. Until then they are read-only (D103). **Archive** is at the foot
+  of the patient's edit sheet and asks first (D122); the profile stays and
+  says when and by whom, with **Restore** (D123, D124), which asks nothing
+  (D125). Both need `patients.edit` and are audited (ARCHIVE, RESTORE).
 
 ### 10.2 Patients list — `/patients`
 
@@ -706,8 +713,9 @@ patients, without a filter to choose. A search that finds no one offers
 One screen that tells the patient's current state without opening others:
 
 1. **Header:** name, age · gender, mobile (Call, WhatsApp), patient number,
-   assigned doctor; **alerts** (allergies in the danger tone first, then
-   conditions and medications).
+   assigned doctor; whether they are archived, with **Restore** (D123);
+   **alerts** (allergies in the danger tone first, then conditions and
+   medications).
 2. **Next appointment** (date, time, doctor) or **Book**.
 3. **Open treatments:** name, status, next due ("Overdue by 4 days").
 4. **Balance** (`payments.view`): due or advance; **Record payment**, **New

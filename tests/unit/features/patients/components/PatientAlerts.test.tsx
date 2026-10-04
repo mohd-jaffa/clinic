@@ -221,7 +221,7 @@ describe("PatientAlerts' sheet (D117 – D120)", () => {
   });
 
   it("changes nothing of an archived patient's (D103)", async () => {
-    draw(aPatient({ archived: true }));
+    draw(aPatient({ archivedAt: "2026-10-01T05:00:00Z" }));
     const alerts = await openSheet();
     expect(within(alerts).queryByRole("button", { name: /^(Edit|Turn off|Add alert)/ })).not.toBeInTheDocument();
   });

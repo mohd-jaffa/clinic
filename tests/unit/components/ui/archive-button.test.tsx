@@ -2,13 +2,13 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
-import { ArchiveEntryButton } from "@/features/clinic/components/ArchiveEntryButton";
+import { ArchiveButton } from "@/components/ui/archive-button";
 
-describe("ArchiveEntryButton (D80)", () => {
+describe("ArchiveButton (D80, D122)", () => {
   it("asks to archive, and closes the sheet only once it was archived", async () => {
     const onArchived = vi.fn();
     const archive = vi.fn().mockResolvedValueOnce(false).mockResolvedValueOnce(true);
-    render(<ArchiveEntryButton archive={archive} archiving={false} onArchived={onArchived} />);
+    render(<ArchiveButton archive={archive} archiving={false} onArchived={onArchived} />);
 
     await userEvent.click(screen.getByRole("button", { name: "Archive" }));
     expect(onArchived).not.toHaveBeenCalled();
@@ -17,7 +17,7 @@ describe("ArchiveEntryButton (D80)", () => {
   });
 
   it("is busy while archiving", () => {
-    render(<ArchiveEntryButton archive={vi.fn()} archiving onArchived={vi.fn()} />);
+    render(<ArchiveButton archive={vi.fn()} archiving onArchived={vi.fn()} />);
     expect(screen.getByRole("button", { name: "Archive" })).toHaveAttribute("aria-busy", "true");
   });
 });

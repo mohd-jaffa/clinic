@@ -3,6 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
 
+import { ArchiveButton } from "@/components/ui/archive-button";
 import { FormSheet } from "@/components/ui/form-sheet";
 import { MoneyField } from "@/components/ui/money-field";
 import { useResponse } from "@/components/ui/response-card";
@@ -19,7 +20,6 @@ import { FORM_RESET_OPTIONS, serviceSchema, type ServiceInput, type ServicePaylo
 import { ServicesClient } from "../api.client";
 import { useCatalogueChange } from "../hooks/useCatalogueChange";
 import type { Service } from "../types";
-import { ArchiveEntryButton } from "./ArchiveEntryButton";
 
 const { priceList, catalogues } = UI_TEXT;
 
@@ -120,7 +120,7 @@ export function ServiceSheet({
         {...register("price")}
       />
       {service && (
-        <ArchiveEntryButton
+        <ArchiveButton
           archive={() =>
             archive(service, { title: priceList.archiveTitle(service.name), message: priceList.archiveBody })
           }
