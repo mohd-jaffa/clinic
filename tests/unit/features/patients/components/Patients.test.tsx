@@ -64,17 +64,17 @@ beforeEach(() => {
 });
 afterEach(() => vi.useRealTimers());
 
-describe("Patients (plan §10.2, D104, D110)", () => {
-  it("lists the clinic's patients, each opening their profile with Call beside it", () => {
+describe("Patients (plan §10.2, D104, D121)", () => {
+  it("lists the clinic's patients — age, gender, number and mobile — each opening their profile", () => {
     draw();
     expect(screen.getByRole("heading", { level: 1, name: "Patients" })).toBeInTheDocument();
     expect(list.asked).toHaveBeenLastCalledWith("", "ALL");
     const row = within(screen.getByRole("list", { name: "Patients" })).getByRole("listitem");
     const open = within(row).getByRole("link", { name: /^Rohan Mehta/ });
     expect(open).toHaveAttribute("href", "/patients/p-1");
-    // On a phone the line leaves the mobile to Call; from a tablet's width it shows.
     expect(row).toHaveTextContent("36 y · Male · P-1012 · 98765 43210");
-    expect(within(row).getByRole("link", { name: "Call Rohan Mehta" })).toHaveAttribute("href", "tel:+919876543210");
+    // Call is on the profile, a tap away, not on every row.
+    expect(within(row).getAllByRole("link")).toHaveLength(1);
   });
 
   it("searches what is typed, trimmed", async () => {

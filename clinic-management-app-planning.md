@@ -196,7 +196,7 @@ earlier lines are never rewritten.
 | D107 | **An added patient's profile opens** (the user), with a card naming them and their number ("Rohan Mehta added — P-1012"); the add form leaves the history, so Back leads to where they came from. | 2026-10-04 |
 | D108 | **The assigned doctor starts as the adding doctor, or the clinic's only doctor** (the user); otherwise as **No doctor yet**. It can always be changed. | 2026-10-04 |
 | D109 | **A date jumps by month and year** (the user): the calendar's heading opens its year's months, then a page of twelve years — the kit's date picker, for every date field — so a date of birth decades back is a few taps away. | 2026-10-04 |
-| D110 | **Each row of the patients list carries Call** (the user): a round call button beside the row, which opens the profile. On a phone the row's line is age · gender · number and leaves the mobile to the button; from a tablet's width the mobile joins the line. | 2026-10-04 |
+| D110 | *(Replaced by D121.)* **Each row of the patients list carries Call** (the user): a round call button beside the row, which opens the profile. On a phone the row's line is age · gender · number and leaves the mobile to the button; from a tablet's width the mobile joins the line. | 2026-10-04 |
 | D111 | **The patients list is rows on a desktop too** (the user): the same rows as on a phone, in a column of reading width — no table. | 2026-10-04 |
 | D112 | **A search that finds no one offers to add them** (the user): "No patient matches …" with **Add patient**, for those who may add, on the All tab; the sheet opens with what was typed — a mobile's digits as the mobile, words as the name. | 2026-10-04 |
 | D113 | **A patient's details are a card of what is filled** (the user): below the header, a **Details** card lists only the details that hold a value — mobile, date of birth (when given as a date, not an age), alternate phone, email, address, emergency contact, notes — with one **Edit** opening the patient sheet. The header holds the name, age · gender · number, their doctor, and **Call** and **WhatsApp** under them. | 2026-10-04 |
@@ -207,6 +207,7 @@ earlier lines are never rewritten.
 | D118 | **Turning an alert off asks first** (the user): a confirm card says it stops showing on the profile, at visits and on prescriptions, so a stray tap never hides an allergy. | 2026-10-04 |
 | D119 | **An alert's label and note can be changed; its kind cannot** (the user): the add sheet opens on it, so a note is added later or a spelling fixed, and an allergy never quietly becomes a note. | 2026-10-04 |
 | D120 | **Turned-off alerts are folded in the alerts sheet** (the user): "Show turned off (2)" at its foot, read only; nothing clinical is deleted, and the label may be added again. | 2026-10-04 |
+| D121 | **No Call on the patients list** (the user, asking for what is production grade; replaces D110): the list is for finding a patient, and Call and WhatsApp are on the profile a tap away, with the patient's name and alerts in view. A call button on every row invited a dialled mis-tap. Each row gives age · gender · number, and the mobile too from 640 px; on a phone it would only be cut short. | 2026-10-04 |
 
 ## 3. Users and roles
 
@@ -692,8 +693,8 @@ Search by name (fuzzy, trigram), mobile (on its digits however typed), or
 patient number — sent in the request's body, never its address (D98); the
 best match first, and newest first with nothing typed (D104). Each row: name,
 age and gender, mobile, patient number, last
-visit ("Last visit: 28 Sep"), and a balance chip when they owe; **Call**
-beside it, the mobile in the line from a tablet's width (D110). Rows on every
+visit ("Last visit: 28 Sep"), and a balance chip when they owe; the mobile
+joins the line from 640 px, and Call is on the profile (D121). Rows on every
 width (D111). Paged (**Show more**, `PAGE_SIZE`). Tabs: All · Owing
 (`payments.view`) · Archived (`patients.edit`). A doctor sees only their own
 patients, without a filter to choose. A search that finds no one offers

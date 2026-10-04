@@ -1,10 +1,10 @@
 "use client";
 
-import { Archive, Phone, UserPlus, UsersRound } from "lucide-react";
+import { Archive, UserPlus, UsersRound } from "lucide-react";
 import { useId, useState, type ReactNode } from "react";
 
 import { Avatar } from "@/components/ui/avatar";
-import { Button, IconLink } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { CoastHeader } from "@/components/ui/coast-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ListScreen } from "@/components/ui/list-screen";
@@ -20,7 +20,7 @@ import { ReadOnlyNote } from "@/features/subscription/components/ReadOnlyNote";
 import { useReadOnly } from "@/features/subscription/hooks/useReadOnly";
 import { useAddForm } from "@/hooks/useAddForm";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
-import { callHref, formatPhoneDigits } from "@/lib/phone";
+import { formatPhoneDigits } from "@/lib/phone";
 import { PATIENT_TABS, type PatientTab } from "@/lib/validation";
 
 import { describePatient } from "../describe";
@@ -38,10 +38,11 @@ function prefillFrom(search: string): PatientPrefill {
 }
 
 /**
- * Patients (plan §10.2, D104, D110 – D112): searched by name, mobile or
+ * Patients (plan §10.2, D104, D111, D112, D121): searched by name, mobile or
  * number — in the body, never the address (D98) — newest first with nothing
- * typed, a page at a time. Each row opens the profile and carries **Call**;
- * on a phone its line leaves the mobile to the button. A doctor finds only
+ * typed, a page at a time. Each row gives age, gender and number — the mobile
+ * too, wider than a phone — and opens the profile, where Call and WhatsApp
+ * are. A doctor finds only
  * their own patients; the archived wait on their own tab for those who may
  * restore them. **Add patient**, or the ＋'s Patient, opens the sheet; a
  * search that found no one offers it with what was typed.
@@ -128,7 +129,10 @@ export function Patients() {
   );
 }
 
-/** One patient in the list (D110): their line, and Call. The mobile shows in the line from a tablet's width. */
+/**
+ * One patient in the list (D121), opening their profile — where Call is. The
+ * mobile joins the line from 640 px; on a phone it would only be cut short.
+ */
 function PatientListRow({ patient }: { patient: PatientListItem }) {
   return (
     <Row
@@ -137,11 +141,10 @@ function PatientListRow({ patient }: { patient: PatientListItem }) {
       subtitle={
         <>
           {describePatient(patient)}
-          <span className="hidden md:inline">{` · ${formatPhoneDigits(patient.phone)}`}</span>
+          <span className="hidden sm:inline">{` · ${formatPhoneDigits(patient.phone)}`}</span>
         </>
       }
       href={patientRoute(patient.id)}
-      trailing={<IconLink icon={Phone} href={callHref(patient.phone)} label={patients.call(patient.name)} />}
     />
   );
 }

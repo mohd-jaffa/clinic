@@ -215,21 +215,3 @@ export function IconButton({
     </button>
   );
 }
-
-/**
- * A round, label-less link — a patient's Call (D110): the icon in the action
- * green on its soft tint, so it reads as something to do beside a row that
- * opens. Its label is required, as an `IconButton`'s.
- */
-export function IconLink({ icon: Icon, href, label }: { icon: LucideIcon; href: string; label: string }) {
-  return (
-    <a
-      href={href}
-      aria-label={label}
-      title={label}
-      className="inline-flex size-11 shrink-0 items-center justify-center rounded-full bg-action-soft text-action transition-[background-color,color,transform] duration-(--duration-map) ease-map hover:bg-action hover:text-on-action active:scale-95"
-    >
-      <Icon size={20} strokeWidth={2.25} aria-hidden="true" />
-    </a>
-  );
-}

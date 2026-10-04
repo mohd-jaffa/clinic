@@ -1508,3 +1508,30 @@ appended and never rewritten (AGENTS.md §33).
 ### Blockers
 - None. Alerts at the top of a visit and above the prescription come with
   Phase 6.
+
+## 2026-10-04 — No Call button on the patients list
+
+### Changed
+- The patients list no longer carries a Call button on each row (D121,
+  replacing D110). The user asked whether it was overkill now that the
+  profile has Call, and for what is production grade:
+  - The list is for finding a patient. Call and WhatsApp are on the
+    profile, a tap away, with the name and alerts in view.
+  - A call target on every row sat where a thumb opens the row, inviting a
+    dialled mis-tap.
+- Each row's line is age · gender · number, and the mobile joins it from
+  640 px (tablet, desktop, a phone turned sideways). At 390 px the mobile
+  only came out cut short, so a phone leaves it to the profile.
+- Kit: `IconLink` removed; it existed only for that button. DESIGN.md
+  follows.
+- Plan: D121 recorded; D110 marked replaced; §10.2 updated.
+
+### Validation
+- Typecheck, lint, format check passed. Unit and integration tests passed
+  (1866), coverage 100%.
+- Build passed; E2E passed (86, phone and desktop), axe clean. The list
+  journey now finds the mobile in the matching row rather than a Call link.
+  This change was validated together with R4.5.
+
+### Blockers
+- None.
