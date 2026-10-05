@@ -1643,3 +1643,74 @@ appended and never rewritten (AGENTS.md §33).
 ### Blockers
 - None. The clinic-deletion test gets its patient rows when `delete_clinic`
   arrives; it does not exist yet.
+
+## 2026-10-05 — R4.8 Importing patients from a file
+
+### Added
+- `/settings/import` (owner only): import patients from a CSV or Excel
+  (.xlsx) file in four steps, one at a time (plan §10.5, D127 – D133).
+  - **File:** read in the browser with Papa Parse or read-excel-file (D127).
+    The file is never sent or kept. The old .xls is refused with how to save
+    it again. A file with more rows than the platform allows is refused (D128).
+  - **Columns:** each field is matched to a column guessed from the headers
+    ("Mobile No.", "D.O.B", "Patient's mobile number"), with the first row's
+    value shown underneath.
+  - **Check:** each row is checked by the add sheet's own schema, and dates
+    are read day first (D130). Problems are listed in words for fixing a
+    file. Possible duplicates are listed with what they matched (a patient
+    already here, or an earlier row), and skipped unless ticked (D129).
+  - **Import:** sent in batches of 200, with progress shown. Leaving the
+    page asks first, and a stop carries on from the same batch. The summary
+    has the counts, **Download rows not imported** (a CSV with a Problem
+    column), **Open patients** and **Import another file** (D133).
+- An owner whose clinic has no patients yet gets **Import from a file** on
+  the empty patients list (D132).
+- `0016_patient_import`:
+  - `platform_settings.max_import_rows` (default 10,000, bounds 100 – 50,000),
+    and `update_platform_settings` learns it (D128).
+  - `import_patients` is safe to send again: each row carries its own key, a
+    known key is found rather than added, and no number is skipped. It
+    answers each row's patient and whether it was added.
+- Routes: `GET, POST /api/patients/import` (the limits; a batch) and
+  `POST /api/patients/import/matches` (the clinic's patients on a batch's
+  mobiles, in the body, D98). All are owner only; each batch is audited
+  once, by count and patient numbers.
+- Kit: `Steps`; `Row`'s `wrap` option. `useRevalidate` was split out of
+  `useApiMutation` so the import can refresh the lists. `saveCsv`,
+  `formatCount`, `utcDayKey`.
+
+### Changed
+- Plan:
+  - D127 – D133 recorded.
+  - §6 gains `max_import_rows`; §10.5 is rewritten; §30 has the new routes.
+  - Later migrations move up one: `0017_appointments` … `0027_clinic_deletion`.
+- DESIGN.md: `Steps` and the import screen's patterns; `Row` `wrap`.
+- `import_patients` now needs a key on each row; the existing tests and the
+  E2E import helper send one.
+
+### Validation
+- Typecheck, lint, format check passed. Unit and integration tests passed
+  (2009), coverage 100%.
+- Integration:
+  - A batch sent again, whole or in part, adds no one twice and skips no
+    number.
+  - A row without its key is refused; a refused row refuses its batch.
+  - Owner only, through the function and through every import route.
+  - Audited once per batch; the row cap is held within its bounds.
+- Build passed; E2E passed (92, phone and desktop), axe clean. Two new
+  journeys:
+  - A CSV imported from Settings: problems, a patient already here, a row
+    twice in the file, one ticked anyway, and the rows not imported
+    downloaded and read back.
+  - A real .xlsx imported from the empty list, its date cell and a
+    day-first date stored as the right days.
+- Screenshots at phone, light and dark, and desktop showed the page
+  scrolling sideways on a phone. The step indicator was too wide, and the
+  flow's grid grew with it. A phone now names only the current step, the
+  flow keeps to one column, and long problem reasons wrap. Rechecked with no
+  overflow on any step.
+
+### Blockers
+- None. Note: `npm audit` reports a critical advisory for `next` 16.2.x and
+  high ones in ESLint's tooling. They predate this change; upgrading Next is
+  its own change, for the user to decide.

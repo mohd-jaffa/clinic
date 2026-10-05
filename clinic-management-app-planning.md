@@ -2213,7 +2213,7 @@ tests (§34) and its changelog entry.
 | R4.5 | Alerts: allergies, conditions, medications (D117 – D120) | §10.4 | — | DONE (2026-10-04 · 45f61d5) |
 | R4.6 | Archive and restore (D122 – D125) | §10.1 | — | DONE (2026-10-04 · 8096bfa) |
 | R4.7 | Integration: the doctor scope; staff without `patients.view`; isolation rows | §34 | — | DONE (2026-10-05 · 1e9c3c0) |
-| R4.8 | `0016_patient_import`; patient import: parse CSV/Excel in the browser, map, preview (errors, duplicates), batches, summary, refused rows as CSV (D127 – D133) | §10.5 | — | TODO |
+| R4.8 | `0016_patient_import`; patient import: parse CSV/Excel in the browser, map, preview (errors, duplicates), batches, summary, refused rows as CSV (D127 – D133) | §10.5 | — | DONE (2026-10-05 · c149350) |
 
 ### Phase 5 — Appointments and the queue
 
