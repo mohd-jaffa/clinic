@@ -136,6 +136,9 @@ export const MY_ACCOUNT_ROUTE = "/settings/account";
 /** The owner's Plan screen (plan §7.5): where the plan banner's How to renew leads (D74). */
 export const PLAN_ROUTE = `${SETTINGS_ROUTE}/plan`;
 
+/** Importing patients from a file, the owner's (plan §10.5). */
+export const IMPORT_ROUTE = `${SETTINGS_ROUTE}/import`;
+
 /**
  * A row of the Settings index (plan §31.2, D71): the screen it opens, what
  * that screen holds, and who may open it — the clinic's setup for

@@ -16,6 +16,7 @@ import {
   nextDayKey,
   todayKey,
   weekStartKey,
+  utcDayKey,
 } from "@/lib/dates/calendar";
 
 describe("dayKey", () => {
@@ -138,5 +139,13 @@ describe("dayCount", () => {
     expect(dayCount("2026-10-20", "2026-10-22")).toBe(3);
     expect(dayCount("2026-12-30", "2027-01-02")).toBe(4);
     expect(dayCount("2026-10-01", "2027-10-01")).toBe(366);
+  });
+});
+
+describe("utcDayKey", () => {
+  it("reads a spreadsheet's date cell, midnight UTC, as the day it names — not moved to the clinic's clock", () => {
+    expect(utcDayKey(new Date("1990-04-03T00:00:00Z"))).toBe("1990-04-03");
+    expect(utcDayKey(new Date("2026-12-31T00:00:00Z"))).toBe("2026-12-31");
+    expect(utcDayKey(new Date("nope"))).toBe("");
   });
 });

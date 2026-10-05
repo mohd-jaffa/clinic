@@ -80,6 +80,14 @@ export const MAX_PATIENT_AGE = 120;
 /** How many patients "Already here?" lists for one mobile (D106): a family, and then some. */
 export const MAX_PATIENT_MATCHES = 10;
 
+/**
+ * How many rows one request of a patient import sends, and how many mobiles
+ * one duplicate lookup asks about (plan §10.5): one quick transaction each,
+ * and 50 requests for the 10,000 rows an import starts out allowed. How many
+ * rows an import may hold is the platform's setting (D128), not this.
+ */
+export const IMPORT_BATCH_SIZE = 200;
+
 /** How long a holiday or a doctor's leave may last, both ends counted (D85). */
 export const MAX_CLOSURE_DAYS = 366;
 

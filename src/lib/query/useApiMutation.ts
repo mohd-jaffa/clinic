@@ -1,16 +1,8 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { useSWRConfig } from "swr";
 
-// How SWR files a paged list (swr/_internal INFINITE_PREFIX): its first page's key, marked.
-const PAGED = "$inf$";
-
-/** A cache key's route: without the paged mark, and without its query. */
-function routeOf(key: string): string {
-  const bare = key.startsWith(PAGED) ? key.slice(PAGED.length) : key;
-  return bare.split("?")[0];
-}
+import { useRevalidate } from "./useRevalidate";
 
 /**
  * A write to the API, with the pieces of state every form around one was
@@ -33,7 +25,7 @@ export function useApiMutation<TInput, TResult>(
     onError?: (failure: unknown) => void;
   } = {},
 ) {
-  const { mutate, cache } = useSWRConfig();
+  const refresh = useRevalidate();
   const [submitting, setSubmitting] = useState(false);
 
   const { revalidate, onSuccess, onError } = options;
@@ -43,10 +35,7 @@ export function useApiMutation<TInput, TResult>(
       setSubmitting(true);
       try {
         const result = await run(input);
-        const routes = new Set(revalidate ?? []);
-        const stale = [...cache.keys()].filter((key) => routes.has(routeOf(key)));
-        // A route nothing has read yet is still named, so a screen opened next starts fresh.
-        await Promise.all([...new Set([...routes, ...stale])].map((key) => mutate(key)));
+        await refresh(revalidate ?? []);
         onSuccess?.(result);
         return result;
       } catch (failure) {
@@ -56,7 +45,7 @@ export function useApiMutation<TInput, TResult>(
         setSubmitting(false);
       }
     },
-    [run, revalidate, onSuccess, onError, mutate, cache],
+    [run, revalidate, onSuccess, onError, refresh],
   );
 
   return { submit, submitting };

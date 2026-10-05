@@ -1,8 +1,8 @@
 import { patchJson, postJson, postOnce } from "@/lib/api/client";
 import { apiRoutes } from "@/lib/query/keys";
-import type { AlertInput, PatientInput, UpdateAlertInput, UpdatePatientInput } from "@/lib/validation";
+import type { AlertInput, ImportRowInput, PatientInput, UpdateAlertInput, UpdatePatientInput } from "@/lib/validation";
 
-import type { Patient, PatientAlert } from "./types";
+import type { ImportMatch, ImportResult, Patient, PatientAlert } from "./types";
 
 /**
  * The patients' endpoints the browser calls (plan §30): adding one — once per
@@ -25,4 +25,14 @@ export const AlertsClient = {
     postJson<PatientAlert>(apiRoutes.patients.alerts(patientId), alert),
   update: ({ patientId, alertId, ...changes }: UpdateAlertInput & { patientId: string; alertId: string }) =>
     patchJson<PatientAlert>(apiRoutes.patients.alert(patientId, alertId), changes),
+};
+
+/**
+ * A patient import (plan §10.5): the clinic's patients on a batch of the
+ * file's mobiles, and a batch of its checked rows — each under its own key,
+ * so sending one again adds no one twice.
+ */
+export const ImportClient = {
+  matches: (phones: readonly string[]) => postJson<ImportMatch[]>(apiRoutes.patients.importMatches, { phones }),
+  send: (rows: readonly ImportRowInput[]) => postJson<ImportResult>(apiRoutes.patients.import, { rows }),
 };

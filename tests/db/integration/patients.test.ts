@@ -6,6 +6,7 @@ import type { Permission } from "@/constants/permissions";
 import { PLATFORM_SETTING_DEFAULTS } from "@/constants/platform";
 import { FIRST_PATIENT_NUMBER } from "@/constants/seeds";
 import { addAlert, listAlerts, updateAlert } from "@/features/patients/alerts";
+import { findImportMatches, getImportLimits, importPatients } from "@/features/patients/import";
 import {
   archivePatient,
   createPatient,
@@ -17,7 +18,8 @@ import {
 } from "@/features/patients/api";
 import { estimatedBirthDate } from "@/lib/dates/age";
 import { addDaysKey, todayKey } from "@/lib/dates/calendar";
-import { alertSchema, patientSchema, type PatientInput } from "@/lib/validation";
+import { getPlatformSettings } from "@/lib/platform/settings";
+import { alertSchema, importRowSchema, patientSchema, type PatientInput } from "@/lib/validation";
 import {
   addMember,
   admin,
@@ -501,35 +503,67 @@ describe("alerts (plan §10.4)", () => {
   });
 });
 
-describe("an import batch (plan §10.5, D51)", () => {
-  const rows = (names: string[]) => names.map((full_name) => patient({ full_name, gender: "FEMALE" }));
+describe("an import batch (plan §10.5, D51; 0016)", () => {
+  type Answer = { patient_id: string; patient_number: number; created: boolean };
+  const rows = (names: string[]) =>
+    names.map((full_name) => patient({ full_name, gender: "FEMALE", idempotency_key: randomUUID() }));
+  const send = async (member: SignedIn, batch: Record<string, unknown>[]) =>
+    supabaseOf(member).rpc("import_patients", { p_patients: batch });
 
   it("adds the rows as the owner, numbered in the order given", async () => {
-    const { data, error } = await supabaseOf(clinic.owner).rpc("import_patients", {
-      p_patients: rows(["Imported One", "Imported Two", "Imported Three"]),
-    });
+    const { data, error } = await send(clinic.owner, rows(["Imported One", "Imported Two", "Imported Three"]));
     expect(error).toBeNull();
-    const added = data as PatientRow[];
-    expect(added.map(({ full_name }) => full_name)).toEqual(["Imported One", "Imported Two", "Imported Three"]);
-    const [first, second, third] = added.map(({ patient_number }) => patient_number);
+    const answered = data as Answer[];
+    expect(answered.every(({ created }) => created)).toBe(true);
+    const [first, second, third] = answered.map(({ patient_number }) => patient_number);
     expect([second - first, third - second]).toEqual([1, 1]);
-    expect(added.every(({ created_by }) => created_by === clinic.owner.userId)).toBe(true);
+    const { data: added } = await admin()
+      .from("patients")
+      .select("full_name, created_by")
+      .in(
+        "id",
+        answered.map(({ patient_id }) => patient_id),
+      )
+      .order("patient_number");
+    expect(added).toEqual(
+      ["Imported One", "Imported Two", "Imported Three"].map((full_name) => ({
+        full_name,
+        created_by: clinic.owner.userId,
+      })),
+    );
   });
 
-  it("adds none of a batch with a row refused", async () => {
-    const { error } = await supabaseOf(clinic.owner).rpc("import_patients", {
-      p_patients: [
-        ...rows(["Never Added"]),
-        patient({ full_name: "Born Tomorrow", date_of_birth: addDaysKey(today, 1) }),
-      ],
-    });
+  it("adds no one twice when a batch is sent again, wholly or in part", async () => {
+    const batch = rows(["Retried One", "Retried Two"]);
+    const { data: first } = await send(clinic.owner, batch);
+    const { data: again, error } = await send(clinic.owner, [...batch, ...rows(["Retried Three"])]);
+    expect(error).toBeNull();
+    const [one, two, three] = again as Answer[];
+    expect([one, two].map(({ patient_id, created }) => ({ patient_id, created }))).toEqual(
+      (first as Answer[]).map(({ patient_id }) => ({ patient_id, created: false })),
+    );
+    expect(three.created).toBe(true);
+    // The number after the last, none skipped.
+    expect(three.patient_number).toBe((first as Answer[])[1].patient_number + 1);
+    const { data: named } = await admin().from("patients").select("id").like("full_name", "Retried %");
+    expect(named).toHaveLength(3);
+  });
+
+  it("refuses a row without its key, and adds none of a batch with a row refused", async () => {
+    const { error: keyless } = await send(clinic.owner, [patient({ full_name: "No Key" })]);
+    expect(keyless?.hint).toBe("IDEMPOTENCY_KEY_REQUIRED");
+
+    const { error } = await send(clinic.owner, [
+      ...rows(["Never Added"]),
+      patient({ full_name: "Born Tomorrow", date_of_birth: addDaysKey(today, 1), idempotency_key: randomUUID() }),
+    ]);
     expect(error?.hint).toBe("PATIENT_BIRTH_DATE_INVALID");
-    const { data } = await supabaseOf(clinic.owner).from("patients").select("id").eq("full_name", "Never Added");
+    const { data } = await admin().from("patients").select("id").in("full_name", ["Never Added", "No Key"]);
     expect(data).toEqual([]);
   });
 
   it("is the owner's alone", async () => {
-    const { error } = await supabaseOf(receptionist).rpc("import_patients", { p_patients: rows(["Not Mine"]) });
+    const { error } = await send(receptionist, rows(["Not Mine"]));
     expect(error?.hint).toBe("AUTH_PERMISSION_DENIED");
   });
 });
@@ -754,12 +788,89 @@ describe("alerts through the app's functions (R4.5, D117 – D120)", () => {
   });
 });
 
+describe("importing through the app's functions (R4.8, D127 – D133)", () => {
+  let importer: TestClinic;
+  const typed = (fullName: string, phone: string) =>
+    importRowSchema.parse({ key: randomUUID(), fullName, phone, born: { as: "AGE", years: "30" }, gender: "FEMALE" });
+  const auditOf = async (clinicId: string) => {
+    const { data } = await admin()
+      .from("audit_logs")
+      .select("action, actor_id, entity_type, entity_id, changes")
+      .eq("clinic_id", clinicId)
+      .eq("entity_type", "patients")
+      .order("created_at");
+    return data!;
+  };
+
+  beforeAll(async () => {
+    importer = await registerClinic({ fullName: "Import Owner" });
+  });
+
+  it("answers the platform's row cap", async () => {
+    expect(await getImportLimits()).toEqual({
+      maxRows: (await getPlatformSettings()).maxImportRows,
+      batchSize: expect.any(Number),
+    });
+  });
+
+  it("imports a batch, audited once by count and numbers; sent again, adds and audits nothing", async () => {
+    const batch = [typed("Imported Anil", "98000 00001"), typed("Imported Bina", "98000 00002")];
+    expect(await importPatients(importer.owner.tenant, batch, "req_import")).toEqual({ imported: 2, added: 2 });
+    expect(await importPatients(importer.owner.tenant, batch, "req_again")).toEqual({ imported: 2, added: 0 });
+    expect(await auditOf(importer.clinicId)).toEqual([
+      {
+        action: "CREATE",
+        actor_id: importer.owner.userId,
+        entity_type: "patients",
+        entity_id: null,
+        changes: { imported: 2, patient_number: { from: FIRST_PATIENT_NUMBER, to: FIRST_PATIENT_NUMBER + 1 } },
+      },
+    ]);
+    const { data: patients } = await admin()
+      .from("patients")
+      .select("full_name, phone, dob_is_estimated, assigned_doctor_id, created_by")
+      .eq("clinic_id", importer.clinicId)
+      .order("patient_number");
+    expect(patients).toEqual([
+      {
+        full_name: "Imported Anil",
+        phone: "+919800000001",
+        dob_is_estimated: true,
+        assigned_doctor_id: null,
+        created_by: importer.owner.userId,
+      },
+      {
+        full_name: "Imported Bina",
+        phone: "+919800000002",
+        dob_is_estimated: true,
+        assigned_doctor_id: null,
+        created_by: importer.owner.userId,
+      },
+    ]);
+  });
+
+  it("finds the clinic's patients on an import's mobiles — and none of another clinic's", async () => {
+    expect(await findImportMatches(importer.owner.tenant, ["+919800000001", "+919800000009"])).toEqual([
+      { phone: "+919800000001", number: FIRST_PATIENT_NUMBER, name: "Imported Anil" },
+    ]);
+    expect(await findImportMatches(other.owner.tenant, ["+919800000001"])).toEqual([]);
+  });
+
+  it("is the owner's alone", async () => {
+    await expect(importPatients(receptionist.tenant!, [typed("Not Theirs", "98000 00003")])).rejects.toMatchObject({
+      code: "AUTH_PERMISSION_DENIED",
+    });
+  });
+});
+
 describe("a view-only clinic (plan §7.3)", () => {
   it("adds and changes nothing", async () => {
     const mine = await create(other.owner, { full_name: "Before Expiry" });
     await setValidUntil(other.clinicId, addDaysKey(today, -PLATFORM_SETTING_DEFAULTS.graceDays - 30));
     expect((await refusal(other.owner, {}))?.hint).toBe("CLINIC_PLAN_EXPIRED");
-    const { error } = await supabaseOf(other.owner).rpc("import_patients", { p_patients: [patient()] });
+    const { error } = await supabaseOf(other.owner).rpc("import_patients", {
+      p_patients: [patient({ idempotency_key: randomUUID() })],
+    });
     expect(error?.hint).toBe("CLINIC_PLAN_EXPIRED");
     const { data } = await update(other.owner, mine.id, { full_name: "After Expiry" });
     expect(data).toBeNull();

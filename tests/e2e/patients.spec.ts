@@ -57,6 +57,7 @@ async function imported(tenant: Tenant, people: { name: string; phone?: string }
     phone: phone ?? `+91${aMobileNumber()}`,
     date_of_birth: "1990-04-12",
     gender: "FEMALE",
+    idempotency_key: randomUUID(),
   }));
   const { error } = await tenant.supabase.rpc("import_patients", { p_patients: rows });
   expect(error).toBeNull();

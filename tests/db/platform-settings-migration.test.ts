@@ -7,11 +7,16 @@ import {
   PLATFORM_SETTING_DEFAULTS,
   type PlatformSettingKey,
 } from "@/constants/platform";
-import { cleanTextLimit, columnLine, functionBody, quoted, readMigration, tableBody } from "@tests/support/sql";
+import { cleanTextLimit, columnLine, latestFunctionBody, quoted, readMigration, tableBody } from "@tests/support/sql";
 
 const sql = readMigration("0004_platform_settings.sql");
-const update = functionBody(sql, "update_platform_settings");
-const keys = Object.keys(PLATFORM_SETTING_COLUMNS) as PlatformSettingKey[];
+// Its latest version: a migration that adds a setting replaces it (0016).
+const update = latestFunctionBody("update_platform_settings");
+/** The settings a later migration added, each with its own contract test. */
+const ADDED_LATER: readonly PlatformSettingKey[] = ["maxImportRows"];
+const keys = (Object.keys(PLATFORM_SETTING_COLUMNS) as PlatformSettingKey[]).filter(
+  (key) => !ADDED_LATER.includes(key),
+);
 
 describe("0004 platform settings", () => {
   it("has a column for every setting the app knows, and no other", () => {
@@ -19,7 +24,7 @@ describe("0004 platform settings", () => {
       .split("\n")
       .map((line) => /^ {2}([a-z_]+) /.exec(line)?.[1])
       .filter((column): column is string => !!column && column !== "constraint");
-    expect(columns).toEqual(["id", ...Object.values(PLATFORM_SETTING_COLUMNS), "updated_by", "updated_at"]);
+    expect(columns).toEqual(["id", ...keys.map((key) => PLATFORM_SETTING_COLUMNS[key]), "updated_by", "updated_at"]);
   });
 
   it("starts every setting at the default in platform.ts", () => {
@@ -36,7 +41,7 @@ describe("0004 platform settings", () => {
   it("bounds every number as platform.ts does", () => {
     for (const [key, bound] of Object.entries(PLATFORM_SETTING_BOUNDS)) {
       const column = PLATFORM_SETTING_COLUMNS[key as PlatformSettingKey];
-      if ("maxCount" in bound) continue;
+      if ("maxCount" in bound || ADDED_LATER.includes(key as PlatformSettingKey)) continue;
       expect(columnLine(sql, "platform_settings", column), key).toContain(
         `check (${column} between ${bound.min} and ${bound.max})`,
       );
@@ -65,7 +70,7 @@ describe("0004 platform settings", () => {
   });
 });
 
-describe("0004 update_platform_settings", () => {
+describe("update_platform_settings, as last replaced", () => {
   it("is the DEV's alone, checked by the database itself", () => {
     expect(update).toContain("security definer");
     expect(update).toMatch(/if not public\.is_platform_dev\(\) then\s+raise exception [^;]*errcode = '42501'/);

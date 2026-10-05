@@ -33,4 +33,18 @@ describe("the app's words", () => {
     expect([0, 3].map(UI_TEXT.closures.count)).toEqual(["None coming up", "3 coming up"]);
     expect([1, 3].map(UI_TEXT.closures.days)).toEqual(["1 day", "3 days"]);
   });
+
+  it("counts an import's rows as India writes them, in the singular and the plural (plan §10.5)", () => {
+    const words = UI_TEXT.patientImport;
+    expect([words.chosen("a.csv", 1), words.chosen("a.csv", 12000)]).toEqual(["a.csv · 1 row", "a.csv · 12,000 rows"]);
+    expect(words.tooLong(120000, 10000)).toContain("1,20,000 rows; one import takes at most 10,000");
+    expect([words.send(1), words.send(1240)]).toEqual(["Import 1 patient", "Import 1,240 patients"]);
+    expect(words.willAdd(1)).toMatch(/^1 patient will/);
+    expect(words.willAdd(100000)).toMatch(/^1,00,000 patients will/);
+    expect(words.willLeave(2, 3)).toBe("2 skipped as duplicates, 3 left out with problems.");
+    expect(words.sending(200, 1240)).toBe("Importing… 200 of 1,240");
+    expect(words.stopped(200, 1240)).toMatch(/^The import stopped at 200 of 1,240\./);
+    expect([words.column("C", "Mobile No."), words.column("D", "")]).toEqual(["C · Mobile No.", "Column D"]);
+    expect([words.row(14, "Rohan"), words.row(15, "")]).toEqual(["Row 14 · Rohan", "Row 15"]);
+  });
 });

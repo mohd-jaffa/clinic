@@ -85,3 +85,22 @@ export interface PatientAlert {
   note: string | null;
   active: boolean;
 }
+
+/** What a patient import may hold (D128), and how many rows each request sends. */
+export interface ImportLimits {
+  maxRows: number;
+  batchSize: number;
+}
+
+/** One of the clinic's patients on a mobile an import's row has (plan §10.5). */
+export interface ImportMatch {
+  phone: string;
+  number: number;
+  name: string;
+}
+
+/** What one request of an import did: its rows, all now patients, and how many of them it added. */
+export interface ImportResult {
+  imported: number;
+  added: number;
+}

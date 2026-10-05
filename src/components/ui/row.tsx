@@ -70,6 +70,8 @@ export function RowToken({ value, label }: { value: string; label?: string }) {
  * `look`: a `surface` row stands on the ground on its own; a `quiet` one is
  * not yet in play — still to come, done — drawn as an outline instead; a
  * `menu` row is one line of a menu's list, bare on the ground (D75).
+ * `wrap` lets the line under the title run on instead of being cut short,
+ * for words that must be read whole — why an import's row was left out.
  */
 export function Row({
   leading,
@@ -80,6 +82,7 @@ export function Row({
   href,
   onClick,
   look = "surface",
+  wrap = false,
 }: {
   leading?: ReactNode;
   title: string;
@@ -89,6 +92,7 @@ export function Row({
   href?: string;
   onClick?: () => void;
   look?: "surface" | "quiet" | "menu";
+  wrap?: boolean;
 }) {
   const menu = look === "menu";
   const stretched =
@@ -123,7 +127,13 @@ export function Row({
       {leading && <span className="shrink-0">{leading}</span>}
       <span className="min-w-0 flex-1">
         {target}
-        {subtitle && <span className="block truncate text-small text-muted tabular-nums">{subtitle}</span>}
+        {subtitle && (
+          <span
+            className={cn("block text-small text-muted tabular-nums", wrap ? "text-pretty break-words" : "truncate")}
+          >
+            {subtitle}
+          </span>
+        )}
       </span>
       {detail && <span className="shrink-0 font-bold text-ink tabular-nums">{detail}</span>}
       {trailing && <span className="relative z-[1] flex shrink-0 items-center gap-2">{trailing}</span>}

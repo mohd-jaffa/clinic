@@ -1,6 +1,6 @@
 import * as z from "zod";
 
-import { MAX_PATIENT_AGE, TEXT_LIMITS } from "@/constants/limits";
+import { IMPORT_BATCH_SIZE, MAX_PATIENT_AGE, TEXT_LIMITS } from "@/constants/limits";
 import { UI_TEXT, VALIDATION_MESSAGES } from "@/constants/messages";
 import { ALERT_KINDS, GENDERS } from "@/constants/statuses";
 import { estimatedBirthDate } from "@/lib/dates/age";
@@ -172,3 +172,42 @@ export const updateAlertSchema = z
 
 export type UpdateAlertInput = z.input<typeof updateAlertSchema>;
 export type UpdateAlertPayload = z.output<typeof updateAlertSchema>;
+
+/**
+ * One row of a patient import (plan §10.5, D51): a patient as the add sheet
+ * gives one — the same checks, so a row the preview passed is a row the
+ * server takes — without an assigned doctor, which an import does not carry,
+ * and with the browser's key for it, so a batch sent again adds no one twice.
+ */
+export const importRowSchema = patientSchema
+  .omit({ assignedDoctorId: true })
+  .extend({ key: z.uuid({ error: VALIDATION_MESSAGES.invalid }) });
+
+export type ImportRowInput = z.input<typeof importRowSchema>;
+export type ImportRowPayload = z.output<typeof importRowSchema>;
+
+/** One request of an import: at most IMPORT_BATCH_SIZE rows, each checked as the preview checked it. */
+export const importBatchSchema = z.object({
+  rows: z
+    .array(importRowSchema, { error: VALIDATION_MESSAGES.invalid })
+    .min(1, VALIDATION_MESSAGES.invalid)
+    .max(IMPORT_BATCH_SIZE, VALIDATION_MESSAGES.invalid),
+});
+
+export type ImportBatchInput = z.input<typeof importBatchSchema>;
+export type ImportBatchPayload = z.output<typeof importBatchSchema>;
+
+/**
+ * The mobiles of a batch of an import's rows, asked about before it is sent
+ * (plan §10.5): which of the clinic's patients already have them. In the
+ * body, never the address (D98).
+ */
+export const importMatchesSchema = z.object({
+  phones: z
+    .array(indianMobile(patients.mobileLabel), { error: VALIDATION_MESSAGES.invalid })
+    .min(1, VALIDATION_MESSAGES.invalid)
+    .max(IMPORT_BATCH_SIZE, VALIDATION_MESSAGES.invalid),
+});
+
+export type ImportMatchesInput = z.input<typeof importMatchesSchema>;
+export type ImportMatchesPayload = z.output<typeof importMatchesSchema>;

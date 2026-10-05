@@ -213,6 +213,13 @@ earlier lines are never rewritten.
 | D124 | **Archiving leaves the person on the profile** (the user): the sheet closes, "Meena Iyer archived" is said, and the notice with Restore is there at once if it was a mistake. | 2026-10-04 |
 | D125 | **Restore asks nothing** (the user): it only brings a patient back and is undone by archiving again, as a catalogue entry's Restore (D80). | 2026-10-04 |
 | D126 | **The header's Alerts button always carries an icon** (the user): a pencil when the alerts may be changed, an eye when they may only be read — an archived patient, a view-only clinic, or `visits.view` alone — so it never reads as a bare chip, and never promises an edit that would be refused. | 2026-10-04 |
+| D127 | **An import reads CSV and Excel (.xlsx) in the browser, with read-excel-file and Papa Parse** (the user): small, MIT, maintained, fetched only on the import screen; the old .xls is refused with how to save it as .xlsx or CSV. | 2026-10-05 |
+| D128 | **How many rows an import may hold is a platform setting** (the user): `max_import_rows`, 10,000 to start, 100 – 50,000, changed by the DEV in the console; the batch size (`IMPORT_BATCH_SIZE`, 200) stays a constant, being technical. The cap is checked when the file is read; each batch is bounded on the server. | 2026-10-05 |
+| D129 | **A possible duplicate is imported anyway one row at a time** (the user): the preview lists each with what it matched — a patient already here ("Same mobile and name as P-1012 Rohan Mehta") or an earlier row — skipped unless ticked. Names are similar when every word of the shorter is in the longer, so a family on one mobile is not flagged. | 2026-10-05 |
+| D130 | **Dates in a file are read day first** (the user): 03/04/1990 is 3 April 1990, as India writes it; ISO dates, "3 Apr 1990" and Excel's own date cells are read as they are; a date read no way is named in the row's problem. | 2026-10-05 |
+| D131 | **The import is four steps, one at a time** (the user): File → Columns → Check → Import, with a step indicator and Back; nothing leaves the device until the last step's Import. Once sending starts there is no way back, so no row is sent under a new key. | 2026-10-05 |
+| D132 | **An import starts from Settings, and from an empty patients list** (the user): the owner of a clinic with no patients yet gets **Import from a file** in the list's empty state, where someone moving from a spreadsheet looks first. | 2026-10-05 |
+| D133 | **The summary counts, gives back the rows not imported, and leads on** (the user): imported, skipped as duplicates, not imported; **Download rows not imported** — the file's own columns and a Problem column, to fix and import again; **Open patients**; **Import another file**. A batch sent again after a stop adds no one twice: each row carries its own key (`0016_patient_import`). Migrations from appointments on move up one: `0017_appointments`, … | 2026-10-05 |
 
 ## 3. Users and roles
 
@@ -396,6 +403,7 @@ the live value.
 | `invite_valid_days` | 7 | 1 – 30 | How long an invite link works (§8.4). |
 | `follow_up_lapsed_days` | 30 | 7 – 365 | When an overdue follow-up becomes "lapsed" (§14.3). |
 | `deletion_cooling_days` | 7 | 0 – 90 | How long after an owner's deletion request the admin may delete the clinic (§9.1). |
+| `max_import_rows` | 10 000 | 100 – 50 000 | How many rows one patient import may hold (§10.5, D128). |
 | `renewal_contact_name` | — | ≤ 100 | Plan screen, landing page, expiry emails. |
 | `renewal_contact_phone` | — | +91 mobile | Same; a **Call** and a **WhatsApp** link. |
 | `renewal_contact_email` | — | email | Same. |
@@ -740,25 +748,39 @@ pencil when they may be changed and an eye when they may only be read (D126).
 
 ### 10.5 Importing patients — `/settings/import` (D51)
 
-For a clinic moving from Excel or other software. Owner only.
+For a clinic moving from Excel or other software. Owner only. Four steps, one
+at a time, with a step indicator and Back (D131); it starts from Settings, and
+from an empty patients list for the owner (D132).
 
-1. **Choose a file** — CSV or Excel (`.xlsx`). It is **parsed in the browser**;
-   the file itself never leaves the device and is never stored.
-2. **Map columns** — each of the sheet's columns to a patient field (name,
-   mobile, date of birth or age, gender, alternate phone, email, address,
-   emergency contact, notes), guessed from the headers.
-3. **Preview** — every row checked with the same schema as the patient form
-   (§10.1): rows with errors listed with the reason; possible duplicates
-   (same mobile and a similar name, in the file or already in the clinic)
-   flagged, skipped by default.
-4. **Import** — the valid rows are sent in batches of `IMPORT_BATCH_SIZE`
-   (`POST /api/patients/import`, idempotent per batch), validated again on the
-   server, numbered from the clinic's counter, and audited as one import.
-   A summary says how many were imported, skipped and refused, and the refused
-   rows can be downloaded as a CSV to fix and try again.
+1. **File** — CSV or Excel (`.xlsx`, its first sheet; the old `.xls` is
+   refused with how to save it again) (D127). It is **parsed in the
+   browser**; the file itself never leaves the device and is never stored.
+   Its first filled row is the header; each row keeps its number in the
+   file. One with more rows than `max_import_rows` (a platform setting,
+   D128) is refused.
+2. **Columns** — each patient field (name, mobile, date of birth, age,
+   gender, alternate phone, email, address, emergency contact and phone,
+   notes) takes one of the file's columns, guessed from the headers and
+   shown with the first row's value. A name, a mobile, a gender and a date of
+   birth or an age are needed.
+3. **Check** — every row checked with the same schema as the patient form
+   (§10.1), dates read day first (D130): ready, possible duplicates, and
+   problems, counted. Problems are listed with the reason, in words for
+   fixing a file, and left out. Possible duplicates — the same mobile and a
+   similar name as a patient already in the clinic (asked about in batches,
+   in the body, `POST /api/patients/import/matches`) or as an earlier row —
+   are listed with what each matched and skipped unless ticked (D129).
+4. **Import** — the rows going, in batches of `IMPORT_BATCH_SIZE`
+   (`POST /api/patients/import`), each row under its own key so a batch
+   sent again adds no one twice (`0016`), validated again on the server,
+   numbered from the clinic's counter, without an assigned doctor, and
+   audited once per batch by count and numbers. Progress is shown; leaving
+   the page asks first; a stop carries on from the batch that stopped. A
+   summary counts what was imported, skipped and not imported; the rows not
+   imported can be downloaded as a CSV — the file's columns and a Problem
+   column — to fix and try again; **Open patients** leads on (D133).
 
-Up to `MAX_IMPORT_ROWS` (10 000) rows per import. Patients only: visits,
-bills and balances stay in the old system.
+Patients only: visits, bills and balances stay in the old system.
 
 ## 11. Appointments, calendar and the queue
 
@@ -1700,23 +1722,25 @@ Planned order (one or more per tracker row):
                                 can_see_patient(), patient_alerts, search indexes,
                                 create_patient, search_patients, import_patients;
                                 patients.create and .edit need patients.view (D102)
-0016_appointments               appointments, exclusion, transitions, daily_tokens,
+0016_patient_import             max_import_rows (D128); import_patients safe to send again,
+                                each row under its own key (D133)
+0017_appointments               appointments, exclusion, transitions, daily_tokens,
                                 create/update/status/walk-in/arrived functions
-0017_visits                     visits (with billing state), vitals, send_in, mark_done,
+0018_visits                     visits (with billing state), vitals, send_in, mark_done,
                                 next_patient, start_visit, save_vitals
-0018_prescriptions              prescriptions, prescription_items, save_prescription,
+0019_prescriptions              prescriptions, prescription_items, save_prescription,
                                 prescription_templates (+ items)
-0019_treatments                 treatments, treatment_sessions, transitions
-0020_follow_ups                 follow_up_contacts, follow_up_items
-0021_bills                      bills, bill_items, financial-year bill_counters, create_bill
+0020_treatments                 treatments, treatment_sessions, transitions
+0021_follow_ups                 follow_up_contacts, follow_up_items
+0022_bills                      bills, bill_items, financial-year bill_counters, create_bill
                                 (and the fee at arrival in mark_arrived), void_bill,
                                 mark_no_charge
-0022_payments                   payments, record_payment, void_payment,
+0023_payments                   payments, record_payment, void_payment,
                                 patient_balances, bill_settlement, patient_stats
-0023_expenses                   expenses
-0024_dashboard_and_reports      dashboard_summary, report_daily, report_monthly
-0025_subscription_notices       the daily pg_cron → pg_net call (address and secret in Vault)
-0026_clinic_deletion            request_clinic_deletion, cancel_clinic_deletion,
+0024_expenses                   expenses
+0025_dashboard_and_reports      dashboard_summary, report_daily, report_monthly
+0026_subscription_notices       the daily pg_cron → pg_net call (address and secret in Vault)
+0027_clinic_deletion            request_clinic_deletion, cancel_clinic_deletion,
                                 delete_clinic (DEV)
 ```
 
@@ -1737,7 +1761,7 @@ take an `Idempotency-Key` header.
 | Team | `GET /api/team` · `POST /api/team/invites` · `POST /api/team/invites/[id]/resend` · `DELETE /api/team/invites/[id]` · `GET, PATCH /api/team/[id]` · `POST /api/team/[id]/active` |
 | Doctors | `GET /api/doctors` (active doctors, for pickers) |
 | Subscription | `GET /api/subscription` (state, dates, prices, contact, history — owner) · `GET /api/subscription/payments/[id]/receipt.pdf` |
-| Patients | `POST /api/patients` · `POST /api/patients/search` (the list, a page at a time: the words, the tab and the cursor in the body, D98) · `POST /api/patients/matches` (the mobile in the body, D98) · `GET, PATCH /api/patients/[id]` · `POST /api/patients/[id]/archive` · `POST /api/patients/[id]/restore` · `GET /api/patients/[id]/summary` · `GET /api/patients/[id]/timeline` · `GET /api/patients/[id]/last-prescription` · `POST /api/patients/import` · `GET, POST /api/patients/[id]/alerts` · `PATCH /api/patients/[id]/alerts/[alertId]` |
+| Patients | `POST /api/patients` · `POST /api/patients/search` (the list, a page at a time: the words, the tab and the cursor in the body, D98) · `POST /api/patients/matches` (the mobile in the body, D98) · `GET, PATCH /api/patients/[id]` · `POST /api/patients/[id]/archive` · `POST /api/patients/[id]/restore` · `GET /api/patients/[id]/summary` · `GET /api/patients/[id]/timeline` · `GET /api/patients/[id]/last-prescription` · `GET, POST /api/patients/import` (the owner's: the import's limits, D128; a batch) · `POST /api/patients/import/matches` (the clinic's patients on a batch's mobiles, in the body, D98) · `GET, POST /api/patients/[id]/alerts` · `PATCH /api/patients/[id]/alerts/[alertId]` |
 | Appointments | `GET, POST /api/appointments` · `GET, PATCH /api/appointments/[id]` · `POST /api/appointments/[id]/status` · `POST /api/appointments/[id]/arrived` · `POST /api/appointments/[id]/reminded` · `POST /api/appointments/walk-in` |
 | Queue | `GET /api/queue` · `POST /api/queue/send-in` · `POST /api/queue/done` · `POST /api/queue/next` |
 | Visits | `POST /api/visits` · `GET, PATCH /api/visits/[id]` · `PUT /api/visits/[id]/vitals` · `POST /api/visits/[id]/no-charge` |
@@ -2189,13 +2213,13 @@ tests (§34) and its changelog entry.
 | R4.5 | Alerts: allergies, conditions, medications (D117 – D120) | §10.4 | — | DONE (2026-10-04 · 45f61d5) |
 | R4.6 | Archive and restore (D122 – D125) | §10.1 | — | DONE (2026-10-04 · 8096bfa) |
 | R4.7 | Integration: the doctor scope; staff without `patients.view`; isolation rows | §34 | — | DONE (2026-10-05 · 1e9c3c0) |
-| R4.8 | Patient import: parse CSV/Excel in the browser, map, preview (errors, duplicates), batches, summary, refused rows as CSV | §10.5 | — | TODO |
+| R4.8 | `0016_patient_import`; patient import: parse CSV/Excel in the browser, map, preview (errors, duplicates), batches, summary, refused rows as CSV (D127 – D133) | §10.5 | — | TODO |
 
 ### Phase 5 — Appointments and the queue
 
 | ID | Work | Source | Waits on | Status |
 |---|---|---|---|---|
-| R5.1 | `0016_appointments`: table (clinic's appointment types), exclusion, transitions, closures check, the appointments on a closure being added listed (D87), nothing booked for an archived patient (D103), tokens, functions | §11, §28.4 | — | TODO |
+| R5.1 | `0017_appointments`: table (clinic's appointment types), exclusion, transitions, closures check, the appointments on a closure being added listed (D87), nothing booked for an archived patient (D103), tokens, functions | §11, §28.4 | — | TODO |
 | R5.2 | Booking sheet: patient search/quick add, doctor, date, time, type → duration; clash card | §11.1 | — | TODO |
 | R5.3 | Calendar: day (list / columns per doctor), week, doctor filter, closures shaded; the kit's calendar grid (D66) | §11.5 | — | TODO |
 | R5.4 | Appointment detail: confirm, reschedule, cancel (reason), no-show; the profile's next appointment and its appointments in the history (D101) | §11.2, §10.3 | — | TODO |
@@ -2207,9 +2231,9 @@ tests (§34) and its changelog entry.
 
 | ID | Work | Source | Waits on | Status |
 |---|---|---|---|---|
-| R6.1 | `0017_visits`: visits (billing state), vitals, `send_in`, `mark_done`, `next_patient`; Send in, Done and Next patient in the queue and the workspace | §11.4, §12.1, §28.5 | — | TODO |
+| R6.1 | `0018_visits`: visits (billing state), vitals, `send_in`, `mark_done`, `next_patient`; Send in, Done and Next patient in the queue and the workspace | §11.4, §12.1, §28.5 | — | TODO |
 | R6.2 | Visit workspace: alerts, vitals, complaint/diagnosis/notes, follow-up, per-section saves | §12.2 | — | TODO |
-| R6.3 | `0018_prescriptions`: items, advice, medicine suggestions, allergy warning; the doctor's own, or typed with `prescriptions.write` (`entered_by`) | §13, §8.2 | — | TODO |
+| R6.3 | `0019_prescriptions`: items, advice, medicine suggestions, allergy warning; the doctor's own, or typed with `prescriptions.write` (`entered_by`) | §13, §8.2 | — | TODO |
 | R6.4 | `lib/pdf` letterhead (A4 and A5, footer) and the prescription PDF; share, download, print | §13, §33 | — | TODO |
 | R6.5 | Patient timeline with visits and prescriptions; the patients list's last visit (D101) | §10.3, §10.2 | — | TODO |
 | R6.6 | Integration + E2E: queue → visit → prescription PDF | §34 | — | TODO |
@@ -2220,9 +2244,9 @@ tests (§34) and its changelog entry.
 
 | ID | Work | Source | Waits on | Status |
 |---|---|---|---|---|
-| R7.1 | `0019_treatments`: treatments, sessions, transitions | §14.1 | — | TODO |
+| R7.1 | `0020_treatments`: treatments, sessions, transitions | §14.1 | — | TODO |
 | R7.2 | Treatments in the visit workspace and on the profile | §14.1 | — | TODO |
-| R7.3 | `0020_follow_ups`: `follow_up_items`, contacts | §14.2 | — | TODO |
+| R7.3 | `0021_follow_ups`: `follow_up_items`, contacts | §14.2 | — | TODO |
 | R7.4 | Follow-ups screen: tabs with counts, Call, WhatsApp, Book, Mark contacted | §14.3 | — | TODO |
 | R7.5 | Integration: each tab on the right day in the clinic's timezone; lapsed follows the setting | §34 | — | TODO |
 | R7.6 | Follow-up reminders on WhatsApp, recorded as a contact | §14.3, §22.1 | — | TODO |
@@ -2231,10 +2255,10 @@ tests (§34) and its changelog entry.
 
 | ID | Work | Source | Waits on | Status |
 |---|---|---|---|---|
-| R8.1 | `0021_bills`: bills, items, financial-year counters, `create_bill` (idempotent, price check without `payments.discount`), `void_bill`, `mark_no_charge`, the fee at arrival in `mark_arrived` | §15.2, §15.6, §11.3 | — | TODO |
+| R8.1 | `0022_bills`: bills, items, financial-year counters, `create_bill` (idempotent, price check without `payments.discount`), `void_bill`, `mark_no_charge`, the fee at arrival in `mark_arrived` | §15.2, §15.6, §11.3 | — | TODO |
 | R8.2 | `billing/totals.ts`, the one formula; discount by amount or % | §15.1 | — | TODO |
 | R8.3 | New bill screen: from To bill, a visit or a patient; the doctor's fee; discount and price change with `payments.discount`; collect now. Collect fee at arrival | §15.2, §11.3 | — | TODO |
-| R8.4 | `0022_payments`: record, refund, void; `patient_balances`, `bill_settlement`, `patient_stats` | §15.3, §15.4 | — | TODO |
+| R8.4 | `0023_payments`: record, refund, void; `patient_balances`, `bill_settlement`, `patient_stats` | §15.3, §15.4 | — | TODO |
 | R8.5 | Bill PDF; share, download, print | §15.5, §33 | — | TODO |
 | R8.6 | Checkout: the queue's To-bill column, Billing's tabs (To bill, bills, payments, outstanding), No charge; the profile's balance section, its bills and payments in the history, and the patients list's Owing tab and balance chip (D101) | §15.4, §15.6, §10.2, §10.3 | — | TODO |
 | R8.7 | Integration: double submit → one bill/payment; balances to the paisa; read-only refuses | §34 | — | TODO |
@@ -2244,14 +2268,14 @@ tests (§34) and its changelog entry.
 
 | ID | Work | Source | Waits on | Status |
 |---|---|---|---|---|
-| R9.1 | `0023_expenses` and the expenses screen (the clinic's categories): add, edit, archive, month totals, by category | §16 | — | TODO |
+| R9.1 | `0024_expenses` and the expenses screen (the clinic's categories): add, edit, archive, month totals, by category | §16 | — | TODO |
 | R9.2 | Integration + E2E | §34 | — | TODO |
 
 ### Phase 10 — Home and reports
 
 | ID | Work | Source | Waits on | Status |
 |---|---|---|---|---|
-| R10.1 | `0024_dashboard_and_reports`: `dashboard_summary`, `report_daily`, `report_monthly` | §17, §18 | — | TODO |
+| R10.1 | `0025_dashboard_and_reports`: `dashboard_summary`, `report_daily`, `report_monthly` | §17, §18 | — | TODO |
 | R10.2 | Home: sections by permission; getting-started for a new clinic | §17 | — | TODO |
 | R10.3 | Reports: daily and monthly, the two charts; the kit's chart kit, bar and donut (D66) | §18 | — | TODO |
 | R10.4 | Integration: a seeded month's figures equal hand-computed ones | §34 | — | TODO |
@@ -2266,7 +2290,7 @@ tests (§34) and its changelog entry.
 | R11.2 | Console: overview, clinics (No trial and Deletion flags), clinic detail, accounts, error log, platform audit | §20 | — | TODO |
 | R11.3 | Extend plan (Monthly, Yearly, Set date); the owner's confirmation email | §7.4 | — | TODO |
 | R11.4 | Platform settings screen | §6, §20.4 | — | TODO |
-| R11.5 | `0025_subscription_notices`: daily notices, each once per period | §22 | — | TODO |
+| R11.5 | `0026_subscription_notices`: daily notices, each once per period | §22 | — | TODO |
 | R11.6 | Owner's activity log | §19 | — | TODO |
 | R11.7 | Integration + E2E: extend, change a setting, notices once, DEV sees no clinic data | §34 | — | TODO |
 | R11.8 | Plan receipts: receipt numbers, the receipt PDF, the business details settings | §7.5, §6 | Q2 | TODO |
@@ -2279,7 +2303,7 @@ tests (§34) and its changelog entry.
 | R12.2 | Privacy and terms | §21 | Q22 | TODO |
 | R12.3 | Manifest, icons, service worker, offline page, Install app | §21 | — | TODO |
 | R12.4 | Security headers; `noindex` on app routes; share-preview image | §21 | — | TODO |
-| R12.5 | `0026_clinic_deletion`: the owner's request and cancel (banner, emails), the admin's delete after the cooling-off | §9.1, §20 | — | TODO |
+| R12.5 | `0027_clinic_deletion`: the owner's request and cancel (banner, emails), the admin's delete after the cooling-off | §9.1, §20 | — | TODO |
 | R12.6 | CSV export, one file per area, audited | §9 | — | TODO |
 
 ### Phase 13 — Hardening and release v1.0.0

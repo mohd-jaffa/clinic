@@ -6,7 +6,8 @@
  * (AGENTS.md §10).
  *
  * 0004_platform_settings seeds the row from these same defaults and bounds
- * every column by these same limits; tests/db keeps the two equal.
+ * every column by these same limits (0016 adds `max_import_rows`); tests/db
+ * keeps the two equal.
  */
 
 export interface PlatformSettings {
@@ -22,6 +23,8 @@ export interface PlatformSettings {
   inviteValidDays: number;
   followUpLapsedDays: number;
   deletionCoolingDays: number;
+  /** How many rows one patient import may hold (plan §10.5, D128). */
+  maxImportRows: number;
   /** Who a clinic contacts to renew (plan §7.5); each is hidden while unset. */
   renewalContactName: string | null;
   renewalContactPhone: string | null;
@@ -47,6 +50,7 @@ export const PLATFORM_SETTING_COLUMNS: Record<PlatformSettingKey, string> = {
   inviteValidDays: "invite_valid_days",
   followUpLapsedDays: "follow_up_lapsed_days",
   deletionCoolingDays: "deletion_cooling_days",
+  maxImportRows: "max_import_rows",
   renewalContactName: "renewal_contact_name",
   renewalContactPhone: "renewal_contact_phone",
   renewalContactEmail: "renewal_contact_email",
@@ -68,6 +72,7 @@ export const PLATFORM_SETTING_DEFAULTS: PlatformSettings = {
   inviteValidDays: 7,
   followUpLapsedDays: 30,
   deletionCoolingDays: 7,
+  maxImportRows: 10_000,
   renewalContactName: null,
   renewalContactPhone: null,
   renewalContactEmail: null,
@@ -97,4 +102,5 @@ export const PLATFORM_SETTING_BOUNDS = {
   inviteValidDays: { min: 1, max: 30 },
   followUpLapsedDays: { min: 7, max: 365 },
   deletionCoolingDays: { min: 0, max: 90 },
+  maxImportRows: { min: 100, max: 50_000 },
 } as const satisfies Partial<Record<PlatformSettingKey, NumberBound>>;

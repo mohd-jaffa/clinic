@@ -1,11 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { z } from "zod";
 
-import { TEXT_LIMITS } from "@/constants/limits";
+import { IMPORT_BATCH_SIZE, TEXT_LIMITS } from "@/constants/limits";
 import { VALIDATION_MESSAGES } from "@/constants/messages";
 import {
   alertSchema,
   firstIssue,
+  importBatchSchema,
+  importMatchesSchema,
+  importRowSchema,
   patientListSchema,
   patientMatchesSchema,
   patientSchema,
@@ -226,5 +229,45 @@ describe("updateAlertSchema (D118, D119)", () => {
     expect(updateAlertSchema.parse({ active: false })).toEqual({ active: false });
     expect(updateAlertSchema.parse({ kind: "CONDITION" })).toEqual({});
     expect(messageOf(updateAlertSchema, { active: true })).toBe(VALIDATION_MESSAGES.invalid);
+  });
+});
+
+describe("the import's schemas (plan §10.5, D51)", () => {
+  const typed = {
+    key: "3f2b1c4d-0a1b-4c2d-8e3f-1a2b3c4d5e6f",
+    fullName: " Rohan  Mehta ",
+    phone: "98765 43210",
+    born: { as: "DATE", date: "1990-04-03" },
+    gender: "MALE",
+    assignedDoctorId: "7b1e4a52-3c5d-4e6f-8a9b-0c1d2e3f4a5b",
+  };
+
+  it("checks a row as the add sheet checks a patient, with its key and never a doctor", () => {
+    const row = importRowSchema.parse(typed);
+    expect(row).toMatchObject({
+      key: typed.key,
+      fullName: "Rohan Mehta",
+      phone: "+919876543210",
+      born: { dateOfBirth: "1990-04-03", dobIsEstimated: false },
+      gender: "MALE",
+      altPhone: null,
+    });
+    expect(row).not.toHaveProperty("assignedDoctorId");
+    expect(messageOf(importRowSchema, { ...typed, key: "nope" })).toBe(VALIDATION_MESSAGES.invalid);
+    expect(messageOf(importRowSchema, { ...typed, phone: "123" })).toBe(VALIDATION_MESSAGES.phone);
+  });
+
+  it("sends a batch of one to IMPORT_BATCH_SIZE rows, and asks about as many mobiles", () => {
+    expect(importBatchSchema.parse({ rows: [typed] }).rows).toHaveLength(1);
+    expect(messageOf(importBatchSchema, { rows: [] })).toBe(VALIDATION_MESSAGES.invalid);
+    expect(messageOf(importBatchSchema, { rows: Array(IMPORT_BATCH_SIZE + 1).fill(typed) })).toBe(
+      VALIDATION_MESSAGES.invalid,
+    );
+    expect(importMatchesSchema.parse({ phones: ["98765 43210"] })).toEqual({ phones: ["+919876543210"] });
+    expect(messageOf(importMatchesSchema, { phones: [] })).toBe(VALIDATION_MESSAGES.invalid);
+    expect(messageOf(importMatchesSchema, { phones: Array(IMPORT_BATCH_SIZE + 1).fill("98765 43210") })).toBe(
+      VALIDATION_MESSAGES.invalid,
+    );
+    expect(messageOf(importMatchesSchema, { phones: ["123"] })).toBe(VALIDATION_MESSAGES.phone);
   });
 });

@@ -91,6 +91,16 @@ describe("Patients (plan §10.2, D104, D121)", () => {
     expect(screen.getAllByRole("button", { name: "Add patient" })).toHaveLength(1);
   });
 
+  it("offers the owner of a clinic with no patients an import from a file (D132)", () => {
+    list.current = { ...list.current, data: [] };
+    const { unmount } = draw();
+    expect(screen.getByRole("link", { name: "Import from a file" })).toHaveAttribute("href", "/settings/import");
+    unmount();
+    auth.current = authStub({ role: "STAFF", permissions: ["patients.view", "patients.create"] });
+    draw();
+    expect(screen.queryByRole("link", { name: "Import from a file" })).not.toBeInTheDocument();
+  });
+
   it("shows a doctor their own patients, and says so", () => {
     auth.current = authStub({ role: "DOCTOR", permissions: ["patients.view"] });
     list.current = { ...list.current, data: [] };
@@ -201,6 +211,7 @@ describe("Patients' Add patient (D67)", () => {
     list.current = { ...list.current, data: [] };
     draw();
     expect(screen.queryByRole("button", { name: "Add patient" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Import from a file" })).not.toBeInTheDocument();
     expect(screen.getByText("Your clinic is view-only until its plan is renewed.")).toBeInTheDocument();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     await userEvent.type(search(), "Kabir");

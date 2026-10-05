@@ -80,6 +80,18 @@ describe("platform settings (plan §6)", () => {
     expect(error?.code).toBe("22023");
   });
 
+  it("hold the import's row cap within its bounds (D128)", async () => {
+    expect(await updatePlatformSettings(asDeveloper(), { maxImportRows: 25_000 }, "req_rows")).toMatchObject({
+      maxImportRows: 25_000,
+    });
+    for (const maxImportRows of [99, 50_001]) {
+      await expect(updatePlatformSettings(asDeveloper(), { maxImportRows }, "req_rows")).rejects.toMatchObject({
+        code: "VALIDATION_ERROR",
+      });
+    }
+    expect((await getPlatformSettings()).maxImportRows).toBe(25_000);
+  });
+
   it("take effect at once: a longer grace turns a view-only clinic back to full access", async () => {
     await updatePlatformSettings(asDeveloper(), { graceDays: 7 }, "req_grace");
     await setValidUntil(clinic.clinicId, addDaysKey(todayKey(), -10));

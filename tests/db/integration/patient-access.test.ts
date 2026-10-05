@@ -7,6 +7,8 @@ import { PATCH as alertRoute } from "@/app/api/patients/[id]/alerts/[alertId]/ro
 import { GET as alertsRoute, POST as addAlertRoute } from "@/app/api/patients/[id]/alerts/route";
 import { POST as restoreRoute } from "@/app/api/patients/[id]/restore/route";
 import { GET as patientRoute, PATCH as changeRoute } from "@/app/api/patients/[id]/route";
+import { POST as importMatchesRoute } from "@/app/api/patients/import/matches/route";
+import { GET as importLimitsRoute, POST as importRoute } from "@/app/api/patients/import/route";
 import { POST as matchesRoute } from "@/app/api/patients/matches/route";
 import { POST as createRoute } from "@/app/api/patients/route";
 import { POST as searchRoute } from "@/app/api/patients/search/route";
@@ -27,7 +29,8 @@ import {
  * guard, the feature function and RLS answer together. Staff without
  * `patients.view` are refused by every route and read nothing at the
  * database either; `patients.view` alone reads and changes nothing; a doctor
- * reaches only their own patients (D3); another clinic reaches none.
+ * reaches only their own patients (D3); another clinic reaches none; and an
+ * import is the owner's alone (plan §10.5).
  */
 type Member = SignedIn & { memberId: string };
 type Answer = { status: number; body: { data?: unknown; error?: { code: string } } };
@@ -218,5 +221,32 @@ describe("another clinic, through every route", () => {
     }
     const { data } = await admin().from("patient_alerts").select("note").eq("id", theirAlert).single();
     expect(data).toEqual({ note: null });
+  });
+});
+
+describe("an import, the owner's alone (plan §10.5)", () => {
+  const importRoutes = (member: SignedIn) => ({
+    limits: () => ask(member, importLimitsRoute, { method: "GET" }),
+    matches: () => ask(member, importMatchesRoute, { body: { phones: [PHONE.slice(3)] } }),
+    send: () =>
+      ask(member, importRoute, {
+        body: { rows: [{ ...typed, fullName: "Imported Patient", key: randomUUID() }] },
+      }),
+  });
+
+  it("is refused to every member but the owner, doctors and those who add patients included", async () => {
+    for (const member of [bookkeeper, frontDesk, doctorA]) {
+      for (const [route, send] of Object.entries(importRoutes(member))) {
+        expect((await send()).status, route).toBe(403);
+      }
+    }
+  });
+
+  it("answers the owner its limits and the clinic's patients on a mobile, and imports a batch", async () => {
+    const routes = importRoutes(clinic.owner);
+    expect(await routes.limits()).toMatchObject({ status: 200, body: { data: { maxRows: expect.any(Number) } } });
+    // Everyone on the family mobile, whichever doctor is theirs.
+    expect(matched(await routes.matches())).toEqual(expect.arrayContaining(["Their Patient", "Asha Rao"]));
+    expect(await routes.send()).toMatchObject({ status: 200, body: { data: { imported: 1, added: 1 } } });
   });
 });

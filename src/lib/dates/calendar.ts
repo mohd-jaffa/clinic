@@ -90,6 +90,16 @@ export function monthWeeks(key: string): (string | null)[][] {
   return Array.from({ length: cells.length / 7 }, (_, week) => cells.slice(week * 7, week * 7 + 7));
 }
 
+/**
+ * A calendar date carried as midnight UTC — how a spreadsheet's date cell is
+ * read (plan §10.5) — as its day key. It names a day, not an instant, so it
+ * is not moved into the clinic's timezone.
+ */
+export function utcDayKey(date: Date): string {
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toISOString().slice(0, 10);
+}
+
 /** Whether a text is a day of the calendar as a key: "2026-02-28", never "2026-02-30". */
 export function isDayKey(text: string): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) return false;

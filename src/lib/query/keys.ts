@@ -63,6 +63,8 @@ export const apiRoutes = {
     list: "/api/patients",
     search: "/api/patients/search",
     matches: "/api/patients/matches",
+    import: "/api/patients/import",
+    importMatches: "/api/patients/import/matches",
     one: (id: string) => `/api/patients/${id}`,
     archive: (id: string) => `/api/patients/${id}/archive`,
     restore: (id: string) => `/api/patients/${id}/restore`,

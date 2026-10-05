@@ -1,10 +1,10 @@
 "use client";
 
-import { Archive, UserPlus, UsersRound } from "lucide-react";
+import { Archive, FileUp, UserPlus, UsersRound } from "lucide-react";
 import { useId, useState, type ReactNode } from "react";
 
 import { Avatar } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
+import { Button, LinkButton } from "@/components/ui/button";
 import { CoastHeader } from "@/components/ui/coast-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ListScreen } from "@/components/ui/list-screen";
@@ -13,8 +13,8 @@ import { Row, RowList } from "@/components/ui/row";
 import { SearchField } from "@/components/ui/search-field";
 import { TabPanel, Tabs } from "@/components/ui/tabs";
 import { UI_TEXT } from "@/constants/messages";
-import { ADD_FORMS, patientRoute } from "@/constants/navigation";
-import { hasAccess } from "@/constants/permissions";
+import { ADD_FORMS, IMPORT_ROUTE, patientRoute } from "@/constants/navigation";
+import { hasAccess, ROUTE_ACCESS } from "@/constants/permissions";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { ReadOnlyNote } from "@/features/subscription/components/ReadOnlyNote";
 import { useReadOnly } from "@/features/subscription/hooks/useReadOnly";
@@ -45,7 +45,8 @@ function prefillFrom(search: string): PatientPrefill {
  * are. A doctor finds only
  * their own patients; the archived wait on their own tab for those who may
  * restore them. **Add patient**, or the ＋'s Patient, opens the sheet; a
- * search that found no one offers it with what was typed.
+ * search that found no one offers it with what was typed. A clinic with no
+ * patients yet offers its owner **Import from a file** (D132).
  */
 export function Patients() {
   const { membership } = useAuth();
@@ -61,6 +62,8 @@ export function Patients() {
   const canAdd = membership !== null && hasAccess(membership, "patients.create");
   const seesArchived = membership !== null && hasAccess(membership, "patients.edit");
   const adds = canAdd && !readOnly;
+  // Someone moving from a spreadsheet looks here first (D132).
+  const imports = membership !== null && hasAccess(membership, ROUTE_ACCESS.owner) && !readOnly;
   const addTyped = () => {
     setPrefill(({ count }) => ({ count: count + 1, values: prefillFrom(searched) }));
     adding.show();
@@ -79,6 +82,16 @@ export function Patients() {
             icon={UsersRound}
             title={patients.emptyTitle}
             hint={membership?.role === "DOCTOR" ? patients.emptyHintDoctor : patients.emptyHint}
+            action={
+              imports && (
+                <LinkButton
+                  href={IMPORT_ROUTE}
+                  label={UI_TEXT.patientImport.fromEmpty}
+                  icon={FileUp}
+                  variant="secondary"
+                />
+              )
+            }
           />
         )
       }

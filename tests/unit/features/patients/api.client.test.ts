@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { AlertsClient, PatientsClient } from "@/features/patients/api.client";
+import { AlertsClient, ImportClient, PatientsClient } from "@/features/patients/api.client";
 import type { PatientInput } from "@/lib/validation";
 
 const mockFetch = vi.fn();
@@ -58,6 +58,24 @@ describe("AlertsClient (plan §10.4)", () => {
       url: "/api/patients/p-1/alerts/a-1",
       method: "PATCH",
       body: JSON.stringify({ active: false }),
+    });
+  });
+});
+
+describe("ImportClient (plan §10.5)", () => {
+  it("asks about a batch's mobiles in the body, and sends a batch of rows", async () => {
+    await ImportClient.matches(["98765 43210"]);
+    expect(sent()).toMatchObject({
+      url: "/api/patients/import/matches",
+      method: "POST",
+      body: JSON.stringify({ phones: ["98765 43210"] }),
+    });
+    mockFetch.mockClear();
+    await ImportClient.send([{ key: "k-1", fullName: "Rohan" } as never]);
+    expect(sent()).toMatchObject({
+      url: "/api/patients/import",
+      method: "POST",
+      body: JSON.stringify({ rows: [{ key: "k-1", fullName: "Rohan" }] }),
     });
   });
 });

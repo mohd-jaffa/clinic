@@ -8,6 +8,9 @@
 
 import { MAX_PATIENT_AGE } from "./limits";
 
+/** A count as India writes it: 1,240 · 12,000 · 1,00,000. */
+const count = (value: number) => value.toLocaleString("en-IN");
+
 export const ERROR_MESSAGES = {
   VALIDATION_ERROR: "Please check the highlighted fields.",
   VALIDATION_INVALID_JSON: "The request body must be valid JSON.",
@@ -82,6 +85,13 @@ export const ERROR_MESSAGES = {
   PATIENTS_LOAD_FAILED: "The patients couldn't be loaded.",
   ALERT_ALREADY_EXISTS: "This patient already has that alert.",
   ALERTS_LOAD_FAILED: "The alerts couldn't be loaded.",
+  // A patient import's file (plan §10.5, D127): said in the browser, which reads it.
+  IMPORT_FILE_TYPE: "That isn't a CSV or Excel (.xlsx) file.",
+  IMPORT_FILE_XLS: "That's an older Excel file (.xls). Save it as .xlsx or CSV, then choose it again.",
+  IMPORT_FILE_UNREADABLE: "That file couldn't be read. Check it opens, then choose it again.",
+  IMPORT_FILE_EMPTY: "That file has no patients in it: it needs a header row and at least one row under it.",
+  IMPORT_LIMITS_LOAD_FAILED: "The import couldn't be set up.",
+  IMPORT_CHECK_FAILED: "The rows couldn't be checked against the clinic's patients.",
 
   // The browser could not reach the server (plan §21, D55): said by the client, never sent by the server.
   NETWORK_OFFLINE: "You're offline. Try again once the connection is back — what you typed is still here.",
@@ -752,6 +762,90 @@ export const UI_TEXT = {
     turnedOffSection: "Turned off",
     showTurnedOff: (count: number) => `Show turned off (${count})`,
     hideTurnedOff: "Hide turned off",
+  },
+
+  /** Importing patients (plan §10.5, D51, D127 – D133). */
+  patientImport: {
+    title: "Import patients",
+    subtitle: "From an Excel or CSV file",
+    steps: { FILE: "File", COLUMNS: "Columns", CHECK: "Check", SEND: "Import" },
+    stepsLabel: "Import steps",
+    next: "Next",
+    back: "Back",
+    // The file.
+    fileTitle: "Choose a file",
+    fileHint:
+      "A CSV or Excel (.xlsx) file with a header row and one patient per row. It is read on this device: the file itself is never sent or kept.",
+    choose: "Choose file",
+    chooseAnother: "Choose another file",
+    reading: "Reading…",
+    chosen: (name: string, rows: number) => `${name} · ${rows === 1 ? "1 row" : `${count(rows)} rows`}`,
+    tooLong: (rows: number, max: number) =>
+      `That file has ${count(rows)} rows; one import takes at most ${count(max)}. Split it, and import each part.`,
+    patientsOnly: "Patients only: visits, bills and balances stay in the old system.",
+    // The columns.
+    columnsTitle: "Match the columns",
+    columnsHint: "Each field takes one of the file's columns, guessed from its headers. Check them before going on.",
+    notInFile: "Not in the file",
+    column: (letter: string, header: string) => (header ? `${letter} · ${header}` : `Column ${letter}`),
+    sample: (value: string) => `First row: ${value}`,
+    fields: {
+      fullName: "Full name",
+      phone: "Mobile",
+      dateOfBirth: "Date of birth",
+      age: "Age in years",
+      gender: "Gender",
+      altPhone: "Alternate phone",
+      email: "Email",
+      address: "Address",
+      emergencyContactName: "Emergency contact",
+      emergencyContactPhone: "Emergency contact’s phone",
+      notes: "Notes",
+    },
+    bornHint: "Give the date of birth, the age, or both: a row uses its date of birth when it has one.",
+    bornMissing: "Choose the column for the date of birth or the age.",
+    columnMissing: (label: string) => `Choose the column for ${label.toLowerCase()}.`,
+    genderUnread: "Gender needs to say Male, Female or Other (or M, F, O).",
+    dateUnread: "Date of birth must be a date, like 03/04/1990 (day first) or 1990-04-03.",
+    // Checking the rows.
+    checkTitle: "Check the rows",
+    checking: "Checking against the clinic's patients…",
+    countsLabel: "The rows",
+    readyLabel: "Ready",
+    problemsTitle: "With problems",
+    problemsHint: "Left out. Download them after the import to fix and import again.",
+    duplicatesTitle: "Possible duplicates",
+    duplicatesHint: "Skipped unless you tick them to import anyway: a family can share one mobile.",
+    row: (line: number, name: string) => (name ? `Row ${line} · ${name}` : `Row ${line}`),
+    sameAsPatient: (number: string, name: string) => `Same mobile and name as ${number} ${name}`,
+    sameAsRow: (line: number) => `Same mobile and name as row ${line}`,
+    showMore: "Show more",
+    noneReady: "No row is ready to import. Go back and check the columns, or fix the file.",
+    // Sending.
+    sendTitle: "Import",
+    willAdd: (rows: number) =>
+      rows === 1
+        ? "1 patient will be added, numbered after the clinic's last."
+        : `${count(rows)} patients will be added, numbered after the clinic's last.`,
+    willLeave: (skipped: number, refused: number) =>
+      `${count(skipped)} skipped as duplicates, ${count(refused)} left out with problems.`,
+    send: (rows: number) => (rows === 1 ? "Import 1 patient" : `Import ${count(rows)} patients`),
+    sending: (done: number, total: number) => `Importing… ${count(done)} of ${count(total)}`,
+    keepOpen: "Keep this page open until it finishes.",
+    stopped: (done: number, total: number) =>
+      `The import stopped at ${count(done)} of ${count(total)}. No one is added twice, so try again to carry on.`,
+    progressLabel: "Import progress",
+    // The summary.
+    doneTitle: "Import finished",
+    importedLabel: "Imported",
+    skippedLabel: "Skipped as duplicates",
+    refusedLabel: "Not imported",
+    downloadRefused: "Download rows not imported",
+    refusedFile: "patients-not-imported.csv",
+    problemColumn: "Problem",
+    openPatients: "Open patients",
+    importAnother: "Import another file",
+    fromEmpty: "Import from a file",
   },
 
   /** An age, short enough for a row or a prescription (plan §10.1). */
