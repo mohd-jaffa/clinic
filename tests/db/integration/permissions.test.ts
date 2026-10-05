@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import type { RouteAccess } from "@/constants/permissions";
@@ -13,10 +15,11 @@ import {
 } from "@tests/support/integration";
 
 /**
- * The permission matrix, so far (plan §34.3, R1.11, R3.8): every permission
- * the schema enforces yet, allowed and refused — by the route guard, and by
- * RLS or a function with the member's own token. Each phase adds the rows its
- * tables bring.
+ * The permission matrix, so far (plan §34.3, R1.11, R3.8, R4.7): every
+ * permission the schema enforces yet, allowed and refused — by the route
+ * guard, and by RLS or a function with the member's own token. Each phase
+ * adds the rows its tables bring; the patients routes themselves are asked in
+ * patient-access.test.ts.
  */
 let clinic: TestClinic;
 let manager: SignedIn & { memberId: string };
@@ -167,6 +170,106 @@ describe("team.manage, by the route guard and the database", () => {
       p_active: false,
     });
     expect(refused?.hint).toBe("AUTH_PERMISSION_DENIED");
+  });
+});
+
+describe("patients.view, patients.create and patients.edit, by the guard, RLS and create_patient", () => {
+  const patient = { full_name: "Matrix Patient", phone: "+919876543210", date_of_birth: "1990-04-12", gender: "MALE" };
+  const add = (member: SignedIn) =>
+    member
+      .tenant!.supabase.rpc("create_patient", { p_patient: patient, p_idempotency_key: randomUUID() })
+      .single<{ patient_id: string }>();
+  let editor: SignedIn & { memberId: string };
+  let viewer: SignedIn & { memberId: string };
+  let patientId: string;
+
+  beforeAll(async () => {
+    [editor, viewer] = await Promise.all([
+      addMember(clinic.clinicId, { permissions: ["patients.view", "patients.create", "patients.edit"] }),
+      addMember(clinic.clinicId, { permissions: ["patients.view"] }),
+    ]);
+    const { data, error } = await add(editor);
+    expect(error).toBeNull();
+    patientId = data!.patient_id;
+  });
+
+  it("lets each through the guard to what it allows, and no further", async () => {
+    for (const access of ["patients.view", "patients.create", "patients.edit"] as const) {
+      await expect(ask(editor, access)).resolves.toMatchObject({ status: 200 });
+    }
+    await expect(ask(viewer, "patients.view", "GET")).resolves.toMatchObject({ status: 200 });
+    for (const access of ["patients.create", "patients.edit"] as const) {
+      await expect(ask(viewer, access)).resolves.toMatchObject({ status: 403 });
+    }
+    await expect(ask(manager, "patients.view", "GET")).resolves.toMatchObject({ status: 403 });
+  });
+
+  it("reads patients with patients.view, and none without it", async () => {
+    const { data: seen } = await viewer.tenant!.supabase.from("patients").select("id").eq("id", patientId);
+    expect(seen).toHaveLength(1);
+    const { data: unseen } = await manager.tenant!.supabase.from("patients").select("id");
+    expect(unseen).toEqual([]);
+  });
+
+  it("adds a patient with patients.create, and refuses one without it", async () => {
+    const { error } = await add(viewer);
+    expect(error?.hint).toBe("AUTH_PERMISSION_DENIED");
+  });
+
+  it("changes a patient with patients.edit, and changes none without it", async () => {
+    const change = (member: SignedIn) =>
+      member.tenant!.supabase.from("patients").update({ full_name: "Changed" }).eq("id", patientId).select("id");
+    expect((await change(viewer)).data).toEqual([]);
+    expect((await change(editor)).data).toHaveLength(1);
+  });
+});
+
+describe("visits.view and visits.edit on a patient's alerts, by RLS", () => {
+  let reader: SignedIn & { memberId: string };
+  let writer: SignedIn & { memberId: string };
+  let patientId: string;
+
+  beforeAll(async () => {
+    [reader, writer] = await Promise.all([
+      addMember(clinic.clinicId, { permissions: ["patients.view", "visits.view"] }),
+      addMember(clinic.clinicId, { permissions: ["patients.view", "visits.view", "visits.edit"] }),
+    ]);
+    const { data, error } = await clinic.owner.tenant.supabase
+      .rpc("create_patient", {
+        p_patient: { full_name: "Alert Matrix", phone: "+919876543211", date_of_birth: "1990-04-12", gender: "FEMALE" },
+        p_idempotency_key: randomUUID(),
+      })
+      .single<{ patient_id: string }>();
+    expect(error).toBeNull();
+    patientId = data!.patient_id;
+  });
+
+  const addAlert = (member: SignedIn, label: string) =>
+    member
+      .tenant!.supabase.from("patient_alerts")
+      .insert({ clinic_id: clinic.clinicId, patient_id: patientId, kind: "ALLERGY", label })
+      .select("id")
+      .maybeSingle();
+
+  it("adds and changes an alert with visits.edit, and neither without it", async () => {
+    const { data: added, error } = await addAlert(writer, "Penicillin");
+    expect(error).toBeNull();
+    expect((await addAlert(reader, "Latex")).error?.code).toBe("42501");
+
+    const turnOff = (member: SignedIn) =>
+      member.tenant!.supabase.from("patient_alerts").update({ active: false }).eq("id", added!.id).select("id");
+    expect((await turnOff(reader)).data).toEqual([]);
+    expect((await turnOff(writer)).data).toHaveLength(1);
+  });
+
+  it("reads alerts with visits.view, and none with patients.view alone", async () => {
+    const { data: read } = await reader
+      .tenant!.supabase.from("patient_alerts")
+      .select("id")
+      .eq("patient_id", patientId);
+    expect(read).toHaveLength(1);
+    const { data: hidden } = await receptionist.tenant!.supabase.from("patient_alerts").select("id");
+    expect(hidden).toEqual([]);
   });
 });
 

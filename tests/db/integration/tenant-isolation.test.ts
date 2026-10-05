@@ -46,6 +46,8 @@ const PLATFORM_TABLES = ["platform_settings", "trial_claims", "receipt_counters"
 let a: TestClinic;
 let b: TestClinic;
 let developer: SignedIn;
+/** A's patient, which B's owner goes looking for. */
+let patientId: string;
 
 beforeAll(async () => {
   [a, b] = await Promise.all([registerClinic({ clinicName: "Clinic A" }), registerClinic({ clinicName: "Clinic B" })]);
@@ -58,9 +60,10 @@ beforeAll(async () => {
     })
     .single<{ patient_id: string }>();
   if (error) throw error;
+  patientId = patient.patient_id;
   await a.owner.tenant.supabase
     .from("patient_alerts")
-    .insert({ clinic_id: a.clinicId, patient_id: patient.patient_id, kind: "ALLERGY", label: "Penicillin" });
+    .insert({ clinic_id: a.clinicId, patient_id: patientId, kind: "ALLERGY", label: "Penicillin" });
   developer = await makeDeveloper();
 });
 
@@ -113,6 +116,37 @@ describe("as clinic B's owner, with a valid token", () => {
       .eq("clinic_id", b.clinicId)
       .select("id");
     expect(moved ?? []).toEqual([]);
+  });
+
+  it("finds none of A's patients, and writes nothing onto one", async () => {
+    const { supabase } = b.owner.tenant;
+    const { data: found } = await supabase.rpc("search_patients", {
+      p_words: "Rohan",
+      p_digits: "9876543210",
+      p_number: null,
+      p_archived: false,
+      p_offset: 0,
+      p_limit: 20,
+    });
+    expect(found).toEqual([]);
+    const { data: seen } = await supabase.rpc("can_see_patient", { p_patient_id: patientId });
+    expect(seen).toBe(false);
+
+    const { error: planted } = await supabase
+      .from("patient_alerts")
+      .insert({ clinic_id: a.clinicId, patient_id: patientId, kind: "ALLERGY", label: "Planted" });
+    expect(planted?.code).toBe("42501");
+    const { error: crossed } = await supabase
+      .from("patient_alerts")
+      .insert({ clinic_id: b.clinicId, patient_id: patientId, kind: "ALLERGY", label: "Crossed" });
+    // Its own clinic named, the patient is still not its own: the composite key refuses it.
+    expect(crossed?.code).toBe("23503");
+    const { data: archived } = await supabase
+      .from("patients")
+      .update({ archived_at: new Date().toISOString() })
+      .eq("id", patientId)
+      .select("id");
+    expect(archived).toEqual([]);
   });
 
   it("reaches none of the platform's tables, nor those only the database reads", async () => {
