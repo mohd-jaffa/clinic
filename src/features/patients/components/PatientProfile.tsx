@@ -124,7 +124,7 @@ function Details({ patient }: { patient: Patient }) {
   const [editing, setEditing] = useState(false);
   const headingId = useId();
   const mayEdit = membership !== null && hasAccess(membership, "patients.edit");
-  const edits = mayEdit && !readOnly && patient.archivedAt === null;
+  const edits = mayEdit && !readOnly && !patient.archivedAt;
 
   return (
     <div className="grid max-w-3xl grid-cols-1 gap-6">

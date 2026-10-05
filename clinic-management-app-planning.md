@@ -212,6 +212,7 @@ earlier lines are never rewritten.
 | D123 | **An archived profile says so in its header** (the user): a notice — "Archived on 4 Oct 2026 by Asha Rao" (by whom while their profile lasts) and that the profile is read-only until restored — with **Restore** for `patients.edit` while the clinic may write. Edit and changing alerts are not offered meanwhile (D103). | 2026-10-04 |
 | D124 | **Archiving leaves the person on the profile** (the user): the sheet closes, "Meena Iyer archived" is said, and the notice with Restore is there at once if it was a mistake. | 2026-10-04 |
 | D125 | **Restore asks nothing** (the user): it only brings a patient back and is undone by archiving again, as a catalogue entry's Restore (D80). | 2026-10-04 |
+| D126 | **The header's Alerts button always carries an icon** (the user): a pencil when the alerts may be changed, an eye when they may only be read — an archived patient, a view-only clinic, or `visits.view` alone — so it never reads as a bare chip, and never promises an edit that would be refused. | 2026-10-04 |
 
 ## 3. Users and roles
 
@@ -734,7 +735,8 @@ alerts and the details; each later phase adds its part as its records arrive
 `patient_alerts`: kind (Allergy, Condition, Medication), a label ("Penicillin"),
 an optional note, active or not. Read with `visits.view`, changed with
 `visits.edit`. Shown on the profile header, at the top of every visit, and
-above the prescription editor.
+above the prescription editor. In the header, **Alerts** opens them, with a
+pencil when they may be changed and an eye when they may only be read (D126).
 
 ### 10.5 Importing patients — `/settings/import` (D51)
 

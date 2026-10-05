@@ -1583,3 +1583,30 @@ appended and never rewritten (AGENTS.md §33).
 ### Blockers
 - None. What happens to an archived patient's future appointments comes
   with Phase 5 (R5.1 already refuses booking for one, D103).
+
+## 2026-10-05 — An icon on the Alerts button when alerts are view-only
+
+### Changed
+- The profile header's **Alerts** button always carries an icon now (D126,
+  the user): a pencil when the alerts may be changed, an eye when they may
+  only be read. That covers an archived patient, a view-only clinic, and
+  someone with `visits.view` alone. Before, a view-only button had no icon
+  and read like a chip. The user saw it in the archived-profile phone
+  screenshots and took it for a phone-width problem; the editable phone
+  profile already had the pencil.
+- The profile and the alerts treat a patient without `archivedAt` as not
+  archived (`!archivedAt` rather than `=== null`). A server answering in
+  the older shape no longer hides Edit and the pencil. Your dev server
+  (port 3000) still answers with `archived` and no `archivedAt`, so it is
+  running stale code; restarting it clears that.
+- Plan: D126 recorded; §10.4 updated. DESIGN.md: `AlertChip`'s row.
+
+### Validation
+- Typecheck, lint, format check passed. Unit and integration tests passed
+  (1892), coverage 100%.
+- Build passed; E2E passed for patients and catalogues (22, phone and
+  desktop), axe clean. Screenshots checked at phone and desktop, light and
+  dark.
+
+### Blockers
+- None.

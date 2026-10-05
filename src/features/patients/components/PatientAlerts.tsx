@@ -1,6 +1,6 @@
 "use client";
 
-import { BellOff, ChevronDown, Info, Pencil, Plus, TriangleAlert } from "lucide-react";
+import { BellOff, ChevronDown, Eye, Info, Pencil, Plus, TriangleAlert } from "lucide-react";
 import { useState, type ReactNode } from "react";
 
 import { AlertChip } from "@/components/ui/alert-chip";
@@ -36,9 +36,10 @@ const lineOf = (alert: PatientAlert) => [ALERT_KIND_LABELS[alert.kind], alert.no
 /**
  * A patient's alerts in their profile header (plan §10.3, §10.4, D117): a chip
  * for each active one — allergies first, in the danger tone — and **Alerts**,
- * opening the sheet that lists them with their notes. Only for `visits.view`;
- * changed with `visits.edit`, never while the patient is archived (D103) or
- * the clinic is view-only.
+ * opening the sheet that lists them with their notes — a pencil on it when
+ * they may be changed, an eye when they may only be read (D126). Only for
+ * `visits.view`; changed with `visits.edit`, never while the patient is
+ * archived (D103) or the clinic is view-only.
  */
 export function PatientAlerts({ patient }: { patient: Patient }) {
   const { membership } = useAuth();
@@ -50,7 +51,7 @@ export function PatientAlerts({ patient }: { patient: Patient }) {
   if (!mayRead) return null;
 
   const active = (query.data ?? []).filter((alert) => alert.active).sort(byKind);
-  const edits = mayEdit && !readOnly && patient.archivedAt === null;
+  const edits = mayEdit && !readOnly && !patient.archivedAt;
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -75,7 +76,7 @@ export function PatientAlerts({ patient }: { patient: Patient }) {
       )}
       <Button
         label={words.open}
-        icon={edits ? Pencil : undefined}
+        icon={edits ? Pencil : Eye}
         variant="secondary"
         size="sm"
         onClick={() => setOpen(true)}

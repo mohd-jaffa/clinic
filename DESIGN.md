@@ -354,7 +354,7 @@ A capsule that only says where something stands ("Waiting", "With the doctor"): 
 
 ### Chips and pills
 - **`StatusPill`:** a small capsule with a dot and a word, in `neutral` (ground, muted, line ring), `live` (`--action-soft`, `--action`) or `attention` (`--coral-soft`, `--coral`) tones from `statuses.ts`.
-- **`AlertChip`:** a clinical alert: `danger` on `--coral-soft` with a warning icon, `note` on ground with an info icon. Its `kind` ("Allergy") is said before the label to a screen reader; the mark says it to the eye. A patient's chips run in one row with **Alerts** after the last (D117), allergies first.
+- **`AlertChip`:** a clinical alert: `danger` on `--coral-soft` with a warning icon, `note` on ground with an info icon. Its `kind` ("Allergy") is said before the label to a screen reader; the mark says it to the eye. A patient's chips run in one row with **Alerts** after the last (D117), allergies first; **Alerts** carries a pencil when they may be changed and an eye when they may only be read (D126).
 - **`Pin`:** a coral capsule pinned on the coastline at the right of a `CoastHeader`, carrying the one thing not to miss. With `href` its tap area grows to 44 px.
 - **`ChoiceChips`:** a row of 44 px round, bold small choices (a radio group) that scrolls sideways on a phone. **`ChoiceField`** sets a short set of them as a form field — its label (required marked), the chips wrapping, the hint or refusal beside them — with nothing chosen until one is (a patient's gender).
 - **`SegmentedControl`:** round choices on a `--surface` track with a `--line` ring; the chosen thumb is `--chip` and slides on the map's curve (the theme switch in My account).
