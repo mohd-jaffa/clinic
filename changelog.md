@@ -1610,3 +1610,36 @@ appended and never rewritten (AGENTS.md §33).
 
 ### Blockers
 - None.
+
+## 2026-10-05 — R4.7 Integration: who reaches a patient
+
+### Added
+- `tests/db/integration/patient-access.test.ts`: each member sends their own
+  token to the real patients route handlers, so the guard, the feature
+  function and RLS answer together:
+  - Staff without `patients.view` are refused by all ten patients routes
+    (403). At the database itself they read no patients and no alerts, and
+    `search_patients` finds none.
+  - `patients.view` alone reads the list, a mobile's family and a profile.
+    It adds, changes and archives none, and reads no alerts (403).
+  - The doctor scope (D3): a doctor lists and matches only their own, and
+    adds, reads and changes their own. Every route that names another
+    doctor's patient answers not found, and nothing of theirs changes.
+  - Another clinic finds none of the clinic's patients, and every route
+    that names one answers not found.
+- The permission matrix (`permissions.test.ts`) gains rows for
+  `patients.view`, `patients.create` and `patients.edit` (guard, RLS,
+  `create_patient`), and for `visits.view` and `visits.edit` on alerts.
+- Tenant isolation: B's owner finds none of A's patients by search, gets
+  `can_see_patient` false, plants no alert on A's patient (RLS, and the
+  composite key when B's own clinic is named), and archives none.
+
+### Validation
+- Typecheck, lint, format check passed. Unit and integration tests passed
+  (1907), coverage 100%.
+- No app code changed, so E2E was not run again; it last passed at 88 with
+  R4.6 and 22 after the alerts icon change.
+
+### Blockers
+- None. The clinic-deletion test gets its patient rows when `delete_clinic`
+  arrives; it does not exist yet.
