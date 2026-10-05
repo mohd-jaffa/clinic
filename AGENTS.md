@@ -73,6 +73,10 @@ specifies.
   with no body and **no co-author or other attribution trailer** (the user,
   2026-10-02). Commit as **`jaFFa <jafakash.14@gmail.com>`** (plan D38).
   Work on a branch and merge to `main` through a PR with CI green.
+- **One commit per change, docs included** (the user, 2026-10-05; plan
+  D136): the code, its tests, the plan's decisions and tracker row,
+  `DESIGN.md` and `changelog.md` go in the same commit. Docs are never
+  committed on their own.
 - **Testing mandate:** write unit, database, integration and E2E tests at each
   step — not later. Coverage is 100% and CI enforces it (§31).
 - **Local environment:** Docker and the local Supabase. Every env variable is
@@ -608,6 +612,34 @@ menus and is hidden inside the installed app.
 - Seed data (`supabase/seed.sql`) is for local development only and never
   loaded into a hosted project.
 
+**Speed is part of every row** (the user, 2026-10-05; plan §37.1, D135).
+Brio's live app lagged because each screen waited on several database round
+trips, one after another, on indexes nobody had checked. Here, every row:
+
+- **Indexes what it reads.** Every query it adds is served by an index that
+  leads with `clinic_id`, in the query's own filter and order. Every paged
+  list has an index in its own order, partial when the list keeps to one
+  status. Every foreign key is indexed. The migration's contract test names
+  each index.
+- **Keeps policies cheap.** Helpers are called as `(select fn())`. A policy
+  keeps a doctor to their patients as `0015` does, `(select
+  public.sees_every_patient()) or patient_id in (select
+  public.doctor_patient_ids())`, worked out once a statement, never with
+  `can_see_patient()` per row.
+- **Makes no call it does not need.**
+  - Reads that do not depend on each other go at once, failing for the
+    first one listed (`allInOrder`, as Brio).
+  - A record comes with its children in one query.
+  - No query runs in a loop.
+  - A write answers from its `returning`, not a second read.
+  - Side work the answer does not need runs after it (`after()`); the audit
+    row is written beside the read-back.
+- **Selects what it shows.** No `select *`. Sums, counts and balances are
+  worked out in SQL, never by fetching rows to add up.
+- **Stays within the budget** (plan §37): a screen or read waits on at most 2
+  round trips (the session, then everything else at once), a save on at most
+  4. The changelog entry says how many its screens and saves wait on.
+
 ---
 
 # 26. API
@@ -795,7 +827,8 @@ rewritten:
 
 Each entry names the change, the affected module, the reason, the validation,
 the blocker status, and migration notes if any. The matching tracker row in
-the plan is set to **DONE (date · commit)**.
+the plan is set to **DONE (date)** in the same commit as the change (plan
+D136); the row's commit is the one that set it.
 
 ---
 
@@ -851,10 +884,12 @@ A task is complete only when:
 - Audit logging is added where required; no patient data leaks into logs.
 - No hard-coded words, vocabularies or business rules.
 - The screen works at phone, tablet and desktop widths with no axe violations.
+- Every query it adds is indexed, and its screens and saves are within the
+  round-trip budget (§25, plan §37).
 - Tests are written and green, coverage is 100%.
 - No unrelated feature was added.
 - `changelog.md` and the tracker are updated; open blockers recorded.
-- The change is committed.
+- The change is committed — code and docs in one commit.
 
 ---
 

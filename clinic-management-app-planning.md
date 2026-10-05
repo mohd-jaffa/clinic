@@ -220,6 +220,9 @@ earlier lines are never rewritten.
 | D131 | **The import is four steps, one at a time** (the user): File → Columns → Check → Import, with a step indicator and Back; nothing leaves the device until the last step's Import. Once sending starts there is no way back, so no row is sent under a new key. | 2026-10-05 |
 | D132 | **An import starts from Settings, and from an empty patients list** (the user): the owner of a clinic with no patients yet gets **Import from a file** in the list's empty state, where someone moving from a spreadsheet looks first. | 2026-10-05 |
 | D133 | **The summary counts, gives back the rows not imported, and leads on** (the user): imported, skipped as duplicates, not imported; **Download rows not imported** — the file's own columns and a Problem column, to fix and import again; **Open patients**; **Import another file**. A batch sent again after a stop adds no one twice: each row carries its own key (`0016_patient_import`). Migrations from appointments on move up one: `0017_appointments`, … | 2026-10-05 |
+| D134 | **A speed phase before release** (the user, after Brio's live app lagged): **Phase 13 — Speed** measures every screen, read and save. It puts the session in one database round trip, indexes what is read, cuts round trips made one after another, and puts the server beside the database (§37, §39). Hardening and release become **Phase 14**; each old R13.n is now R14.n. | 2026-10-05 |
+| D135 | **Speed is part of every row** (the user): from R5.1 on, each row indexes the queries it adds, makes no database call it does not need, keeps its screens and saves within the round-trip budget, and says in its changelog how many round trips they wait on (§37.1). | 2026-10-05 |
+| D136 | **Docs travel with their change** (the user): a row's code, tests, plan, DESIGN.md, changelog and tracker row go in **one commit**; docs are never committed on their own. The tracker reads **DONE (date)**, and the row's commit is the one that set it (`git log -G "R5.1 .*DONE"`). Rows done before keep their hashes. | 2026-10-05 |
 
 ## 3. Users and roles
 
@@ -258,7 +261,7 @@ Brio's `bakery`/`business`.
 
 ## 4. Scope
 
-### 4.1 V1 (Phases 0 – 13)
+### 4.1 V1 (Phases 0 – 14)
 
 - Sign-up with a free trial (one per mobile); sign-in by email or mobile;
   email confirmation; password reset; light and dark themes.
@@ -431,7 +434,7 @@ Rules:
   or `expiry_warning_days` change every clinic's state at once (that is the
   point); retention applies at the next purge.
 - **Contact and business details unset** are simply not shown; the release
-  checklist (R13.8) requires them set before v1.0.0.
+  checklist (R14.8) requires them set before v1.0.0.
 
 What stays in code: vocabularies (statuses, roles, permissions), transition
 tables, validation bounds that protect columns (lengths, money limits), and UI
@@ -1338,7 +1341,7 @@ clinicdesk/
 ├── clinic-management-app-planning.md     # this plan
 ├── docs/
 │   ├── planning/                          # the initial draft, kept
-│   └── RELEASE.md                         # Phase 13
+│   └── RELEASE.md                         # Phase 14
 ├── .github/workflows/ ci.yml release.yml
 ├── scripts/                               # check-test-paths, check-deploy-output,
 │                                          # brand, og-image, landing-shots, pdf-fonts
@@ -1514,7 +1517,7 @@ reaches the browser (`server-only` imports, an env split checked by a test).
   the number; only the server computes it, and only the service role reads
   the table.
 - **Sessions:** HttpOnly, `SameSite=Lax`, `Secure` in production; access token
-  1 hour, refresh rotation on (Supabase defaults reviewed in R13.2).
+  1 hour, refresh rotation on (Supabase defaults reviewed in R14.2).
 - **Rate limits:** Supabase Auth's limits on sign-up, sign-in, recovery and
   invites; a Vercel firewall rule on `/api/auth/*` (as Brio).
 
@@ -1742,6 +1745,9 @@ Planned order (one or more per tracker row):
 0026_subscription_notices       the daily pg_cron → pg_net call (address and secret in Vault)
 0027_clinic_deletion            request_clinic_deletion, cancel_clinic_deletion,
                                 delete_clinic (DEV)
+0028_session_profile            session_profile: the session, profile, membership and plan in
+                                one read (R13.2, D134)
+0029_faster_reads               indexes and policies from the load-seeded EXPLAINs (R13.3)
 ```
 
 ## 30. API
@@ -2104,11 +2110,57 @@ As Brio (D17):
 - **Database:** every list is paged; search is indexed (trigram, digits);
   every policy helper is evaluated once per statement; the seeded load test
   (a clinic with 50 000 patients, 200 000 appointments, 100 000 bills) keeps
-  every list and search under 300 ms at the API (R13.5).
+  every list and search under 300 ms at the API (R13.4).
+- **Round trips** (D134): what a request waits on is mostly the trips from
+  the server to the database, one after another — about 40 ms each from
+  Vercel to Supabase in production. Every screen and every read waits on at
+  most **2**: the session, then everything else at once. A save waits on at
+  most **4**: the session, any check the write needs, the write, its audit
+  row. Measured on the production build locally with 40 ms added to each
+  database request (R13.1).
+- **The server beside the database:** Vercel `bom1` with Supabase
+  `ap-south-1`, and functions kept warm (fluid compute). Brio's live app was
+  slow for both reasons: its server ran in Washington, and an idle function
+  took 1 – 8.5 s to answer.
 - **Screens:** server-drawn with their first data (AppScreen), no layout shift
   from loading states (skeletons sized to content).
 - **Accessibility:** zero axe violations on every E2E-visited screen; a manual
-  keyboard and screen-reader pass before release (R13.4).
+  keyboard and screen-reader pass before release (R14.4).
+
+### 37.1 Speed in every row (D135)
+
+Speed is built with each row, not added at the end. From R5.1 on, every row:
+
+- **Indexes what it reads.** Every query it adds is served by an index that
+  leads with `clinic_id`, in the query's own filter and order. A paged list
+  has an index in its own order, partial when the list keeps to one status.
+  Every foreign key is indexed, since Postgres does not do it. The
+  migration's contract test names each index.
+- **Keeps policies cheap.** Helpers are called as `(select fn())`, so they
+  run once a statement, not once a row. A policy keeps a doctor to their
+  patients as `0015` does, `(select public.sees_every_patient()) or
+  patient_id in (select public.doctor_patient_ids())`, never with
+  `can_see_patient()` for each row.
+- **Makes no call it does not need.**
+  - Reads that do not depend on each other go at once, failing for the first
+    one listed, as Brio's `allInOrder` does.
+  - A record comes with its children in one query (embedded select).
+  - No query runs in a loop.
+  - A write answers from its own `returning`, not a second read.
+  - Side work the answer does not need (emails, the bell) runs after the
+    answer (`after()`); the audit row is written beside the read-back, not
+    after it.
+- **Selects what it shows.** No `select *`; a list reads its own columns. Sums,
+  counts and balances are worked out in SQL, never by fetching rows to add
+  up in the server or the browser.
+- **Keeps the browser light.**
+  - One SWR key serves every reader of a route.
+  - A screen polls only when it changes under you (the queue), and stops
+    while the tab is hidden.
+  - Heavy code (PDF drawing, Excel reading, charts) loads when it is first
+    needed.
+- **Says what it costs.** Its changelog entry gives how many round trips its
+  screens and saves wait on, within §37's budget.
 
 ---
 
@@ -2134,15 +2186,18 @@ when the one it depends on is DONE.
 | **10 — Home and reports** | The operational Home and the daily/monthly reports. | 7, 8, 9 | Home and the reports agree with the underlying records for a seeded month. |
 | **11 — Subscription operations and the developer console** | The owner's Plan screen, the console (clinics, settings, extend, accounts, logs), expiry emails, the owner's activity log. | 10 | The admin extends a clinic and changes a setting from the console; expiry emails go out once each; DEV sees no clinic data. |
 | **12 — Landing, legal and PWA** | Landing with live pricing, privacy, terms, installable app, security headers, CSV export, deletion requests and the admin's delete. | 11 | Installable on Android Chrome and iOS Safari; opens offline to the offline page; an export holds every row; a deleted clinic leaves no rows but its trial claim. |
-| **13 — Hardening and release v1.0.0** | Security, accessibility and performance passes; the full journey; release workflow; production setup. | 12 | §34.4 passes at both widths in CI; the release checklist is complete; v1.0.0 is live. |
+| **13 — Speed** | Every screen, read and save measured on a load-seeded clinic; the session in one round trip; indexes and policies tuned; round trips cut to the budget; the hosting beside the database (D134). | 12 | Every screen and read waits on at most 2 round trips and every save on at most 4 (§37); every list and search is under 300 ms at the API on the load seed; Supabase's performance advisor reports nothing. |
+| **14 — Hardening and release v1.0.0** | Security and accessibility passes; speed checked again; the full journey; release workflow; production setup. | 13 | §34.4 passes at both widths in CI; the release checklist is complete; v1.0.0 is live and answers from `bom1` within §37's budgets. |
 
 ## 39. Tracker
 
-**Status** is one of **TODO**, **DOING**, **DONE (date · commit)**, **BLOCKED
-(reason)**, or **LATER (date)**. *Source* is the plan section. *Waits on* names
-the open question (§41) whose answer the row needs; without an answer it is
-built on that question's default. Rows are never deleted. Every row includes its
-tests (§34) and its changelog entry.
+**Status** is one of **TODO**, **DOING**, **DONE (date)**, **BLOCKED
+(reason)**, or **LATER (date)**. Rows done before D136 read **DONE (date ·
+commit)**. *Source* is the plan section. *Waits on* names the open question
+(§41) whose answer the row needs; without an answer it is built on that
+question's default. Rows are never deleted. Every row includes its tests
+(§34), its indexes and round-trip count (§37.1) and its changelog entry, all
+in the row's one commit (D136).
 
 ### Phase 0 — Groundwork
 
@@ -2306,18 +2361,33 @@ tests (§34) and its changelog entry.
 | R12.5 | `0027_clinic_deletion`: the owner's request and cancel (banner, emails), the admin's delete after the cooling-off | §9.1, §20 | — | TODO |
 | R12.6 | CSV export, one file per area, audited | §9 | — | TODO |
 
-### Phase 13 — Hardening and release v1.0.0
+### Phase 13 — Speed (D134)
+
+Every screen, read and save built in Phases 0 – 12, made as fast as it can
+be before anyone uses it live. Each row measures before and after, and its
+changelog gives both.
 
 | ID | Work | Source | Waits on | Status |
 |---|---|---|---|---|
-| R13.1 | Rate limits: Supabase Auth settings, Vercel firewall on `/api/auth/*` | §27.6 | — | TODO |
-| R13.2 | Security review: every table's policies, every service-role call, headers, session settings, redaction | §27 | — | TODO |
-| R13.3 | Patient-data review: logs, error log, audit, PDFs, cache headers, service worker | §27.6 | — | TODO |
-| R13.4 | Accessibility pass: axe on every screen; manual keyboard and screen reader | §37 | — | TODO |
-| R13.5 | Performance: budgets measured; load-seeded EXPLAINs; indexes adjusted | §37 | — | TODO |
-| R13.6 | The full critical journey (§34.4) at both widths in CI | §34.4 | — | TODO |
-| R13.7 | `release.yml`, `check-deploy-output.mjs`, `docs/RELEASE.md` (accounts, setup, each release, backups, rollback) | §35 | — | TODO |
-| R13.8 | Production: Supabase (ap-south-1), Vercel (bom1), domain, Gmail SMTP, Vault and env secrets (`CRON_SECRET`, `TRIAL_CLAIM_SECRET`), the DEV account, renewal contact set, the final product name; restore rehearsed; v1.0.0 | §35 | Q1, Q3, Q22 | TODO |
+| R13.1 | The measuring setup: a load seed (a clinic with 50 000 patients, 200 000 appointments, 100 000 bills, a year of visits); the production build timed locally with 40 ms added to each database request; every screen, read and save timed and its round trips counted; Home, Queue and Patients timed on a throttled phone (4× CPU, 4G). The baseline in the changelog | §37 | — | TODO |
+| R13.2 | `0028_session_profile`: the session in one round trip. The token's signature and expiry checked on the server against the project's published key (`getClaims`), instead of asking Supabase Auth each request. One function checks the session is still open and hands back the profile, membership, clinic, doctor, plan and the settings it needs. Today a session waits on 3: Auth, the profile, then the plan and settings | §5.5, §37 | — | TODO |
+| R13.3 | `0029_faster_reads`: EXPLAIN ANALYZE on the load seed for every list, search, count and report. Indexes added or changed (every paged list in its own order, every foreign key). No policy or list calls `can_see_patient()` per row. Supabase's performance advisor reports nothing: unindexed keys, policies re-run per row, overlapping policies, duplicate or unused indexes | §27, §28, §37 | — | TODO |
+| R13.4 | Round trips cut to the budget. Reads that do not depend on each other go at once (`allInOrder`), records come with their children, writes answer from `returning`, and side work runs after the answer. Every screen and read within 2, every save within 4; every list and search under 300 ms at the API on the load seed | §37 | — | TODO |
+| R13.5 | Pages: the proxy starts only where it has work and loads the Supabase client only to renew. Heavy code loads when first needed; first-load JS within 200 KB gzip. Polling stops while the tab is hidden. Reusing a screen revisited within seconds (`staleTimes`) measured, kept only if it helps. LCP and INP within budget on the throttled phone | §37 | — | TODO |
+| R13.6 | Hosting: `vercel.json` with region `bom1` and fluid compute, sent by `vercel deploy --prebuilt` with every release; the release guide (R14.7) says so | §35, §37 | — | TODO |
+
+### Phase 14 — Hardening and release v1.0.0
+
+| ID | Work | Source | Waits on | Status |
+|---|---|---|---|---|
+| R14.1 | Rate limits: Supabase Auth settings, Vercel firewall on `/api/auth/*` | §27.6 | — | TODO |
+| R14.2 | Security review: every table's policies, every service-role call, headers, session settings, redaction | §27 | — | TODO |
+| R14.3 | Patient-data review: logs, error log, audit, PDFs, cache headers, service worker | §27.6 | — | TODO |
+| R14.4 | Accessibility pass: axe on every screen; manual keyboard and screen reader | §37 | — | TODO |
+| R14.5 | Speed checked again: R13.1's measurements re-run after R14.1 – R14.4, nothing over budget | §37 | — | TODO |
+| R14.6 | The full critical journey (§34.4) at both widths in CI | §34.4 | — | TODO |
+| R14.7 | `release.yml`, `check-deploy-output.mjs`, `docs/RELEASE.md` (accounts, setup, each release, backups, rollback) | §35 | — | TODO |
+| R14.8 | Production: Supabase (ap-south-1), Vercel (bom1), domain, Gmail SMTP, Vault and env secrets (`CRON_SECRET`, `TRIAL_CLAIM_SECRET`), the DEV account, renewal contact set, the final product name; restore rehearsed; v1.0.0. The live app checked: it answers from `bom1::bom1`, warm and after idling, within §37's budgets | §35, §37 | Q1, Q3, Q22 | TODO |
 
 ## 40. Definition of shippable
 
@@ -2329,8 +2399,8 @@ A phase is DONE when:
   in every theme, with no axe violations;
 - no hard-coded strings (all words in `messages.ts`), no business rule in code
   that §6 says is a setting;
-- `changelog.md` has the phase's entries and its tracker rows read DONE with
-  their commits;
+- `changelog.md` has the phase's entries and its tracker rows read DONE;
+- its screens and saves are within §37's round-trip budget;
 - open blockers are recorded.
 
 ## 41. Open questions
@@ -2343,7 +2413,7 @@ starts.
 |---|---|---|
 | Q1 | The product's final name and brand. | **Partly answered (D35):** "ClinicDesk" is a working name, used only through `UI_TEXT.appName` and the brand constants. The final name is needed before Phase 12. |
 | Q2 | The renewal contact to show clinics (name, phone/WhatsApp, email, UPI id), and the business name and address for plan receipts. | **Open.** Set by the DEV in platform settings (§6); hidden until set; required before release. |
-| Q3 | The production domain. | **Open.** Required before R13.8. |
+| Q3 | The production domain. | **Open.** Required before R14.8. |
 | Q4 | One clinic per person in V1? | **Answered: yes (D23).** |
 | Q5 | Exactly one owner? | **Answered: yes; no transfer in V1 (D24).** |
 | Q6 | Who writes prescriptions? | **Answered (D45):** the visit's doctor, or staff with `prescriptions.write`, always in the doctor's name. |
@@ -2416,7 +2486,7 @@ What this plan changed in `docs/planning/2026-10-02-initial-draft.md`, and why.
 | Audit log, retention unstated | Audit and error logs, purged by settings; `*_by` columns on clinical and financial rows | D14 — who did what outlives the audit window. |
 | "Server Actions/API" | REST API routes + SWR, as Brio | One contract, testable, Brio's pattern. |
 | `src/types/`, `src/utils/` | Types in each feature; helpers in `src/lib` | Brio's structure. |
-| Phases: Foundation → Core → Finance → Operations → Inventory → Payroll | Phases 0 – 13 to a production v1.0.0; inventory, payroll and dental in Later | The draft's own V1 scope; D6. |
+| Phases: Foundation → Core → Finance → Operations → Inventory → Payroll | Phases 0 – 14 to a production v1.0.0; inventory, payroll and dental in Later | The draft's own V1 scope; D6. |
 | Analytics "Revenue" | "Collected" and "Billed", defined (§18) | With bills, revenue has two meanings. |
 | Hosting unstated | Vercel `bom1` + Supabase `ap-south-1` | D9 — close to users, data in India. |
 | One price per service | The clinic's price list, and each doctor's own consultation fee | D26 |

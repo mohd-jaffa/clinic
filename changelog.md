@@ -1714,3 +1714,66 @@ appended and never rewritten (AGENTS.md §33).
 - None. Note: `npm audit` reports a critical advisory for `next` 16.2.x and
   high ones in ESLint's tooling. They predate this change; upgrading Next is
   its own change, for the user to decide.
+
+## 2026-10-05 — A speed phase before release; speed in every row
+
+The user asked for the app to be fast before it goes live, because Brio's
+live app lagged after it was deployed. This change records the plan only; no
+code changes.
+
+### Changed
+- Plan:
+  - **D134:** a new **Phase 13 — Speed** comes before release. Hardening
+    and release move to **Phase 14**, and each old R13.n is now R14.n.
+  - **D135:** speed is part of every row from R5.1 on (new §37.1).
+  - **D136:** docs travel with their change, in one commit. The tracker now
+    reads **DONE (date)**.
+- §37 adds two budgets:
+  - **Round trips:** a screen or read waits on at most 2 (the session, then
+    everything else at once), and a save on at most 4.
+  - **Hosting:** the server sits beside the database, with functions kept
+    warm.
+- **§37.1, the rules every row follows:**
+  - index each query it adds, in its own order;
+  - keep policies worked out once a statement;
+  - make reads that don't depend on each other at once;
+  - no query in a loop, and no read-back after a write;
+  - select only the columns shown, and add up in SQL;
+  - keep the browser light;
+  - say in the changelog how many round trips its screens and saves wait
+    on.
+- **Phase 13's rows:**
+  - R13.1: a load seed and the measuring setup.
+  - R13.2: `0028_session_profile`, the session in one round trip.
+  - R13.3: `0029_faster_reads`, indexes and policies from EXPLAINs on the
+    load seed, with Supabase's performance advisor clean.
+  - R13.4: round trips cut to the budget.
+  - R13.5: page weight and the proxy.
+  - R13.6: `bom1` and fluid compute in `vercel.json`.
+- **Phase 14:** R14.5 re-runs the speed measurements after the security
+  rows, and R14.8 checks the live app answers from `bom1::bom1` within
+  budget. §29 lists the two new migrations.
+- **AGENTS.md:**
+  - §2.3: docs go in the change's own commit.
+  - §25: the speed rules.
+  - §33: the tracker row's format.
+  - §36: the definition of done includes indexes and the budget.
+
+### Notes
+- These rules come from what made Brio slow and what fixed it (its
+  changelog for releases 1.0.1 – 1.0.2):
+  - its server ran in Washington, far from the database in Mumbai;
+  - idle functions took 1 – 8.5 s to answer;
+  - each screen waited on 3 – 4 database round trips, one after another;
+  - lists had no index in their own order;
+  - policies re-ran their helper on every row.
+- ClinicDesk's session check today waits on 3 round trips before a screen
+  reads anything: Supabase Auth, the profile, then the plan and settings.
+  R13.2 brings it to one. The rows built so far (Phases 0 – 4) are measured
+  and fixed in Phase 13; rows from R5.1 on follow §37.1 as they are built.
+
+### Validation
+- Docs only. No code, test or migration changed.
+
+### Blockers
+- None.
