@@ -1,8 +1,8 @@
 import * as z from "zod";
 
-import { APPOINTMENT_MINUTES, APPOINTMENT_STEP_MINUTES, TEXT_LIMITS } from "@/constants/limits";
+import { APPOINTMENT_MINUTES, APPOINTMENT_STEP_MINUTES, MAX_CALENDAR_DAYS, TEXT_LIMITS } from "@/constants/limits";
 import { UI_TEXT, VALIDATION_MESSAGES } from "@/constants/messages";
-import { dayTime, todayKey } from "@/lib/dates/calendar";
+import { dayCount, dayTime, todayKey } from "@/lib/dates/calendar";
 
 import { optionalLines, requiredDay, wholeNumberText } from "../primitives";
 import { newPatientSchema } from "./patients";
@@ -134,3 +134,23 @@ export const bookedTimesSchema = z.object({
 });
 
 export type BookedTimesPayload = z.output<typeof bookedTimesSchema>;
+
+/**
+ * The calendar's days (plan §11.5): from one day to another — a day, or the
+ * week (D158), at most MAX_CALENDAR_DAYS — and one doctor's, or every
+ * doctor's while none is named. Days and a doctor, never a patient, so in the
+ * address.
+ */
+export const calendarQuerySchema = z
+  .object({
+    from: requiredDay(appointments.dateLabel),
+    to: requiredDay(appointments.dateLabel),
+    doctorId: z.uuid({ error: VALIDATION_MESSAGES.invalid }).optional(),
+  })
+  .superRefine(({ from, to }, ctx) => {
+    if (to < from || dayCount(from, to) > MAX_CALENDAR_DAYS) {
+      ctx.addIssue({ code: "custom", path: ["to"], message: VALIDATION_MESSAGES.atMostDays(MAX_CALENDAR_DAYS) });
+    }
+  });
+
+export type CalendarQuery = z.output<typeof calendarQuerySchema>;

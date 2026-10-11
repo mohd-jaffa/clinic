@@ -49,6 +49,13 @@ export async function readInitialSession(): Promise<AuthSessionView | null | und
 /** A read of one screen's first data, made as its API route would make it. */
 export type ScreenRead = (tenant: Tenant) => Promise<unknown>;
 
+/**
+ * A screen's reads, keyed by the routes its hooks ask for — or worked out from
+ * who is signed in, for a screen whose first read depends on them (the
+ * calendar opens on a doctor's own column, D155).
+ */
+export type ScreenReads = Record<string, ScreenRead> | ((tenant: Tenant) => Record<string, ScreenRead>);
+
 /** The first data a screen shows, keyed as its hooks ask for it (`ServerData`). */
 export interface ScreenData {
   queries: Record<string, unknown>;
@@ -79,8 +86,8 @@ const NOTHING: ScreenData = { queries: {}, pages: {} };
 export async function readScreen(reads: {
   /** Who the screen is for; any member unless it says (plan §31.2). */
   access?: RouteAccess;
-  queries?: Record<string, ScreenRead>;
-  pages?: Record<string, ScreenRead>;
+  queries?: ScreenReads;
+  pages?: ScreenReads;
 }): Promise<ScreenData> {
   const session = await readServerSession();
   if (!session) return NOTHING;
@@ -99,9 +106,9 @@ export async function readScreen(reads: {
     doctorId: membership.doctorId,
   };
 
-  const readAll = async (group: Record<string, ScreenRead> = {}) => {
+  const readAll = async (group: ScreenReads = {}) => {
     const entries = await Promise.all(
-      Object.entries(group).map(async ([key, read]) => {
+      Object.entries(typeof group === "function" ? group(tenant) : group).map(async ([key, read]) => {
         try {
           // Exactly what the route would have sent: dates as strings, nothing undefined.
           return [key, JSON.parse(JSON.stringify(await read(tenant)))] as const;

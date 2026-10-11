@@ -9,7 +9,7 @@ const { logActionSafe, addPatient } = vi.hoisted(() => ({ logActionSafe: vi.fn()
 vi.mock("@/lib/audit/auditLog", () => ({ logActionSafe }));
 vi.mock("@/features/patients/api", () => ({ addPatient }));
 
-const { bookAppointment, listBookedTimes } = await import("@/features/appointments/api");
+const { bookAppointment, listAppointments, listBookedTimes } = await import("@/features/appointments/api");
 
 function tenantWith(options: FakeSupabaseOptions, member: Partial<Tenant> = {}) {
   const fake = fakeSupabase(options);
@@ -181,6 +181,67 @@ describe("listBookedTimes (D147)", () => {
       rpc: () => ({ error: { ...postgrestError("P0001"), hint: "AUTH_PERMISSION_DENIED" } }),
     });
     await expect(listBookedTimes(tenant, { doctorId: "d-1", date: "2026-10-13" })).rejects.toMatchObject({
+      code: "AUTH_PERMISSION_DENIED",
+    });
+  });
+});
+
+describe("listAppointments (plan §11.5)", () => {
+  const row = {
+    id: "a-1",
+    patient_id: "p-1",
+    doctor_id: "d-1",
+    source: "BOOKED",
+    status: "CONFIRMED",
+    scheduled_at: "2026-10-13T04:30:00+00:00",
+    duration_minutes: 30,
+    local_date: "2026-10-13",
+    token_number: null,
+    patient: { full_name: "Rohan Mehta", patient_number: 1012 },
+    doctor: { member: { profile: { full_name: "Maya Rao" } } },
+    type: { name: "Procedure" },
+  };
+
+  it("reads the days asked, by time, with each patient, doctor and type, in one query", async () => {
+    const { tenant, queries, argsOf } = tenantWith({ answer: () => ({ data: [row] }) });
+    expect(await listAppointments(tenant, { from: "2026-10-13", to: "2026-10-13" })).toEqual([
+      {
+        id: "a-1",
+        patientId: "p-1",
+        patientName: "Rohan Mehta",
+        patientNumber: 1012,
+        doctorId: "d-1",
+        doctorName: "Maya Rao",
+        typeName: "Procedure",
+        source: "BOOKED",
+        status: "CONFIRMED",
+        scheduledAt: "2026-10-13T04:30:00+00:00",
+        minutes: 30,
+        day: "2026-10-13",
+        token: null,
+      },
+    ]);
+    expect(queries).toHaveLength(1);
+    expect(queries[0].table).toBe("appointments");
+    expect(argsOf(queries[0], "eq")).toEqual([["clinic_id", "clinic-1"]]);
+    expect(argsOf(queries[0], "gte")).toEqual([["local_date", "2026-10-13"]]);
+    expect(argsOf(queries[0], "lte")).toEqual([["local_date", "2026-10-13"]]);
+    expect(argsOf(queries[0], "order")).toEqual([["scheduled_at"]]);
+  });
+
+  it("keeps to one doctor when asked, and reads a doctor no longer on the team as no name", async () => {
+    const { tenant, queries, argsOf } = tenantWith({ answer: () => ({ data: [{ ...row, doctor: null }] }) });
+    const [found] = await listAppointments(tenant, { from: "2026-10-12", to: "2026-10-18", doctorId: "d-1" });
+    expect(found.doctorName).toBeNull();
+    expect(argsOf(queries[0], "eq")).toEqual([
+      ["clinic_id", "clinic-1"],
+      ["doctor_id", "d-1"],
+    ]);
+  });
+
+  it("says why it could not read them", async () => {
+    const { tenant } = tenantWith({ answer: () => ({ error: postgrestError("42501") }) });
+    await expect(listAppointments(tenant, { from: "2026-10-13", to: "2026-10-13" })).rejects.toMatchObject({
       code: "AUTH_PERMISSION_DENIED",
     });
   });

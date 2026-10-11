@@ -134,7 +134,7 @@ test("a patient new to the clinic is added with their booking", async ({ page })
   await signIn(page, desk.email, desk.password);
 
   await page.goto("/appointments");
-  await page.getByRole("button", { name: appointments.book }).click();
+  await page.getByRole("button", { name: appointments.book }).first().click();
   const sheet = page.getByRole("dialog", { name: appointments.bookTitle });
   await sheet.getByRole("searchbox", { name: appointments.searchPatients }).fill("Meera Pillai");
   await expect(sheet.getByText(appointments.noMatches)).toBeVisible();

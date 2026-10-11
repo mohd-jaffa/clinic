@@ -109,6 +109,14 @@ describe("readScreen", () => {
     });
   });
 
+  it("works out a screen's reads from who is signed in, when its first read depends on them (D155)", async () => {
+    signedIn();
+    const data = await readScreen({
+      queries: (member) => ({ [`/api/appointments?doctorId=${member.doctorId}`]: async () => [{ id: "a-1" }] }),
+    });
+    expect(data.queries).toEqual({ "/api/appointments?doctorId=doctor-1": [{ id: "a-1" }] });
+  });
+
   it("leaves out a read that fails, for the screen to ask for itself, and logs it by route alone", async () => {
     signedIn();
     const data = await readScreen({

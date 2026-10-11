@@ -126,6 +126,21 @@ export function daysFrom(from: string, to: string): string[] {
 
 const HOUR = new Intl.DateTimeFormat("en-GB", { timeZone: CLINIC_TIME_ZONE, hour: "numeric", hourCycle: "h23" });
 
+const CLOCK = new Intl.DateTimeFormat("en-GB", {
+  timeZone: CLINIC_TIME_ZONE,
+  hour: "numeric",
+  minute: "numeric",
+  hourCycle: "h23",
+});
+
+/** How far into its day, on the clinic's clock, an instant falls, in minutes: 10:30 AM is 630. */
+export function minutesOfDay(instant: string | Date = new Date()): number {
+  const parts = Object.fromEntries(
+    CLOCK.formatToParts(instant instanceof Date ? instant : new Date(instant)).map((part) => [part.type, part.value]),
+  );
+  return Number(parts.hour) * 60 + Number(parts.minute);
+}
+
 /** The hour on the clinic's clock, 0–23 — what Home's greeting goes by (plan §17). */
 export function clinicHour(now: Date = new Date()): number {
   return Number(HOUR.format(now));

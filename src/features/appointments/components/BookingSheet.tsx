@@ -97,6 +97,9 @@ const NO_PATIENT: BookingForm["patient"] = {
   gender: "",
 };
 
+/** What a tap on the calendar's grid starts a booking with (D156): its doctor, its day and its time. */
+export type BookingPrefill = Pick<BookingForm, "doctorId" | "date" | "time">;
+
 /** What the sheet starts with (D149): today, the doctor, the clinic's first type and its length; no time. */
 const blank = (doctorId: string, type: AppointmentType | undefined): BookingForm => ({
   patient: structuredClone(NO_PATIENT),
@@ -124,7 +127,8 @@ interface Refusal {
  * Then the doctor, the day, the time in two halves with what the doctor
  * already has that day under it, the type, which fills its length, and
  * notes. It starts on today, the doctor booking (or the clinic's only
- * doctor) and the clinic's first type. A booking sent twice books once; a
+ * doctor) and the clinic's first type — or, from a tap on the calendar's
+ * grid, that doctor, day and time (D156). A booking sent twice books once; a
  * new patient sent again is added once.
  *
  * A time taken, or a closed day, is said on a card naming it, and the sheet
@@ -132,7 +136,16 @@ interface Refusal {
  * added, and the sheet goes on with them found. Booked, it closes, and the
  * card says who, when and with whom.
  */
-export function BookingSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function BookingSheet({
+  open,
+  onClose,
+  prefill,
+}: {
+  open: boolean;
+  onClose: () => void;
+  /** Where a tap on the calendar's grid started it (D156). */
+  prefill?: BookingPrefill;
+}) {
   const respond = useResponse();
   const { membership } = useAuth();
   const doctors = useDoctors().data ?? [];
@@ -156,7 +169,7 @@ export function BookingSheet({ open, onClose }: { open: boolean; onClose: () => 
     formState: { errors, isSubmitted },
   } = useForm<BookingForm, unknown, BookingPayload>({
     resolver: zodResolver(bookingSchema) as Resolver<BookingForm, unknown, BookingPayload>,
-    defaultValues: blank(firstDoctor, types[0]),
+    defaultValues: { ...blank(firstDoctor, types[0]), ...prefill },
     resetOptions: FORM_RESET_OPTIONS,
   });
   const [mode, doctorId, date, lengthChoice] = useWatch({
@@ -186,7 +199,12 @@ export function BookingSheet({ open, onClose }: { open: boolean; onClose: () => 
   };
 
   const booking = useApiMutation(AppointmentsClient.book, {
-    revalidate: [apiRoutes.appointments.booked, apiRoutes.patients.search, apiRoutes.patients.matches],
+    revalidate: [
+      apiRoutes.appointments.list,
+      apiRoutes.appointments.booked,
+      apiRoutes.patients.search,
+      apiRoutes.patients.matches,
+    ],
     onSuccess: (booked) => {
       const { patient, doctor } = sent();
       keys.settle();

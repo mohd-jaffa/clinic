@@ -132,6 +132,7 @@ export {
 export {
   bookedTimesSchema,
   bookingSchema,
+  calendarQuerySchema,
   HOURS,
   LENGTH_CHOICES,
   MINUTES,
@@ -140,6 +141,7 @@ export {
   type BookedTimesPayload,
   type BookingInput,
   type BookingPayload,
+  type CalendarQuery,
   type PatientMode,
 } from "./schemas/appointments";
 

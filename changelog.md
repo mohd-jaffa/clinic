@@ -1989,3 +1989,79 @@ the screen in R5.3. Asked of the user first: D144 – D151.
 
 ### Blockers
 - None.
+
+## 2026-10-11 — The calendar (R5.3)
+
+The Appointments screen is now the calendar. Asked of the user first: D152 –
+D159.
+
+### Added
+- **The calendar (`Appointments`, plan §11.5):**
+  - **Opens on:** today. Every doctor's for the front desk; a doctor's own
+    for a member with the Doctor role (D155).
+  - **Phone:** the day as a list by time — patient, time, type (or Walk-in
+    and its token, D154), the doctor while every doctor's are shown, and the
+    status — under a date strip that reaches a week back and four weeks
+    ahead, with a calendar for any other day (D157).
+  - **Tablet and desktop:** a day with a column per doctor, or one doctor's
+    week, Monday to Sunday (D158). The grid runs 8 AM – 8 PM, stretching to
+    fit (D152), in quarter hours. A tap on an empty quarter opens the booking
+    sheet with that doctor, day and time (D156) — never on a closed column,
+    nor before now. Today, Previous and Next sit beside the day or week.
+  - **Closures:** the day's holiday and leave are said above it, and shaded
+    on the grid.
+  - **Cancelled and no-shows** are folded away, counted, at the foot (D153).
+  - Appointments don't open yet; their detail is R5.4 (D159).
+- **`CalendarGrid`** (kit, D66): columns of steps; overlapping items share
+  their column in lanes (`lanesOf`); closed columns are shaded; empty steps
+  are tapped to start something there; columns can be set narrower for a
+  week.
+- **Calendar screen pieces:** `CalendarToolbar`, `CalendarBoard`, `DayList`,
+  `AppointmentBlock`, `ClosureNotices`, `CancelledList`.
+- **Helpers:**
+  - `calendar.ts`: `firstDoctorFilter`, `weekOf`, `isLive`, `gridHours`,
+    `closuresOn`;
+  - `describe.ts`: an appointment said whole;
+  - `calendarKey`, `useAppointments`, `minutesOfDay`.
+- **`GET /api/appointments`** (`listAppointments`): the days asked (at most
+  a week, `calendarQuerySchema`), one doctor's or every doctor's, by time,
+  each with its patient, doctor and type in one query. It is read as the
+  member, so a doctor finds only their own patients' — all of each one's.
+- **Constants:** `CALENDAR_HOURS`, `CALENDAR_STEP_MINUTES`, `DATE_STRIP_DAYS`,
+  `MAX_CALENDAR_DAYS`, and `UI_TEXT.calendar`.
+
+### Changed
+- **A screen's first reads can be worked out from who is signed in**
+  (`AppScreen` / `readScreen` take a function of the member): the calendar's
+  first read is keyed to a doctor's own column.
+- **The booking sheet** takes a `prefill` from a tapped quarter, and
+  refreshes the calendar once it books.
+- **Plan:**
+  - D152 – D159 in the decision log;
+  - §11.5 and §30;
+  - the tracker: R5.3 DONE.
+- **DESIGN.md:** `CalendarGrid`, an appointment on the grid, a day's closures.
+
+### Speed (§37.1)
+- **Round trips:**
+  - The calendar opens on the session, then everything at once: the
+    doctors, the types, the closures and today's appointments, all read on
+    the server.
+  - Changing the day, the week or the doctor is the session plus one query.
+- **Indexes:** a day or week is served by `(clinic_id, local_date,
+  scheduled_at)`, and one doctor's by `(clinic_id, doctor_id, local_date,
+  scheduled_at)`, both from R5.1. A week is at most seven days.
+
+### Validation
+- Typecheck, lint and format check passed.
+- Unit and integration tests passed, coverage 100%. `calendar.test.ts`
+  (integration) covers the days by time, one doctor's, and the doctor scope.
+- E2E (phone and desktop, axe), `tests/e2e/calendar.spec.ts`:
+  - **Phone:** today's walk-in; another day from the strip; the cancelled
+    folded away; nothing wider than the screen.
+  - **Desktop:** a column per doctor; a tapped quarter booked there with its
+    doctor, day and time, then shown on the grid; one doctor's week.
+- The full E2E suite passed: 100 tests.
+
+### Blockers
+- None.

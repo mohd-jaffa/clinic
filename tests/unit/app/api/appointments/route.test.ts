@@ -4,12 +4,16 @@ import { PERMISSIONS } from "@/constants/permissions";
 import { aSession } from "@tests/support/auth";
 import { answerOf, apiRequest, supabaseClients } from "@tests/support/routes";
 
-const { getSession, bookAppointment } = vi.hoisted(() => ({ getSession: vi.fn(), bookAppointment: vi.fn() }));
+const { getSession, bookAppointment, listAppointments } = vi.hoisted(() => ({
+  getSession: vi.fn(),
+  bookAppointment: vi.fn(),
+  listAppointments: vi.fn(),
+}));
 vi.mock("@/features/auth/session", async (actual) => ({ ...(await actual()), getSession }));
-vi.mock("@/features/appointments/api", () => ({ bookAppointment }));
+vi.mock("@/features/appointments/api", () => ({ bookAppointment, listAppointments }));
 vi.mock("@/lib/supabase/server", () => supabaseClients);
 
-const { POST } = await import("@/app/api/appointments/route");
+const { GET, POST } = await import("@/app/api/appointments/route");
 
 const KEY = "3f2b1c4d-0a1b-4c2d-8e3f-1a2b3c4d5e6f";
 const PATIENT = "7b1e4a52-3c5d-4e6f-8a9b-0c1d2e3f4a5b";
@@ -84,5 +88,28 @@ describe("POST /api/appointments (plan §11.1)", () => {
       body: { error: { code: "VALIDATION_ERROR" } },
     });
     expect(bookAppointment).not.toHaveBeenCalled();
+  });
+});
+
+describe("GET /api/appointments (plan §11.5)", () => {
+  const get = (query: string) =>
+    GET(apiRequest(`/api/appointments?${query}`, { method: "GET", headers: { authorization: "Bearer tok" } }));
+
+  it("answers appointments.view with the days asked, every doctor's while none is named", async () => {
+    listAppointments.mockResolvedValue([{ id: "a-1" }]);
+    const { status, body } = await answerOf(await get("from=2026-10-13&to=2026-10-13"));
+    expect({ status, body }).toMatchObject({ status: 200, body: { data: [{ id: "a-1" }] } });
+    expect(listAppointments).toHaveBeenCalledWith(expect.objectContaining({ clinicId: "clinic-1" }), {
+      from: "2026-10-13",
+      to: "2026-10-13",
+    });
+  });
+
+  it("refuses a member without appointments.view, and days past a week", async () => {
+    getSession.mockResolvedValue(staff(["patients.view", "appointments.create"]));
+    expect(await answerOf(await get("from=2026-10-13&to=2026-10-13"))).toMatchObject({ status: 403 });
+    getSession.mockResolvedValue(staff(["patients.view", "appointments.view"]));
+    expect(await answerOf(await get("from=2026-10-01&to=2026-10-13"))).toMatchObject({ status: 400 });
+    expect(listAppointments).not.toHaveBeenCalled();
   });
 });

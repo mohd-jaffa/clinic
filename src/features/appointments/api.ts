@@ -6,9 +6,9 @@ import { auditedChanges } from "@/lib/audit/changes";
 import { AppError, authorizationError, fromPostgrestError, validationError } from "@/lib/errors";
 import { allInOrder } from "@/lib/parallel";
 import type { Tenant } from "@/lib/supabase/tenant";
-import type { BookedTimesPayload, BookingPayload } from "@/lib/validation";
+import type { BookedTimesPayload, BookingPayload, CalendarQuery } from "@/lib/validation";
 
-import type { Booked, BookedTime } from "./types";
+import type { Booked, BookedTime, CalendarAppointment, CalendarAppointmentRow } from "./types";
 
 /**
  * Appointments (plan §11): booked through `create_appointment` — never twice
@@ -99,5 +99,49 @@ export async function listBookedTimes(tenant: Tenant, { doctorId, date }: Booked
   return (data as { starts_at: string; ends_at: string }[]).map((row) => ({
     startsAt: row.starts_at,
     endsAt: row.ends_at,
+  }));
+}
+
+/** What the calendar reads of each appointment, its patient, its doctor's name and its type's, in one query. */
+const CALENDAR_COLUMNS =
+  "id, patient_id, doctor_id, source, status, scheduled_at, duration_minutes, local_date, token_number, " +
+  "patient:patients!appointments_patient_id_clinic_id_fkey(full_name, patient_number), " +
+  "doctor:doctors!appointments_doctor_id_clinic_id_fkey(member:clinic_members(profile:profiles!clinic_members_user_id_fkey(full_name))), " +
+  "type:appointment_types!appointments_appointment_type_id_clinic_id_fkey(name)";
+
+/**
+ * The calendar's appointments (plan §11.5): those of the days asked — a day
+ * or a week — one doctor's or every doctor's, by time, cancelled ones and
+ * no-shows too (the screen folds them away, D153). Read as the member, so a
+ * doctor finds only their own patients' (D3). One query, served by the index
+ * on (clinic_id, local_date, scheduled_at), or with the doctor's.
+ */
+export async function listAppointments(
+  tenant: Tenant,
+  { from, to, doctorId }: CalendarQuery,
+): Promise<CalendarAppointment[]> {
+  let query = tenant.supabase
+    .from(TABLE)
+    .select(CALENDAR_COLUMNS)
+    .eq("clinic_id", tenant.clinicId)
+    .gte("local_date", from)
+    .lte("local_date", to);
+  if (doctorId) query = query.eq("doctor_id", doctorId);
+  const { data, error } = await query.order("scheduled_at");
+  if (error) throw fromPostgrestError(error);
+  return (data as unknown as CalendarAppointmentRow[]).map((row) => ({
+    id: row.id,
+    patientId: row.patient_id,
+    patientName: row.patient.full_name,
+    patientNumber: row.patient.patient_number,
+    doctorId: row.doctor_id,
+    doctorName: row.doctor?.member?.profile?.full_name ?? null,
+    typeName: row.type.name,
+    source: row.source,
+    status: row.status,
+    scheduledAt: row.scheduled_at,
+    minutes: row.duration_minutes,
+    day: row.local_date,
+    token: row.token_number,
   }));
 }

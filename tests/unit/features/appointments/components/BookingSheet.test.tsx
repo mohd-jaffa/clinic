@@ -114,6 +114,23 @@ describe("BookingSheet (plan §11.1; D144 – D151)", () => {
     expect(within(sheet()).getByRole("combobox", { name: "Time, Hour" })).toHaveTextContent("Hour");
   });
 
+  it("starts on the doctor, day and time of a quarter tapped on the calendar (D156)", () => {
+    doctors.current = [RAHUL, MAYA];
+    render(
+      <Providers>
+        <BookingSheet
+          open
+          onClose={onClose}
+          prefill={{ doctorId: RAHUL.id, date: "2026-10-14", time: { hour: "10", minute: "15" } }}
+        />
+      </Providers>,
+    );
+    expect(within(sheet()).getByRole("combobox", { name: /^Doctor/ })).toHaveTextContent("Rahul Nair");
+    expect(within(sheet()).getByRole("button", { name: /^Date/ })).toHaveTextContent("14 Oct 2026");
+    expect(within(sheet()).getByRole("combobox", { name: "Time, Hour" })).toHaveTextContent("10 AM");
+    expect(within(sheet()).getByRole("combobox", { name: "Time, Minutes" })).toHaveTextContent(":15");
+  });
+
   it("starts on the doctor booking, among several; with neither, asks for one", () => {
     doctors.current = [RAHUL, MAYA];
     const { unmount } = draw();

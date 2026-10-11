@@ -1,6 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { bookedTimesSchema, bookingSchema, HOURS, MINUTES, type BookingInput } from "@/lib/validation";
+import {
+  bookedTimesSchema,
+  bookingSchema,
+  calendarQuerySchema,
+  HOURS,
+  MINUTES,
+  type BookingInput,
+} from "@/lib/validation";
 
 const PATIENT = "7b1e4a52-3c5d-4e6f-8a9b-0c1d2e3f4a5b";
 const DOCTOR = "8c2f5b63-4d6e-4f70-9bac-1d2e3f4a5b6c";
@@ -128,5 +135,23 @@ describe("bookedTimesSchema (D147)", () => {
       date: "2026-10-13",
     });
     expect(bookedTimesSchema.safeParse({ doctorId: "x", date: "2026-10-13" }).success).toBe(false);
+  });
+});
+
+describe("calendarQuerySchema (plan §11.5)", () => {
+  it("takes a day or a week, one doctor's or every doctor's", () => {
+    expect(calendarQuerySchema.parse({ from: "2026-10-13", to: "2026-10-13" })).toEqual({
+      from: "2026-10-13",
+      to: "2026-10-13",
+    });
+    expect(calendarQuerySchema.parse({ from: "2026-10-12", to: "2026-10-18", doctorId: DOCTOR })).toMatchObject({
+      doctorId: DOCTOR,
+    });
+  });
+
+  it("refuses days that run backwards or past a week", () => {
+    expect(calendarQuerySchema.safeParse({ from: "2026-10-13", to: "2026-10-12" }).success).toBe(false);
+    expect(calendarQuerySchema.safeParse({ from: "2026-10-12", to: "2026-10-19" }).success).toBe(false);
+    expect(calendarQuerySchema.safeParse({ from: "2026-10-12", to: "2026-10-13", doctorId: "x" }).success).toBe(false);
   });
 });

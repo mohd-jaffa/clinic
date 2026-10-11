@@ -87,6 +87,19 @@ export const MAX_PATIENT_AGE = 120;
  */
 export const FIRST_HOUR_SHOWN = 9;
 
+/**
+ * The calendar (plan §11.5): the grid's hours — 8 AM to 8 PM, reaching
+ * earlier or later for a booking outside them (D152) — its rows a quarter of
+ * an hour each, tapped to book there (D156), and how far the phone's date
+ * strip reaches either side of today (D157). Every hour can be booked (D7).
+ */
+export const CALENDAR_HOURS = { from: 8, to: 20 } as const;
+export const CALENDAR_STEP_MINUTES = 15;
+export const DATE_STRIP_DAYS = { back: 7, ahead: 28 } as const;
+
+/** The most days the calendar asks for at once: a week (D158). */
+export const MAX_CALENDAR_DAYS = 7;
+
 /** How many patients a picker's search lists (D144): the best matches; typing more narrows them. */
 export const PICKER_RESULTS = 6;
 

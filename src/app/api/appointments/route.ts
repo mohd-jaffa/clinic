@@ -1,10 +1,17 @@
 import { withClinicRoute } from "@/features/auth/guard";
-import { bookAppointment } from "@/features/appointments/api";
-import { readJson } from "@/lib/api/handler";
+import { bookAppointment, listAppointments } from "@/features/appointments/api";
+import { readJson, readQuery } from "@/lib/api/handler";
 import { readIdempotencyKey } from "@/lib/api/idempotency";
-import { bookingSchema } from "@/lib/validation";
+import { bookingSchema, calendarQuerySchema } from "@/lib/validation";
 
 export const runtime = "nodejs";
+
+/** The calendar's appointments (plan §11.5), for `appointments.view`: a day or a week, one doctor's or all. */
+export async function GET(request: Request) {
+  return withClinicRoute(request, { access: "appointments.view" }, (tenant) =>
+    listAppointments(tenant, readQuery(request, calendarQuerySchema)),
+  );
+}
 
 /**
  * A booking (plan §11.1), for `appointments.create` — a new patient with it

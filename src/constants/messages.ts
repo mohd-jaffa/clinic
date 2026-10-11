@@ -104,6 +104,7 @@ export const ERROR_MESSAGES = {
   APPOINTMENT_CANCEL_REASON_REQUIRED: "Say why it’s being cancelled.",
   APPOINTMENT_TYPE_INACTIVE: "That appointment type is archived. Choose another.",
   CLOSURE_APPOINTMENTS_LOAD_FAILED: "The appointments on these days couldn't be checked.",
+  APPOINTMENTS_LOAD_FAILED: "The appointments couldn't be loaded.",
 
   // The browser could not reach the server (plan §21, D55): said by the client, never sent by the server.
   NETWORK_OFFLINE: "You're offline. Try again once the connection is back — what you typed is still here.",
@@ -573,6 +574,35 @@ export const UI_TEXT = {
     slotTaken: (doctor: string, range: string) => `${doctor} is booked ${range}`,
     clinicClosed: (reason: string) => `The clinic is closed that day: ${reason}`,
     doctorAway: (doctor: string, reason: string) => `${doctor} is away that day: ${reason}`,
+  },
+
+  /** The calendar (plan §11.5; D152 – D159). */
+  calendar: {
+    view: "Show",
+    views: { DAY: "Day", WEEK: "Week" },
+    doctor: "Doctor",
+    allDoctors: "All doctors",
+    today: "Today",
+    chooseDay: "Choose a day",
+    day: "Day",
+    previousDay: "Previous day",
+    nextDay: "Next day",
+    previousWeek: "Previous week",
+    nextWeek: "Next week",
+    dayGrid: (day: string) => `Appointments, ${day}`,
+    weekGrid: (doctor: string, range: string) => `${doctor}’s appointments, ${range}`,
+    weekDay: (weekday: string, day: string) => `${weekday} ${day}`,
+    nothingBooked: "Nothing booked",
+    nothingBookedHint: "Nothing is booked for this day yet.",
+    clinicClosed: (reason: string) => `Clinic closed: ${reason}`,
+    doctorAway: (doctor: string, reason: string) => `${doctor} away: ${reason}`,
+    away: (reason: string) => `Away: ${reason}`,
+    walkIn: "Walk-in",
+    token: (token: number) => `#${token}`,
+    cancelled: (count: number) => `Cancelled and no-shows (${count})`,
+    hideCancelled: "Hide cancelled and no-shows",
+    /** One appointment, said whole to a screen reader: the grid draws it in a line or two. */
+    said: (time: string, patient: string, kind: string, status: string) => `${time}, ${patient}, ${kind}, ${status}`,
   },
 
   /** Holidays and leave (plan §9, D84 – D87): the days the clinic, or one doctor, is away. */

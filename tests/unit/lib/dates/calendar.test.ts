@@ -10,6 +10,7 @@ import {
   dayStart,
   daysFrom,
   dayTime,
+  minutesOfDay,
   financialYear,
   isDayKey,
   monthStartKey,
@@ -155,5 +156,12 @@ describe("dayTime", () => {
   it("is the instant a time of a day falls at on the clinic's clock", () => {
     expect(dayTime("2026-09-22", "10:30")).toBe("2026-09-22T05:00:00.000Z");
     expect(dayTime("2026-09-22", "00:05")).toBe("2026-09-21T18:35:00.000Z");
+  });
+});
+
+describe("minutesOfDay", () => {
+  it("is how far into its day, on the clinic's clock, an instant falls", () => {
+    expect(minutesOfDay("2026-10-13T05:00:00Z")).toBe(630);
+    expect(minutesOfDay(new Date("2026-10-12T18:30:00Z"))).toBe(0);
   });
 });

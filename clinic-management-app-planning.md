@@ -238,6 +238,14 @@ earlier lines are never rewritten.
 | D149 | **The sheet starts on today, the doctor and the clinic's first type** (the user): the date today; the doctor the one booking, or the clinic's only doctor, otherwise none (as D108); the type the clinic's first active one with its length; the time empty. | 2026-10-11 |
 | D150 | **Booked, the sheet closes with a card** (the user): "Booked Rohan Mehta · 13 Oct, 10:30 AM with Maya Rao". The calendar behind it (R5.3) shows the day. | 2026-10-11 |
 | D151 | **The length is chips, plus Other** (the user): 10, 15, 20, 30, 45 and 60 minutes, the type's own length chosen; **Other** opens a minutes field (5 – 480) starting from the length it leaves. Choosing a type sets its length again. | 2026-10-11 |
+| D152 | **The calendar's grid runs 8 AM to 8 PM, stretching to fit** (the user): on a tablet or a desktop the day and the week show 8 AM – 8 PM, reaching to the hour before the earliest appointment and after the latest when they fall outside (`CALENDAR_HOURS`). Every hour can still be booked (D7). | 2026-10-11 |
+| D153 | **Cancelled appointments and no-shows are folded away, counted** (the user): the calendar shows what is still happening; "Cancelled and no-shows (n)" at the foot opens them, quiet, with their status. On the grid they are left off, so their time looks free — it is. | 2026-10-11 |
+| D154 | **Walk-ins show in the calendar at the time they arrived** (the user), marked Walk-in with their token; on the grid, which they hold no slot of, they share the column beside the bookings, on the soft green. | 2026-10-11 |
+| D155 | **The calendar opens on today, every doctor's for the front desk, a doctor their own** (the user): a member with the Doctor role starts on their own; the owner and staff on All doctors. Anyone may switch. The page's first read is keyed the same way. | 2026-10-11 |
+| D156 | **The grid is in quarter hours; a tap on an empty quarter books there** (the user): it opens the booking sheet with that doctor, day and time (10:15), which can still be set to any 5 minutes. Not on a closed column, nor before now. | 2026-10-11 |
+| D157 | **The phone's date strip reaches a week back and four weeks ahead** (the user), today in view; any other day through the calendar button beside it (the kit's date picker), the strip then reaching around that day. | 2026-10-11 |
+| D158 | **The week view is Monday to Sunday, one doctor** (the user): the week holding the chosen day, a column a day, for the doctor chosen — the first doctor when All doctors was on — with previous and next week. | 2026-10-11 |
+| D159 | **An appointment does not open until R5.4** (the user): the calendar shows appointments; their detail, with confirm, reschedule and cancel, comes with R5.4. | 2026-10-11 |
 
 ## 3. Users and roles
 
@@ -917,10 +925,17 @@ Refreshes every `QUEUE_REFRESH_MS` (15 s) and on focus; realtime is later
 
 ### 11.5 Calendar — `/appointments`
 
-- **Phone:** one day as a list by time, a doctor filter, a date strip; **＋**
+- **Phone:** one day as a list by time, a doctor filter, a date strip (a week
+  back to four weeks ahead, any other day through its calendar, D157); **＋**
   books.
 - **Tablet/desktop:** day view with a column per doctor; week view for one
-  doctor; closures shaded; tap an empty time to book there.
+  doctor, Monday to Sunday (D158); 8 AM – 8 PM, stretching to fit (D152), in
+  quarter hours; closures shaded; tap an empty quarter to book there with its
+  doctor, day and time (D156).
+- It opens on today: every doctor's for the front desk, a doctor their own
+  (D155). Cancelled appointments and no-shows wait, counted, at the foot
+  (D153); walk-ins show at the time they arrived (D154). Holidays and leave
+  are said above the day.
 - Each appointment: time, patient, type, status pill. Opening one shows its
   detail with the actions its status allows; **Reschedule** reopens the
   booking sheet (same rules).
@@ -1812,7 +1827,7 @@ take an `Idempotency-Key` header.
 | Doctors | `GET /api/doctors` (active doctors, for pickers) |
 | Subscription | `GET /api/subscription` (state, dates, prices, contact, history — owner) · `GET /api/subscription/payments/[id]/receipt.pdf` |
 | Patients | `POST /api/patients` · `POST /api/patients/search` (the list, a page at a time: the words, the tab and the cursor in the body, D98) · `POST /api/patients/matches` (the mobile in the body, D98) · `GET, PATCH /api/patients/[id]` · `POST /api/patients/[id]/archive` · `POST /api/patients/[id]/restore` · `GET /api/patients/[id]/summary` · `GET /api/patients/[id]/timeline` · `GET /api/patients/[id]/last-prescription` · `GET, POST /api/patients/import` (the owner's: the import's limits, D128; a batch) · `POST /api/patients/import/matches` (the clinic's patients on a batch's mobiles, in the body, D98) · `GET, POST /api/patients/[id]/alerts` · `PATCH /api/patients/[id]/alerts/[alertId]` |
-| Appointments | `GET, POST /api/appointments` (a booking, with a new patient in its body when one is added, D145) · `GET /api/appointments/booked` (a doctor's taken times on a day, D147) · `GET, PATCH /api/appointments/[id]` · `POST /api/appointments/[id]/status` · `POST /api/appointments/[id]/arrived` · `POST /api/appointments/[id]/reminded` · `POST /api/appointments/walk-in` |
+| Appointments | `GET, POST /api/appointments` (the calendar's days, `?from&to&doctorId`, at most a week; a booking, with a new patient in its body when one is added, D145) · `GET /api/appointments/booked` (a doctor's taken times on a day, D147) · `GET, PATCH /api/appointments/[id]` · `POST /api/appointments/[id]/status` · `POST /api/appointments/[id]/arrived` · `POST /api/appointments/[id]/reminded` · `POST /api/appointments/walk-in` |
 | Queue | `GET /api/queue` · `POST /api/queue/send-in` · `POST /api/queue/done` · `POST /api/queue/next` |
 | Visits | `POST /api/visits` · `GET, PATCH /api/visits/[id]` · `PUT /api/visits/[id]/vitals` · `POST /api/visits/[id]/no-charge` |
 | Prescriptions | `GET, PUT /api/visits/[id]/prescription` · `GET /api/visits/[id]/prescription.pdf` · `GET /api/prescriptions/medicines?q=` · `GET, POST /api/prescription-templates` · `PATCH /api/prescription-templates/[id]` |
@@ -2320,7 +2335,7 @@ in the row's one commit (D136).
 |---|---|---|---|---|
 | R5.1 | `0017_appointments`: table (clinic's appointment types), exclusion, transitions, closures check, the appointments on a closure being added listed (D87, D137), nothing booked for an archived patient (D103), tokens, functions (D138 – D143) | §11, §28.4 | — | DONE (2026-10-11) |
 | R5.2 | Booking sheet: patient search/quick add, doctor, date, time, type → duration; clash card (D144 – D151) | §11.1 | — | DONE (2026-10-11) |
-| R5.3 | Calendar: day (list / columns per doctor), week, doctor filter, closures shaded; the kit's calendar grid (D66) | §11.5 | — | TODO |
+| R5.3 | Calendar: day (list / columns per doctor), week, doctor filter, closures shaded; the kit's calendar grid (D66; D152 – D159) | §11.5 | — | DONE (2026-10-11) |
 | R5.4 | Appointment detail: confirm, reschedule, cancel (reason), no-show; the profile's next appointment and its appointments in the history (D101) | §11.2, §10.3 | — | TODO |
 | R5.5 | Walk-ins, arrival tokens, today's queue (Waiting, With doctor, Still to come, Done) with 15 s refresh | §11.3, §11.4 | — | TODO |
 | R5.6 | Integration (concurrent bookings, concurrent tokens) + E2E | §34 | — | TODO |
