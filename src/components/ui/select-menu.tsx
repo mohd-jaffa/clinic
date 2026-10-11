@@ -65,6 +65,8 @@ export const SelectMenu = forwardRef<
     variant?: keyof typeof TRIGGERS;
     /** A mark before the chosen label — a clock on the time field. */
     leading?: ReactNode;
+    /** The choice the list opens on while none is chosen — the hour it is now, not midnight. */
+    opensAt?: string;
     invalid?: boolean;
     required?: boolean;
     describedBy?: string;
@@ -82,6 +84,7 @@ export const SelectMenu = forwardRef<
     placeholder,
     variant = "field",
     leading,
+    opensAt,
     invalid,
     required,
     describedBy,
@@ -96,6 +99,9 @@ export const SelectMenu = forwardRef<
 
   const choices: readonly SelectOption[] = placeholder ? [{ value: "", label: placeholder }, ...options] : options;
   const chosen = choices.findIndex((option) => option.value === value);
+  // Where the list opens: on the choice made, or — with none made — on the one the screen names.
+  const start = value === "" && opensAt !== undefined ? choices.findIndex((option) => option.value === opensAt) : -1;
+  const opening = start >= 0 ? start : chosen;
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
   const optionId = (index: number) => `${listId}-${index}`;
@@ -130,7 +136,7 @@ export const SelectMenu = forwardRef<
 
   const onKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
     const last = choices.length - 1;
-    const here = open ? active : Math.max(chosen, 0);
+    const here = open ? active : Math.max(opening, 0);
     const moves: Record<string, number> = {
       ArrowDown: open ? here + 1 : here,
       ArrowUp: open ? here - 1 : here,
@@ -177,7 +183,7 @@ export const SelectMenu = forwardRef<
         aria-required={required || undefined}
         aria-describedby={describedBy}
         disabled={disabled}
-        onClick={() => (open ? setOpen(false) : openAt(chosen))}
+        onClick={() => (open ? setOpen(false) : openAt(opening))}
         onKeyDown={onKeyDown}
         // Space would click again as it is let go, and open what it just closed.
         onKeyUp={(event) => event.key === " " && event.preventDefault()}

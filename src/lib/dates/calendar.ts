@@ -52,6 +52,11 @@ export function dayHour(key: string, hour: number): string {
   return new Date(`${key}T${String(hour).padStart(2, "0")}:00:00${CLINIC_UTC_OFFSET}`).toISOString();
 }
 
+/** The instant a time of a day falls at in the clinic's timezone: 10:30 AM on "2026-09-22", from "10:30". */
+export function dayTime(key: string, time: string): string {
+  return new Date(`${key}T${time}:00${CLINIC_UTC_OFFSET}`).toISOString();
+}
+
 /** The Monday of the week a day falls in. */
 export function weekStartKey(key: string): string {
   const weekday = new Date(`${key}T00:00:00Z`).getUTCDay();

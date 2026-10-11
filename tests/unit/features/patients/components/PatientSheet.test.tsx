@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { PatientPrefill } from "@/features/patients/components/PatientSheet";
+import type { PatientPrefill } from "@/features/patients/prefill";
 import type { Patient } from "@/features/patients/types";
 import { ApiError } from "@/lib/api/client";
 import { authStub } from "@tests/support/auth";

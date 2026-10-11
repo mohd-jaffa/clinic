@@ -8,6 +8,7 @@ import {
   formatRecent,
   formatLongDate,
   formatClock,
+  formatHour,
   formatMonth,
   formatMonthName,
   formatMonthYear,
@@ -169,5 +170,14 @@ describe("formatDayRange", () => {
     expect(formatDayRange("2026-10-20", "", today)).toBe("—");
     const year = new Date().getFullYear();
     expect(formatDayRange(`${year}-06-01`, `${year}-06-02`)).toBe("1 – 2 Jun");
+  });
+});
+
+describe("formatHour", () => {
+  it("writes an hour of the clock the way the app does", () => {
+    expect(formatHour("00")).toBe("12 AM");
+    expect(formatHour("09")).toBe("9 AM");
+    expect(formatHour("12")).toBe("12 PM");
+    expect(formatHour("18")).toBe("6 PM");
   });
 });

@@ -28,7 +28,8 @@
 -- 7. A patient with appointments to come is not archived until they are
 --    cancelled or moved (D140).
 -- 8. closure_appointments: the appointments on the days of a holiday or leave
---    being added, for its sheet (D87, D137).
+--    being added, for its sheet (D87, D137); doctor_booked_times: a doctor's
+--    taken times on a day, for the booking sheet (D147).
 -- ============================================================
 
 -- ------------------------------------------------------------
@@ -775,6 +776,43 @@ $$;
 
 revoke all on function public.closure_appointments(uuid, date, date, integer) from public, anon;
 grant execute on function public.closure_appointments(uuid, date, date, integer) to authenticated;
+
+-- ------------------------------------------------------------
+-- 8. A doctor's booked times on a day (D147)
+-- ------------------------------------------------------------
+
+-- For the booking sheet, as its doctor and day are picked (and for moving a
+-- booking, R5.4): when each live booking starts and ends, by time — never
+-- whose it is, so whoever books sees every taken time, whichever patients
+-- they may see. appointments.create or appointments.edit.
+create or replace function public.doctor_booked_times(p_doctor_id uuid, p_day date)
+returns table (starts_at timestamptz, ends_at timestamptz)
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+declare
+  clinic uuid := public.current_clinic_id();
+begin
+  if clinic is null or not (public.has_permission('appointments.create') or public.has_permission('appointments.edit')) then
+    raise exception 'Reading a doctor''s booked times needs appointments.create' using hint = 'AUTH_PERMISSION_DENIED';
+  end if;
+
+  return query
+  select appointment.scheduled_at, appointment.scheduled_at + make_interval(mins => appointment.duration_minutes)
+    from public.appointments as appointment
+   where appointment.clinic_id = clinic
+     and appointment.doctor_id = p_doctor_id
+     and appointment.local_date = p_day
+     and appointment.source = 'BOOKED'
+     and appointment.status not in ('CANCELLED', 'NO_SHOW')
+   order by appointment.scheduled_at;
+end;
+$$;
+
+revoke all on function public.doctor_booked_times(uuid, date) from public, anon;
+grant execute on function public.doctor_booked_times(uuid, date) to authenticated;
 
 -- ------------------------------------------------------------
 -- Policies (plan §27.4)

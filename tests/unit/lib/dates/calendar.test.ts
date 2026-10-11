@@ -9,6 +9,7 @@ import {
   dayKey,
   dayStart,
   daysFrom,
+  dayTime,
   financialYear,
   isDayKey,
   monthStartKey,
@@ -147,5 +148,12 @@ describe("utcDayKey", () => {
     expect(utcDayKey(new Date("1990-04-03T00:00:00Z"))).toBe("1990-04-03");
     expect(utcDayKey(new Date("2026-12-31T00:00:00Z"))).toBe("2026-12-31");
     expect(utcDayKey(new Date("nope"))).toBe("");
+  });
+});
+
+describe("dayTime", () => {
+  it("is the instant a time of a day falls at on the clinic's clock", () => {
+    expect(dayTime("2026-09-22", "10:30")).toBe("2026-09-22T05:00:00.000Z");
+    expect(dayTime("2026-09-22", "00:05")).toBe("2026-09-21T18:35:00.000Z");
   });
 });

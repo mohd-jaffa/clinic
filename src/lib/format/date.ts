@@ -82,6 +82,12 @@ export function formatClock(time: string | null | undefined): string {
   return `${hour % 12 || 12}:${match[2]} ${hour < 12 ? "AM" : "PM"}`;
 }
 
+/** An hour of the clock as a field holds it ("00" – "23"), the way the app writes one: "12 AM", "10 AM", "6 PM". */
+export function formatHour(hour: string): string {
+  const value = Number(hour);
+  return `${value % 12 || 12} ${value < 12 ? "AM" : "PM"}`;
+}
+
 /** A date without its year, for a row where the year is already obvious: "13 Oct". */
 export function formatDayMonth(isoDate: string | null | undefined): string {
   const match = isoDate ? /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoDate) : null;

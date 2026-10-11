@@ -7,7 +7,7 @@ import { authorizationError, fromPostgrestError } from "@/lib/errors";
 import { tenantRecords } from "@/lib/supabase/records";
 import { searchTerms } from "@/lib/supabase/search";
 import type { Tenant } from "@/lib/supabase/tenant";
-import type { PatientListPayload, PatientPayload, UpdatePatientPayload } from "@/lib/validation";
+import type { NewPatientPayload, PatientListPayload, PatientPayload, UpdatePatientPayload } from "@/lib/validation";
 
 import type { Patient, PatientListItem, PatientMatch, PatientRow } from "./types";
 
@@ -93,20 +93,28 @@ export async function getPatient(tenant: Tenant, id: string): Promise<Patient> {
  * Adds a patient (plan §10.1). The same key sent again finds the patient the
  * first made, audited once.
  */
-export async function createPatient(
+/** Adds a patient through `create_patient`, once per key: theirs, and whether this call added them. */
+async function insertPatient(
   tenant: Tenant,
-  patient: PatientPayload,
+  values: Record<string, unknown>,
   idempotencyKey: string,
-  requestId?: string,
-): Promise<Patient> {
-  const values = toColumns(patient);
+): Promise<{ id: string; created: boolean }> {
   const { data, error } = await tenant.supabase
     .rpc("create_patient", { p_patient: values, p_idempotency_key: idempotencyKey })
     .single<{ patient_id: string; created: boolean }>();
   if (error) throw fromPostgrestError(error);
+  return { id: data.patient_id, created: data.created };
+}
 
-  const row = await records(tenant).find(data.patient_id);
-  if (data.created) {
+/** A patient just added, read back — audited when this call added them: the number by value, the rest by name. */
+async function recordAdded(
+  tenant: Tenant,
+  added: { id: string; created: boolean },
+  values: Record<string, unknown>,
+  requestId?: string,
+): Promise<PatientRow> {
+  const row = await records(tenant).find(added.id);
+  if (added.created) {
     await logActionSafe(tenant, {
       action: "CREATE",
       entityType: TABLE,
@@ -120,7 +128,42 @@ export async function createPatient(
       requestId,
     });
   }
-  return toPatient(row);
+  return row;
+}
+
+export async function createPatient(
+  tenant: Tenant,
+  patient: PatientPayload,
+  idempotencyKey: string,
+  requestId?: string,
+): Promise<Patient> {
+  const values = toColumns(patient);
+  const added = await insertPatient(tenant, values, idempotencyKey);
+  return toPatient(await recordAdded(tenant, added, values, requestId));
+}
+
+/**
+ * A patient added while booking (D145): added at once, so the booking can go
+ * on with them; read back and audited meanwhile (`recorded`), beside the
+ * booking rather than before it (plan §37.1).
+ */
+export async function addPatient(
+  tenant: Tenant,
+  patient: NewPatientPayload,
+  idempotencyKey: string,
+  requestId?: string,
+): Promise<{ id: string; recorded: Promise<PatientListItem> }> {
+  const values = toColumns(patient);
+  const added = await insertPatient(tenant, values, idempotencyKey);
+  const recorded = recordAdded(tenant, added, values, requestId).then((row): PatientListItem => ({
+    id: row.id,
+    number: row.patient_number,
+    name: row.full_name,
+    phone: row.phone,
+    dateOfBirth: row.date_of_birth,
+    gender: row.gender,
+  }));
+  return { id: added.id, recorded };
 }
 
 /** Changes the fields sent (plan §10.1); refused while the patient is archived (D103). */

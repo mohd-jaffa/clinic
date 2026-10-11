@@ -230,6 +230,14 @@ earlier lines are never rewritten.
 | D141 | **A patient keeps their token for the day** (the user): going back from Arrived — to Scheduled (a wrong tap) or No-show (they left) — keeps it, and arriving again that day gives the same number. Moving the appointment to another day or doctor gives it back. The counter never goes back, so no two share one. | 2026-10-11 |
 | D142 | **A confirmed appointment moved is scheduled again** (the user): moving it to another time, or another doctor, sets it back to Scheduled for the patient's yes; a change of notes, length or type alone keeps it confirmed. | 2026-10-11 |
 | D143 | **A patient arrives only on the appointment's own day** (the user): one booked for another day is moved to today, or the patient is added as a walk-in (`APPOINTMENT_NOT_TODAY`). A token belongs to today's queue. | 2026-10-11 |
+| D144 | **The booking sheet finds its patient by a search in the sheet** (the user): name, mobile or number typed at the top, the best six matches under it to choose from, and once chosen the patient with **Change**. Archived patients are not found (D103). | 2026-10-11 |
+| D145 | **A new patient is added inline, saved with the booking** (the user): **New patient** (with `patients.create`) opens name, mobile, date of birth or age and gender in the sheet, filled from what was searched (D112), with "Already here?" on the mobile to choose one already there. One **Book** adds the patient, under their own key, and books them; if the booking is refused, the patient stays added, the refusal names them and the sheet goes on with them found — so a booking sent again adds no one twice. | 2026-10-11 |
+| D146 | **A time is picked as its hour, then its minutes** (the user): two short lists side by side — 12 AM to 11 PM, and :00 to :55 on the clinic's 5-minute steps — the kit's `ClockField`. The hour list opens on the hour it is now for today, on 9 AM for another day; every hour can be booked (D7). | 2026-10-11 |
+| D147 | **The sheet shows what the doctor already has that day** (the user): under the time, "Maya Rao that day: 10:00 AM – 10:30 AM, 11:00 AM – 11:15 AM", or that nothing is booked yet — times only, never patients, for whoever books (`doctor_booked_times` in `0017`, `GET /api/appointments/booked`). | 2026-10-11 |
+| D148 | **A time taken is named on the card, and the sheet keeps everything** (the user): "Maya Rao is booked 10:00 – 10:30 AM" on the card and at the time; a closed day names its closure ("The clinic is closed that day: Diwali"). Booking again sends the same key. | 2026-10-11 |
+| D149 | **The sheet starts on today, the doctor and the clinic's first type** (the user): the date today; the doctor the one booking, or the clinic's only doctor, otherwise none (as D108); the type the clinic's first active one with its length; the time empty. | 2026-10-11 |
+| D150 | **Booked, the sheet closes with a card** (the user): "Booked Rohan Mehta · 13 Oct, 10:30 AM with Maya Rao". The calendar behind it (R5.3) shows the day. | 2026-10-11 |
+| D151 | **The length is chips, plus Other** (the user): 10, 15, 20, 30, 45 and 60 minutes, the type's own length chosen; **Other** opens a minutes field (5 – 480) starting from the length it leaves. Choosing a type sets its length again. | 2026-10-11 |
 
 ## 3. Users and roles
 
@@ -821,6 +829,16 @@ default duration, which may be changed per booking.
 - **Moving** (Reschedule): only a booking not yet arrived, under every rule
   above (`APPOINTMENT_NOT_MOVABLE`); a confirmed one moved to another time or
   doctor is scheduled again (D142). Notes change at any time.
+
+**The booking sheet** (R5.2, D144 – D151) opens from the calendar's **Book
+appointment** and the ＋'s Appointment (D67). The patient is searched for in
+the sheet, or added with the booking (name, mobile, date of birth or age,
+gender, with "Already here?"); then the doctor, the date, the time as its
+hour and minutes with the doctor's booked times that day under it, the type,
+which sets the length (chips, or Other), and notes. It starts on today, the
+doctor booking or the clinic's only doctor, and the clinic's first type. A
+taken time or a closed day is named on the card and the sheet keeps
+everything; booked, it closes with a card naming who, when and with whom.
 
 ### 11.2 Statuses
 
@@ -1754,7 +1772,7 @@ Planned order (one or more per tracker row):
 0017_appointments               appointments, exclusion, transitions, daily_tokens,
                                 create/update/status/walk-in/arrived functions, the archive
                                 refused with appointments to come (D140), closure_appointments
-                                (D137)
+                                (D137), doctor_booked_times (D147)
 0018_visits                     visits (with billing state), vitals, send_in, mark_done,
                                 next_patient, start_visit, save_vitals
 0019_prescriptions              prescriptions, prescription_items, save_prescription,
@@ -1794,7 +1812,7 @@ take an `Idempotency-Key` header.
 | Doctors | `GET /api/doctors` (active doctors, for pickers) |
 | Subscription | `GET /api/subscription` (state, dates, prices, contact, history — owner) · `GET /api/subscription/payments/[id]/receipt.pdf` |
 | Patients | `POST /api/patients` · `POST /api/patients/search` (the list, a page at a time: the words, the tab and the cursor in the body, D98) · `POST /api/patients/matches` (the mobile in the body, D98) · `GET, PATCH /api/patients/[id]` · `POST /api/patients/[id]/archive` · `POST /api/patients/[id]/restore` · `GET /api/patients/[id]/summary` · `GET /api/patients/[id]/timeline` · `GET /api/patients/[id]/last-prescription` · `GET, POST /api/patients/import` (the owner's: the import's limits, D128; a batch) · `POST /api/patients/import/matches` (the clinic's patients on a batch's mobiles, in the body, D98) · `GET, POST /api/patients/[id]/alerts` · `PATCH /api/patients/[id]/alerts/[alertId]` |
-| Appointments | `GET, POST /api/appointments` · `GET, PATCH /api/appointments/[id]` · `POST /api/appointments/[id]/status` · `POST /api/appointments/[id]/arrived` · `POST /api/appointments/[id]/reminded` · `POST /api/appointments/walk-in` |
+| Appointments | `GET, POST /api/appointments` (a booking, with a new patient in its body when one is added, D145) · `GET /api/appointments/booked` (a doctor's taken times on a day, D147) · `GET, PATCH /api/appointments/[id]` · `POST /api/appointments/[id]/status` · `POST /api/appointments/[id]/arrived` · `POST /api/appointments/[id]/reminded` · `POST /api/appointments/walk-in` |
 | Queue | `GET /api/queue` · `POST /api/queue/send-in` · `POST /api/queue/done` · `POST /api/queue/next` |
 | Visits | `POST /api/visits` · `GET, PATCH /api/visits/[id]` · `PUT /api/visits/[id]/vitals` · `POST /api/visits/[id]/no-charge` |
 | Prescriptions | `GET, PUT /api/visits/[id]/prescription` · `GET /api/visits/[id]/prescription.pdf` · `GET /api/prescriptions/medicines?q=` · `GET, POST /api/prescription-templates` · `PATCH /api/prescription-templates/[id]` |
@@ -2301,7 +2319,7 @@ in the row's one commit (D136).
 | ID | Work | Source | Waits on | Status |
 |---|---|---|---|---|
 | R5.1 | `0017_appointments`: table (clinic's appointment types), exclusion, transitions, closures check, the appointments on a closure being added listed (D87, D137), nothing booked for an archived patient (D103), tokens, functions (D138 – D143) | §11, §28.4 | — | DONE (2026-10-11) |
-| R5.2 | Booking sheet: patient search/quick add, doctor, date, time, type → duration; clash card | §11.1 | — | TODO |
+| R5.2 | Booking sheet: patient search/quick add, doctor, date, time, type → duration; clash card (D144 – D151) | §11.1 | — | DONE (2026-10-11) |
 | R5.3 | Calendar: day (list / columns per doctor), week, doctor filter, closures shaded; the kit's calendar grid (D66) | §11.5 | — | TODO |
 | R5.4 | Appointment detail: confirm, reschedule, cancel (reason), no-show; the profile's next appointment and its appointments in the history (D101) | §11.2, §10.3 | — | TODO |
 | R5.5 | Walk-ins, arrival tokens, today's queue (Waiting, With doctor, Still to come, Done) with 15 s refresh | §11.3, §11.4 | — | TODO |

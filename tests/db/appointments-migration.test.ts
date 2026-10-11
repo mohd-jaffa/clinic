@@ -254,6 +254,21 @@ describe("0017 the appointments on a closure's days (D87, D137)", () => {
   });
 });
 
+describe("0017 a doctor's booked times on a day (D147)", () => {
+  it("is whoever books' or moves', gives each live booking's start and end by time — never whose", () => {
+    const times = functionBody(sql, "doctor_booked_times");
+    expect(times).toContain("returns table (starts_at timestamptz, ends_at timestamptz)");
+    expect(times).toContain(
+      "not (public.has_permission('appointments.create') or public.has_permission('appointments.edit'))",
+    );
+    expect(times).toContain("and appointment.local_date = p_day");
+    expect(times).toContain("and appointment.source = 'BOOKED'");
+    expect(times).toContain("and appointment.status not in ('CANCELLED', 'NO_SHOW')");
+    expect(times).not.toContain("patient");
+    expect(sql).toContain("grant execute on function public.doctor_booked_times(uuid, date) to authenticated;");
+  });
+});
+
 describe("0017 indexes (plan §37.1)", () => {
   it("serves every read with an index that leads with the clinic, in its own order", () => {
     expect(sql).toContain(

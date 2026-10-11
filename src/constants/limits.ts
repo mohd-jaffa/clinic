@@ -80,6 +80,16 @@ export const APPOINTMENT_STEP_MINUTES = 5;
  */
 export const MAX_PATIENT_AGE = 120;
 
+/**
+ * Where a booking's hour list opens for a day other than today (D146): the
+ * morning, when most clinics begin. Today's opens at the hour it is now. It
+ * only scrolls the list; every hour can be booked (D7).
+ */
+export const FIRST_HOUR_SHOWN = 9;
+
+/** How many patients a picker's search lists (D144): the best matches; typing more narrows them. */
+export const PICKER_RESULTS = 6;
+
 /** How many patients "Already here?" lists for one mobile (D106): a family, and then some. */
 export const MAX_PATIENT_MATCHES = 10;
 

@@ -35,6 +35,7 @@ export {
   importBatchSchema,
   importMatchesSchema,
   importRowSchema,
+  newPatientSchema,
   PATIENT_TABS,
   patientListSchema,
   patientMatchesSchema,
@@ -50,6 +51,8 @@ export {
   type ImportMatchesPayload,
   type ImportRowInput,
   type ImportRowPayload,
+  type NewPatientInput,
+  type NewPatientPayload,
   type PatientListPayload,
   type PatientListQuery,
   type PatientTab,
@@ -125,6 +128,20 @@ export {
   type ServiceInput,
   type ServicePayload,
 } from "./schemas/catalogues";
+
+export {
+  bookedTimesSchema,
+  bookingSchema,
+  HOURS,
+  LENGTH_CHOICES,
+  MINUTES,
+  OTHER_LENGTH,
+  PATIENT_MODES,
+  type BookedTimesPayload,
+  type BookingInput,
+  type BookingPayload,
+  type PatientMode,
+} from "./schemas/appointments";
 
 export {
   closureDaysSchema,

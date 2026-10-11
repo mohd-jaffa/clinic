@@ -72,6 +72,11 @@ export const apiRoutes = {
     alerts: (id: string) => `/api/patients/${id}/alerts`,
     alert: (id: string, alertId: string) => `/api/patients/${id}/alerts/${alertId}`,
   },
+  // Appointments (plan §11, §30): a doctor's day is who and which day, never a patient.
+  appointments: {
+    list: "/api/appointments",
+    booked: "/api/appointments/booked",
+  },
 } as const;
 
 /**

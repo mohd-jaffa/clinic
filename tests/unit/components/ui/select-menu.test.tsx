@@ -262,4 +262,20 @@ describe("SelectMenu", () => {
     expect(scrolled).toHaveBeenLastCalledWith({ block: "nearest" });
     Reflect.deleteProperty(Element.prototype, "scrollIntoView");
   });
+
+  it("opens on the choice the screen names while none is chosen, and on the chosen one once there is", async () => {
+    render(<Menu start="" placeholder="Choose one" opensAt="CARD" />);
+    await userEvent.click(control());
+    expect(active()).toBe("Card");
+    await userEvent.click(within(list()).getByRole("option", { name: "UPI" }));
+    await userEvent.click(control());
+    expect(active()).toBe("UPI");
+  });
+
+  it("opens on the first choice when the one it names is not offered, and moves on from it by keys", async () => {
+    render(<Menu start="" opensAt="CHEQUE" />);
+    control().focus();
+    await userEvent.keyboard("{ArrowDown}");
+    expect(active()).toBe("Cash");
+  });
 });

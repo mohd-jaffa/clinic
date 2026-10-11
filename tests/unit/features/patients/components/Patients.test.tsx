@@ -2,7 +2,7 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { PatientPrefill } from "@/features/patients/components/PatientSheet";
+import type { PatientPrefill } from "@/features/patients/prefill";
 import type { PatientListItem } from "@/features/patients/types";
 import { authStub } from "@tests/support/auth";
 import { Providers } from "@tests/support/providers";

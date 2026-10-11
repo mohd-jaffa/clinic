@@ -26,16 +26,11 @@ import { PATIENT_TABS, type PatientTab } from "@/lib/validation";
 import { describePatient } from "../describe";
 import { usePatients } from "../hooks/usePatients";
 import type { PatientListItem } from "../types";
-import { PatientSheet, type PatientPrefill } from "./PatientSheet";
+import { prefillFrom, type PatientPrefill } from "../prefill";
+import { PatientSheet } from "./PatientSheet";
 
 const { patients } = UI_TEXT;
 const TAB_OPTIONS = PATIENT_TABS.map((tab) => ({ value: tab, label: patients.tabs[tab] }));
-
-/** What a search that found no one fills the add form with (D112): a mobile typed, or a name. */
-function prefillFrom(search: string): PatientPrefill {
-  if (/^[\d\s()+-]+$/.test(search)) return { phone: search };
-  return /\d/.test(search) ? {} : { fullName: search };
-}
 
 /**
  * Patients (plan §10.2, D104, D111, D112, D121): searched by name, mobile or

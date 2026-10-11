@@ -10,6 +10,7 @@ const { logActionSafe } = vi.hoisted(() => ({ logActionSafe: vi.fn() }));
 vi.mock("@/lib/audit/auditLog", () => ({ logActionSafe }));
 
 const {
+  addPatient,
   archivePatient,
   createPatient,
   findPatientMatches,
@@ -93,6 +94,54 @@ describe("getPatient", () => {
     await expect(getPatient(tenantWith({ answer: () => ({ data: null }) }).tenant, "p-9")).rejects.toMatchObject({
       code: "RECORD_NOT_FOUND",
     });
+  });
+});
+
+describe("addPatient (D145)", () => {
+  const essentials = {
+    fullName: "Meera Pillai",
+    phone: "+919876543210",
+    born: { dateOfBirth: "1992-10-11", dobIsEstimated: true },
+    gender: "FEMALE" as const,
+  };
+
+  it("adds them at once, and reads them back and audits them by name alone, beside what follows", async () => {
+    const { tenant, rpcs } = tenantWith({
+      rpc: () => ({ data: { patient_id: "p-1", created: true } }),
+      answer: () => ({ data: aPatientRow({ full_name: "Meera Pillai", gender: "FEMALE" }) }),
+    });
+    const added = await addPatient(tenant, essentials, "key-1", "req_1");
+    expect(added.id).toBe("p-1");
+    expect(rpcs[0].args).toEqual({
+      p_patient: {
+        full_name: "Meera Pillai",
+        phone: "+919876543210",
+        date_of_birth: "1992-10-11",
+        dob_is_estimated: true,
+        gender: "FEMALE",
+      },
+      p_idempotency_key: "key-1",
+    });
+    expect(await added.recorded).toEqual({
+      id: "p-1",
+      number: 1012,
+      name: "Meera Pillai",
+      phone: "+919876543210",
+      dateOfBirth: "1990-04-12",
+      gender: "FEMALE",
+    });
+    expect(logActionSafe).toHaveBeenCalledWith(
+      tenant,
+      expect.objectContaining({ action: "CREATE", entityId: "p-1", requestId: "req_1" }),
+    );
+    expect(JSON.stringify(logActionSafe.mock.calls)).not.toMatch(/Meera|9876543210/);
+  });
+
+  it("says why they could not be added", async () => {
+    const { tenant } = tenantWith({
+      rpc: () => ({ error: { ...postgrestError("P0001"), hint: "AUTH_PERMISSION_DENIED" } }),
+    });
+    await expect(addPatient(tenant, essentials, "key-1")).rejects.toMatchObject({ code: "AUTH_PERMISSION_DENIED" });
   });
 });
 

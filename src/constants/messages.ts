@@ -201,6 +201,9 @@ export const UI_TEXT = {
   datePicker: {
     choose: "Choose a date",
     chooseTime: "Choose a time",
+    chooseHour: "Hour",
+    chooseMinute: "Min",
+    minuteOf: (minute: string) => `:${minute}`,
     calendar: (field: string) => `${field}: pick a day`,
     previousMonth: "Previous month",
     nextMonth: "Next month",
@@ -532,6 +535,46 @@ export const UI_TEXT = {
     order: "New categories join the end of the list.",
   },
 
+  /** Booking (plan §11.1; D144 – D151): the booking sheet, and the screen it opens on. */
+  appointments: {
+    book: "Book appointment",
+    bookTitle: "Book an appointment",
+    patientLabel: "Patient",
+    searchPatients: "Search by name, mobile or number",
+    searchHint: "Type a name, a mobile number or a P-number.",
+    noMatches: "No patient found. Add them as a new patient.",
+    newPatient: "New patient",
+    findPatient: "Find a patient instead",
+    change: "Change",
+    changeNamed: (name: string) => `Change ${name}`,
+    doctorLabel: "Doctor",
+    chooseDoctor: "Choose a doctor",
+    dateLabel: "Date",
+    timeLabel: "Time",
+    hourLabel: "Hour",
+    minuteLabel: "Minutes",
+    timePassed: "That time has already passed. Choose a later time, or add a walk-in.",
+    typeLabel: "Type",
+    chooseType: "Choose a type",
+    lengthLabel: "Length",
+    otherLength: "Other",
+    minutesLabel: "Minutes",
+    minutes: (count: number) => `${count} min`,
+    notesLabel: "Notes",
+    notesHint: "Not clinical: first visit, bring the X-ray.",
+    /** The doctor's taken times on the day being booked (D147): times only, never patients. */
+    doctorDayLead: (doctor: string) => `${doctor} that day:`,
+    doctorDayFree: (doctor: string) => `Nothing booked for ${doctor} that day yet.`,
+    timeRange: (from: string, to: string) => `${from} – ${to}`,
+    booked: (patient: string, when: string, doctor: string) => `Booked ${patient} · ${when} with ${doctor}`,
+    bookedWhen: (day: string, time: string) => `${day}, ${time}`,
+    notBooked: "That wasn’t booked",
+    /** Why it wasn't (D148): the time it clashed with, the closure it fell on. */
+    slotTaken: (doctor: string, range: string) => `${doctor} is booked ${range}`,
+    clinicClosed: (reason: string) => `The clinic is closed that day: ${reason}`,
+    doctorAway: (doctor: string, reason: string) => `${doctor} is away that day: ${reason}`,
+  },
+
   /** Holidays and leave (plan §9, D84 – D87): the days the clinic, or one doctor, is away. */
   closures: {
     count: (count: number) => (count === 0 ? "None coming up" : `${count} coming up`),
@@ -713,6 +756,7 @@ export const UI_TEXT = {
     matchesTitle: (count: number) =>
       count === 1 ? "Already here? 1 patient has this mobile" : `Already here? ${count} patients have this mobile`,
     matchesHint: "Open one, or carry on to add someone new — families often share a number.",
+    matchesChooseHint: "Choose one, or carry on to add someone new — families often share a number.",
     archived: "Archived",
     added: (name: string, number: string) => `${name} added — ${number}`,
     notAdded: "The patient wasn’t added",

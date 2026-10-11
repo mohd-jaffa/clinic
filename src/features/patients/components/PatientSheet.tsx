@@ -39,15 +39,13 @@ import {
 
 import { PatientsClient } from "../api.client";
 import { usePatientArchive } from "../hooks/usePatientArchive";
+import type { PatientPrefill } from "../prefill";
 import type { Patient } from "../types";
 import { PatientMatches } from "./PatientMatches";
 
 const { patients } = UI_TEXT;
 const GENDER_OPTIONS = GENDERS.map((gender) => ({ value: gender, label: GENDER_LABELS[gender] }));
 const BORN_OPTIONS = BORN_AS.map((as) => ({ value: as, label: patients.bornAs[as] }));
-
-/** What a search that found no one fills a new patient with (D112). */
-export type PatientPrefill = Partial<Pick<PatientInput, "fullName" | "phone">>;
 
 /** The fields kept under More details (D105). */
 const MORE = ["altPhone", "email", "address", "emergencyContactName", "emergencyContactPhone", "notes"] as const;

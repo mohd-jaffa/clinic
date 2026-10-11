@@ -1,4 +1,5 @@
 import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { aPatientMatch } from "@tests/support/patients";
@@ -40,5 +41,19 @@ describe("PatientMatches (D106)", () => {
     matches.current = { data: undefined };
     rerender(<PatientMatches typed="98765" />);
     expect(screen.queryByRole("region")).not.toBeInTheDocument();
+  });
+
+  it("chooses a patient instead of opening them while booking — never an archived one (D103, D145)", async () => {
+    const onChoose = vi.fn();
+    const riya = aPatientMatch({ id: "p-8", name: "Riya Mehta" });
+    matches.current = { data: [riya, aPatientMatch({ archived: true })] };
+    render(<PatientMatches typed="98765 43210" onChoose={onChoose} />);
+    expect(screen.getByText(/^Choose one, or carry on/)).toBeInTheDocument();
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
+    vi.useRealTimers();
+    await userEvent.click(screen.getByRole("button", { name: "Riya Mehta" }));
+    expect(onChoose).toHaveBeenCalledWith(riya);
+    expect(screen.queryByRole("button", { name: "Anita Mehta" })).not.toBeInTheDocument();
+    expect(screen.getByText("Anita Mehta").closest("li")).toHaveTextContent("Archived");
   });
 });

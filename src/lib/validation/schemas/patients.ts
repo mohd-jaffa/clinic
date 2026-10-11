@@ -101,6 +101,20 @@ export type PatientInput = z.input<typeof patientSchema>;
 export type PatientPayload = z.output<typeof patientSchema>;
 
 /**
+ * A patient added while booking (plan §11.3, D145): what every patient needs —
+ * name, mobile, date of birth or age, gender — and nothing that can wait.
+ */
+export const newPatientSchema = z.object({
+  fullName: fields.fullName,
+  phone: fields.phone,
+  born: fields.born,
+  gender: fields.gender,
+});
+
+export type NewPatientInput = z.input<typeof newPatientSchema>;
+export type NewPatientPayload = z.output<typeof newPatientSchema>;
+
+/**
  * A change to a patient: only the fields sent change — the edit sheet sends
  * those that were touched, so an estimated date of birth is not moved by a
  * save that left the age alone. A field sent empty is cleared.

@@ -1886,3 +1886,106 @@ picked (D87). Asked of the user first: D137 – D143.
 
 ### Blockers
 - None.
+
+## 2026-10-11 — The booking sheet (R5.2)
+
+Appointments can now be booked. The sheet opens from **Book appointment** on
+the new Appointments screen and from the ＋'s Appointment. The calendar joins
+the screen in R5.3. Asked of the user first: D144 – D151.
+
+### Added
+- **The booking sheet** (`BookingSheet`, D144 – D151):
+  - **Patient:** a search in the sheet (name, mobile or number), the best
+    six matches to choose, then the chosen patient with **Change**.
+  - **New patient** (with `patients.create`): name, mobile, date of birth or
+    age and gender, filled from what was searched. "Already here?" on the
+    mobile chooses one already there.
+  - **The rest:** the doctor; the date; the time as its hour, then its
+    minutes; the doctor's booked times that day, under the time (times
+    only); the type, which sets the length (chips, or Other starting from the
+    length it leaves); notes.
+  - **Defaults:** today, the doctor booking (or the clinic's only doctor),
+    and the clinic's first type with its length.
+  - **Refusals:** a taken time or a closed day is named on the card and at
+    its field, and the sheet keeps everything. Booking again sends the same
+    key.
+  - **Booked:** the sheet closes with "Booked Rohan Mehta · 13 Oct, 10:30 AM
+    with Maya Rao".
+- **The Appointments screen** (`/appointments`): **Book appointment** for
+  `appointments.create`, and the view-only note. It arrives with the doctors
+  and the appointment types already read.
+- **`POST /api/appointments`** (`bookAppointment`): the booking as
+  `bookingSchema` parses it, once per Idempotency-Key.
+  - A new patient is added first under their own key (`patientKey`,
+    `addPatient`) and stays added if the booking is refused. The refusal then
+    names them, so the sheet goes on with them found and nothing is added
+    twice.
+  - The booking is audited with its values, its notes by name only.
+  - Its answer is worded from what was chosen, so a booker who may not read
+    appointments back still gets it.
+- **`GET /api/appointments/booked`** (`listBookedTimes`): a doctor's taken
+  times on a day. `doctor_booked_times` was added to the unreleased `0017`
+  (for `appointments.create` or `.edit`; never whose they are) and applied
+  to the local database by hand.
+- **Kit:**
+  - `ClockField`: a time in two pickers.
+  - `SelectMenu` takes `opensAt`; the booking hours open on the hour it is
+    now for today, on 9 AM for another day (`FIRST_HOUR_SHOWN`).
+- **Patients:**
+  - `usePatientSearch`: a picker's search, in the body (D98).
+  - `prefillFrom` moved to `features/patients/prefill.ts`, shared by
+    Patients and the booking sheet.
+  - `PatientMatches` takes `onChoose`.
+- **`allInOrder`** (`src/lib/parallel.ts`, ported from Brio): reads that
+  don't depend on each other go at once, failing for the first one listed.
+- **Constants and words:**
+  - `PICKER_RESULTS` and `FIRST_HOUR_SHOWN`;
+  - `HOURS`, `MINUTES`, `LENGTH_CHOICES`, `OTHER_LENGTH` and `PATIENT_MODES`
+    with `bookingSchema`, `bookedTimesSchema` and `newPatientSchema`;
+  - `dayTime` and `formatHour`;
+  - `UI_TEXT.appointments`.
+
+### Changed
+- **`useAddForm`:** the ＋'s forms open and close through the browser's own
+  history, which the router follows, instead of `router.push` /
+  `router.replace`. Closing a form after a save no longer re-renders the
+  screen on the server. Before, the sheet lingered while that happened, long
+  enough for a success card (3 s) to time out. The patients and shell
+  journeys pass unchanged.
+- **Plan:**
+  - D144 – D151 in the decision log;
+  - §11.1 (the booking sheet), §29 (`doctor_booked_times`) and §30 (the new
+    route);
+  - the tracker: R5.2 DONE.
+- **DESIGN.md:** `ClockField`, a record found in a sheet, a line of times.
+
+### Speed (§37.1)
+- **Round trips:**
+  - The screen waits on the session, then the doctors and the types at once.
+  - A search of patients is the session plus one call. The doctor's day is
+    the session plus one call.
+  - A booking of a patient found waits on the session, the booking, then the
+    audit row.
+  - A booking with a new patient waits on four, the budget's limit: the
+    session; the patient; the booking beside the patient's read-back
+    (`allInOrder`); the audit rows.
+- **Indexes:** `doctor_booked_times` reads `(clinic_id, doctor_id, local_date,
+  scheduled_at)`, added in R5.1. The patient search uses 0015's.
+
+### Validation
+- Typecheck, lint, format check passed.
+- Unit and integration tests passed, coverage 100%. `booking.test.ts`
+  covers:
+  - booking once per key, and the audit row with no notes in it;
+  - a new patient added once however often sent, kept and named when the
+    time is taken, and not added twice on the next try;
+  - `patients.create` and the patient's key required;
+  - a doctor's taken times, live bookings only, for whoever books.
+- E2E (phone and desktop, axe): `tests/e2e/appointments.spec.ts`.
+  - The front desk books from the ＋: they find the patient, see the
+    doctor's day, are told the taken time and book the next free one. The
+    sheet is checked not to run off a phone's side.
+  - A patient new to the clinic is booked with their booking.
+
+### Blockers
+- None.
