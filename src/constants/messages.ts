@@ -85,6 +85,7 @@ export const ERROR_MESSAGES = {
   PATIENTS_LOAD_FAILED: "The patients couldn't be loaded.",
   ALERT_ALREADY_EXISTS: "This patient already has that alert.",
   ALERTS_LOAD_FAILED: "The alerts couldn't be loaded.",
+  PATIENT_HAS_APPOINTMENTS: "Cancel or move their appointments to come before archiving them.",
   // A patient import's file (plan §10.5, D127): said in the browser, which reads it.
   IMPORT_FILE_TYPE: "That isn't a CSV or Excel (.xlsx) file.",
   IMPORT_FILE_XLS: "That's an older Excel file (.xls). Save it as .xlsx or CSV, then choose it again.",
@@ -92,6 +93,17 @@ export const ERROR_MESSAGES = {
   IMPORT_FILE_EMPTY: "That file has no patients in it: it needs a header row and at least one row under it.",
   IMPORT_LIMITS_LOAD_FAILED: "The import couldn't be set up.",
   IMPORT_CHECK_FAILED: "The rows couldn't be checked against the clinic's patients.",
+
+  // Appointments (plan §11; D7, D138 – D143).
+  APPOINTMENT_SLOT_TAKEN: "That time is already booked with this doctor. Choose another time.",
+  APPOINTMENT_ON_CLOSED_DAY: "The clinic is closed that day, or the doctor is on leave. Choose another day.",
+  APPOINTMENT_IN_PAST: "That time has already passed. Choose a later time, or add a walk-in.",
+  APPOINTMENT_STATUS_NOT_ALLOWED: "This appointment can’t go to that status from where it is. Refresh and try again.",
+  APPOINTMENT_NOT_MOVABLE: "Only a booking that hasn’t arrived yet can be moved.",
+  APPOINTMENT_NOT_TODAY: "Only today’s appointments can be marked arrived. Move it to today, or add a walk-in.",
+  APPOINTMENT_CANCEL_REASON_REQUIRED: "Say why it’s being cancelled.",
+  APPOINTMENT_TYPE_INACTIVE: "That appointment type is archived. Choose another.",
+  CLOSURE_APPOINTMENTS_LOAD_FAILED: "The appointments on these days couldn't be checked.",
 
   // The browser could not reach the server (plan §21, D55): said by the client, never sent by the server.
   NETWORK_OFFLINE: "You're offline. Try again once the connection is back — what you typed is still here.",
@@ -539,6 +551,14 @@ export const UI_TEXT = {
     removeNamed: (reason: string) => `Remove ${reason}`,
     removeTitle: (reason: string) => `Remove ${reason}?`,
     removeBody: "Booking opens on those days again.",
+    /** The appointments already on the days being picked (D87, D137). */
+    appointmentsOnDays: (count: number) =>
+      count === 1 ? "1 appointment on these days" : `${count} appointments on these days`,
+    appointmentsStay: "They stay booked — move or cancel them from the calendar.",
+    appointmentsList: "Appointments on these days",
+    appointmentWhen: (day: string, time: string, doctor: string) => `${day}, ${time} · ${doctor}`,
+    aPatient: "A patient",
+    moreAppointments: (count: number) => `And ${count} more`,
     remove: "Remove",
     removed: (reason: string) => `${reason} removed`,
     notRemoved: "That wasn’t removed",
@@ -725,6 +745,8 @@ export const UI_TEXT = {
       "They leave the patients list and search. Their records are kept, read-only, and they can be restored from Archived.",
     archivedNote: (name: string) => `${name} archived`,
     notArchived: "That patient wasn’t archived",
+    /** An archive refused for an appointment still to come (D140). */
+    hasAppointmentOn: (name: string, day: string) => `${name} has an appointment on ${day}`,
     archivedOn: (date: string, by: string | null) => (by ? `Archived on ${date} by ${by}` : `Archived on ${date}`),
     archivedHint: "Their profile is read-only until they are restored.",
     restoreName: (name: string) => `Restore ${name}`,

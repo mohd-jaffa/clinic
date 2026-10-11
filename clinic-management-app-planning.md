@@ -223,6 +223,13 @@ earlier lines are never rewritten.
 | D134 | **A speed phase before release** (the user, after Brio's live app lagged): **Phase 13 — Speed** measures every screen, read and save. It puts the session in one database round trip, indexes what is read, cuts round trips made one after another, and puts the server beside the database (§37, §39). Hardening and release become **Phase 14**; each old R13.n is now R14.n. | 2026-10-05 |
 | D135 | **Speed is part of every row** (the user): from R5.1 on, each row indexes the queries it adds, makes no database call it does not need, keeps its screens and saves within the round-trip budget, and says in its changelog how many round trips they wait on (§37.1). | 2026-10-05 |
 | D136 | **Docs travel with their change** (the user): a row's code, tests, plan, DESIGN.md, changelog and tracker row go in **one commit**; docs are never committed on their own. The tracker reads **DONE (date)**, and the row's commit is the one that set it (`git log -G "R5.1 .*DONE"`). Rows done before keep their hashes. | 2026-10-05 |
+| D137 | **The appointments on a closure's days show in its sheet, as the days are picked** (the user, answers D87's how): under the fields, before Save — how many, the first 20 by time with the patient, day, time and doctor, and "And n more"; saving leaves them booked, to be moved or cancelled from the calendar. A patient is named only to someone who may see them (`appointments.view`, within the doctor scope); anyone else reads "A patient". `closure_appointments` in `0017`, `GET /api/closures/appointments`. | 2026-10-11 |
+| D138 | **An arrived patient who leaves before being seen is a no-show** (the user): the status table gains Arrived → No-show, so the queue's Waiting column offers it (§11.4); they keep their token, and No-show → Arrived brings them back. | 2026-10-11 |
+| D139 | **A walk-in is refused on a closed day, like a booking** (the user): a clinic holiday, or the doctor's leave (`APPOINTMENT_ON_CLOSED_DAY`, naming the closure's reason). If the clinic opens after all, today's closure is removed first. A patient booked before the closure was added may still be marked Arrived. | 2026-10-11 |
+| D140 | **A patient with appointments to come is not archived until they are cancelled or moved** (the user): one still to come today or later, or under way, refuses the archive (`PATIENT_HAS_APPOINTMENTS`), and the card names its day ("Rohan Mehta has an appointment on 12 Oct"). One left unmarked on a past day does not count. | 2026-10-11 |
+| D141 | **A patient keeps their token for the day** (the user): going back from Arrived — to Scheduled (a wrong tap) or No-show (they left) — keeps it, and arriving again that day gives the same number. Moving the appointment to another day or doctor gives it back. The counter never goes back, so no two share one. | 2026-10-11 |
+| D142 | **A confirmed appointment moved is scheduled again** (the user): moving it to another time, or another doctor, sets it back to Scheduled for the patient's yes; a change of notes, length or type alone keeps it confirmed. | 2026-10-11 |
+| D143 | **A patient arrives only on the appointment's own day** (the user): one booked for another day is moved to today, or the patient is added as a walk-in (`APPOINTMENT_NOT_TODAY`). A token belongs to today's queue. | 2026-10-11 |
 
 ## 3. Users and roles
 
@@ -649,8 +656,8 @@ job title, doctor details; deactivate / reactivate (asks first).
   is never deleted.
 - **Holidays and leave — `/settings/closures`** (`settings.manage`): a date
   range, the whole clinic or one doctor, and a reason. Booking refuses those
-  days. Adding a closure over existing appointments lists them (it does not
-  cancel them; built with appointments in R5.1, D87). A closure starts today
+  days. Adding a closure over existing appointments lists them in its sheet as
+  the days are picked (it does not cancel them; R5.1, D87, D137). A closure starts today
   or later and lasts at most 366 days (D85); closures for the same people do
   not overlap (D86); past ones are kept behind **Show past**, and only one not
   yet over is removed, asked first (D84).
@@ -704,7 +711,9 @@ Patient number (`P-1001`, a per-clinic counter, never reused), and:
   restored. Until then they are read-only (D103). **Archive** is at the foot
   of the patient's edit sheet and asks first (D122); the profile stays and
   says when and by whom, with **Restore** (D123, D124), which asks nothing
-  (D125). Both need `patients.edit` and are audited (ARCHIVE, RESTORE).
+  (D125). Both need `patients.edit` and are audited (ARCHIVE, RESTORE). A
+  patient with an appointment still to come is not archived until it is
+  cancelled or moved; the card names its day (D140).
 
 ### 10.2 Patients list — `/patients`
 
@@ -801,9 +810,17 @@ default duration, which may be changed per booking.
   and `NO_SHOW`. A clash answers `APPOINTMENT_SLOT_TAKEN` naming the clashing
   time; the sheet keeps what was typed.
 - **Not on a closed day:** a clinic holiday, or the doctor's leave
-  (`APPOINTMENT_ON_CLOSED_DAY`).
-- **Not in the past** when booked (a walk-in is "now").
-- **The doctor must be active** and in the same clinic.
+  (`APPOINTMENT_ON_CLOSED_DAY`, naming the closure's reason) — a walk-in
+  neither (D139).
+- **Not in the past** when booked: no earlier than the 5-minute step it is
+  made in (`APPOINTMENT_IN_PAST`; a walk-in is "now").
+- **The doctor must be active** and in the same clinic; the type one of the
+  clinic's active types.
+- **Not for an archived patient** (D103): nothing is booked, moved or arrived
+  for them until they are restored.
+- **Moving** (Reschedule): only a booking not yet arrived, under every rule
+  above (`APPOINTMENT_NOT_MOVABLE`); a confirmed one moved to another time or
+  doctor is scheduled again (D142). Notes change at any time.
 
 ### 11.2 Statuses
 
@@ -815,7 +832,7 @@ default duration, which may be changed per booking.
 |---|---|
 | SCHEDULED | CONFIRMED, ARRIVED, CANCELLED, NO_SHOW |
 | CONFIRMED | ARRIVED, SCHEDULED, CANCELLED, NO_SHOW |
-| ARRIVED | IN_PROGRESS, SCHEDULED, CANCELLED |
+| ARRIVED | IN_PROGRESS, SCHEDULED, CANCELLED, NO_SHOW (left before being seen, D138) |
 | IN_PROGRESS | COMPLETED, ARRIVED |
 | NO_SHOW | ARRIVED (came late) |
 | COMPLETED | — |
@@ -823,7 +840,9 @@ default duration, which may be changed per booking.
 
 `IN_PROGRESS` and `COMPLETED` are reached only through the queue — **Send in**,
 **Done**, **Next patient** (§11.4) — which open and close the visit with them
-(§12.1). Cancelling asks first and takes a reason.
+(§12.1). Arrived is reached only through **Arrived** or a walk-in, which
+give the token (§11.3); a walk-in never goes back to Scheduled. Cancelling
+asks first, needs `appointments.cancel` and takes a reason.
 
 ### 11.3 Arrivals, walk-ins and tokens
 
@@ -835,7 +854,10 @@ default duration, which may be changed per booking.
 - **Tokens:** every patient who arrives — walk-in, or booked and marked
   **Arrived** — takes the next token for that doctor that day (`#7`), from a
   per-doctor-per-day counter taken under a row lock. Tokens restart each day
-  in the clinic's timezone.
+  in the clinic's timezone. A patient keeps theirs for the day: going back and
+  arriving again gives the same number; moving the appointment to another day
+  or doctor gives it back (D141). **Arrived** only on the appointment's own
+  day (D143).
 - **Fee at arrival (D44):** in a clinic that collects the consultation fee at
   arrival, arriving (or adding a walk-in) continues to **Collect fee**: the
   doctor's consultation fee (D26) pre-filled, the method, **Issue and
@@ -1598,17 +1620,19 @@ patient_alerts        id · clinic_id · patient_id · kind (ALLERGY|CONDITION|M
 
 ```text
 appointments          id · clinic_id · patient_id · doctor_id · source (BOOKED|WALK_IN)
-                      · appointment_type_id · scheduled_at · duration_minutes (5–480)
+                      · appointment_type_id · scheduled_at (a booking on 5-minute steps)
+                      · duration_minutes (5–480)
                       · local_date (set by trigger, clinic timezone) · status
                       · token_number · arrived_at · started_at · completed_at
                       · notes · cancel_reason · cancelled_at · cancelled_by · reminded_at
-                      · created_by · updated_by
-                      EXCLUDE USING gist (doctor_id WITH =, tstzrange(scheduled_at,
-                        scheduled_at + duration) WITH &&)
+                      · idempotency_key · created_by · updated_by
+                      EXCLUDE USING gist (doctor_id WITH =, appointment_slot(scheduled_at,
+                        duration_minutes) WITH &&)
                         WHERE source = 'BOOKED' AND status NOT IN ('CANCELLED','NO_SHOW')
-                      unique (doctor_id, local_date, token_number)
-                      indexes: (clinic_id, local_date), (doctor_id, scheduled_at),
-                      (patient_id, scheduled_at)
+                      unique (doctor_id, local_date, token_number), (clinic_id, idempotency_key)
+                      indexes: (clinic_id, local_date, scheduled_at),
+                      (clinic_id, doctor_id, local_date, scheduled_at),
+                      (clinic_id, patient_id, scheduled_at desc), and every foreign key
 daily_tokens          clinic_id · doctor_id · day · last_token   PK (doctor_id, day)
 ```
 
@@ -1728,7 +1752,9 @@ Planned order (one or more per tracker row):
 0016_patient_import             max_import_rows (D128); import_patients safe to send again,
                                 each row under its own key (D133)
 0017_appointments               appointments, exclusion, transitions, daily_tokens,
-                                create/update/status/walk-in/arrived functions
+                                create/update/status/walk-in/arrived functions, the archive
+                                refused with appointments to come (D140), closure_appointments
+                                (D137)
 0018_visits                     visits (with billing state), vitals, send_in, mark_done,
                                 next_patient, start_visit, save_vitals
 0019_prescriptions              prescriptions, prescription_items, save_prescription,
@@ -1763,7 +1789,7 @@ take an `Idempotency-Key` header.
 | Auth | `POST /api/auth/register` · `POST /api/auth/login` · `POST /api/auth/logout` · `POST /api/auth/refresh` · `GET /api/auth/session` · `POST /api/auth/confirm` · `POST /api/auth/resend-confirmation` · `POST /api/auth/password-reset` · `POST /api/auth/password-reset/complete` · `POST /api/auth/password` · `PATCH /api/auth/profile` · `POST /api/auth/accept-invite/preview` (what a link opens onto; the token in the body, never an address) · `POST /api/auth/accept-invite` |
 | Clinic | `GET, PATCH /api/clinic` · `GET, POST, DELETE /api/clinic/logo` · `POST, DELETE /api/clinic/deletion-request` · `GET /api/export/[area]` (CSV) |
 | Catalogues | `GET, POST /api/services` · `PATCH /api/services/[id]` · `GET, POST /api/appointment-types` · `PATCH /api/appointment-types/[id]` · `GET, POST /api/expense-categories` · `PATCH /api/expense-categories/[id]` |
-| Closures | `GET, POST /api/closures` · `DELETE /api/closures/[id]` |
+| Closures | `GET, POST /api/closures` · `DELETE /api/closures/[id]` · `GET /api/closures/appointments` (the appointments on the days being picked, D137) |
 | Team | `GET /api/team` · `POST /api/team/invites` · `POST /api/team/invites/[id]/resend` · `DELETE /api/team/invites/[id]` · `GET, PATCH /api/team/[id]` · `POST /api/team/[id]/active` |
 | Doctors | `GET /api/doctors` (active doctors, for pickers) |
 | Subscription | `GET /api/subscription` (state, dates, prices, contact, history — owner) · `GET /api/subscription/payments/[id]/receipt.pdf` |
@@ -2274,7 +2300,7 @@ in the row's one commit (D136).
 
 | ID | Work | Source | Waits on | Status |
 |---|---|---|---|---|
-| R5.1 | `0017_appointments`: table (clinic's appointment types), exclusion, transitions, closures check, the appointments on a closure being added listed (D87), nothing booked for an archived patient (D103), tokens, functions | §11, §28.4 | — | TODO |
+| R5.1 | `0017_appointments`: table (clinic's appointment types), exclusion, transitions, closures check, the appointments on a closure being added listed (D87, D137), nothing booked for an archived patient (D103), tokens, functions (D138 – D143) | §11, §28.4 | — | DONE (2026-10-11) |
 | R5.2 | Booking sheet: patient search/quick add, doctor, date, time, type → duration; clash card | §11.1 | — | TODO |
 | R5.3 | Calendar: day (list / columns per doctor), week, doctor filter, closures shaded; the kit's calendar grid (D66) | §11.5 | — | TODO |
 | R5.4 | Appointment detail: confirm, reschedule, cancel (reason), no-show; the profile's next appointment and its appointments in the history (D101) | §11.2, §10.3 | — | TODO |

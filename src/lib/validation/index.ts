@@ -126,7 +126,15 @@ export {
   type ServicePayload,
 } from "./schemas/catalogues";
 
-export { closureSchema, WHOLE_CLINIC, type ClosureInput, type ClosurePayload } from "./schemas/closures";
+export {
+  closureDaysSchema,
+  closureSchema,
+  WHOLE_CLINIC,
+  type ClosureDaysInput,
+  type ClosureDaysPayload,
+  type ClosureInput,
+  type ClosurePayload,
+} from "./schemas/closures";
 
 export { FORM_RESET_OPTIONS } from "./forms";
 

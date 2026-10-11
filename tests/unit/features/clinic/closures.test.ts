@@ -7,7 +7,7 @@ import { fakeSupabase, postgrestError, type FakeSupabaseOptions } from "@tests/s
 const { logActionSafe } = vi.hoisted(() => ({ logActionSafe: vi.fn() }));
 vi.mock("@/lib/audit/auditLog", () => ({ logActionSafe }));
 
-const { addClosure, listClosures, removeClosure } = await import("@/features/clinic/closures");
+const { addClosure, listClosureAppointments, listClosures, removeClosure } = await import("@/features/clinic/closures");
 
 function tenantWith(options: FakeSupabaseOptions) {
   const fake = fakeSupabase(options);
@@ -126,5 +126,56 @@ describe("removeClosure (D84)", () => {
     const none = tenantWith({ rpc: () => ({ data: null }) });
     await expect(removeClosure(none.tenant, "c-1")).rejects.toMatchObject({ code: "RECORD_NOT_FOUND" });
     expect(logActionSafe).not.toHaveBeenCalled();
+  });
+});
+
+describe("listClosureAppointments (D137)", () => {
+  const days = { doctorId: "d-1", startsOn: "2026-10-20", endsOn: "2026-10-22" };
+
+  it("asks closure_appointments for the first CLOSURE_APPOINTMENTS_SHOWN, and says how many in all", async () => {
+    const { tenant, rpcs } = tenantWith({
+      rpc: () => ({
+        data: [
+          {
+            appointment_id: "a-1",
+            scheduled_at: "2026-10-20T05:00:00+00:00",
+            doctor_name: "Rahul Nair",
+            patient_name: "Rohan Mehta",
+            total: 3,
+          },
+          {
+            appointment_id: "a-2",
+            scheduled_at: "2026-10-21T04:30:00+00:00",
+            doctor_name: "Rahul Nair",
+            patient_name: null,
+            total: 3,
+          },
+        ],
+      }),
+    });
+    expect(await listClosureAppointments(tenant, days)).toEqual({
+      total: 3,
+      appointments: [
+        { id: "a-1", scheduledAt: "2026-10-20T05:00:00+00:00", doctorName: "Rahul Nair", patientName: "Rohan Mehta" },
+        { id: "a-2", scheduledAt: "2026-10-21T04:30:00+00:00", doctorName: "Rahul Nair", patientName: null },
+      ],
+    });
+    expect(rpcs).toEqual([
+      {
+        name: "closure_appointments",
+        args: { p_doctor_id: "d-1", p_starts_on: "2026-10-20", p_ends_on: "2026-10-22", p_limit: 20 },
+      },
+    ]);
+  });
+
+  it("finds none as none, and says why it could not ask", async () => {
+    const none = tenantWith({ rpc: () => ({ data: [] }) });
+    expect(await listClosureAppointments(none.tenant, days)).toEqual({ total: 0, appointments: [] });
+    const refused = tenantWith({
+      rpc: () => ({ error: { ...postgrestError("P0001"), hint: "AUTH_PERMISSION_DENIED" } }),
+    });
+    await expect(listClosureAppointments(refused.tenant, days)).rejects.toMatchObject({
+      code: "AUTH_PERMISSION_DENIED",
+    });
   });
 });

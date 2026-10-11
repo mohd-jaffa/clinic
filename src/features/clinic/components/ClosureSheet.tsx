@@ -24,6 +24,8 @@ import {
 
 import { ClosuresClient } from "../api.client";
 
+import { ClosureAppointments } from "./ClosureAppointments";
+
 const { closures } = UI_TEXT;
 
 /** A new one: the whole clinic, no days yet, no reason. */
@@ -33,8 +35,9 @@ const BLANK: ClosureInput = { who: WHOLE_CLINIC, startsOn: "", endsOn: "", reaso
  * A new holiday or leave (plan §9, D85): who is away — the whole clinic or
  * one of its doctors — the first and last day, and why. Days before today
  * cannot be picked; choosing the first day fills in the last when it is
- * empty or before it, so a single day is one choice. It is never edited, so
- * the sheet only adds.
+ * empty or before it, so a single day is one choice. Once the days are
+ * chosen, the appointments already on them are listed (D137); saving leaves
+ * them booked. It is never edited, so the sheet only adds.
  */
 export function ClosureSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const respond = useResponse();
@@ -53,7 +56,7 @@ export function ClosureSheet({ open, onClose }: { open: boolean; onClose: () => 
     defaultValues: BLANK,
     resetOptions: FORM_RESET_OPTIONS,
   });
-  const startsOn = useWatch({ control, name: "startsOn" });
+  const [away, startsOn, endsOn] = useWatch({ control, name: ["who", "startsOn", "endsOn"] });
 
   const { submit, submitting } = useApiMutation(ClosuresClient.add, {
     revalidate: [apiRoutes.closures.list],
@@ -142,6 +145,7 @@ export function ClosureSheet({ open, onClose }: { open: boolean; onClose: () => 
         error={errors.reason?.message}
         {...register("reason")}
       />
+      <ClosureAppointments who={away} startsOn={startsOn} endsOn={endsOn} />
     </FormSheet>
   );
 }

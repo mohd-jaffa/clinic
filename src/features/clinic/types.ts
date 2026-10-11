@@ -110,3 +110,28 @@ export interface Closure {
   endsOn: string;
   reason: string;
 }
+
+/** One of `closure_appointments`' rows (0017): an appointment on a closure's days, and how many there are. */
+export interface ClosureAppointmentRow {
+  appointment_id: string;
+  scheduled_at: string;
+  doctor_name: string;
+  /** Null for a patient the reader may not see. */
+  patient_name: string | null;
+  total: number;
+}
+
+/** An appointment still to happen on a closure's days (D137), as its sheet lists it. */
+export interface ClosureAppointment {
+  id: string;
+  scheduledAt: string;
+  doctorName: string;
+  /** Null for a patient the reader may not see: "A patient". */
+  patientName: string | null;
+}
+
+/** The appointments on a closure's days: the first CLOSURE_APPOINTMENTS_SHOWN, and how many in all. */
+export interface ClosureAppointments {
+  total: number;
+  appointments: ClosureAppointment[];
+}

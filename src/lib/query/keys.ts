@@ -43,6 +43,7 @@ export const apiRoutes = {
   closures: {
     list: "/api/closures",
     one: (id: string) => `/api/closures/${id}`,
+    appointments: "/api/closures/appointments",
   },
   // The clinic's active doctors, for every picker (plan §30).
   doctors: {

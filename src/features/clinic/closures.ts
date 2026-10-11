@@ -1,10 +1,11 @@
+import { CLOSURE_APPOINTMENTS_SHOWN } from "@/constants/limits";
 import { logActionSafe } from "@/lib/audit/auditLog";
 import { fromPostgrestError, notFoundError } from "@/lib/errors";
 import { tenantRecords } from "@/lib/supabase/records";
 import type { Tenant } from "@/lib/supabase/tenant";
-import type { ClosurePayload } from "@/lib/validation";
+import type { ClosureDaysPayload, ClosurePayload } from "@/lib/validation";
 
-import type { Closure, ClosureRow } from "./types";
+import type { Closure, ClosureAppointments, ClosureAppointmentRow, ClosureRow } from "./types";
 
 /**
  * Holidays and leave (plan §9, D84 – D87): the days the whole clinic, or one
@@ -53,6 +54,33 @@ export async function addClosure(tenant: Tenant, closure: ClosurePayload, reques
     { requestId },
   );
   return toClosure(row);
+}
+
+/**
+ * The appointments still to happen on a closure's days, asked as its sheet's
+ * days are picked (D87, D137): the first CLOSURE_APPOINTMENTS_SHOWN by time,
+ * and how many in all, in one call to `closure_appointments`. Adding the
+ * closure leaves them booked. A patient is named only to a reader who may see
+ * them.
+ */
+export async function listClosureAppointments(tenant: Tenant, days: ClosureDaysPayload): Promise<ClosureAppointments> {
+  const { data, error } = await tenant.supabase.rpc("closure_appointments", {
+    p_doctor_id: days.doctorId,
+    p_starts_on: days.startsOn,
+    p_ends_on: days.endsOn,
+    p_limit: CLOSURE_APPOINTMENTS_SHOWN,
+  });
+  if (error) throw fromPostgrestError(error);
+  const rows = data as ClosureAppointmentRow[];
+  return {
+    total: rows[0]?.total ?? 0,
+    appointments: rows.map((row) => ({
+      id: row.appointment_id,
+      scheduledAt: row.scheduled_at,
+      doctorName: row.doctor_name,
+      patientName: row.patient_name,
+    })),
+  };
 }
 
 /** Removes one not yet over (D84), and hands it back for the screen's words. */

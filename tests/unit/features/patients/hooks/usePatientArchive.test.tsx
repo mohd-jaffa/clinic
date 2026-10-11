@@ -69,6 +69,26 @@ describe("usePatientArchive (D122 – D125)", () => {
     );
   });
 
+  it("names the day of an appointment still to come when that is why (D140)", async () => {
+    const message = "Cancel or move their appointments to come before archiving them.";
+    client.archive.mockRejectedValue(
+      new ApiError(422, "PATIENT_HAS_APPOINTMENTS", message, "req_2", { scheduledAt: "2026-10-12T18:45:00Z" }),
+    );
+    act(() => void hook.current.archive());
+    await userEvent.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "Archive" }));
+    // 12 Oct at 6:45 PM UTC is already 13 Oct in the clinic.
+    expect(
+      await screen.findByRole("alertdialog", { name: "Rohan Mehta has an appointment on 13 Oct" }),
+    ).toHaveTextContent(message);
+  });
+
+  it("says it plainly when the refusal names no day", async () => {
+    client.archive.mockRejectedValue(new ApiError(422, "PATIENT_HAS_APPOINTMENTS", "Cancel them first.", "req_3"));
+    act(() => void hook.current.archive());
+    await userEvent.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "Archive" }));
+    expect(await screen.findByRole("alertdialog", { name: "That patient wasn’t archived" })).toBeInTheDocument();
+  });
+
   it("restores without asking, busy meanwhile, and says so", async () => {
     let finish: (value: Patient) => void = () => {};
     client.restore.mockImplementation(() => new Promise((resolve) => (finish = resolve)));

@@ -4,7 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { addClosure } from "@/features/clinic/closures";
-import { todayKey } from "@/lib/dates/calendar";
+import { addDaysKey, dayHour, todayKey } from "@/lib/dates/calendar";
 import { getServerEnv } from "@/lib/env/server";
 import {
   addMember,
@@ -34,11 +34,15 @@ const CLINIC_TABLES: readonly { table: string; column: string }[] = [
   { table: "clinic_closures", column: "clinic_id" },
   { table: "patients", column: "clinic_id" },
   { table: "patient_alerts", column: "clinic_id" },
+  { table: "appointments", column: "clinic_id" },
   { table: "audit_logs", column: "clinic_id" },
 ];
 
-/** A clinic's tables only the database itself reads and writes: the patient counter, the doctor scope (0015). */
-const DATABASE_TABLES = ["patient_counters", "patient_doctors"];
+/**
+ * A clinic's tables only the database itself reads and writes: the patient
+ * counter, the doctor scope (0015), the tokens (0017).
+ */
+const DATABASE_TABLES = ["patient_counters", "patient_doctors", "daily_tokens"];
 
 /** The platform's own tables: no signed-in member, nor the DEV's own token, reads them. */
 const PLATFORM_TABLES = ["platform_settings", "trial_claims", "receipt_counters", "error_logs"];
@@ -46,8 +50,9 @@ const PLATFORM_TABLES = ["platform_settings", "trial_claims", "receipt_counters"
 let a: TestClinic;
 let b: TestClinic;
 let developer: SignedIn;
-/** A's patient, which B's owner goes looking for. */
+/** A's patient and their appointment, which B's owner goes looking for. */
 let patientId: string;
+let appointmentId: string;
 
 beforeAll(async () => {
   [a, b] = await Promise.all([registerClinic({ clinicName: "Clinic A" }), registerClinic({ clinicName: "Clinic B" })]);
@@ -64,6 +69,25 @@ beforeAll(async () => {
   await a.owner.tenant.supabase
     .from("patient_alerts")
     .insert({ clinic_id: a.clinicId, patient_id: patientId, kind: "ALLERGY", label: "Penicillin" });
+  const [{ data: type }, { data: doctor }] = await Promise.all([
+    admin().from("appointment_types").select("id").eq("clinic_id", a.clinicId).eq("name", "Consultation").single(),
+    admin().from("doctors").select("id").eq("member_id", a.owner.session.membership!.id).single(),
+  ]);
+  // Tomorrow: today is A's holiday, above.
+  const { data: appointment, error: refused } = await a.owner.tenant.supabase
+    .rpc("create_appointment", {
+      p_appointment: {
+        patient_id: patientId,
+        doctor_id: doctor!.id,
+        appointment_type_id: type!.id,
+        scheduled_at: dayHour(addDaysKey(todayKey(), 1), 10),
+        duration_minutes: 15,
+      },
+      p_idempotency_key: randomUUID(),
+    })
+    .single<{ appointment_id: string }>();
+  if (refused) throw refused;
+  appointmentId = appointment.appointment_id;
   developer = await makeDeveloper();
 });
 
@@ -147,6 +171,23 @@ describe("as clinic B's owner, with a valid token", () => {
       .eq("id", patientId)
       .select("id");
     expect(archived).toEqual([]);
+  });
+
+  it("finds none of A's appointments to change, and books none onto A's patient", async () => {
+    const { supabase } = b.owner.tenant;
+    for (const [name, args] of [
+      ["change_appointment_status", { p_appointment_id: appointmentId, p_status: "CANCELLED", p_reason: "Planted" }],
+      ["mark_arrived", { p_appointment_id: appointmentId }],
+      ["update_appointment", { p_appointment_id: appointmentId, p_changes: { notes: "Planted" } }],
+    ] as const) {
+      const { error } = await supabase.rpc(name, args);
+      expect(error?.hint, name).toBe("RECORD_NOT_FOUND");
+    }
+    const { error: booked } = await supabase.rpc("create_appointment", {
+      p_appointment: { patient_id: patientId, scheduled_at: dayHour(addDaysKey(todayKey(), 2), 10) },
+      p_idempotency_key: randomUUID(),
+    });
+    expect(booked?.hint).toBe("RECORD_NOT_FOUND");
   });
 
   it("reaches none of the platform's tables, nor those only the database reads", async () => {

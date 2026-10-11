@@ -71,6 +71,9 @@ export const PHONE_NUMBER_DIGITS = { min: 6, max: 15 } as const;
 /** Each appointment type's default length, in minutes (plan §28.2). */
 export const APPOINTMENT_MINUTES = { min: 5, max: 480 } as const;
 
+/** A booking starts on these steps of the clock (plan §11.1): 9:00, 9:05, 9:10. Kept equal to 0017's CHECK. */
+export const APPOINTMENT_STEP_MINUTES = 5;
+
 /**
  * The oldest a patient may be, in years (plan §10.1): a date of birth is at
  * most this long ago, and an age at most this many (D100).
@@ -90,6 +93,12 @@ export const IMPORT_BATCH_SIZE = 200;
 
 /** How long a holiday or a doctor's leave may last, both ends counted (D85). */
 export const MAX_CLOSURE_DAYS = 366;
+
+/**
+ * How many of the appointments on a holiday's or leave's days its sheet lists
+ * (D137); how many there are in all is said above them.
+ */
+export const CLOSURE_APPOINTMENTS_SHOWN = 20;
 
 /**
  * How long before another confirmation or password-reset email may go to the

@@ -54,6 +54,60 @@ export const ALERT_KIND_LABELS: Record<AlertKind, string> = {
   MEDICATION: "Medication",
 };
 
+/** Where an appointment came from (plan §11.1, §11.3): booked ahead, or added at the desk. */
+export const APPOINTMENT_SOURCES = ["BOOKED", "WALK_IN"] as const;
+export type AppointmentSource = (typeof APPOINTMENT_SOURCES)[number];
+export const APPOINTMENT_SOURCE_LABELS: Record<AppointmentSource, string> = {
+  BOOKED: "Booked",
+  WALK_IN: "Walk-in",
+};
+
+/** An appointment's status (plan §11.2). */
+export const APPOINTMENT_STATUSES = [
+  "SCHEDULED",
+  "CONFIRMED",
+  "ARRIVED",
+  "IN_PROGRESS",
+  "COMPLETED",
+  "CANCELLED",
+  "NO_SHOW",
+] as const;
+export type AppointmentStatus = (typeof APPOINTMENT_STATUSES)[number];
+export const APPOINTMENT_STATUS_LABELS: Record<AppointmentStatus, string> = {
+  SCHEDULED: "Scheduled",
+  CONFIRMED: "Confirmed",
+  ARRIVED: "Arrived",
+  IN_PROGRESS: "With doctor",
+  COMPLETED: "Done",
+  CANCELLED: "Cancelled",
+  NO_SHOW: "No-show",
+};
+export const APPOINTMENT_STATUS_TONES: Record<AppointmentStatus, StatusTone> = {
+  SCHEDULED: "neutral",
+  CONFIRMED: "live",
+  ARRIVED: "live",
+  IN_PROGRESS: "live",
+  COMPLETED: "neutral",
+  CANCELLED: "neutral",
+  NO_SHOW: "attention",
+};
+
+/**
+ * Where an appointment's status may go next (plan §11.2), mirrored by
+ * `appointment_status_next()` in 0017 and kept equal by tests/db. An arrived
+ * patient who leaves before being seen is a no-show (D138). In progress and
+ * done are reached only through the queue (plan §11.4).
+ */
+export const APPOINTMENT_STATUS_TRANSITIONS: Record<AppointmentStatus, readonly AppointmentStatus[]> = {
+  SCHEDULED: ["CONFIRMED", "ARRIVED", "CANCELLED", "NO_SHOW"],
+  CONFIRMED: ["ARRIVED", "SCHEDULED", "CANCELLED", "NO_SHOW"],
+  ARRIVED: ["IN_PROGRESS", "SCHEDULED", "CANCELLED", "NO_SHOW"],
+  IN_PROGRESS: ["COMPLETED", "ARRIVED"],
+  NO_SHOW: ["ARRIVED"],
+  COMPLETED: [],
+  CANCELLED: [],
+};
+
 /** The paper bills and prescriptions print on (D28). */
 export const PAPER_SIZES = ["A4", "A5"] as const;
 export type PaperSize = (typeof PAPER_SIZES)[number];

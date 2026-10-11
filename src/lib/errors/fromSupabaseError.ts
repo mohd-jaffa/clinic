@@ -90,6 +90,14 @@ const BUSINESS_RULES: ReadonlySet<ErrorMessageCode> = new Set<ErrorMessageCode>(
   // Patients (0015): an archived one is read-only (D103); a doctor no longer on the team.
   "PATIENT_ARCHIVED",
   "DOCTOR_INACTIVE",
+  // Appointments (0017): when and what may be booked, moved and arrived; archiving one with some to come (D140).
+  "APPOINTMENT_ON_CLOSED_DAY",
+  "APPOINTMENT_IN_PAST",
+  "APPOINTMENT_STATUS_NOT_ALLOWED",
+  "APPOINTMENT_NOT_MOVABLE",
+  "APPOINTMENT_NOT_TODAY",
+  "APPOINTMENT_TYPE_INACTIVE",
+  "PATIENT_HAS_APPOINTMENTS",
 ]);
 
 /**

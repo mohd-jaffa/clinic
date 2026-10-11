@@ -3,7 +3,7 @@ import type { z } from "zod";
 
 import { MAX_CLOSURE_DAYS, TEXT_LIMITS } from "@/constants/limits";
 import { VALIDATION_MESSAGES } from "@/constants/messages";
-import { closureSchema, firstIssue, WHOLE_CLINIC } from "@/lib/validation";
+import { closureDaysSchema, closureSchema, firstIssue, WHOLE_CLINIC } from "@/lib/validation";
 
 function messageOf(schema: z.ZodType, value: unknown): string | null {
   const result = schema.safeParse(value);
@@ -54,5 +54,25 @@ describe("closureSchema (plan §9, D85)", () => {
     expect(messageOf(closureSchema, { ...holiday, reason: "x".repeat(TEXT_LIMITS.closureReason + 1) })).toBe(
       VALIDATION_MESSAGES.tooLong("Reason", TEXT_LIMITS.closureReason),
     );
+  });
+});
+
+describe("closureDaysSchema (D137)", () => {
+  it("reads who and the days as a closure would, without a reason", () => {
+    expect(closureDaysSchema.parse({ who: DOCTOR, startsOn: "2026-10-20", endsOn: "2026-10-22" })).toEqual({
+      doctorId: DOCTOR,
+      startsOn: "2026-10-20",
+      endsOn: "2026-10-22",
+    });
+  });
+
+  it("refuses days a closure could not have", () => {
+    expect(
+      closureDaysSchema.safeParse({ who: WHOLE_CLINIC, startsOn: "2026-10-01", endsOn: "2026-10-02" }).success,
+    ).toBe(false);
+    expect(
+      closureDaysSchema.safeParse({ who: WHOLE_CLINIC, startsOn: "2026-10-20", endsOn: "2026-10-19" }).success,
+    ).toBe(false);
+    expect(closureDaysSchema.safeParse({ who: WHOLE_CLINIC, startsOn: "2026-10-20", endsOn: "" }).success).toBe(false);
   });
 });

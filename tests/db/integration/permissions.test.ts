@@ -4,7 +4,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import type { RouteAccess } from "@/constants/permissions";
 import { withClinicRoute } from "@/features/auth/guard";
-import { todayKey } from "@/lib/dates/calendar";
+import { addDaysKey, dayHour, todayKey } from "@/lib/dates/calendar";
 import {
   addMember,
   registerClinic,
@@ -15,7 +15,7 @@ import {
 } from "@tests/support/integration";
 
 /**
- * The permission matrix, so far (plan §34.3, R1.11, R3.8, R4.7): every
+ * The permission matrix, so far (plan §34.3, R1.11, R3.8, R4.7, R5.1): every
  * permission the schema enforces yet, allowed and refused — by the route
  * guard, and by RLS or a function with the member's own token. Each phase
  * adds the rows its tables bring; the patients routes themselves are asked in
@@ -270,6 +270,79 @@ describe("visits.view and visits.edit on a patient's alerts, by RLS", () => {
     expect(read).toHaveLength(1);
     const { data: hidden } = await receptionist.tenant!.supabase.from("patient_alerts").select("id");
     expect(hidden).toEqual([]);
+  });
+});
+
+describe("appointments.view, .create, .edit and .cancel, by the guard, RLS and the 0017 functions", () => {
+  let booker: SignedIn & { memberId: string };
+  let changer: SignedIn & { memberId: string };
+  let canceller: SignedIn & { memberId: string };
+  const fields: Record<string, unknown> = {};
+
+  beforeAll(async () => {
+    [booker, changer, canceller] = await Promise.all([
+      addMember(clinic.clinicId, { permissions: ["patients.view", "appointments.view", "appointments.create"] }),
+      addMember(clinic.clinicId, { permissions: ["patients.view", "appointments.view", "appointments.edit"] }),
+      addMember(clinic.clinicId, { permissions: ["patients.view", "appointments.view", "appointments.cancel"] }),
+    ]);
+    const { supabase } = clinic.owner.tenant;
+    const { data: patient } = await supabase
+      .rpc("create_patient", {
+        p_patient: { full_name: "Booking Matrix", phone: "+919876543212", date_of_birth: "1990-04-12", gender: "MALE" },
+        p_idempotency_key: randomUUID(),
+      })
+      .single<{ patient_id: string }>();
+    const [{ data: type }, { data: doctor }] = await Promise.all([
+      supabase.from("appointment_types").select("id").eq("name", "Consultation").single(),
+      supabase.from("doctors").select("id").eq("member_id", clinic.owner.session.membership!.id).single(),
+    ]);
+    Object.assign(fields, { patient_id: patient!.patient_id, doctor_id: doctor!.id, appointment_type_id: type!.id });
+  });
+
+  let hour = 9;
+  const book = (member: SignedIn) =>
+    member
+      .tenant!.supabase.rpc("create_appointment", {
+        p_appointment: { ...fields, scheduled_at: dayHour(addDaysKey(todayKey(), 1), hour++), duration_minutes: 15 },
+        p_idempotency_key: randomUUID(),
+      })
+      .single<{ appointment_id: string }>();
+  const status = (member: SignedIn, id: string, to: string) =>
+    member.tenant!.supabase.rpc("change_appointment_status", {
+      p_appointment_id: id,
+      p_status: to,
+      p_reason: "Matrix",
+    });
+
+  it("lets each through the guard to what it allows, and no further", async () => {
+    await expect(ask(booker, "appointments.create")).resolves.toMatchObject({ status: 200 });
+    await expect(ask(booker, "appointments.edit")).resolves.toMatchObject({ status: 403 });
+    await expect(ask(changer, "appointments.edit")).resolves.toMatchObject({ status: 200 });
+    await expect(ask(changer, "appointments.cancel")).resolves.toMatchObject({ status: 403 });
+    await expect(ask(canceller, "appointments.cancel")).resolves.toMatchObject({ status: 200 });
+    await expect(ask(manager, "appointments.view", "GET")).resolves.toMatchObject({ status: 403 });
+  });
+
+  it("reads appointments with appointments.view, and none without it", async () => {
+    const { data } = await book(booker);
+    const { data: seen } = await receptionist
+      .tenant!.supabase.from("appointments")
+      .select("id")
+      .eq("id", data!.appointment_id);
+    expect(seen).toHaveLength(1);
+    const { data: unseen } = await manager.tenant!.supabase.from("appointments").select("id");
+    expect(unseen).toEqual([]);
+  });
+
+  it("books with appointments.create, changes with .edit, cancels with .cancel — each and no other", async () => {
+    expect((await book(changer)).error?.hint).toBe("AUTH_PERMISSION_DENIED");
+    const { data } = await book(booker);
+    const id = data!.appointment_id;
+    expect((await status(booker, id, "CONFIRMED")).error?.hint).toBe("AUTH_PERMISSION_DENIED");
+    expect((await status(canceller, id, "CONFIRMED")).error?.hint).toBe("AUTH_PERMISSION_DENIED");
+    expect((await status(changer, id, "CONFIRMED")).error).toBeNull();
+    expect((await status(changer, id, "CANCELLED")).error?.hint).toBe("AUTH_PERMISSION_DENIED");
+    expect((await status(canceller, id, "CANCELLED")).error).toBeNull();
   });
 });
 

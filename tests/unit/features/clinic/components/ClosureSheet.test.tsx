@@ -13,6 +13,12 @@ const { client, doctors } = vi.hoisted(() => ({
 }));
 vi.mock("@/features/clinic/api.client", () => ({ ClosuresClient: client }));
 vi.mock("@/features/team/hooks/useDoctors", () => ({ useDoctors: () => doctors.current }));
+// The appointments already on the days are their own component's to list (D137): here, only what it is handed.
+vi.mock("@/features/clinic/components/ClosureAppointments", () => ({
+  ClosureAppointments: ({ who, startsOn, endsOn }: { who: string; startsOn: string; endsOn: string }) => (
+    <p>{`Appointments for ${who} ${startsOn} – ${endsOn}`}</p>
+  ),
+}));
 
 const { ClosureSheet } = await import("@/features/clinic/components/ClosureSheet");
 
@@ -65,6 +71,7 @@ describe("ClosureSheet (plan §9, D85)", () => {
     expect(dayOf(/^Last day/)).toHaveTextContent("20 Oct 2026");
     await waitFor(() => expect(screen.queryByText("Last day needs a value.")).not.toBeInTheDocument());
     await pick(/^Last day/, "Thursday, 22 Oct 2026");
+    expect(within(sheet()).getByText("Appointments for CLINIC 2026-10-20 – 2026-10-22")).toBeInTheDocument();
     await userEvent.type(within(sheet()).getByRole("textbox", { name: /^Reason/ }), "Diwali");
     await userEvent.click(within(sheet()).getByRole("button", { name: "Save" }));
 

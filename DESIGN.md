@@ -243,7 +243,7 @@ Tailwind's own palette is cleared (`--color-*: initial`), so `bg-land`, `text-in
 - **Ink Chip** (`--chip`, text `--on-chip`): the round chip on a capsule, the chosen day in the calendar, the sliding thumb of `SegmentedControl`, a Quick Actions chip, an avatar on the land. In dark it inverts to pale with dark text.
 
 ### Tertiary
-- **Attention Coral** (`--coral`, text on it `--on-coral`): the danger capsule, the `Pin`, field errors and their border, coral words such as "₹2,500 owed", the attention mark on response and confirm cards, the Delete clinic row's icon, and the icon in a coral band.
+- **Attention Coral** (`--coral`, text on it `--on-coral`): the danger capsule, the `Pin`, field errors and their border, coral words such as "₹2,500 owed", the attention mark on response and confirm cards, the warning mark over the appointments on days a closure is about to close (D137), the Delete clinic row's icon, and the icon in a coral band.
 - **Coral Wash** (`--coral-soft`): the plan band once the plan has ended, the offline band, the attention status pill, the danger `AlertChip`, and the attention `SystemNotice` lobe.
 
 ### Neutral
@@ -258,7 +258,7 @@ Tailwind's own palette is cleared (`--color-*: initial`), so `bg-land`, `text-in
 - `--shadow-tone` is not a colour to paint with; it is the RGB triple `--shadow-raised` is mixed from.
 
 ### Named Rules
-**The Coral Is Attention Rule.** Coral marks only what must not be missed: an allergy, money owed or to bill, an ended plan or view-only clinic, no connection, an error, an action that cannot be undone. A required-field asterisk is muted, not coral. If a screen's coral is not one of these, remove it.
+**The Coral Is Attention Rule.** Coral marks only what must not be missed: an allergy, money owed or to bill, an ended plan or view-only clinic, no connection, an error, an action that cannot be undone, appointments on days about to be closed. A required-field asterisk is muted, not coral. If a screen's coral is not one of these, remove it.
 
 **The No Gold Rule.** No yellow, gold, blue or lilac anywhere, in either theme (the user's fixed constraint). Warnings use coral and their words, not amber.
 

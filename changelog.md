@@ -1777,3 +1777,112 @@ code changes.
 
 ### Blockers
 - None.
+
+## 2026-10-11 — Appointments in the database (R5.1)
+
+Phase 5 starts with appointments in the database. `0017_appointments` adds the
+table, the double-booking guard, the status moves, tokens and the functions the
+booking sheet, the calendar and the queue will call (R5.2 – R5.5). The
+holiday-or-leave sheet now lists the appointments already on the days being
+picked (D87). Asked of the user first: D137 – D143.
+
+### Added
+- `supabase/migrations/0017_appointments.sql`:
+  - `appointments`: patient, doctor, one of the clinic's appointment types, a
+    start and a length (5 – 480 minutes). A booking starts on the clinic's
+    5-minute steps; a walk-in at now. `local_date` is set by trigger in the
+    clinic's timezone. It is never deleted, only cancelled, with a reason,
+    stamped with when and by whom.
+  - **No double-booking (D7):** an exclusion constraint on the doctor and
+    `appointment_slot(start, minutes)` (start included, end not, so
+    back-to-back never clash) over live bookings. A walk-in holds no slot. A
+    clash answers `APPOINTMENT_SLOT_TAKEN` naming the time it clashed with,
+    never whose it is.
+  - **Statuses:** `appointment_status_next()`, kept equal to
+    `APPOINTMENT_STATUS_TRANSITIONS` by tests/db, with Arrived → No-show
+    added (D138). In progress and done are left for the queue (0018).
+  - **Tokens:** `daily_tokens`, one counter per doctor per day under a row
+    lock. A patient keeps their token for the day (D141); moving the
+    appointment to another day or doctor gives it back.
+  - **Functions:** `create_appointment` and `add_walk_in` (once per
+    idempotency key), `update_appointment`, `change_appointment_status`,
+    `mark_arrived`.
+    - Each checks its permission (cancel needs `appointments.cancel`), the
+      doctor scope and that the clinic can write.
+    - Nothing is booked, moved or arrived for an archived patient (D103), on a
+      closed day (a walk-in neither, D139), in the past, or with a doctor or
+      type no longer active.
+    - A confirmed appointment moved to another time or doctor is scheduled
+      again (D142).
+    - A patient is marked Arrived only on the appointment's own day (D143).
+  - **The doctor scope grows:** an appointment's doctor sees its patient
+    (`patient_doctors`, by trigger).
+  - **`check_patient`:** a patient with an appointment still to come is not
+    archived (`PATIENT_HAS_APPOINTMENTS`, naming when, D140).
+  - **`closure_appointments`:** the appointments on a closure's days, the
+    first 20 and how many in all. A patient is named only to someone who may
+    see them.
+- **The holiday-or-leave sheet (D137):**
+  - What it shows: once the days are picked, how many appointments fall on
+    them and the first 20 — patient, day and time, doctor — and that they
+    stay booked. If the check fails, it says so and offers Try again rather
+    than passing for none.
+  - Code: `ClosureAppointments` and `useClosureAppointments` (clinic
+    feature); `GET /api/closures/appointments` (`settings.manage`, the days
+    parsed by the new `closureDaysSchema`); `listClosureAppointments`.
+- **Constants:**
+  - `APPOINTMENT_SOURCES`, `APPOINTMENT_STATUSES` with labels and tones, and
+    `APPOINTMENT_STATUS_TRANSITIONS`;
+  - `APPOINTMENT_STEP_MINUTES` and `CLOSURE_APPOINTMENTS_SHOWN`;
+  - the appointment error codes, mapped as business rules in
+    `fromSupabaseError`.
+
+### Changed
+- **Archiving a patient** refused for an appointment to come titles its card
+  with the day: "Rohan Mehta has an appointment on 12 Oct" (D140).
+- **Plan:**
+  - D137 – D143 in the decision log;
+  - §9 (the closure list), §10.1 (archive), §11.1 (the booking rules and
+    moving), §11.2 (Arrived → No-show) and §11.3 (tokens, own day);
+  - §28.4 (columns, constraint, indexes), §29, §30 (the new route);
+  - the tracker: R5.1 DONE.
+- **DESIGN.md:** coral's list of uses gains the warning mark over the
+  appointments on days about to be closed.
+
+### Speed (§37.1)
+- **Round trips:**
+  - The closure sheet's check waits on the session, then one call
+    (`closure_appointments` gives the rows and their total in one query).
+  - Each function is one call. Its screens and their read-backs come with
+    R5.2 – R5.5.
+  - The archive check runs inside the archive's own update, so it adds no
+    round trip.
+- **Indexes,** each leading with `clinic_id` in the read's own order:
+  - `(clinic_id, local_date, scheduled_at)`: the day, the queue and a
+    closure's days;
+  - `(clinic_id, doctor_id, local_date, scheduled_at)`: a doctor's days and
+    week;
+  - `(clinic_id, patient_id, scheduled_at desc)`: a patient's history and
+    what is to come.
+  - Every foreign key is indexed too: the type, who created, who updated and
+    who cancelled.
+  - The exclusion constraint's gist index answers clashes, and the token
+    counter is a primary-key upsert.
+- **Policies:** `appointments_select` follows the `0015` pattern, so
+  `can_see_patient()` is never asked per row.
+
+### Validation
+- Typecheck, lint and format check passed.
+- Unit and integration tests passed: 2091 tests, coverage 100%. The new
+  integration tests cover booking, clashes, closed days, the past, archived
+  patients and inactive doctors, statuses and permissions, tokens (per doctor,
+  kept for the day, given back on a move), walk-ins, moves, the doctor scope,
+  the archive refusal, the closure list and a view-only clinic. Rows were
+  added to the tenant-isolation test (`appointments`, `daily_tokens`) and the
+  permission matrix (`appointments.*`).
+- E2E: the closures journey gains days that already have appointments,
+  listed to the owner by name and to a settings-only member as "A patient",
+  and still booked after saving.
+
+### Blockers
+- None.
