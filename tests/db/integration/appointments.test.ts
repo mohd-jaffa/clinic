@@ -112,7 +112,7 @@ async function booked(member: SignedIn, fields: Record<string, unknown>): Promis
 const walkIn = (member: SignedIn, fields: Record<string, unknown>, key: string = randomUUID()) =>
   supabaseOf(member)
     .rpc("add_walk_in", { p_walk_in: { appointment_type_id: consultation, ...fields }, p_idempotency_key: key })
-    .single<{ appointment_id: string; created: boolean }>();
+    .single<{ appointment_id: string; token_number: number; created: boolean }>();
 
 const setStatus = (member: SignedIn, id: string, status: string, reason: string | null = null) =>
   supabaseOf(member)
@@ -457,8 +457,13 @@ describe("walk-ins (plan §11.3, D139)", () => {
     expect(added.token_number).toBeGreaterThan(0);
     expect(Math.abs(new Date(added.scheduled_at).getTime() - Date.now())).toBeLessThan(60_000);
 
+    // Sent again, it hands back the same walk-in and its token, the number the patient was told (D173).
     const again = await walkIn(desk, { patient_id: walker, doctor_id: doctors.A }, key);
-    expect(again.data).toEqual({ appointment_id: data!.appointment_id, created: false });
+    expect(again.data).toEqual({
+      appointment_id: data!.appointment_id,
+      token_number: added.token_number,
+      created: false,
+    });
 
     const next = await walkIn(desk, { patient_id: booked1, doctor_id: doctors.A });
     expect((await row(next.data!.appointment_id)).token_number).toBe(added.token_number! + 1);

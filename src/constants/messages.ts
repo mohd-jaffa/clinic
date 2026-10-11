@@ -106,6 +106,7 @@ export const ERROR_MESSAGES = {
   CLOSURE_APPOINTMENTS_LOAD_FAILED: "The appointments on these days couldn't be checked.",
   APPOINTMENTS_LOAD_FAILED: "The appointments couldn't be loaded.",
   APPOINTMENT_LOAD_FAILED: "This appointment couldn't be loaded.",
+  QUEUE_LOAD_FAILED: "The queue couldn't be loaded.",
 
   // The browser could not reach the server (plan §21, D55): said by the client, never sent by the server.
   NETWORK_OFFLINE: "You're offline. Try again once the connection is back — what you typed is still here.",
@@ -604,6 +605,39 @@ export const UI_TEXT = {
     hideCancelled: "Hide cancelled and no-shows",
     /** One appointment, said whole to a screen reader: the grid draws it in a line or two. */
     said: (time: string, patient: string, kind: string, status: string) => `${time}, ${patient}, ${kind}, ${status}`,
+  },
+
+  /** Today's queue (plan §11.4; D168 – D175): who is waiting, with the doctor, still to come and done. */
+  queue: {
+    doctors: "Whose queue",
+    allDoctors: "All doctors",
+    waiting: "Waiting",
+    withDoctor: "With doctor",
+    stillToCome: "Still to come",
+    done: "Done",
+    doneCount: (count: number) => `Done (${count})`,
+    hideDone: "Hide done",
+    token: "Token",
+    booked: "Booked",
+    /** How long a patient has waited, or been with the doctor. */
+    minutes: (count: number) => (count < 1 ? "Just now" : `${count} min`),
+    late: (minutes: number) => `Late ${minutes} min`,
+    withDoctorLine: (doctor: string, minutes: string) => `With ${doctor} · ${minutes}`,
+    doneAt: (time: string) => `Done ${time}`,
+    roomFree: "The room is free",
+    roomFreeHint: "A patient sent in shows here.",
+    noneWaiting: "No one is waiting",
+    noneWithDoctor: "No one is with the doctor",
+    noneToCome: "No one else is booked today",
+    noneDone: "No one is done yet",
+    arrived: "Arrived",
+    markArrived: (patient: string) => `Mark ${patient} arrived`,
+    /** What the card says as a patient joins the queue (D173): the number to tell them. */
+    tokenGiven: (patient: string, token: number, doctor: string) => `${patient} is #${token} with ${doctor}`,
+    notArrived: "That wasn’t marked arrived",
+    addWalkIn: "Add walk-in",
+    walkInTitle: "Add a walk-in",
+    notAdded: "The walk-in wasn’t added",
   },
 
   /** One appointment (plan §11.2; D160 – D167): its detail, and what its status allows. */

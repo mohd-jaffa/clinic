@@ -10,7 +10,7 @@ import { authStub } from "@tests/support/auth";
 import { Providers } from "@tests/support/providers";
 
 const { client, auth, read } = vi.hoisted(() => ({
-  client: { setStatus: vi.fn() },
+  client: { setStatus: vi.fn(), arrive: vi.fn() },
   auth: { current: {} as ReturnType<typeof authStub> },
   read: {
     current: {} as { data?: AppointmentDetail; error?: unknown; mutate: () => void; isValidating: boolean },
@@ -33,6 +33,7 @@ beforeEach(() => {
   auth.current = authStub({ role: "STAFF", permissions: ALL });
   read.current = { data: anAppointmentDetail({ notes: "Bring the X-ray" }), mutate: vi.fn(), isValidating: false };
   client.setStatus.mockImplementation(async ({ status }: { status: string }) => ({ id: "a-1", status }));
+  client.arrive.mockResolvedValue({ id: "a-1", patientId: "p-1", doctorId: "d-1", token: 7 });
 });
 afterEach(() => vi.useRealTimers());
 
@@ -177,5 +178,37 @@ describe("AppointmentSheet (plan §11.2; D160 – D165)", () => {
     draw();
     expect(actions()).not.toBeInTheDocument();
     expect(within(sheet()).queryByText(/view-only/)).not.toBeInTheDocument();
+  });
+
+  it("marks a patient arrived on the day, Arrived leading, and gives their token on the card (D164, D173)", async () => {
+    draw();
+    const group = actions()!;
+    expect(within(group).getAllByRole("button")[0]).toHaveAccessibleName("Arrived");
+    await userEvent.click(within(group).getByRole("button", { name: "Arrived" }));
+    expect(client.arrive).toHaveBeenCalledWith("a-1");
+    await waitFor(() => expect(handlers.onClose).toHaveBeenCalled());
+    expect((await screen.findAllByText("Rohan Mehta is #7 with Maya Rao")).length).toBeGreaterThan(0);
+  });
+
+  it("says why an arrival was refused, and names a doctor gone from the team on the card", async () => {
+    client.arrive.mockRejectedValueOnce(new ApiError(422, "APPOINTMENT_NOT_TODAY", "Only today's.", "req_1"));
+    const { unmount } = draw();
+    await userEvent.click(within(actions()!).getByRole("button", { name: "Arrived" }));
+    expect(await screen.findByText("That wasn’t marked arrived")).toBeInTheDocument();
+    unmount();
+
+    read.current = { data: anAppointmentDetail({ doctorName: null }), mutate: vi.fn(), isValidating: false };
+    draw(aCalendarAppointment({ doctorName: null }));
+    await userEvent.click(within(actions()!).getByRole("button", { name: "Arrived" }));
+    expect((await screen.findAllByText("Rohan Mehta is #7 with No longer on the team")).length).toBeGreaterThan(0);
+  });
+
+  it("leads with Confirm on a day to come, when there is no arriving yet", () => {
+    const later = { day: "2026-10-14", scheduledAt: "2026-10-14T03:30:00Z" };
+    read.current = { data: anAppointmentDetail(later), mutate: vi.fn(), isValidating: false };
+    draw(aCalendarAppointment(later));
+    const buttons = within(actions()!).getAllByRole("button");
+    expect(buttons[0]).toHaveAccessibleName("Confirm");
+    expect(within(actions()!).queryByRole("button", { name: "Arrived" })).not.toBeInTheDocument();
   });
 });

@@ -96,3 +96,18 @@ export interface AppointmentChanged {
   scheduledAt: string;
   minutes: number;
 }
+
+/** An appointment as today's queue reads it (plan §11.4): the calendar's, and when it arrived, went in and was done. */
+export interface QueueAppointment extends CalendarAppointment {
+  arrivedAt: string | null;
+  startedAt: string | null;
+  completedAt: string | null;
+}
+
+/** What a walk-in or an arrival answers (D173): the appointment, its patient and doctor, and the token given. */
+export interface Arrival {
+  id: string;
+  patientId: string;
+  doctorId: string;
+  token: number;
+}

@@ -1,49 +1,32 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { CalendarClock, CalendarPlus, Search } from "lucide-react";
+import { CalendarClock, CalendarPlus } from "lucide-react";
 import { useRef, useState } from "react";
-import {
-  Controller,
-  useForm,
-  useWatch,
-  type Control,
-  type FieldErrors,
-  type Resolver,
-  type UseFormRegister,
-} from "react-hook-form";
+import { Controller, useForm, useWatch, type Resolver } from "react-hook-form";
 
-import { Button } from "@/components/ui/button";
 import { ChoiceField } from "@/components/ui/choice-field";
 import { ClockField } from "@/components/ui/clock-field";
 import { DateField } from "@/components/ui/date-field";
 import { FormSheet } from "@/components/ui/form-sheet";
-import { PhoneField } from "@/components/ui/phone-field";
 import { useResponse } from "@/components/ui/response-card";
-import { Row, RowList } from "@/components/ui/row";
-import { SegmentedControl } from "@/components/ui/segmented-control";
 import { SelectField } from "@/components/ui/select-field";
 import { TextAreaField, TextField } from "@/components/ui/text-field";
-import { FIRST_HOUR_SHOWN, MAX_PATIENT_AGE, TEXT_LIMITS } from "@/constants/limits";
+import { FIRST_HOUR_SHOWN, TEXT_LIMITS } from "@/constants/limits";
 import { UI_TEXT } from "@/constants/messages";
 import { hasAccess } from "@/constants/permissions";
-import { GENDER_LABELS, GENDERS } from "@/constants/statuses";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { useAppointmentTypes } from "@/features/clinic/hooks/useAppointmentTypes";
 import type { AppointmentType } from "@/features/clinic/types";
-import { PatientMatches } from "@/features/patients/components/PatientMatches";
-import type { PatientPrefill } from "@/features/patients/prefill";
 import { useDoctors } from "@/features/team/hooks/useDoctors";
 import { ApiError } from "@/lib/api/client";
 import { requestKeys } from "@/lib/api/request-key";
-import { estimatedBirthDate } from "@/lib/dates/age";
 import { clinicHour, dayKey, minutesOfDay, todayKey } from "@/lib/dates/calendar";
 import { formatDayMonth, formatTime } from "@/lib/format/date";
 import { apiRoutes } from "@/lib/query/keys";
 import { useApiMutation } from "@/lib/query/useApiMutation";
 import { useRevalidate } from "@/lib/query/useRevalidate";
 import {
-  BORN_AS,
   bookingSchema,
   FORM_RESET_OPTIONS,
   HOURS,
@@ -51,67 +34,33 @@ import {
   MINUTES,
   OTHER_LENGTH,
   rescheduleSchema,
-  type BookingInput,
-  type BookingPayload,
-  type PatientMode,
 } from "@/lib/validation";
 
 import { AppointmentsClient } from "../api.client";
+import { NO_PATIENT, refusalOf, type AppointmentForm } from "../form";
+import { usePatientChoice } from "../hooks/usePatientChoice";
 import { appointmentRoutes } from "../keys";
 import type { AppointmentDetail } from "../types";
 import { DoctorDay } from "./DoctorDay";
-import { PatientPicker, type ChosenPatient } from "./PatientPicker";
+import { PatientField, type FixedPatient } from "./PatientField";
 
-const { appointments, appointment: moves, patients } = UI_TEXT;
-const GENDER_OPTIONS = GENDERS.map((gender) => ({ value: gender, label: GENDER_LABELS[gender] }));
-const BORN_OPTIONS = BORN_AS.map((as) => ({ value: as, label: patients.bornAs[as] }));
+const { appointments, appointment: moves } = UI_TEXT;
 const LENGTH_OPTIONS = [
   ...LENGTH_CHOICES.map((minutes) => ({ value: minutes, label: appointments.minutes(Number(minutes)) })),
   { value: OTHER_LENGTH, label: appointments.otherLength },
 ];
 
-/**
- * The sheet's own form: the booking as `bookingSchema` reads it, with every
- * field of a new patient held as a string from the start, though only the
- * mode chosen is read.
- */
-type BookingForm = Omit<BookingInput, "patient"> & {
-  patient: {
-    mode: PatientMode;
-    id: string;
-    fullName: string;
-    phone: string;
-    born: { as: string; date: string; years: string };
-    gender: string;
-  };
-  /** When an appointment being moved is now (D161). */
-  was?: string;
-};
-
-/** The patient a sheet is opened for, and who stays (D161, D166): no search, no **Change**. */
-export type FixedPatient = Pick<ChosenPatient, "id" | "name" | "number">;
-
 /** A type's own length as the chips hold it (D151): its chip, or Other with its minutes. */
-function lengthOf(minutes: number): BookingForm["length"] {
+function lengthOf(minutes: number): AppointmentForm["length"] {
   const chip = LENGTH_CHOICES.find((choice) => Number(choice) === minutes);
   return chip ? { choice: chip, other: "" } : { choice: OTHER_LENGTH, other: String(minutes) };
 }
 
-/** No patient yet: none found, and a new one's fields empty. */
-const NO_PATIENT: BookingForm["patient"] = {
-  mode: "FOUND",
-  id: "",
-  fullName: "",
-  phone: "",
-  born: { as: "DATE", date: "", years: "" },
-  gender: "",
-};
-
 /** What a tap on the calendar's grid starts a booking with (D156): its doctor, its day and its time. */
-export type BookingPrefill = Pick<BookingForm, "doctorId" | "date" | "time">;
+export type BookingPrefill = Pick<AppointmentForm, "doctorId" | "date" | "time">;
 
 /** What the sheet starts with (D149): today, the doctor, the clinic's first type and its length; no time. */
-const blank = (doctorId: string, type: AppointmentType | undefined, patientId = ""): BookingForm => ({
+const blank = (doctorId: string, type: AppointmentType | undefined, patientId = ""): AppointmentForm => ({
   patient: { ...structuredClone(NO_PATIENT), id: patientId },
   doctorId,
   date: todayKey(),
@@ -122,7 +71,7 @@ const blank = (doctorId: string, type: AppointmentType | undefined, patientId = 
 });
 
 /** An appointment being moved, as the sheet starts (D161): where it is now — its doctor, day, time, type, length, notes. */
-function startsAs(moving: AppointmentDetail): BookingForm {
+function startsAs(moving: AppointmentDetail): AppointmentForm {
   const minutes = minutesOfDay(moving.scheduledAt);
   return {
     patient: { ...structuredClone(NO_PATIENT), id: moving.patientId },
@@ -137,15 +86,6 @@ function startsAs(moving: AppointmentDetail): BookingForm {
     notes: moving.notes ?? "",
     was: moving.scheduledAt,
   };
-}
-
-/** What a refusal names (D145, D148): the time it clashed with, the closure it fell on, the patient added. */
-interface Refusal {
-  startsAt?: string;
-  endsAt?: string;
-  reason?: string;
-  wholeClinic?: boolean;
-  patient?: ChosenPatient;
 }
 
 /**
@@ -206,7 +146,6 @@ export function BookingSheet({
 
   const [keys] = useState(requestKeys);
   const [patientKeys] = useState(requestKeys);
-  const [chosen, setChosen] = useState<ChosenPatient | null>(null);
   const startsWith = () => blank(firstDoctor, activeTypes[0], fixed?.id);
   // With the patient fixed, the doctor is the first thing to fill — not the notes, the first typed field.
   const doctorField = useRef<HTMLButtonElement | null>(null);
@@ -220,8 +159,9 @@ export function BookingSheet({
     setError,
     reset,
     formState: { errors, isSubmitted },
-  } = useForm<BookingForm, unknown, BookingPayload>({
-    resolver: zodResolver(moving ? rescheduleSchema : bookingSchema) as Resolver<BookingForm, unknown, BookingPayload>,
+  } = useForm<AppointmentForm>({
+    // The form is held as typed; what is sent is read once more by the route.
+    resolver: zodResolver(moving ? rescheduleSchema : bookingSchema) as unknown as Resolver<AppointmentForm>,
     defaultValues: moving ? startsAs(moving) : { ...startsWith(), ...prefill },
     resetOptions: FORM_RESET_OPTIONS,
   });
@@ -229,35 +169,26 @@ export function BookingSheet({
     control,
     name: ["patient.mode", "doctorId", "date", "length.choice"],
   });
+  const choice = usePatientChoice(setValue, isSubmitted);
   const doctorName = (id: string) => doctors.find((doctor) => doctor.id === id)?.name ?? "";
   // Who and with whom the booking sent is, for the card that answers it: the form still holds it.
   const sent = () => {
     const { patient: given, doctorId: doctor } = getValues();
     return {
       // A patient found is the one chosen, or the one it was opened for: the form refuses a booking without one.
-      patient: given.mode === "NEW" ? given.fullName.trim() : (fixed ?? chosen)!.name,
+      patient: given.mode === "NEW" ? given.fullName.trim() : (fixed ?? choice.chosen)!.name,
       doctor: doctorName(doctor),
     };
   };
 
-  const choose = (patient: ChosenPatient | null) => {
-    setChosen(patient);
-    setValue("patient.mode", "FOUND");
-    setValue("patient.id", patient ? patient.id : "", { shouldValidate: isSubmitted && patient !== null });
-  };
-  const addNew = (prefill: PatientPrefill) => {
-    setValue("patient.mode", "NEW");
-    setValue("patient.fullName", prefill.fullName ?? "");
-    setValue("patient.phone", prefill.phone ?? "");
-  };
   const when = (at: string) => appointments.bookedWhen(formatDayMonth(dayKey(at)), formatTime(at));
 
   /** A booking or a move refused (D145, D148): the time taken, or the closed day, named on the card and the field. */
   const refused = (failure: unknown, fallback: string) => {
     const { doctor } = sent();
-    const named = (failure instanceof ApiError ? failure.details : undefined) as Refusal | undefined;
+    const named = refusalOf(failure);
     // Added before the booking was refused, the patient stays added (D145): go on with them found.
-    if (named?.patient) choose(named.patient);
+    if (named?.patient) choice.choose(named.patient);
     let title = fallback;
     if (failure instanceof ApiError && failure.code === "APPOINTMENT_SLOT_TAKEN" && named?.startsAt && named.endsAt) {
       title = appointments.slotTaken(
@@ -278,6 +209,7 @@ export function BookingSheet({
     revalidate: [
       apiRoutes.appointments.list,
       apiRoutes.appointments.booked,
+      apiRoutes.queue.list,
       apiRoutes.patients.search,
       apiRoutes.patients.matches,
     ],
@@ -285,7 +217,7 @@ export function BookingSheet({
       const { patient: name, doctor } = sent();
       keys.settle();
       patientKeys.settle();
-      setChosen(null);
+      choice.choose(null);
       reset(startsWith());
       onClose();
       void refresh([apiRoutes.patients.summary(booked.patientId), apiRoutes.patients.timeline(booked.patientId)]);
@@ -329,30 +261,16 @@ export function BookingSheet({
       submitIcon={moving ? CalendarClock : CalendarPlus}
       initialFocus={fixed ? doctorField : undefined}
     >
-      {fixed ? (
-        <div>
-          <p className="mb-1.5 text-small font-bold text-ink">{appointments.patientLabel}</p>
-          <RowList label={appointments.patientLabel} look="menu">
-            <Row look="menu" title={fixed.name} subtitle={patients.number(fixed.number)} />
-          </RowList>
-        </div>
-      ) : mode === "NEW" ? (
-        <NewPatientFields
-          control={control}
-          register={register}
-          errors={errors}
-          onChoose={choose}
-          onFind={() => setValue("patient.mode", "FOUND")}
-        />
-      ) : (
-        <PatientPicker
-          chosen={chosen}
-          onChoose={choose}
-          onClear={() => choose(null)}
-          onNew={canAddPatient ? addNew : undefined}
-          error={errors.patient?.id?.message}
-        />
-      )}
+      <PatientField
+        control={control}
+        register={register}
+        errors={errors}
+        setValue={setValue}
+        mode={mode}
+        fixed={fixed}
+        canAdd={canAddPatient}
+        choice={choice}
+      />
       <Controller
         control={control}
         name="doctorId"
@@ -474,116 +392,5 @@ export function BookingSheet({
         {...register("notes")}
       />
     </FormSheet>
-  );
-}
-
-/**
- * A new patient added with the booking (D145): what every patient needs —
- * name, mobile, date of birth or age, gender — the rest waiting for their
- * profile. "Already here?" lists the patients already on the mobile, to
- * choose one of them instead; **Find a patient instead** goes back to the
- * search.
- */
-function NewPatientFields({
-  control,
-  register,
-  errors,
-  onChoose,
-  onFind,
-}: {
-  control: Control<BookingForm, unknown, BookingPayload>;
-  register: UseFormRegister<BookingForm>;
-  errors: FieldErrors<BookingForm>;
-  onChoose: (patient: ChosenPatient) => void;
-  onFind: () => void;
-}) {
-  const [phone, bornAs] = useWatch({ control, name: ["patient.phone", "patient.born.as"] });
-  const today = todayKey();
-  const refused = errors.patient;
-  return (
-    <section aria-label={appointments.newPatient} className="grid gap-5">
-      <div className="flex items-center justify-between gap-3">
-        <h3 className="text-body font-bold text-ink">{appointments.newPatient}</h3>
-        <Button variant="quiet" size="sm" icon={Search} label={appointments.findPatient} onClick={onFind} />
-      </div>
-      <TextField
-        label={patients.nameLabel}
-        autoComplete="off"
-        maxLength={TEXT_LIMITS.personName}
-        required
-        error={refused?.fullName?.message}
-        {...register("patient.fullName")}
-      />
-      <div>
-        <PhoneField
-          label={patients.mobileLabel}
-          autoComplete="off"
-          required
-          error={refused?.phone?.message}
-          {...register("patient.phone")}
-        />
-        <PatientMatches typed={phone} onChoose={onChoose} />
-      </div>
-      <div className="grid gap-3">
-        <Controller
-          control={control}
-          name="patient.born.as"
-          render={({ field }) => (
-            <SegmentedControl
-              label={patients.bornLabel}
-              value={field.value}
-              options={BORN_OPTIONS}
-              onChange={field.onChange}
-            />
-          )}
-        />
-        {bornAs === "AGE" ? (
-          <TextField
-            key="age"
-            label={patients.ageLabel}
-            inputMode="numeric"
-            autoComplete="off"
-            maxLength={3}
-            hint={patients.ageHint}
-            required
-            error={refused?.born?.years?.message}
-            {...register("patient.born.years")}
-          />
-        ) : (
-          <Controller
-            key="date"
-            control={control}
-            name="patient.born.date"
-            render={({ field }) => (
-              <DateField
-                ref={field.ref}
-                label={patients.dateOfBirthLabel}
-                value={field.value}
-                onChange={field.onChange}
-                onBlur={field.onBlur}
-                min={estimatedBirthDate(MAX_PATIENT_AGE, today)}
-                max={today}
-                required
-                error={refused?.born?.date?.message}
-              />
-            )}
-          />
-        )}
-      </div>
-      <Controller
-        control={control}
-        name="patient.gender"
-        render={({ field }) => (
-          <ChoiceField
-            label={patients.genderLabel}
-            value={field.value}
-            options={GENDER_OPTIONS}
-            onChange={field.onChange}
-            required
-            error={refused?.gender?.message}
-          />
-        )}
-      />
-    </section>
   );
 }

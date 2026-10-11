@@ -197,6 +197,14 @@ describe("0017 booking, moving and walk-ins (plan §11.1, §11.3; D103, D139, D1
     );
   });
 
+  it("hands back a walk-in's token — the one it took, or the one it already had for the key (D173)", () => {
+    expect(sql).toContain("returns table (appointment_id uuid, token_number integer, created boolean)");
+    const walkIn = functionBody(sql, "add_walk_in");
+    expect(walkIn).toContain("return query select added, token, false;");
+    expect(walkIn).toContain("returning id, appointments.token_number into added, token;");
+    expect(walkIn).toContain("return query select added, token, true;");
+  });
+
   it("moves only a booking not yet arrived, and schedules a confirmed one moved again", () => {
     const update = functionBody(sql, "update_appointment");
     expect(update).toContain("if was.source <> 'BOOKED' or was.status not in ('SCHEDULED', 'CONFIRMED') then");
@@ -294,6 +302,10 @@ describe("0017 indexes (plan §37.1)", () => {
     expect(sql).toContain("create index appointments_updated_by_idx on public.appointments (updated_by);");
     expect(sql).toContain(
       "create index appointments_cancelled_by_idx on public.appointments (cancelled_by) where cancelled_by is not null;",
+    );
+    // Today's queue: anyone still with a doctor from a day before (plan §11.4).
+    expect(sql).toContain(
+      "create index appointments_in_progress_idx on public.appointments (clinic_id, doctor_id) where status = 'IN_PROGRESS';",
     );
     expect(sql).toContain("create index daily_tokens_clinic_id_idx on public.daily_tokens (clinic_id);");
   });

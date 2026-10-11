@@ -220,6 +220,21 @@ export const cancelSchema = z
 
 export type CancelInput = z.input<typeof cancelSchema>;
 
+/**
+ * A walk-in (plan §11.3, D171): the patient — found, or added there, under
+ * their own key — the doctor and the type. Arrived at now, with the doctor's
+ * next token; the time and length are the database's.
+ */
+export const walkInSchema = z.object({
+  patient,
+  doctorId: chosenId(appointments.doctorLabel),
+  typeId: chosenId(appointments.typeLabel),
+  patientKey: z.uuid().optional(),
+});
+
+export type WalkInInput = z.input<typeof walkInSchema>;
+export type WalkInPayload = z.output<typeof walkInSchema>;
+
 /** A doctor's day, for their booked times (D147): who and which day, never a patient — so in the address. */
 export const bookedTimesSchema = z.object({
   doctorId: z.uuid({ error: VALIDATION_MESSAGES.invalid }),
@@ -247,3 +262,8 @@ export const calendarQuerySchema = z
   });
 
 export type CalendarQuery = z.output<typeof calendarQuerySchema>;
+
+/** Today's queue (plan §11.4, D170): one doctor's, or every doctor's while none is named — so in the address. */
+export const queueQuerySchema = z.object({ doctorId: z.uuid({ error: VALIDATION_MESSAGES.invalid }).optional() });
+
+export type QueueQuery = z.output<typeof queueQuerySchema>;

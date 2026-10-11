@@ -254,6 +254,14 @@ earlier lines are never rewritten.
 | D165 | **Done, the detail closes with a card** (the user): "Confirmed Rohan Mehta · 13 Oct, 10:30 AM" — and the same for a no-show, a cancellation, a move and notes saved — as booking does (D150); the calendar behind shows the new status. | 2026-10-11 |
 | D166 | **The profile names the next appointment, or books one there** (the user): the soonest still to come — its day, time, doctor and kind, opening its detail — or "No appointment to come" with **Book**, which opens the booking sheet on the profile for them (no search, the doctor first to fill); booked, the section shows it. For `appointments.view`; Book for `appointments.create`, not for an archived patient. `GET /api/patients/[id]/summary`, each part only with its permission. | 2026-10-11 |
 | D167 | **The profile's history lists every appointment, newest first** (the user): those still to come, then the past, cancelled ones and no-shows quiet with their reason, 20 at a time, each opening its detail — in the one column (D114) until visits arrive in Phase 6. `GET /api/patients/[id]/timeline`, each part only with its permission. | 2026-10-11 |
+| D168 | **On a phone the queue is stacked, as shaped** (the user, choosing §32.1 over §11.4's tabs): the patients with a doctor in the lake on the land — "The room is free" when no one is in — then Waiting by token, Still to come, and Done folded with its count. | 2026-10-12 |
+| D169 | **From a tablet up the queue's sections sit side by side** (the user): Waiting · With doctor · Still to come · Done — two to a row on a tablet, four on a desktop — a tapped patient opening in the side sheet. The left panel with the visit beside it (§32.1) can come with the visit workspace (R6.2). | 2026-10-12 |
+| D170 | **The queue opens on every doctor's for the desk, a doctor's own for a doctor; anyone may switch** (the user), as the calendar does (D155): capsules on the land, All doctors and one per doctor, shown when there is more than one. | 2026-10-12 |
+| D171 | **The walk-in sheet asks for the patient, the doctor and the type** (the user): the patient found by the search or added there (name, mobile, date of birth or age, gender, with "Already here?"); they arrive now with the doctor's next token. Notes are added later from the detail. `POST /api/appointments/walk-in`. | 2026-10-12 |
+| D172 | **A queue row carries its main action; the rest are in its detail** (the user): Still to come shows **Arrived** on the row, Waiting will show **Send in** (R6.1); No-show and Cancel are in the appointment's detail, a tap away. | 2026-10-12 |
+| D173 | **A patient joining the queue is told their token first** (the user): adding a walk-in, or marking a booking Arrived — on the row or in the detail — closes with "Rohan Mehta is #7 with Maya Rao". `add_walk_in` hands back the token with the appointment. | 2026-10-12 |
+| D174 | **A patient past their time is marked late, and stays** (the user): "10:30 AM · Late 25 min" in coral words, in Still to come until marked Arrived or a no-show. | 2026-10-12 |
+| D175 | **The walk-in sheet starts on the queue's doctor** (the user): the doctor whose queue is showing; on All doctors, the one adding it if they are a doctor, else the clinic's only doctor; otherwise none, to be chosen (as D149). | 2026-10-12 |
 
 ## 3. Users and roles
 
@@ -940,7 +948,19 @@ doctors); a doctor sees their own.
   ("Rahul is still with Dr. Maya — mark him done?").
 - A patient still "With doctor" when the day ends heads the next day's queue,
   to be marked done.
-- Phone: the columns are tabs with counts. Desktop: side by side.
+- Phone: stacked, as the shaped screen (§32.1, D168) — the patients with a
+  doctor in the lake, then Waiting, Still to come, and Done folded. Tablet and
+  desktop: the sections side by side (D169).
+- It opens on every doctor's for the desk and a doctor's own for a doctor;
+  anyone may switch (D170). A row carries its main action — **Arrived**,
+  later **Send in** — and the rest are in the appointment's detail (D172). A
+  patient past their time is marked late (D174).
+
+**R5.5** builds the queue's Waiting, With doctor, Still to come and Done,
+**Add walk-in** (D171, D175) and **Arrived**, each giving the token on its
+card (D173). **Send in**, **Done**, **Back to waiting** and **Next patient**
+come with the visit (R6.1); To bill and the fee at arrival with billing
+(R8.1, R8.6).
 
 Refreshes every `QUEUE_REFRESH_MS` (15 s) and on focus; realtime is later
 (D34).
@@ -1849,8 +1869,8 @@ take an `Idempotency-Key` header.
 | Doctors | `GET /api/doctors` (active doctors, for pickers) |
 | Subscription | `GET /api/subscription` (state, dates, prices, contact, history — owner) · `GET /api/subscription/payments/[id]/receipt.pdf` |
 | Patients | `POST /api/patients` · `POST /api/patients/search` (the list, a page at a time: the words, the tab and the cursor in the body, D98) · `POST /api/patients/matches` (the mobile in the body, D98) · `GET, PATCH /api/patients/[id]` · `POST /api/patients/[id]/archive` · `POST /api/patients/[id]/restore` · `GET /api/patients/[id]/summary` (where they stand: the next appointment, D166; each part only with its permission) · `GET /api/patients/[id]/timeline` (their history, a page at a time: appointments, D167; each part only with its permission) · `GET /api/patients/[id]/last-prescription` · `GET, POST /api/patients/import` (the owner's: the import's limits, D128; a batch) · `POST /api/patients/import/matches` (the clinic's patients on a batch's mobiles, in the body, D98) · `GET, POST /api/patients/[id]/alerts` · `PATCH /api/patients/[id]/alerts/[alertId]` |
-| Appointments | `GET, POST /api/appointments` (the calendar's days, `?from&to&doctorId`, at most a week; a booking, with a new patient in its body when one is added, D145) · `GET /api/appointments/booked` (a doctor's taken times on a day, D147) · `GET, PATCH /api/appointments/[id]` (its detail, D160; its notes, or moved, D161) · `POST /api/appointments/[id]/status` (confirmed, scheduled, a no-show — `appointments.edit` — or cancelled with its reason — `appointments.cancel`, D162) · `POST /api/appointments/[id]/arrived` · `POST /api/appointments/[id]/reminded` · `POST /api/appointments/walk-in` |
-| Queue | `GET /api/queue` · `POST /api/queue/send-in` · `POST /api/queue/done` · `POST /api/queue/next` |
+| Appointments | `GET, POST /api/appointments` (the calendar's days, `?from&to&doctorId`, at most a week; a booking, with a new patient in its body when one is added, D145) · `GET /api/appointments/booked` (a doctor's taken times on a day, D147) · `GET, PATCH /api/appointments/[id]` (its detail, D160; its notes, or moved, D161) · `POST /api/appointments/[id]/status` (confirmed, scheduled, a no-show — `appointments.edit` — or cancelled with its reason — `appointments.cancel`, D162) · `POST /api/appointments/[id]/arrived` (the token, D173) · `POST /api/appointments/[id]/reminded` · `POST /api/appointments/walk-in` (once per key, the token, D171, D173) |
+| Queue | `GET /api/queue` (today's: still to come, arrived, with a doctor, done — and anyone still with a doctor from before; `?doctorId`, D170) · `POST /api/queue/send-in` · `POST /api/queue/done` · `POST /api/queue/next` |
 | Visits | `POST /api/visits` · `GET, PATCH /api/visits/[id]` · `PUT /api/visits/[id]/vitals` · `POST /api/visits/[id]/no-charge` |
 | Prescriptions | `GET, PUT /api/visits/[id]/prescription` · `GET /api/visits/[id]/prescription.pdf` · `GET /api/prescriptions/medicines?q=` · `GET, POST /api/prescription-templates` · `PATCH /api/prescription-templates/[id]` |
 | Treatments | `GET, POST /api/treatments` · `PATCH /api/treatments/[id]` · `POST /api/treatments/[id]/status` |
@@ -2359,7 +2379,7 @@ in the row's one commit (D136).
 | R5.2 | Booking sheet: patient search/quick add, doctor, date, time, type → duration; clash card (D144 – D151) | §11.1 | — | DONE (2026-10-11) |
 | R5.3 | Calendar: day (list / columns per doctor), week, doctor filter, closures shaded; the kit's calendar grid (D66; D152 – D159) | §11.5 | — | DONE (2026-10-11) |
 | R5.4 | Appointment detail: confirm, reschedule, cancel (reason), no-show; the profile's next appointment and its appointments in the history (D101; D160 – D167) | §11.2, §10.3 | — | DONE (2026-10-11) |
-| R5.5 | Walk-ins, arrival tokens, today's queue (Waiting, With doctor, Still to come, Done) with 15 s refresh | §11.3, §11.4 | — | TODO |
+| R5.5 | Walk-ins, arrival tokens, today's queue (Waiting, With doctor, Still to come, Done) with 15 s refresh (D168 – D175) | §11.3, §11.4 | — | DONE (2026-10-12) |
 | R5.6 | Integration (concurrent bookings, concurrent tokens) + E2E | §34 | — | TODO |
 | R5.7 | WhatsApp click-to-send: the link and share helpers; appointment reminders and `reminded_at` | §22.1 | — | TODO |
 

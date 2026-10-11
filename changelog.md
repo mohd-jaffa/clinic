@@ -2179,3 +2179,100 @@ Asked of the user first: D160 – D167.
 
 ### Blockers
 - None.
+
+## 2026-10-12 — Walk-ins and today's queue (R5.5)
+
+The Queue screen is built: walk-ins, arrivals with their tokens, and today's
+queue. Asked of the user first: D168 – D175.
+
+### Added
+- **Today's queue (`Queue`, `/queue`, plan §11.4):**
+  - **Opens on:** every doctor's for the desk; a doctor's own for a member
+    with the Doctor role. Anyone may switch, by the capsules on the land
+    (D170).
+  - **Phone (D168):** stacked, as the shaped screen (§32.1), not §11.4's
+    tabs. The patients with a doctor sit in the lake ("The room is free"
+    when no one is in), then Waiting by token, Still to come, and Done
+    folded with its count.
+  - **Tablet and desktop (D169):** the sections side by side — Waiting, With
+    doctor, Still to come, Done. A tapped patient opens in the side sheet.
+  - **Rows:** Waiting gives the token, name, Walk-in or booked time, and the
+    minutes waited. Still to come gives the booked time — "Late 25 min" in
+    coral words once it has passed (D174) — and **Arrived** on the row
+    (D172). Everything else is in the appointment's detail.
+  - It is read again every 15 s and on focus (`QUEUE_REFRESH_MS`, D34),
+    never while the tab is hidden, and the minutes waited count on in
+    between (`useNow`).
+- **Add walk-in (`WalkInSheet`, D171, D175):** the patient — found, or added
+  there with "Already here?" — the doctor and the type. It starts on the
+  queue's doctor, else the member's own, else the only doctor. It opens from
+  its button or the ＋'s Walk-in (D67). Refused on a closed day, it names the
+  closure; a new patient added before the refusal stays added.
+- **Arrived (D164, D173):** on a Still to come row and in the appointment's
+  detail, on its own day only. A walk-in or an arrival closes with the token
+  first: "Rohan Mehta is #7 with Maya Rao".
+- **Routes:**
+  - `GET /api/queue` (`listQueue`): today's still to come, arrived, with a
+    doctor and done — and anyone still with a doctor from a day before —
+    one doctor's or all;
+  - `POST /api/appointments/[id]/arrived` (`markArrived`);
+  - `POST /api/appointments/walk-in` (`addWalkIn`), once per key.
+- **Schemas, constants, helpers:**
+  - `walkInSchema`, `queueQuerySchema`;
+  - `QUEUE_REFRESH_MS`, `UI_TEXT.queue`, `QUEUE_LOAD_FAILED`;
+  - `queue.ts` (`queueSections`, `minutesSince`, `lateBy`, `walkInDoctor`),
+    `queueKey`, `useQueue`, `useArrival`, `useNow`.
+
+### Changed
+- **`0017` (unreleased, applied again locally):**
+  - `add_walk_in` hands back the token with the appointment — the one it
+    took, or the one it already had for the key;
+  - a partial index on those in progress, for the queue's carry-over.
+- **The booking sheet's patient part** is its own component and hook
+  (`PatientField`, `NewPatientFields`, `usePatientChoice`, `form.ts`), shared
+  with the walk-in sheet. Booking and walk-ins share how the patient is found
+  or added, and how a refusal names them (`patientFor`, `refusedWith`).
+- **A booking and every change to an appointment** refresh today's queue.
+- **Plan:**
+  - D168 – D175 in the decision log;
+  - §11.4 (the phone stacked, the desktop side by side, what R5.5 builds);
+  - §30;
+  - the tracker: R5.5 DONE.
+- **DESIGN.md:** today's queue, a queue row, the walk-in sheet, the lake on
+  the queue.
+
+### Speed (§37.1)
+- **Round trips:**
+  - The queue opens on the session, then everything at once: the doctors,
+    the types and today's queue, all read on the server.
+  - Each 15-second refresh, and each change of doctor, is the session plus
+    one query.
+  - A walk-in waits on the round trips a booking does: two after the
+    session, three with a new patient.
+  - Arrived waits on 4: the session, the appointment as it stands (for the
+    audit's "from"), the arrival, the audit row.
+- **Indexes:**
+  - today's queue is served by `(clinic_id, local_date, scheduled_at)`, and
+    one doctor's by `(clinic_id, doctor_id, local_date, scheduled_at)`;
+  - those still in from a day before by the new partial
+    `appointments_in_progress_idx`.
+
+### Validation
+- Typecheck, lint and format check passed.
+- Unit and integration tests passed, coverage 100%. `queue.test.ts`
+  (integration) covers:
+  - a walk-in once per key with the next token, audited;
+  - a new patient kept and named on a closed day;
+  - `patients.create` and the patient's key;
+  - arrival with its token, on its own day only, with its permission;
+  - the queue's day, its carry-over, one doctor's, and the doctor scope.
+- E2E (phone and desktop, axe), `tests/e2e/queue.spec.ts`:
+  - **Phone:** a walk-in from the ＋ given #1; a booked patient arrived from
+    their row given #2; both waiting by token; the room free.
+  - **Desktop:** the four columns; a late patient marked (the browser's
+    clock set on); one doctor's queue; a patient arrived, then marked a
+    no-show from their detail.
+- The full E2E suite passed: 104 tests.
+
+### Blockers
+- None.

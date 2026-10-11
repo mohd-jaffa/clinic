@@ -10,6 +10,7 @@ vi.mock("@/lib/audit/auditLog", () => ({ logActionSafe }));
 vi.mock("@/features/patients/api", () => ({ addPatient }));
 
 const {
+  addWalkIn,
   bookAppointment,
   changeAppointment,
   changeAppointmentStatus,
@@ -17,6 +18,8 @@ const {
   listAppointments,
   listBookedTimes,
   listPatientAppointments,
+  listQueue,
+  markArrived,
   nextAppointment,
 } = await import("@/features/appointments/api");
 
@@ -559,5 +562,144 @@ describe("listPatientAppointments (D167)", () => {
     expect(page.argsOf(page.queries[0], "range")).toEqual([[20, 40]]);
     const { tenant } = tenantWith({ answer: () => ({ error: postgrestError("42501") }) });
     await expect(listPatientAppointments(tenant, "p-1")).rejects.toMatchObject({ code: "AUTH_PERMISSION_DENIED" });
+  });
+});
+
+describe("addWalkIn (plan §11.3, D171, D173)", () => {
+  const walkIn = { patient: { mode: "FOUND" as const, id: "p-1" }, doctorId: "d-1", typeId: "t-1" };
+  const walked = { data: { appointment_id: "a-7", token_number: 7, created: true } };
+
+  it("adds a walk-in through add_walk_in with its key, audits it with its token, and answers the token", async () => {
+    const { tenant, rpcs } = tenantWith({ rpc: () => walked });
+    expect(await addWalkIn(tenant, walkIn, "key-7", "req_7")).toEqual({
+      id: "a-7",
+      patientId: "p-1",
+      doctorId: "d-1",
+      token: 7,
+    });
+    expect(rpcs).toEqual([
+      {
+        name: "add_walk_in",
+        args: {
+          p_walk_in: { patient_id: "p-1", doctor_id: "d-1", appointment_type_id: "t-1" },
+          p_idempotency_key: "key-7",
+        },
+      },
+    ]);
+    expect(logActionSafe).toHaveBeenCalledWith(tenant, {
+      action: "CREATE",
+      entityType: "appointments",
+      entityId: "a-7",
+      changes: {
+        patient_id: { from: null, to: "p-1" },
+        doctor_id: { from: null, to: "d-1" },
+        appointment_type_id: { from: null, to: "t-1" },
+        token_number: { from: null, to: 7 },
+      },
+      requestId: "req_7",
+    });
+  });
+
+  it("audits nothing for the walk-in a repeat of the key finds", async () => {
+    const { tenant } = tenantWith({ rpc: () => ({ data: { ...walked.data, created: false } }) });
+    expect((await addWalkIn(tenant, walkIn, "key-7")).token).toBe(7);
+    expect(logActionSafe).not.toHaveBeenCalled();
+  });
+
+  it("adds a new patient first, and names them when the walk-in is refused on a closed day", async () => {
+    const { tenant } = tenantWith(
+      {
+        rpc: () => ({
+          error: {
+            ...postgrestError("P0001"),
+            hint: "APPOINTMENT_ON_CLOSED_DAY",
+            details: '{"reason": "Diwali", "wholeClinic": true}',
+          },
+        }),
+      },
+      { permissions: ["patients.create"] },
+    );
+    await expect(addWalkIn(tenant, { ...walkIn, patient: meera, patientKey: "pk-1" }, "key-8")).rejects.toMatchObject({
+      code: "APPOINTMENT_ON_CLOSED_DAY",
+      details: { reason: "Diwali", wholeClinic: true, patient: added },
+    });
+    expect(addPatient).toHaveBeenCalledWith(tenant, meera, "pk-1", undefined);
+  });
+});
+
+describe("markArrived (plan §11.3, D143, D173)", () => {
+  it("arrives a booking through mark_arrived, audits its status and token, and answers the token", async () => {
+    const { tenant, rpcs } = tenantWith({
+      answer: () => ({ data: { ...standing, status: "SCHEDULED" } }),
+      rpc: () => ({ data: { ...standing, status: "ARRIVED", patient_id: "p-1", token_number: 4 } }),
+    });
+    expect(await markArrived(tenant, "a-1", "req_9")).toEqual({
+      id: "a-1",
+      patientId: "p-1",
+      doctorId: "d-1",
+      token: 4,
+    });
+    expect(rpcs).toEqual([{ name: "mark_arrived", args: { p_appointment_id: "a-1" } }]);
+    expect(logActionSafe).toHaveBeenCalledWith(tenant, {
+      action: "STATUS_CHANGE",
+      entityType: "appointments",
+      entityId: "a-1",
+      changes: { status: { from: "SCHEDULED", to: "ARRIVED" }, token_number: { from: null, to: 4 } },
+      requestId: "req_9",
+    });
+  });
+
+  it("audits nothing when it had arrived already, and says why it was refused", async () => {
+    const arrived = { ...standing, status: "ARRIVED", patient_id: "p-1", token_number: 4 };
+    const again = tenantWith({ answer: () => ({ data: arrived }), rpc: () => ({ data: arrived }) });
+    await markArrived(again.tenant, "a-1");
+    expect(logActionSafe).not.toHaveBeenCalled();
+    const { tenant } = tenantWith({
+      answer: () => ({ data: standing }),
+      rpc: () => ({ error: { ...postgrestError("P0001"), hint: "APPOINTMENT_NOT_TODAY" } }),
+    });
+    await expect(markArrived(tenant, "a-1")).rejects.toMatchObject({ code: "APPOINTMENT_NOT_TODAY" });
+  });
+});
+
+describe("listQueue (plan §11.4)", () => {
+  it("reads today's live appointments and anyone still in, with when they arrived, went in and were done, in one query", async () => {
+    const row = {
+      ...calendarRow,
+      status: "ARRIVED",
+      token_number: 3,
+      arrived_at: "2026-10-13T04:40:00+00:00",
+      started_at: null,
+      completed_at: null,
+    };
+    const { tenant, queries, argsOf } = tenantWith({ answer: () => ({ data: [row] }) });
+    expect(await listQueue(tenant, {})).toEqual([
+      {
+        ...asRead,
+        status: "ARRIVED",
+        token: 3,
+        arrivedAt: "2026-10-13T04:40:00+00:00",
+        startedAt: null,
+        completedAt: null,
+      },
+    ]);
+    expect(queries).toHaveLength(1);
+    expect(argsOf(queries[0], "eq")).toEqual([["clinic_id", "clinic-1"]]);
+    expect(argsOf(queries[0], "or")[0][0]).toMatch(/^local_date\.eq\.\d{4}-\d{2}-\d{2},status\.eq\.IN_PROGRESS$/);
+    expect(argsOf(queries[0], "in")).toEqual([
+      ["status", ["SCHEDULED", "CONFIRMED", "ARRIVED", "IN_PROGRESS", "COMPLETED"]],
+    ]);
+    expect(argsOf(queries[0], "order")).toEqual([["scheduled_at"]]);
+  });
+
+  it("keeps to one doctor when asked, and says why it could not read", async () => {
+    const one = tenantWith({ answer: () => ({ data: [] }) });
+    await listQueue(one.tenant, { doctorId: "d-2" });
+    expect(one.argsOf(one.queries[0], "eq")).toEqual([
+      ["clinic_id", "clinic-1"],
+      ["doctor_id", "d-2"],
+    ]);
+    const { tenant } = tenantWith({ answer: () => ({ error: postgrestError("42501") }) });
+    await expect(listQueue(tenant, {})).rejects.toMatchObject({ code: "AUTH_PERMISSION_DENIED" });
   });
 });

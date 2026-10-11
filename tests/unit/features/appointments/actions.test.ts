@@ -21,6 +21,7 @@ describe("isMovable (plan §11.1)", () => {
 describe("actionsFor (plan §11.2; D161 – D164)", () => {
   it("offers a scheduled booking everything its status allows: confirm, reschedule, a no-show once its time has come, cancel", () => {
     expect(actionsFor(anAppointmentDetail(), desk(ALL), now)).toEqual({
+      arrive: true,
       confirm: true,
       reschedule: true,
       editNotes: false,
@@ -43,6 +44,7 @@ describe("actionsFor (plan §11.2; D161 – D164)", () => {
   it("offers notes alone, beside a no-show and cancel, once it cannot move — and nothing but notes when it is over", () => {
     const walkIn = anAppointmentDetail({ source: "WALK_IN", status: "ARRIVED", token: 3 });
     expect(actionsFor(walkIn, desk(ALL), now)).toEqual({
+      arrive: false,
       confirm: false,
       reschedule: false,
       editNotes: true,
@@ -50,6 +52,7 @@ describe("actionsFor (plan §11.2; D161 – D164)", () => {
       cancel: true,
     });
     expect(actionsFor(anAppointmentDetail({ status: "CANCELLED" }), desk(ALL), now)).toEqual({
+      arrive: false,
       confirm: false,
       reschedule: false,
       editNotes: true,
@@ -60,6 +63,7 @@ describe("actionsFor (plan §11.2; D161 – D164)", () => {
 
   it("asks appointments.edit for all but cancel, which asks appointments.cancel", () => {
     expect(actionsFor(anAppointmentDetail(), desk(["appointments.cancel"]), now)).toEqual({
+      arrive: false,
       confirm: false,
       reschedule: false,
       editNotes: false,
@@ -76,11 +80,20 @@ describe("actionsFor (plan §11.2; D161 – D164)", () => {
       false,
       false,
       false,
+      false,
     ]);
   });
 
   it("goes by the clock when no time is given", () => {
     const longAgo = anAppointmentDetail({ day: "2020-01-01", scheduledAt: "2020-01-01T03:30:00Z" });
     expect(actionsFor(longAgo, desk(ALL))).toMatchObject({ confirm: false, noShow: true });
+  });
+
+  it("offers Arrived on the appointment's own day only — a no-show come late too — never to one in with the doctor", () => {
+    expect(actionsFor(anAppointmentDetail({ status: "NO_SHOW" }), desk(ALL), now).arrive).toBe(true);
+    const tomorrow = anAppointmentDetail({ day: "2026-10-14", scheduledAt: "2026-10-14T03:30:00Z" });
+    expect(actionsFor(tomorrow, desk(ALL), now).arrive).toBe(false);
+    expect(actionsFor(anAppointmentDetail({ status: "IN_PROGRESS" }), desk(ALL), now).arrive).toBe(false);
+    expect(actionsFor(anAppointmentDetail({ status: "ARRIVED" }), desk(ALL), now).arrive).toBe(false);
   });
 });

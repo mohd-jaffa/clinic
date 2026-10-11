@@ -1,6 +1,6 @@
 "use client";
 
-import { Ban, CalendarClock, Check, NotebookPen, UserRound, UserX } from "lucide-react";
+import { Ban, CalendarClock, Check, DoorOpen, NotebookPen, UserRound, UserX } from "lucide-react";
 
 import { Button, LinkButton } from "@/components/ui/button";
 import { DetailList, type Detail } from "@/components/ui/detail-list";
@@ -20,6 +20,7 @@ import { formatDayMonth, formatLongDate } from "@/lib/format/date";
 import { actionsFor } from "../actions";
 import { kindOf, timeOf } from "../describe";
 import { useAppointment } from "../hooks/useAppointment";
+import { useArrival } from "../hooks/useArrival";
 import { useStatusChange } from "../hooks/useStatusChange";
 import type { AppointmentDetail, CalendarAppointment } from "../types";
 
@@ -50,13 +51,13 @@ function detailsOf(appointment: CalendarAppointment, detail: AppointmentDetail |
  * An appointment's detail (plan §11.2; D160 – D165), opened from the calendar
  * or a patient's profile: who, when, with whom, what kind and where it
  * stands, its notes, who booked it — and who cancelled it and why. Under it,
- * what its status allows the one looking: **Confirm**, **Reschedule** (or
- * **Edit notes** once it cannot move), **No-show** once its time has come,
- * **Cancel appointment**. An archived patient's appointment says why it
+ * what its status allows the one looking: **Arrived** on its day, giving the
+ * token (D164); **Confirm**, **Reschedule** (or **Edit notes** once it cannot
+ * move), **No-show** once its time has come, **Cancel appointment**. An archived patient's appointment says why it
  * offers nothing (D103); a read-only clinic, why nothing can change.
  *
  * It opens on what the calendar already holds, and fills in as the rest
- * arrives. Confirm and No-show close it, with a card (D165).
+ * arrives. Arrived, Confirm and No-show close it, with a card (D165, D173).
  */
 export function AppointmentSheet({
   appointment,
@@ -81,6 +82,7 @@ export function AppointmentSheet({
   const query = useAppointment(appointment.id);
   const detail = query.data;
   const status = useStatusChange(appointment, onClose);
+  const arrival = useArrival(appointment, onClose);
   const actions = detail && membership ? actionsFor(detail, membership) : undefined;
   const any = actions !== undefined && Object.values(actions).some(Boolean);
 
@@ -88,10 +90,21 @@ export function AppointmentSheet({
   if (actions && any && !readOnly) {
     footer = (
       <div role="group" aria-label={words.actions} className="flex flex-wrap gap-2">
+        {actions.arrive && (
+          <Button
+            label={UI_TEXT.queue.arrived}
+            icon={DoorOpen}
+            size="sm"
+            loading={arrival.arriving}
+            onClick={() => void arrival.arrive()}
+          />
+        )}
         {actions.confirm && (
           <Button
             label={words.confirm}
             icon={Check}
+            // On its day, Arrived leads.
+            variant={actions.arrive ? "secondary" : "primary"}
             size="sm"
             loading={status.submitting}
             onClick={() => void status.confirm()}

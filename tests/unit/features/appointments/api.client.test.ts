@@ -36,4 +36,21 @@ describe("AppointmentsClient (plan §30)", () => {
       ["/api/appointments/a-1/status", "POST", JSON.stringify({ status: "CANCELLED", reason: "Patient asked" })],
     ]);
   });
+
+  it("marks a patient arrived, and adds a walk-in once per key — the patient in the body (D98)", async () => {
+    mockFetch.mockResolvedValue({ ok: true, status: 200, json: async () => ({ data: { token: 7 } }) });
+    expect(await AppointmentsClient.arrive("a-1")).toEqual({ token: 7 });
+    const input = { patient: { mode: "FOUND" as const, id: "p-1" }, doctorId: "d-1", typeId: "t-1" };
+    await AppointmentsClient.addWalkIn({ input, key: "3f2b1c4d-0a1b-4c2d-8e3f-1a2b3c4d5e6f" });
+    const [[arrived, arrivedInit], [walked, walkedInit]] = mockFetch.mock.calls as [string, RequestInit][];
+    expect([arrived, arrivedInit.method]).toEqual(["/api/appointments/a-1/arrived", "POST"]);
+    expect([walked, walkedInit.method, walkedInit.body]).toEqual([
+      "/api/appointments/walk-in",
+      "POST",
+      JSON.stringify(input),
+    ]);
+    expect((walkedInit.headers as Record<string, string>)["Idempotency-Key"]).toBe(
+      "3f2b1c4d-0a1b-4c2d-8e3f-1a2b3c4d5e6f",
+    );
+  });
 });

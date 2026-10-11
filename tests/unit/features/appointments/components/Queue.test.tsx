@@ -1,0 +1,210 @@
+import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import type { CalendarAppointment, QueueAppointment } from "@/features/appointments/types";
+import { aQueueAppointment } from "@tests/support/appointments";
+import { authStub } from "@tests/support/auth";
+import { Providers } from "@tests/support/providers";
+
+const { auth, adding, query, doctors, asked, sheet } = vi.hoisted(() => ({
+  auth: { current: {} as ReturnType<typeof authStub> },
+  adding: { current: { open: false, show: vi.fn(), close: vi.fn() } },
+  query: {
+    current: {
+      data: [] as QueueAppointment[] | undefined,
+      error: undefined as unknown,
+      isLoading: false,
+      isValidating: false,
+      mutate: vi.fn(),
+    },
+  },
+  doctors: { current: [] as { id: string; name: string }[] | undefined },
+  asked: vi.fn(),
+  sheet: { doctorId: undefined as string | undefined },
+}));
+vi.mock("@/features/auth/AuthProvider", () => ({ useAuth: () => auth.current }));
+vi.mock("@/hooks/useAddForm", () => ({ useAddForm: () => adding.current }));
+vi.mock("@/features/team/hooks/useDoctors", () => ({ useDoctors: () => ({ data: doctors.current }) }));
+vi.mock("@/features/appointments/hooks/useQueue", () => ({
+  useQueue: (doctorId: string) => {
+    asked(doctorId);
+    return query.current;
+  },
+}));
+vi.mock("@/features/appointments/components/WalkInSheet", () => ({
+  WalkInSheet: ({ open, doctorId }: { open: boolean; doctorId: string }) => {
+    sheet.doctorId = doctorId;
+    return open ? <div role="dialog" aria-label="Add a walk-in" /> : null;
+  },
+}));
+vi.mock("@/features/appointments/components/AppointmentPanel", () => ({
+  AppointmentPanel: ({ appointment, open }: { appointment: CalendarAppointment | null; open: boolean }) =>
+    open ? <div role="dialog" aria-label={appointment!.patientName} /> : null,
+}));
+
+const { Queue } = await import("@/features/appointments/components/Queue");
+
+const draw = () =>
+  render(
+    <Providers>
+      <Queue />
+    </Providers>,
+  );
+
+const today = [
+  aQueueAppointment({
+    id: "in",
+    patientName: "Rohan Mehta",
+    status: "IN_PROGRESS",
+    token: 3,
+    startedAt: "2026-10-13T05:17:00Z",
+  }),
+  aQueueAppointment({
+    id: "wait",
+    patientName: "Anita Rao",
+    status: "ARRIVED",
+    source: "WALK_IN",
+    token: 4,
+    arrivedAt: "2026-10-13T05:05:00Z",
+  }),
+  aQueueAppointment({ id: "come", patientName: "Kiran Das", scheduledAt: "2026-10-13T06:30:00Z" }),
+  aQueueAppointment({
+    id: "done",
+    patientName: "Farah Khan",
+    status: "COMPLETED",
+    token: 1,
+    completedAt: "2026-10-13T04:20:00Z",
+  }),
+];
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  // Now, in Kochi: Tuesday 13 October 2026, 11:00 AM.
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date("2026-10-13T05:30:00Z"));
+  auth.current = authStub();
+  adding.current = { open: false, show: vi.fn(), close: vi.fn() };
+  doctors.current = [
+    { id: "d-1", name: "Maya Rao" },
+    { id: "d-2", name: "Arun Sen" },
+  ];
+  query.current = { data: today, error: undefined, isLoading: false, isValidating: false, mutate: vi.fn() };
+  sheet.doctorId = undefined;
+});
+afterEach(() => vi.useRealTimers());
+
+const section = (name: RegExp) => screen.getByRole("heading", { name }).closest("section")!;
+
+describe("Queue (plan §11.4; D168 – D175)", () => {
+  it("opens on every doctor's for the desk: who is in in the lake, then Waiting, With doctor, Still to come and Done", () => {
+    draw();
+    expect(asked).toHaveBeenLastCalledWith("");
+    expect(screen.getByRole("heading", { level: 1, name: "Queue" })).toBeInTheDocument();
+    expect(screen.getByText("Tuesday, 13 Oct 2026")).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "All doctors" })).toBeChecked();
+
+    const lake = screen.getByRole("region", { name: "With doctor: Rohan Mehta" });
+    expect(lake).toHaveTextContent("Token 03Rohan MehtaWith Maya Rao · 13 min");
+    expect(within(section(/^Waiting/)).getByRole("listitem")).toHaveTextContent("Anita Rao");
+    expect(within(section(/^With doctor/)).getByRole("listitem")).toHaveTextContent("Rohan Mehta");
+    expect(within(section(/^Still to come/)).getByRole("listitem")).toHaveTextContent("Kiran Das");
+    expect(within(section(/^Done/)).getByRole("listitem")).toHaveTextContent("Farah Khan");
+    expect(screen.getByRole("button", { name: "Done (1)" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Mark Kiran Das arrived" })).toBeInTheDocument();
+  });
+
+  it("says the room is free when no one is in, each section when it holds no one, and no Done to open", () => {
+    query.current.data = [];
+    draw();
+    expect(screen.getByRole("region", { name: "With doctor" })).toHaveTextContent("The room is free");
+    expect(screen.getByText("No one is waiting")).toBeInTheDocument();
+    expect(screen.getByText("No one is with the doctor")).toBeInTheDocument();
+    expect(screen.getByText("No one else is booked today")).toBeInTheDocument();
+    expect(screen.getByText("No one is done yet")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Done/ })).not.toBeInTheDocument();
+  });
+
+  it("opens a doctor on their own, switches doctors, and has no switcher with one doctor (D170)", async () => {
+    auth.current = authStub({ role: "DOCTOR" });
+    doctors.current = [
+      { id: "d-1", name: "Maya Rao" },
+      { id: "doctor-1", name: "Arun Sen" },
+    ];
+    const { unmount } = draw();
+    expect(asked).toHaveBeenLastCalledWith("doctor-1");
+    expect(screen.getByRole("radio", { name: "Arun Sen" })).toBeChecked();
+    expect(sheet.doctorId).toBe("doctor-1");
+    await userEvent.click(screen.getByRole("radio", { name: "Maya Rao" }));
+    expect(asked).toHaveBeenLastCalledWith("d-1");
+    unmount();
+
+    doctors.current = [{ id: "d-1", name: "Maya Rao" }];
+    draw();
+    expect(screen.queryByRole("radiogroup", { name: "Whose queue" })).not.toBeInTheDocument();
+  });
+
+  it("opens a patient tapped in any section", async () => {
+    draw();
+    await userEvent.click(within(section(/^Waiting/)).getByRole("button", { name: "Anita Rao" }));
+    expect(screen.getByRole("dialog", { name: "Anita Rao" })).toBeInTheDocument();
+  });
+
+  it("adds a walk-in from its button, on the doctor showing (D171, D175)", async () => {
+    draw();
+    await userEvent.click(screen.getByRole("button", { name: "Add walk-in" }));
+    expect(adding.current.show).toHaveBeenCalled();
+    expect(sheet.doctorId).toBe("");
+  });
+
+  it("adds and arrives nothing for a member who may not, nor in a view-only clinic, saying why", () => {
+    auth.current = authStub({ role: "STAFF", permissions: ["patients.view", "appointments.view"] });
+    const { unmount } = draw();
+    expect(screen.queryByRole("button", { name: "Add walk-in" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /arrived/ })).not.toBeInTheDocument();
+    unmount();
+
+    const viewOnly = authStub();
+    auth.current = { ...viewOnly, subscription: { ...viewOnly.subscription!, state: "READ_ONLY" } };
+    draw();
+    expect(screen.queryByRole("button", { name: "Add walk-in" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /arrived/ })).not.toBeInTheDocument();
+    expect(screen.getByText(/view-only/)).toBeInTheDocument();
+  });
+
+  it("waits for the doctors without failing, and for someone with no membership opens on every doctor", () => {
+    doctors.current = undefined;
+    auth.current = { ...authStub(), membership: null };
+    draw();
+    expect(asked).toHaveBeenLastCalledWith("");
+  });
+
+  it("stands in while it loads, and says when it could not, with Try again", async () => {
+    query.current = { data: undefined, error: undefined, isLoading: true, isValidating: false, mutate: vi.fn() };
+    const { rerender } = draw();
+    expect(screen.getByRole("region", { name: "Loading…" })).toBeInTheDocument();
+    query.current = {
+      data: undefined,
+      error: new Error("down"),
+      isLoading: false,
+      isValidating: false,
+      mutate: vi.fn(),
+    };
+    rerender(
+      <Providers>
+        <Queue />
+      </Providers>,
+    );
+    expect(screen.getByText("The queue couldn't be loaded.")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Try again" }));
+    expect(query.current.mutate).toHaveBeenCalled();
+  });
+
+  it("names a doctor gone from the team in the lake", () => {
+    query.current.data = [aQueueAppointment({ status: "IN_PROGRESS", token: 3, doctorName: null })];
+    draw();
+    expect(screen.getByRole("region", { name: "With doctor: Rohan Mehta" })).toHaveTextContent(
+      "With No longer on the team",
+    );
+  });
+});

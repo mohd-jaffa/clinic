@@ -80,6 +80,12 @@ export const apiRoutes = {
     booked: "/api/appointments/booked",
     one: (id: string) => `/api/appointments/${id}`,
     status: (id: string) => `/api/appointments/${id}/status`,
+    arrived: (id: string) => `/api/appointments/${id}/arrived`,
+    walkIn: "/api/appointments/walk-in",
+  },
+  // Today's queue (plan §11.4): one doctor's, or every doctor's.
+  queue: {
+    list: "/api/queue",
   },
 } as const;
 

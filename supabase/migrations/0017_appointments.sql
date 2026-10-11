@@ -120,6 +120,8 @@ create index appointments_appointment_type_id_idx on public.appointments (appoin
 create index appointments_created_by_idx on public.appointments (created_by);
 create index appointments_updated_by_idx on public.appointments (updated_by);
 create index appointments_cancelled_by_idx on public.appointments (cancelled_by) where cancelled_by is not null;
+-- Today's queue also holds whoever is still with a doctor from a day before (plan §11.4): few, kept apart.
+create index appointments_in_progress_idx on public.appointments (clinic_id, doctor_id) where status = 'IN_PROGRESS';
 
 -- ------------------------------------------------------------
 -- 2. Tokens (plan §11.3)
@@ -587,9 +589,10 @@ $$;
 -- refused on a clinic holiday or the doctor's leave like a booking (D139).
 -- Arrived at now, the type's own length, the doctor's next token of the day;
 -- it holds no slot. Once per idempotency key. Hands back the appointment,
--- and whether this call added it.
+-- its token — the number the patient is told (D173) — and whether this call
+-- added it.
 create or replace function public.add_walk_in(p_walk_in jsonb, p_idempotency_key uuid)
-returns table (appointment_id uuid, created boolean)
+returns table (appointment_id uuid, token_number integer, created boolean)
 language plpgsql
 security definer
 set search_path = ''
@@ -599,6 +602,7 @@ declare
   given public.appointments;
   minutes integer;
   added uuid;
+  token integer;
 begin
   if clinic is null or not public.has_permission('appointments.create') then
     raise exception 'Adding a walk-in needs appointments.create' using hint = 'AUTH_PERMISSION_DENIED';
@@ -609,11 +613,11 @@ begin
   perform public.require_clinic_write(clinic);
 
   perform pg_advisory_xact_lock(hashtextextended(clinic::text || ':' || p_idempotency_key::text, 0));
-  select appointment.id into added
+  select appointment.id, appointment.token_number into added, token
     from public.appointments as appointment
    where appointment.clinic_id = clinic and appointment.idempotency_key = p_idempotency_key;
   if added is not null then
-    return query select added, false;
+    return query select added, token, false;
     return;
   end if;
 
@@ -633,8 +637,8 @@ begin
     clinic, given.patient_id, given.doctor_id, 'WALK_IN', given.appointment_type_id, now(), minutes, 'ARRIVED',
     public.next_token(clinic, given.doctor_id, public.clinic_today(clinic)), now(), given.notes, p_idempotency_key
   )
-  returning id into added;
-  return query select added, true;
+  returning id, appointments.token_number into added, token;
+  return query select added, token, true;
 end;
 $$;
 

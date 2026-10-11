@@ -11,8 +11,10 @@ import {
   HOURS,
   MINUTES,
   OTHER_REASON,
+  queueQuerySchema,
   rescheduleSchema,
   statusChangeSchema,
+  walkInSchema,
   type BookingInput,
   type RescheduleInput,
 } from "@/lib/validation";
@@ -258,5 +260,45 @@ describe("cancelSchema (D162)", () => {
       ["other", "Reason needs a value."],
     ]);
     expect(cancelSchema.safeParse(null).error?.issues[0].message).toBe("That value is not valid.");
+  });
+});
+
+describe("walkInSchema (plan §11.3, D171)", () => {
+  it("reads the patient — found, or new — the doctor and the type", () => {
+    expect(walkInSchema.parse({ patient: { mode: "FOUND", id: PATIENT }, doctorId: DOCTOR, typeId: TYPE })).toEqual({
+      patient: { mode: "FOUND", id: PATIENT },
+      doctorId: DOCTOR,
+      typeId: TYPE,
+    });
+    const added = walkInSchema.parse({
+      patient: {
+        mode: "NEW",
+        fullName: " Meera  Pillai ",
+        phone: "98765 43210",
+        born: { as: "AGE", years: "34" },
+        gender: "FEMALE",
+      },
+      doctorId: DOCTOR,
+      typeId: TYPE,
+      patientKey: PATIENT,
+    });
+    expect(added.patient).toMatchObject({ mode: "NEW", fullName: "Meera Pillai", phone: "+919876543210" });
+  });
+
+  it("asks for the patient, the doctor and the type", () => {
+    const result = walkInSchema.safeParse({ patient: { mode: "FOUND", id: "" }, doctorId: "", typeId: "" });
+    expect(result.error?.issues.map((issue) => [issue.path.join("."), issue.message])).toEqual([
+      ["patient.id", "Choose patient."],
+      ["doctorId", "Choose doctor."],
+      ["typeId", "Choose type."],
+    ]);
+  });
+});
+
+describe("queueQuerySchema (plan §11.4)", () => {
+  it("reads one doctor, or every doctor while none is named", () => {
+    expect(queueQuerySchema.parse({})).toEqual({});
+    expect(queueQuerySchema.parse({ doctorId: DOCTOR })).toEqual({ doctorId: DOCTOR });
+    expect(queueQuerySchema.safeParse({ doctorId: "x" }).error?.issues[0].message).toBe("That value is not valid.");
   });
 });

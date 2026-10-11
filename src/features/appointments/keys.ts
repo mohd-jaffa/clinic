@@ -10,13 +10,20 @@ export const calendarKey = (from: string, to: string, doctorId: string) =>
 
 /**
  * Every read a change to an appointment makes stale: the calendar's days, the
- * doctors' taken times, the appointment itself, and its patient's next
- * appointment and history.
+ * doctors' taken times, the appointment itself, today's queue, and its
+ * patient's next appointment and history.
  */
 export const appointmentRoutes = ({ id, patientId }: { id: string; patientId: string }) => [
   apiRoutes.appointments.list,
   apiRoutes.appointments.booked,
   apiRoutes.appointments.one(id),
+  apiRoutes.queue.list,
   apiRoutes.patients.summary(patientId),
   apiRoutes.patients.timeline(patientId),
 ];
+
+/**
+ * Today's queue's key (plan §11.4, D170): the doctor — none for every doctor —
+ * so the page's first read and the screen's hook ask for the very same thing.
+ */
+export const queueKey = (doctorId: string) => withQuery(apiRoutes.queue.list, { doctorId });

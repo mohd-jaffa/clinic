@@ -1,4 +1,4 @@
-import type { AppointmentDetail, CalendarAppointment } from "@/features/appointments/types";
+import type { AppointmentDetail, CalendarAppointment, QueueAppointment } from "@/features/appointments/types";
 
 /** An appointment as the calendar reads it, for a component test. */
 export function aCalendarAppointment(overrides: Partial<CalendarAppointment> = {}): CalendarAppointment {
@@ -34,4 +34,9 @@ export function anAppointmentDetail(overrides: Partial<AppointmentDetail> = {}):
     cancelReason: null,
     ...overrides,
   };
+}
+
+/** An appointment as today's queue reads it, for a component test. */
+export function aQueueAppointment(overrides: Partial<QueueAppointment> = {}): QueueAppointment {
+  return { ...aCalendarAppointment(), arrivedAt: null, startedAt: null, completedAt: null, ...overrides };
 }

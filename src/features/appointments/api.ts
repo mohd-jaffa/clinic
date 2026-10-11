@@ -1,3 +1,5 @@
+import type { PostgrestError } from "@supabase/supabase-js";
+
 import { hasAccess } from "@/constants/permissions";
 import type { AppointmentStatus } from "@/constants/statuses";
 import { addPatient } from "@/features/patients/api";
@@ -14,18 +16,22 @@ import type {
   BookedTimesPayload,
   BookingPayload,
   CalendarQuery,
+  QueueQuery,
   StatusChangePayload,
+  WalkInPayload,
 } from "@/lib/validation";
 
 import type {
   AppointmentChanged,
   AppointmentDetail,
   AppointmentDetailRow,
+  Arrival,
   Booked,
   BookedTime,
   CalendarAppointment,
   CalendarAppointmentRow,
   PatientAppointment,
+  QueueAppointment,
 } from "./types";
 
 /**
@@ -47,6 +53,40 @@ const WRITTEN = [
 ] as const;
 
 /**
+ * The patient a booking or a walk-in is for (D144, D145): one found, or one
+ * added first under their own key — with `patients.create` — whose read-back
+ * runs beside what follows.
+ */
+async function patientFor(
+  tenant: Tenant,
+  patient: BookingPayload["patient"],
+  patientKey: string | undefined,
+  requestId?: string,
+): Promise<{ patientId: string; recorded: Promise<PatientListItem> | null }> {
+  if (patient.mode === "FOUND") return { patientId: patient.id, recorded: null };
+  if (!hasAccess(tenant, "patients.create")) throw authorizationError();
+  if (!patientKey) throw validationError("IDEMPOTENCY_KEY_REQUIRED");
+  const added = await addPatient(tenant, patient, patientKey, requestId);
+  return { patientId: added.id, recorded: added.recorded };
+}
+
+/**
+ * Why a booking or a walk-in was refused, in its own words — naming the
+ * patient added before it, who stays added, so the sheet goes on with them
+ * found and sent again adds no one twice (D145).
+ */
+function refusedWith(error: PostgrestError, patient: PatientListItem | null): AppError {
+  const refused = fromPostgrestError(error);
+  if (!patient) return refused;
+  return new AppError({
+    kind: refused.kind,
+    code: refused.code,
+    details: { ...(refused.details as object | undefined), patient },
+    cause: error,
+  });
+}
+
+/**
  * Books an appointment (plan §11.1; D144, D145). A patient added with it is
  * added first, under their own key, and stays added if the booking is
  * refused — the refusal then names them, so the sheet goes on with them
@@ -60,18 +100,7 @@ export async function bookAppointment(
   idempotencyKey: string,
   requestId?: string,
 ): Promise<Booked> {
-  let patientId: string;
-  let recorded: Promise<PatientListItem> | null = null;
-  if (booking.patient.mode === "FOUND") {
-    patientId = booking.patient.id;
-  } else {
-    if (!hasAccess(tenant, "patients.create")) throw authorizationError();
-    if (!booking.patientKey) throw validationError("IDEMPOTENCY_KEY_REQUIRED");
-    const added = await addPatient(tenant, booking.patient, booking.patientKey, requestId);
-    patientId = added.id;
-    recorded = added.recorded;
-  }
-
+  const { patientId, recorded } = await patientFor(tenant, booking.patient, booking.patientKey, requestId);
   const values = {
     patient_id: patientId,
     doctor_id: booking.doctorId,
@@ -86,16 +115,7 @@ export async function bookAppointment(
       .single<{ appointment_id: string; created: boolean }>(),
     recorded,
   ]);
-  if (answer.error) {
-    const refused = fromPostgrestError(answer.error);
-    if (!patient) throw refused;
-    throw new AppError({
-      kind: refused.kind,
-      code: refused.code,
-      details: { ...(refused.details as object | undefined), patient },
-      cause: answer.error,
-    });
-  }
+  if (answer.error) throw refusedWith(answer.error, patient);
 
   const { appointment_id: id, created } = answer.data;
   if (created) {
@@ -108,6 +128,46 @@ export async function bookAppointment(
     });
   }
   return { id, patientId, scheduledAt: booking.scheduledAt, minutes: booking.minutes };
+}
+
+/** What a walk-in is written with, and audited by. */
+const WALKED_IN = ["patient_id", "doctor_id", "appointment_type_id", "token_number"] as const;
+
+/**
+ * Adds a walk-in (plan §11.3; D139, D171) through `add_walk_in`: arrived at
+ * now, its type's length, the doctor's next token of the day — refused on a
+ * closed day like a booking. A patient added with it is added first, as a
+ * booking's is. Once per idempotency key; audited with its values and its
+ * token. Answers the token, to tell the patient (D173). Waits on the round
+ * trips a booking does.
+ */
+export async function addWalkIn(
+  tenant: Tenant,
+  walkIn: WalkInPayload,
+  idempotencyKey: string,
+  requestId?: string,
+): Promise<Arrival> {
+  const { patientId, recorded } = await patientFor(tenant, walkIn.patient, walkIn.patientKey, requestId);
+  const values = { patient_id: patientId, doctor_id: walkIn.doctorId, appointment_type_id: walkIn.typeId };
+  const [answer, patient] = await allInOrder([
+    tenant.supabase
+      .rpc("add_walk_in", { p_walk_in: values, p_idempotency_key: idempotencyKey })
+      .single<{ appointment_id: string; token_number: number; created: boolean }>(),
+    recorded,
+  ]);
+  if (answer.error) throw refusedWith(answer.error, patient);
+
+  const { appointment_id: id, token_number: token, created } = answer.data;
+  if (created) {
+    await logActionSafe(tenant, {
+      action: "CREATE",
+      entityType: TABLE,
+      entityId: id,
+      changes: auditedChanges(null, { ...values, token_number: token }, WALKED_IN),
+      requestId,
+    });
+  }
+  return { id, patientId, doctorId: walkIn.doctorId, token };
 }
 
 /** A doctor's taken times on a day (D147), by time, in one call: never whose they are. */
@@ -319,6 +379,72 @@ export async function changeAppointmentStatus(
     });
   }
   return toChanged(data);
+}
+
+/**
+ * A booked patient at the desk (plan §11.3; D141, D143) through
+ * `mark_arrived`: on the appointment's own day, with the doctor's next token —
+ * or the one they already hold today. Audited as a status change, with the
+ * token. Answers the token, to tell the patient (D173). Waits on three round
+ * trips after the session, as a status change does.
+ */
+export async function markArrived(tenant: Tenant, id: string, requestId?: string): Promise<Arrival> {
+  const before = await standing(tenant, id);
+  const { data, error } = await tenant.supabase
+    .rpc("mark_arrived", { p_appointment_id: id })
+    .single<ChangedRow & { patient_id: string; token_number: number }>();
+  if (error) throw fromPostgrestError(error);
+  if (data.status !== before.status) {
+    await logActionSafe(tenant, {
+      action: "STATUS_CHANGE",
+      entityType: TABLE,
+      entityId: id,
+      changes: {
+        status: { from: before.status, to: data.status },
+        token_number: { from: null, to: data.token_number },
+      },
+      requestId,
+    });
+  }
+  return { id, patientId: data.patient_id, doctorId: data.doctor_id, token: data.token_number };
+}
+
+/** What today's queue holds (plan §11.4): those still to come, arrived, with a doctor, and done — none cancelled. */
+const QUEUE_STATUSES: readonly AppointmentStatus[] = ["SCHEDULED", "CONFIRMED", "ARRIVED", "IN_PROGRESS", "COMPLETED"];
+
+/** An appointment in the queue: the calendar's, and when it arrived, went in and was done. */
+const QUEUE_COLUMNS = `${CALENDAR_COLUMNS}, arrived_at, started_at, completed_at`;
+
+/**
+ * Today's queue (plan §11.4; D168, D170): today's appointments still to come,
+ * arrived, with a doctor or done — and anyone still with a doctor from a day
+ * before, who heads it — one doctor's or every doctor's, by time. Read as the
+ * member, so a doctor finds only their own patients' (D3). One query, served
+ * by the index on (clinic_id, local_date, scheduled_at) — or the doctor's —
+ * and the partial one on those in progress.
+ */
+export async function listQueue(tenant: Tenant, { doctorId }: QueueQuery): Promise<QueueAppointment[]> {
+  let query = tenant.supabase
+    .from(TABLE)
+    .select(QUEUE_COLUMNS)
+    .eq("clinic_id", tenant.clinicId)
+    .or(`local_date.eq.${todayKey()},status.eq.IN_PROGRESS`)
+    .in("status", QUEUE_STATUSES);
+  if (doctorId) query = query.eq("doctor_id", doctorId);
+  const { data, error } = await query.order("scheduled_at");
+  if (error) throw fromPostgrestError(error);
+  return (
+    data as unknown as (CalendarAppointmentRow & {
+      arrived_at: string | null;
+      started_at: string | null;
+      completed_at: string | null;
+    })[]
+  ).map((row) => ({
+    ...toCalendarAppointment(row),
+    arrivedAt: row.arrived_at,
+    startedAt: row.started_at,
+    completedAt: row.completed_at,
+  }));
 }
 
 /** What a patient may still come for (D140): booked, confirmed, arrived or under way, today or later. */

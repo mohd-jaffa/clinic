@@ -1,13 +1,14 @@
 import { patchJson, postJson, postOnce } from "@/lib/api/client";
 import { apiRoutes } from "@/lib/query/keys";
-import type { AppointmentChangeInput, BookingInput, StatusChangeInput } from "@/lib/validation";
+import type { AppointmentChangeInput, BookingInput, StatusChangeInput, WalkInInput } from "@/lib/validation";
 
-import type { AppointmentChanged, Booked } from "./types";
+import type { AppointmentChanged, Arrival, Booked } from "./types";
 
 /**
  * The appointments' endpoints the browser calls (plan §30): booking one, once
  * per key however often it is sent; changing one — its notes, or moved
- * (D161); and setting its status from its detail.
+ * (D161); setting its status from its detail; and a patient joining the
+ * queue — a walk-in, once per key, or a booking arrived — with their token.
  */
 export const AppointmentsClient = {
   book: ({ input, key }: { input: BookingInput; key: string }) =>
@@ -16,4 +17,7 @@ export const AppointmentsClient = {
     patchJson<AppointmentChanged>(apiRoutes.appointments.one(id), input),
   setStatus: ({ id, ...change }: StatusChangeInput & { id: string }) =>
     postJson<AppointmentChanged>(apiRoutes.appointments.status(id), change),
+  arrive: (id: string) => postJson<Arrival>(apiRoutes.appointments.arrived(id)),
+  addWalkIn: ({ input, key }: { input: WalkInInput; key: string }) =>
+    postOnce<Arrival>(apiRoutes.appointments.walkIn, input, key),
 };

@@ -143,8 +143,10 @@ export {
   OTHER_LENGTH,
   OTHER_REASON,
   PATIENT_MODES,
+  queueQuerySchema,
   rescheduleSchema,
   statusChangeSchema,
+  walkInSchema,
   type AppointmentChangeInput,
   type AppointmentChangePayload,
   type AppointmentNotesInput,
@@ -154,10 +156,13 @@ export {
   type CalendarQuery,
   type CancelInput,
   type PatientMode,
+  type QueueQuery,
   type RescheduleInput,
   type ReschedulePayload,
   type StatusChangeInput,
   type StatusChangePayload,
+  type WalkInInput,
+  type WalkInPayload,
 } from "./schemas/appointments";
 
 export {

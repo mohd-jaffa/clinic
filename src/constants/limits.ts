@@ -100,6 +100,12 @@ export const DATE_STRIP_DAYS = { back: 7, ahead: 28 } as const;
 /** The most days the calendar asks for at once: a week (D158). */
 export const MAX_CALENDAR_DAYS = 7;
 
+/**
+ * How often today's queue is read again while it is on screen (plan §11.4,
+ * D34), and on focus; never while the tab is hidden. Realtime is later.
+ */
+export const QUEUE_REFRESH_MS = 15_000;
+
 /** How many patients a picker's search lists (D144): the best matches; typing more narrows them. */
 export const PICKER_RESULTS = 6;
 

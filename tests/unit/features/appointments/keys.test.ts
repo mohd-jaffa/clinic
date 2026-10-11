@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { appointmentRoutes, calendarKey } from "@/features/appointments/keys";
+import { appointmentRoutes, calendarKey, queueKey } from "@/features/appointments/keys";
 
 describe("calendarKey", () => {
   it("names the days and the doctor — none for every doctor", () => {
@@ -17,8 +17,16 @@ describe("appointmentRoutes", () => {
       "/api/appointments",
       "/api/appointments/booked",
       "/api/appointments/a-1",
+      "/api/queue",
       "/api/patients/p-1/summary",
       "/api/patients/p-1/timeline",
     ]);
+  });
+});
+
+describe("queueKey", () => {
+  it("names the doctor — none for every doctor", () => {
+    expect(queueKey("")).toBe("/api/queue");
+    expect(queueKey("d-1")).toBe("/api/queue?doctorId=d-1");
   });
 });
