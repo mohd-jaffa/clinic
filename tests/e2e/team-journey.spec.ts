@@ -1,10 +1,10 @@
-import { expect, test, type Browser, type Page } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 import { UI_TEXT } from "@/constants/messages";
 import { ALL_NAV, MORE_NAV, placesFor } from "@/constants/navigation";
 import { PERMISSION_PRESET_SETS, type Permission } from "@/constants/permissions";
-import { expectAccessible } from "@tests/support/e2e";
-import { aMobileNumber, anEmail, issueInviteToken, registerClinic, removeAll } from "@tests/support/integration";
+import { expectAccessible, inviteMember, joinByInvite } from "@tests/support/e2e";
+import { anEmail, registerClinic, removeAll } from "@tests/support/integration";
 
 /**
  * Phase 3’s journey (plan §34; R3.8): the owner invites a receptionist
@@ -15,39 +15,7 @@ import { aMobileNumber, anEmail, issueInviteToken, registerClinic, removeAll } f
  */
 test.afterAll(removeAll);
 
-const { actions, acceptInvite, nav, team, system } = UI_TEXT;
-
-const role = (page: Page, name: string) =>
-  page.getByRole("radiogroup", { name: team.roleLabel }).getByRole("radio", { name });
-
-async function invite(page: Page, who: { name: string; email: string; doctor?: boolean }) {
-  await page.getByRole("button", { name: team.invite, exact: true }).click();
-  const sheet = page.getByRole("dialog", { name: team.inviteTitle });
-  if (who.doctor) {
-    await role(page, "Doctor").click();
-    await sheet.getByRole("textbox", { name: /^Consultation fee/ }).fill("700");
-  }
-  await sheet.getByRole("textbox", { name: /^Name/ }).fill(who.name);
-  await sheet.getByRole("textbox", { name: /^Email/ }).fill(who.email);
-  await sheet.getByRole("button", { name: team.send }).click();
-  // The journeys send no mail: the invite is kept, and the card says so.
-  await page
-    .getByRole("alertdialog", { name: team.invitedNoEmail })
-    .getByRole("button", { name: actions.close })
-    .click();
-}
-
-/** The invitee, on a device of their own, follows the link Resend would send, and joins. */
-async function join(browser: Browser, page: Page, email: string): Promise<Page> {
-  const device = await browser.newContext({ viewport: page.viewportSize() });
-  const invitee = await device.newPage();
-  await invitee.goto(`/accept-invite#token=${await issueInviteToken(email)}`);
-  await invitee.getByRole("textbox", { name: /^Mobile number/ }).fill(aMobileNumber());
-  await invitee.getByLabel(/^Choose a password/).fill("a good long password");
-  await invitee.getByRole("button", { name: acceptInvite.join }).click();
-  await expect(invitee).toHaveURL(/\/home$/);
-  return invitee;
-}
+const { nav, team, system } = UI_TEXT;
 
 /** The places someone with these permissions finds: the sidebar's on a desktop, More's on a phone. */
 async function expectPlaces(page: Page, phone: boolean, permissions: readonly Permission[]) {
@@ -87,17 +55,17 @@ test("a receptionist and a doctor join, and each sees only what they may", async
   ).toBe(true);
 
   await page.goto("/team");
-  await invite(page, receptionist);
-  await invite(page, doctor);
+  await inviteMember(page, receptionist);
+  await inviteMember(page, doctor);
   await expect(page.getByRole("list", { name: team.invitedList })).toContainText("Meera Pillai");
   await expect(page.getByRole("list", { name: team.invitedList })).toContainText("Rahul Nair");
 
   const phone = project.name === "phone";
-  const front = await join(browser, page, receptionist.email);
+  const front = await joinByInvite(browser, page, receptionist.email);
   await expectPlaces(front, phone, PERMISSION_PRESET_SETS.RECEPTIONIST.permissions);
   await expectShutOut(front);
 
-  const consulting = await join(browser, page, doctor.email);
+  const consulting = await joinByInvite(browser, page, doctor.email);
   await expectPlaces(consulting, phone, PERMISSION_PRESET_SETS.DOCTOR.permissions);
   await expectShutOut(consulting);
 

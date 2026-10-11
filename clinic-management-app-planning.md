@@ -262,6 +262,9 @@ earlier lines are never rewritten.
 | D173 | **A patient joining the queue is told their token first** (the user): adding a walk-in, or marking a booking Arrived — on the row or in the detail — closes with "Rohan Mehta is #7 with Maya Rao". `add_walk_in` hands back the token with the appointment. | 2026-10-12 |
 | D174 | **A patient past their time is marked late, and stays** (the user): "10:30 AM · Late 25 min" in coral words, in Still to come until marked Arrived or a no-show. | 2026-10-12 |
 | D175 | **The walk-in sheet starts on the queue's doctor** (the user): the doctor whose queue is showing; on All doctors, the one adding it if they are a doctor, else the clinic's only doctor; otherwise none, to be chosen (as D149). | 2026-10-12 |
+| D176 | **The race tests prove bookings, moves, tokens and repeated keys** (the user): ten desks booking one doctor's time at once book one and are told the rest is taken; overlapping times booked at once leave none overlapping, each refusal naming one that stands; two moves into one time move one; ten arrivals and walk-ins for one doctor at once take tokens 1 to 10, another doctor's apart; the same booking, walk-in or arrival sent twice at once makes one. Against the real database, each request its own transaction (`appointment-races.test.ts`). | 2026-10-12 |
+| D177 | **Phase 5's journey runs as the plan's, its members joining by invite** (the user): the owner invites a receptionist and a doctor, each joins by their link with the real presets; the receptionist adds a patient (mobile-match hint), books, has a booking into that time refused, adds a walk-in and arrives the booked patient, each with a token; the doctor cannot open a patient booked only with another doctor; a second clinic reaches none of it (`front-desk-journey.spec.ts`). | 2026-10-12 |
+| D178 | **The journey proves the queue refreshes on its own** (the user): the doctor keeps their queue open on their own device, and the walk-in the desk adds shows there within the 15-second refresh, without a reload. | 2026-10-12 |
 
 ## 3. Users and roles
 
@@ -842,7 +845,10 @@ default duration, which may be changed per booking.
   overlap another live `BOOKED` appointment of the same doctor — a Postgres
   exclusion constraint (`btree_gist`, `tstzrange && `) excluding `CANCELLED`
   and `NO_SHOW`. A clash answers `APPOINTMENT_SLOT_TAKEN` naming the clashing
-  time; the sheet keeps what was typed.
+  time; the sheet keeps what was typed. Writes into one doctor's time — a
+  booking, a move, an arrival back from a no-show — take a lock on the doctor
+  first (`hold_doctor`), so two at once wait their turn rather than deadlock
+  at the constraint; the constraint still decides (R5.6).
 - **Not on a closed day:** a clinic holiday, or the doctor's leave
   (`APPOINTMENT_ON_CLOSED_DAY`, naming the closure's reason) — a walk-in
   neither (D139).
@@ -913,7 +919,8 @@ the queue (R5.5, D164).
   in the clinic's timezone. A patient keeps theirs for the day: going back and
   arriving again gives the same number; moving the appointment to another day
   or doctor gives it back (D141). **Arrived** only on the appointment's own
-  day (D143).
+  day (D143). Marked arrived twice — a double tap, two desks at once — the
+  second changes nothing and gives the same token (R5.6).
 - **Fee at arrival (D44):** in a clinic that collects the consultation fee at
   arrival, arriving (or adding a walk-in) continues to **Collect fee**: the
   doctor's consultation fee (D26) pre-filled, the method, **Issue and
@@ -2380,7 +2387,7 @@ in the row's one commit (D136).
 | R5.3 | Calendar: day (list / columns per doctor), week, doctor filter, closures shaded; the kit's calendar grid (D66; D152 – D159) | §11.5 | — | DONE (2026-10-11) |
 | R5.4 | Appointment detail: confirm, reschedule, cancel (reason), no-show; the profile's next appointment and its appointments in the history (D101; D160 – D167) | §11.2, §10.3 | — | DONE (2026-10-11) |
 | R5.5 | Walk-ins, arrival tokens, today's queue (Waiting, With doctor, Still to come, Done) with 15 s refresh (D168 – D175) | §11.3, §11.4 | — | DONE (2026-10-12) |
-| R5.6 | Integration (concurrent bookings, concurrent tokens) + E2E | §34 | — | TODO |
+| R5.6 | Integration (concurrent bookings, concurrent tokens) + E2E (D176 – D178) | §34 | — | DONE (2026-10-12) |
 | R5.7 | WhatsApp click-to-send: the link and share helpers; appointment reminders and `reminded_at` | §22.1 | — | TODO |
 
 ### Phase 6 — Visits, vitals and prescriptions

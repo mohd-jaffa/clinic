@@ -2276,3 +2276,73 @@ queue. Asked of the user first: D168 – D175.
 
 ### Blockers
 - None.
+
+## 2026-10-12 — Races and Phase 5's journey (R5.6)
+
+What happens when requests arrive at the same moment, proved against the
+real database, and the front desk's journey end to end. Asked of the user
+first: D176 – D178. The race tests found two faults, now fixed.
+
+### Added
+- **The race tests (`appointment-races.test.ts`, D176)**, each request its
+  own transaction through PostgREST:
+  - ten desks booking one doctor's time at once: one booked, nine told the
+    time is taken, each naming it;
+  - ten overlapping times, not all alike, booked at once: none left
+    overlapping, each refusal naming one that stands;
+  - two bookings moved into one time at once: one moves, the other is told;
+  - ten arrivals and walk-ins for one doctor at once: tokens 1 to 10, none
+    twice, none skipped — another doctor's counted apart;
+  - the same booking, walk-in or arrival sent twice at once: one made, one
+    token, one audit row.
+- **Phase 5's journey (`front-desk-journey.spec.ts`, D177, D178)**, at a
+  phone's width and a desktop's, each screen checked by axe:
+  1. The owner invites a receptionist and a doctor; each joins by their link.
+  2. The receptionist adds a patient, told who else is on the mobile.
+  3. She books them with the doctor for later today; a second booking into
+     that time is refused, naming it.
+  4. She adds a walk-in — #1 — and the doctor's queue, open on their own
+     device, shows him within its refresh.
+  5. She marks the booked patient Arrived — #2.
+  6. The doctor cannot find or open a patient booked only with another
+     doctor.
+  7. A second clinic reaches none of it.
+- **Shared journey helpers:** `inviteMember` and `joinByInvite` in
+  `tests/support/e2e.ts`, now used by Phase 3's journey too.
+
+### Fixed
+- **Two bookings into each other's time at once could deadlock** at the
+  exclusion constraint. The database stopped one with a bare conflict, not
+  "Maya Rao is booked 10:00 – 10:30". Writes into one doctor's time — a
+  booking, a move, an arrival back from a no-show — now take a lock on the
+  doctor first (`hold_doctor`, in the unreleased `0017`). Two at once wait
+  their turn, and the second is told the first's time. The constraint still
+  decides. No deadlocks in eight repeated runs.
+- **A patient marked arrived twice** — a double tap, two desks at once — was
+  refused the second time ("can't go to that status"). `mark_arrived` now
+  changes nothing more and hands back the token already given, as a repeated
+  status change does.
+
+### Changed
+- **`0017` (unreleased, applied again locally):** `hold_doctor`, and
+  `create_appointment`, `update_appointment` and `mark_arrived` taking it;
+  `mark_arrived` returns an appointment already arrived as it is.
+- **Plan:**
+  - D176 – D178 in the decision log;
+  - §11.1 (the lock on the doctor) and §11.3 (arrived twice);
+  - the tracker: R5.6 DONE.
+
+### Speed (§37.1)
+- No screen or save waits on more round trips.
+- Bookings for one doctor at the same moment now queue on the doctor's lock
+  for the few milliseconds each takes; other doctors' never wait.
+
+### Validation
+- Typecheck, lint and format check passed.
+- Unit and integration tests passed, coverage 100%. The race tests passed
+  eight runs in a row.
+- E2E (phone and desktop, axe): Phase 5's journey and Phase 3's journey.
+- The full E2E suite passed: 106 tests.
+
+### Blockers
+- None.

@@ -118,6 +118,16 @@ describe("0017 no double-booking (plan §11.1, D7)", () => {
     expect(slot).toContain("tstzrange(p_starts_at, p_starts_at + make_interval(mins => p_minutes), '[)')");
   });
 
+  it("has writes into one doctor's time wait their turn, so two at once never deadlock at the constraint (R5.6)", () => {
+    expect(functionBody(sql, "hold_doctor")).toContain(
+      "perform pg_advisory_xact_lock(hashtextextended('appointments:' || p_doctor_id::text, 0));",
+    );
+    expect(sql).toContain("revoke all on function public.hold_doctor(uuid) from public, anon, authenticated;");
+    expect(functionBody(sql, "create_appointment")).toContain("perform public.hold_doctor(given.doctor_id);");
+    expect(functionBody(sql, "update_appointment")).toContain("perform public.hold_doctor(now_is.doctor_id);");
+    expect(functionBody(sql, "mark_arrived")).toContain("perform public.hold_doctor(was.doctor_id);");
+  });
+
   it("answers a clash with the time it clashed with, never whose it is", () => {
     const taken = functionBody(sql, "raise_slot_taken");
     expect(taken).toContain("hint = 'APPOINTMENT_SLOT_TAKEN'");
@@ -174,6 +184,12 @@ describe("0017 tokens (plan §11.3, D141, D143)", () => {
     expect(functionBody(sql, "mark_arrived")).toContain("if token is null then");
     expect(functionBody(sql, "check_appointment")).toContain(
       "if new.doctor_id is distinct from old.doctor_id or new.local_date is distinct from old.local_date then\n      new.token_number := null;",
+    );
+  });
+
+  it("changes nothing more when a patient is marked arrived twice — a double tap, two desks at once (R5.6)", () => {
+    expect(functionBody(sql, "mark_arrived")).toContain(
+      "if was.status = 'ARRIVED' then\n    return next was;\n    return;",
     );
   });
 

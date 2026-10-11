@@ -315,6 +315,22 @@ $$;
 
 -- What a clash answers (D7): the time it clashed with, never whose it is. The
 -- exclusion constraint refused the write; this only names the time.
+-- Writes into one doctor's time wait their turn (D7, R5.6): two bookings into
+-- each other's time at once would each wait on the other at the exclusion
+-- constraint — a deadlock, one of them stopped with no word of the clash.
+-- Held to the end of the transaction, the second then finds the first and is
+-- told its time. The constraint still decides; this only orders them.
+create or replace function public.hold_doctor(p_doctor_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  perform pg_advisory_xact_lock(hashtextextended('appointments:' || p_doctor_id::text, 0));
+end;
+$$;
+
 create or replace function public.raise_slot_taken(
   p_doctor_id uuid,
   p_starts_at timestamptz,
@@ -378,6 +394,7 @@ end;
 $$;
 
 revoke all on function public.check_booking(uuid, uuid, uuid, uuid, timestamptz, boolean) from public, anon, authenticated;
+revoke all on function public.hold_doctor(uuid) from public, anon, authenticated;
 revoke all on function public.raise_slot_taken(uuid, timestamptz, integer, uuid) from public, anon, authenticated;
 revoke all on function public.appointment_for_change(uuid, text) from public, anon, authenticated;
 
@@ -422,6 +439,7 @@ begin
   perform public.check_booking(
     clinic, given.patient_id, given.doctor_id, given.appointment_type_id, given.scheduled_at, true
   );
+  perform public.hold_doctor(given.doctor_id);
   insert into public.appointments (
     clinic_id, patient_id, doctor_id, source, appointment_type_id, scheduled_at, duration_minutes, notes,
     idempotency_key
@@ -471,6 +489,7 @@ begin
       case when now_is.appointment_type_id is distinct from was.appointment_type_id then now_is.appointment_type_id end,
       now_is.scheduled_at, true
     );
+    perform public.hold_doctor(now_is.doctor_id);
     if was.status = 'CONFIRMED'
        and (now_is.scheduled_at, now_is.doctor_id) is distinct from (was.scheduled_at, was.doctor_id) then
       now_is.status := 'SCHEDULED';
@@ -542,6 +561,8 @@ $$;
 -- still active. They take the doctor's next token of the day — or the one
 -- they already hold from earlier today (D141). A no-show coming back late
 -- into a time booked meanwhile is refused as a clash: add them as a walk-in.
+-- Marked arrived twice — a double tap, two desks at once — the second
+-- changes nothing more and hands back the token already given.
 create or replace function public.mark_arrived(p_appointment_id uuid)
 returns setof public.appointments
 language plpgsql
@@ -552,6 +573,10 @@ declare
   was public.appointments := public.appointment_for_change(p_appointment_id, 'appointments.edit');
   token integer := was.token_number;
 begin
+  if was.status = 'ARRIVED' then
+    return next was;
+    return;
+  end if;
   if not 'ARRIVED' = any (public.appointment_status_next(was.status)) or was.status = 'IN_PROGRESS' then
     raise exception 'Not a move its status allows' using hint = 'APPOINTMENT_STATUS_NOT_ALLOWED';
   end if;
@@ -570,6 +595,8 @@ begin
     raise exception 'Not one of the clinic''s active doctors' using hint = 'DOCTOR_INACTIVE';
   end if;
 
+  -- Back from a no-show, a booking takes its time again.
+  perform public.hold_doctor(was.doctor_id);
   if token is null then
     token := public.next_token(was.clinic_id, was.doctor_id, was.local_date);
   end if;
