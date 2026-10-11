@@ -4,7 +4,7 @@ import { Check, Plus, Trash2 } from "lucide-react";
 import { createRef } from "react";
 import { describe, expect, it, vi } from "vitest";
 
-import { Button, IconButton, LinkButton } from "@/components/ui/button";
+import { Button, IconButton, IconLink, LinkButton } from "@/components/ui/button";
 
 const chipOf = (button: HTMLElement) => button.querySelector("[data-chip]");
 
@@ -168,5 +168,26 @@ describe("IconButton", () => {
     await userEvent.click(screen.getByRole("button", { name: "Previous month" }));
     expect(screen.getByRole("button", { name: "Previous month" })).toBeDisabled();
     expect(onClick).not.toHaveBeenCalled();
+  });
+});
+
+describe("IconLink", () => {
+  it("is a round link out of the app, named by its label, in a new tab, running onClick as it is followed", async () => {
+    const onClick = vi.fn();
+    render(
+      <IconLink
+        icon={Trash2}
+        label="Remind Rohan Mehta on WhatsApp"
+        href="https://wa.me/919876543210"
+        onClick={onClick}
+      />,
+    );
+    const link = screen.getByRole("link", { name: "Remind Rohan Mehta on WhatsApp" });
+    expect(link).toHaveAttribute("href", "https://wa.me/919876543210");
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveAttribute("rel", "noopener noreferrer");
+    link.addEventListener("click", (event) => event.preventDefault());
+    await userEvent.click(link);
+    expect(onClick).toHaveBeenCalled();
   });
 });

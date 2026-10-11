@@ -66,6 +66,7 @@ export function Appointments() {
   const folded = shown.filter((appointment) => !isLive(appointment.status));
 
   const canBook = membership !== null && hasAccess(membership, "appointments.create");
+  const canRemind = membership !== null && hasAccess(membership, "appointments.edit");
   const books = canBook && !readOnly;
   const book = (values?: BookingPrefill) => {
     setPrefill(({ count }) => ({ count: count + 1, values }));
@@ -105,6 +106,7 @@ export function Appointments() {
             label={calendar.dayGrid(formatLongDate(day))}
             appointments={live.filter((appointment) => appointment.day === day)}
             showDoctor={!doctorId}
+            canRemind={canRemind}
             onBook={books ? () => book() : undefined}
             onOpen={opened.show}
           />

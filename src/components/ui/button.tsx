@@ -182,6 +182,44 @@ const ICON_TONES = {
   danger: "text-coral hover:bg-coral-soft",
 } as const;
 
+/**
+ * A round, label-less link to somewhere outside the app — a chat on WhatsApp —
+ * opened in a new tab, as `IconButton` looks. `onClick` runs as it is
+ * followed: a reminder noted as WhatsApp opens.
+ */
+export function IconLink({
+  icon: Icon,
+  label,
+  href,
+  onClick,
+  tone = "plain",
+}: {
+  icon: LucideIcon;
+  /** Never optional: the icon alone says nothing to a screen reader. */
+  label: string;
+  href: string;
+  onClick?: () => void;
+  tone?: keyof typeof ICON_TONES;
+}) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      onClick={onClick}
+      aria-label={label}
+      title={label}
+      className={cn(
+        "inline-flex size-11 shrink-0 items-center justify-center rounded-full transition-[background-color,transform]",
+        "duration-(--duration-map) ease-map active:scale-95",
+        ICON_TONES[tone],
+      )}
+    >
+      <Icon size={20} strokeWidth={2.25} aria-hidden="true" />
+    </a>
+  );
+}
+
 /** A round, label-less action — close, edit, the calendar's next month. */
 export function IconButton({
   icon: Icon,

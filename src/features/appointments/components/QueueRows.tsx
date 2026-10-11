@@ -10,6 +10,7 @@ import { formatTime } from "@/lib/format/date";
 
 import { kindOf } from "../describe";
 import { useArrival } from "../hooks/useArrival";
+import { RemindButton } from "./RemindButton";
 import { lateBy, minutesSince } from "../queue";
 import type { QueueAppointment } from "../types";
 
@@ -111,20 +112,24 @@ export function WithDoctorRow({
 }
 
 /**
- * A patient still to come today (D172, D174): their booked time — and how
- * late, in coral words, once it has passed — their name and kind, and
- * **Arrived** on the row for whoever may mark it.
+ * A patient still to come today (D172, D174, D179): their booked time — and
+ * how late, in coral words, once it has passed — their name and kind, and
+ * whether they have been reminded; on the row, a WhatsApp reminder and
+ * **Arrived** for whoever may.
  */
 export function ComingRow({
   appointment,
   now,
   showDoctor,
+  canRemind,
   canArrive,
   onOpen,
 }: {
   appointment: QueueAppointment;
   now: Date;
   showDoctor: boolean;
+  /** Who may change appointments, view-only or not (D181, D182). */
+  canRemind: boolean;
   canArrive: boolean;
   onOpen: (appointment: QueueAppointment) => void;
 }) {
@@ -138,9 +143,17 @@ export function ComingRow({
         late !== null && <span className="font-bold text-coral">{queue.late(late)}</span>,
         kindOf(appointment),
         doctorOf(appointment, showDoctor),
+        appointment.remindedAt && words.reminded,
       )}
       wrap
-      trailing={canArrive && <ArriveButton appointment={appointment} />}
+      trailing={
+        (canRemind || canArrive) && (
+          <>
+            {canRemind && <RemindButton appointment={appointment} look="icon" />}
+            {canArrive && <ArriveButton appointment={appointment} />}
+          </>
+        )
+      }
       onClick={() => onOpen(appointment)}
     />
   );

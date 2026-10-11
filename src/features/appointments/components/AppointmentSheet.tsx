@@ -15,19 +15,21 @@ import { useAuth } from "@/features/auth/AuthProvider";
 import { ReadOnlyNote } from "@/features/subscription/components/ReadOnlyNote";
 import { useReadOnly } from "@/features/subscription/hooks/useReadOnly";
 import { dayKey } from "@/lib/dates/calendar";
-import { formatDayMonth, formatLongDate } from "@/lib/format/date";
+import { formatDayMonth, formatLongDate, formatTime } from "@/lib/format/date";
 
-import { actionsFor } from "../actions";
+import { actionsFor, NO_ACTIONS } from "../actions";
 import { kindOf, timeOf } from "../describe";
 import { useAppointment } from "../hooks/useAppointment";
 import { useArrival } from "../hooks/useArrival";
 import { useStatusChange } from "../hooks/useStatusChange";
+import { RemindButton } from "./RemindButton";
 import type { AppointmentDetail, CalendarAppointment } from "../types";
 
 const { appointment: words, patients, calendar } = UI_TEXT;
 
 /** What its detail says of an appointment (D160), each line only when it holds something. */
 function detailsOf(appointment: CalendarAppointment, detail: AppointmentDetail | undefined): Detail[] {
+  const reminded = detail ? detail.remindedAt : appointment.remindedAt;
   const lines: [string, string | null | undefined][] = [
     [words.whenLabel, words.when(formatLongDate(appointment.day), timeOf(appointment))],
     [words.doctorLabel, appointment.doctorName ?? words.formerDoctor],
@@ -43,6 +45,11 @@ function detailsOf(appointment: CalendarAppointment, detail: AppointmentDetail |
       detail?.cancelledAt && words.by(detail.cancelledBy, formatDayMonth(dayKey(detail.cancelledAt))),
     ],
     [words.reasonLabel, detail?.cancelReason],
+    [
+      words.remindedLabel,
+      // The detail as read now: a reminder sent with the sheet open shows at once.
+      reminded && words.when(formatDayMonth(dayKey(reminded)), formatTime(reminded)),
+    ],
   ];
   return lines.flatMap(([label, value]) => (value ? [{ label, value }] : []));
 }
@@ -52,9 +59,12 @@ function detailsOf(appointment: CalendarAppointment, detail: AppointmentDetail |
  * or a patient's profile: who, when, with whom, what kind and where it
  * stands, its notes, who booked it — and who cancelled it and why. Under it,
  * what its status allows the one looking: **Arrived** on its day, giving the
- * token (D164); **Confirm**, **Reschedule** (or **Edit notes** once it cannot
- * move), **No-show** once its time has come, **Cancel appointment**. An archived patient's appointment says why it
- * offers nothing (D103); a read-only clinic, why nothing can change.
+ * token (D164); **Remind on WhatsApp** a booking still to come (D179);
+ * **Confirm**, **Reschedule** (or **Edit notes** once it cannot move),
+ * **No-show** once its time has come, **Cancel appointment**. An archived
+ * patient's appointment says why it offers nothing (D103); a read-only
+ * clinic, why nothing can change — though a reminder may still be sent
+ * (D181).
  *
  * It opens on what the calendar already holds, and fills in as the rest
  * arrives. Arrived, Confirm and No-show close it, with a card (D165, D173).
@@ -83,11 +93,13 @@ export function AppointmentSheet({
   const detail = query.data;
   const status = useStatusChange(appointment, onClose);
   const arrival = useArrival(appointment, onClose);
-  const actions = detail && membership ? actionsFor(detail, membership) : undefined;
-  const any = actions !== undefined && Object.values(actions).some(Boolean);
+  const offered = detail && membership ? actionsFor(detail, membership) : undefined;
+  const any = offered !== undefined && Object.values(offered).some(Boolean);
+  // A view-only clinic changes nothing, but a reminder is sharing what is there (D181).
+  const actions = offered && readOnly ? { ...NO_ACTIONS, remind: offered.remind } : offered;
 
   let footer;
-  if (actions && any && !readOnly) {
+  if (actions && Object.values(actions).some(Boolean)) {
     footer = (
       <div role="group" aria-label={words.actions} className="flex flex-wrap gap-2">
         {actions.arrive && (
@@ -110,6 +122,7 @@ export function AppointmentSheet({
             onClick={() => void status.confirm()}
           />
         )}
+        {actions.remind && <RemindButton appointment={appointment} look="capsule" />}
         {actions.reschedule && (
           <Button
             label={words.reschedule}

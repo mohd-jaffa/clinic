@@ -10,7 +10,7 @@ import { authStub } from "@tests/support/auth";
 import { Providers } from "@tests/support/providers";
 
 const { client, auth, read } = vi.hoisted(() => ({
-  client: { setStatus: vi.fn(), arrive: vi.fn() },
+  client: { setStatus: vi.fn(), arrive: vi.fn(), remind: vi.fn() },
   auth: { current: {} as ReturnType<typeof authStub> },
   read: {
     current: {} as { data?: AppointmentDetail; error?: unknown; mutate: () => void; isValidating: boolean },
@@ -166,14 +166,16 @@ describe("AppointmentSheet (plan §11.2; D160 – D165)", () => {
     expect(within(sheet()).getByText(/This patient is archived/)).toBeInTheDocument();
   });
 
-  it("offers nothing in a view-only clinic, saying why — and nothing to someone who may only see", () => {
+  it("offers nothing in a view-only clinic when there is nothing to remind, saying why — and nothing to someone who may only see", () => {
     const viewOnly = authStub({ role: "STAFF", permissions: ALL });
     auth.current = { ...viewOnly, subscription: { ...viewOnly.subscription!, state: "READ_ONLY" } };
-    const { unmount } = draw();
+    read.current = { data: anAppointmentDetail({ status: "ARRIVED" }), mutate: vi.fn(), isValidating: false };
+    const { unmount } = draw(aCalendarAppointment({ status: "ARRIVED" }));
     expect(actions()).not.toBeInTheDocument();
     expect(within(sheet()).getByText(/view-only/)).toBeInTheDocument();
     unmount();
 
+    read.current = { data: anAppointmentDetail(), mutate: vi.fn(), isValidating: false };
     auth.current = authStub({ role: "STAFF", permissions: ["patients.view", "appointments.view"] });
     draw();
     expect(actions()).not.toBeInTheDocument();
@@ -210,5 +212,33 @@ describe("AppointmentSheet (plan §11.2; D160 – D165)", () => {
     const buttons = within(actions()!).getAllByRole("button");
     expect(buttons[0]).toHaveAccessibleName("Confirm");
     expect(within(actions()!).queryByRole("button", { name: "Arrived" })).not.toBeInTheDocument();
+  });
+
+  it("offers a reminder on WhatsApp after Confirm, and says when one was last sent (D179, D180)", () => {
+    vi.setSystemTime(new Date("2026-10-13T02:00:00Z"));
+    // As read now — newer than what the calendar held when it opened.
+    read.current = {
+      data: anAppointmentDetail({ remindedAt: "2026-10-12T05:12:00Z" }),
+      mutate: vi.fn(),
+      isValidating: false,
+    };
+    draw(aCalendarAppointment());
+    const names = [...actions()!.querySelectorAll("button, a")].map(
+      (control) => control.getAttribute("aria-label") ?? control.textContent,
+    );
+    expect(names.slice(0, 3)).toEqual(["Arrived", "Confirm", "Remind Rohan Mehta on WhatsApp"]);
+    const facts = within(sheet())
+      .getAllByRole("definition")
+      .map((value) => value.textContent);
+    expect(facts.at(-1)).toBe("12 Oct · 10:42 AM");
+  });
+
+  it("offers only the reminder in a view-only clinic, saying why nothing else (D181)", () => {
+    const viewOnly = authStub({ role: "STAFF", permissions: ALL });
+    auth.current = { ...viewOnly, subscription: { ...viewOnly.subscription!, state: "READ_ONLY" } };
+    draw();
+    expect(within(actions()!).getByRole("link", { name: "Remind Rohan Mehta on WhatsApp" })).toBeInTheDocument();
+    expect(within(actions()!).queryByRole("button")).not.toBeInTheDocument();
+    expect(within(sheet()).getByText(/view-only/)).toBeInTheDocument();
   });
 });

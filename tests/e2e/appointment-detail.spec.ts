@@ -92,6 +92,17 @@ test("on a phone: an appointment opened, confirmed, then cancelled with a reason
   await expect(detail).toContainText(words.bookedLabel);
   await expectAccessible(page);
 
+  // Remind on WhatsApp: the chat opens with the reminder written, and the reminder is noted (D179, D180).
+  await page.context().route("https://wa.me/**", (route) => route.fulfill({ body: "WhatsApp" }));
+  const remind = detail.getByRole("link", { name: words.remindNamed("Rohan Mehta") });
+  await expect(remind).toHaveAttribute(
+    "href",
+    /^https:\/\/wa\.me\/919876543210\?text=Reminder%3A%20your%20appointment/,
+  );
+  const [chat] = await Promise.all([page.waitForEvent("popup"), remind.click()]);
+  await chat.close();
+  await expect(detail).toContainText(words.remindedLabel);
+
   await detail.getByRole("button", { name: words.confirm }).click();
   await expect(detail).toBeHidden();
   await expect(page.getByRole("status").filter({ hasText: "Confirmed Rohan Mehta" })).toBeVisible();

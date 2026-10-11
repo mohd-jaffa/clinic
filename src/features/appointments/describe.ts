@@ -1,6 +1,6 @@
-import { UI_TEXT } from "@/constants/messages";
+import { UI_TEXT, WHATSAPP_TEXT } from "@/constants/messages";
 import { APPOINTMENT_STATUS_LABELS } from "@/constants/statuses";
-import { formatTime } from "@/lib/format/date";
+import { formatShortDay, formatTime } from "@/lib/format/date";
 
 import type { CalendarAppointment } from "./types";
 
@@ -25,5 +25,21 @@ export function sayAppointment(appointment: CalendarAppointment): string {
     appointment.patientName,
     kindOf(appointment),
     APPOINTMENT_STATUS_LABELS[appointment.status],
+  );
+}
+
+/**
+ * A reminder as the patient reads it on WhatsApp (plan §22.1, D179): "Reminder:
+ * your appointment with Dr. Maya Rao at Smile Care on Tue 14 Oct, 10:30 AM."
+ * — the doctor left out once they are gone from the team.
+ */
+export function reminderText(
+  appointment: Pick<CalendarAppointment, "doctorName" | "day" | "scheduledAt">,
+  clinic: string,
+): string {
+  return WHATSAPP_TEXT.appointmentReminder(
+    appointment.doctorName === null ? null : WHATSAPP_TEXT.doctor(appointment.doctorName),
+    clinic,
+    WHATSAPP_TEXT.when(formatShortDay(appointment.day), formatTime(appointment.scheduledAt)),
   );
 }

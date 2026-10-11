@@ -101,6 +101,7 @@ export const ERROR_MESSAGES = {
   APPOINTMENT_STATUS_NOT_ALLOWED: "This appointment can’t go to that status from where it is. Refresh and try again.",
   APPOINTMENT_NOT_MOVABLE: "Only a booking that hasn’t arrived yet can be moved.",
   APPOINTMENT_NOT_TODAY: "Only today’s appointments can be marked arrived. Move it to today, or add a walk-in.",
+  APPOINTMENT_NOT_REMINDABLE: "Only a booking still to come can be reminded.",
   APPOINTMENT_CANCEL_REASON_REQUIRED: "Say why it’s being cancelled.",
   APPOINTMENT_TYPE_INACTIVE: "That appointment type is archived. Choose another.",
   CLOSURE_APPOINTMENTS_LOAD_FAILED: "The appointments on these days couldn't be checked.",
@@ -680,6 +681,12 @@ export const UI_TEXT = {
     notesSaved: (patient: string) => `Notes saved for ${patient}`,
     notChanged: "That wasn’t changed",
     archivedNote: "This patient is archived: their appointments can’t change until they are restored.",
+    /** A reminder on WhatsApp (plan §22.1; D179 – D184). */
+    remind: "Remind on WhatsApp",
+    remindNamed: (patient: string) => `Remind ${patient} on WhatsApp`,
+    remindedLabel: "Reminded",
+    reminded: "Reminded",
+    notReminded: "The reminder wasn’t noted",
   },
 
   /** Holidays and leave (plan §9, D84 – D87): the days the clinic, or one doctor, is away. */
@@ -1050,6 +1057,22 @@ export const UI_TEXT = {
  * Every word of every email (plan §22). The app's name comes from UI_TEXT, so
  * the final name is one change (D35).
  */
+/**
+ * What a WhatsApp message says, written to the patient (plan §22.1, D48): the
+ * app opens WhatsApp with it, and a person presses send. English in V1; no
+ * clinical detail beyond what the patient is being sent.
+ */
+export const WHATSAPP_TEXT = {
+  /** "Reminder: your appointment with Dr. Maya Rao at Smile Care on Tue 14 Oct, 10:30 AM." */
+  appointmentReminder: (doctor: string | null, clinic: string, when: string) =>
+    doctor
+      ? `Reminder: your appointment with ${doctor} at ${clinic} on ${when}.`
+      : `Reminder: your appointment at ${clinic} on ${when}.`,
+  /** A doctor as a patient is told of them: "Dr. Maya Rao" — once, if their name already says so. */
+  doctor: (name: string) => (/^dr\.?\s/i.test(name) ? name : `Dr. ${name}`),
+  when: (day: string, time: string) => `${day}, ${time}`,
+} as const;
+
 export const MAIL_TEXT = {
   greeting: (name: string) => `Hi ${name},`,
   /** Under a button, for a mail app that will not show one. */

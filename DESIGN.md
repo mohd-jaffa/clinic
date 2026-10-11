@@ -335,7 +335,7 @@ The page is flat: land, ground and surface are tonal layers with no shadows, gra
 
 ## Components
 
-### Buttons (`button.tsx`: `Button`, `LinkButton`, `IconButton`; `capsule.tsx`)
+### Buttons (`button.tsx`: `Button`, `LinkButton`, `IconButton`, `IconLink`; `capsule.tsx`)
 Firm, round and unmistakable: one look per variant, declared once.
 - **Shape:** fully round, 44 px minimum height at both sizes (`md` body text, `sm` small text).
 - **Primary:** `--action` fill, `--on-action` bold label, and a 34 px `--chip` chip (30 px small) on the trailing edge holding an icon, an arrow by default. One primary per view: the one thing to do.
@@ -399,6 +399,7 @@ Every create and edit form opens in a `Sheet`: a bottom sheet on a phone (rounde
 
 - **A record's detail (`AppointmentSheet`, D160):** the same sheet with the record's name as its title; a status pill and a `--muted` line (number · kind) under it, then the facts as a `DetailList`; a quiet **Open profile** link. The foot holds what its status allows, small capsules wrapping in a row: the primary first (**Confirm**), secondary outlines (**Reschedule**, **Edit notes**, **No-show**), the coral danger capsule last (**Cancel appointment**). A view-only clinic hides them and shows the lock note.
 - **The walk-in sheet (`WalkInSheet`, D171):** a form sheet of three fields — the patient (the booking sheet's search, or a new patient's fields, `PatientField`), the doctor and the type — and a full-width **Add walk-in** with the footprints chip.
+- **Remind on WhatsApp (`RemindButton`, D179):** in the detail, a small secondary capsule with the message icon after Confirm; on a row (Still to come, the calendar's day list), a round `IconLink` with the message icon, named "Remind Rohan Mehta on WhatsApp", before Arrived. A row reminded says "Reminded" in its muted line; the detail gives when.
 - **A reason sheet (`CancelSheet`, D162):** a form sheet with the record in bold over its `--muted` time, choice chips of quick reasons with **Other** opening a line, and a full-width coral submit — which then asks on the coral confirm card ("Keep it" as the way out).
 
 ### Quick Actions lobe (`quick-actions.tsx`: `QuickActions`)

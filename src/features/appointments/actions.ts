@@ -8,6 +8,7 @@ import type { AppointmentDetail } from "./types";
 /** What an appointment's detail offers (plan §11.2). */
 export interface AppointmentActions {
   arrive: boolean;
+  remind: boolean;
   confirm: boolean;
   reschedule: boolean;
   editNotes: boolean;
@@ -15,14 +16,22 @@ export interface AppointmentActions {
   cancel: boolean;
 }
 
-const NONE: AppointmentActions = {
+/** Nothing offered. */
+export const NO_ACTIONS: AppointmentActions = {
   arrive: false,
+  remind: false,
   confirm: false,
   reschedule: false,
   editNotes: false,
   noShow: false,
   cancel: false,
 };
+
+/** A booking still to come, today or later: what a reminder is sent for (D184). */
+export const isRemindable = (
+  appointment: Pick<AppointmentDetail, "source" | "status" | "day">,
+  today: string = todayKey(),
+) => isMovable(appointment) && appointment.day >= today;
 
 /** A booking not yet arrived: what may move (plan §11.1). */
 export const isMovable = (appointment: Pick<AppointmentDetail, "source" | "status">) =>
@@ -34,6 +43,7 @@ export const isMovable = (appointment: Pick<AppointmentDetail, "source" | "statu
  *
  * - **Arrived** for one booked, or a no-show come late, on its own day
  *   (D143, D164) — the patient takes their token.
+ * - **Remind on WhatsApp** a booking still to come, today or later (D184).
  * - **Confirm** a booking still scheduled, on its day or before it.
  * - **Reschedule** a booking not yet arrived; any other offers **Edit notes**,
  *   since notes change at any time (plan §11.1).
@@ -49,13 +59,14 @@ export function actionsFor(
   member: { role: ClinicRole; permissions: readonly Permission[] },
   now: Date = new Date(),
 ): AppointmentActions {
-  if (appointment.patientArchived) return NONE;
+  if (appointment.patientArchived) return NO_ACTIONS;
   const edits = hasAccess(member, "appointments.edit");
   const next = APPOINTMENT_STATUS_TRANSITIONS[appointment.status];
   const movable = isMovable(appointment);
   const today = todayKey(now);
   return {
     arrive: edits && appointment.status !== "IN_PROGRESS" && next.includes("ARRIVED") && appointment.day === today,
+    remind: edits && isRemindable(appointment, today),
     confirm: edits && appointment.source === "BOOKED" && appointment.status === "SCHEDULED" && appointment.day >= today,
     reschedule: edits && movable,
     editNotes: edits && !movable,

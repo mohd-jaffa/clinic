@@ -7,6 +7,7 @@ export function aCalendarAppointment(overrides: Partial<CalendarAppointment> = {
     patientId: "p-1",
     patientName: "Rohan Mehta",
     patientNumber: 1012,
+    patientPhone: "+919876543210",
     doctorId: "d-1",
     doctorName: "Maya Rao",
     typeName: "Consultation",
@@ -16,6 +17,7 @@ export function aCalendarAppointment(overrides: Partial<CalendarAppointment> = {
     minutes: 15,
     day: "2026-10-13",
     token: null,
+    remindedAt: null,
     ...overrides,
   };
 }

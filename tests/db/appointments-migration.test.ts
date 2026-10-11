@@ -297,6 +297,20 @@ describe("0017 a doctor's booked times on a day (D147)", () => {
   });
 });
 
+describe("0017 reminders (plan §22.1; D180 – D184)", () => {
+  it("notes a reminder on a booking still to come, with appointments.edit while the clinic can write, handing back when before", () => {
+    const remind = functionBody(sql, "mark_reminded");
+    expect(sql).toContain("returns table (reminded_at timestamptz, previously timestamptz)");
+    expect(remind).toContain("public.appointment_for_change(p_appointment_id, 'appointments.edit')");
+    expect(remind).toContain("if was.source <> 'BOOKED' or was.status not in ('SCHEDULED', 'CONFIRMED')");
+    expect(remind).toContain("or was.local_date < public.clinic_today(was.clinic_id) then");
+    expect(remind).toContain("hint = 'APPOINTMENT_NOT_REMINDABLE'");
+    expect(remind).toContain("return query select stamped, was.reminded_at;");
+    expect(sql).toContain("revoke all on function public.mark_reminded(uuid) from public, anon;");
+    expect(sql).toContain("grant execute on function public.mark_reminded(uuid) to authenticated;");
+  });
+});
+
 describe("0017 indexes (plan §37.1)", () => {
   it("serves every read with an index that leads with the clinic, in its own order", () => {
     expect(sql).toContain(

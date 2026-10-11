@@ -182,14 +182,14 @@ export async function listBookedTimes(tenant: Tenant, { doctorId, date }: Booked
 
 /** What every read of an appointment holds, beside its patient: its own columns, its doctor's name and its type's. */
 const OWN_COLUMNS =
-  "id, patient_id, doctor_id, source, status, scheduled_at, duration_minutes, local_date, token_number";
+  "id, patient_id, doctor_id, source, status, scheduled_at, duration_minutes, local_date, token_number, reminded_at";
 const DOCTOR_AND_TYPE =
   "doctor:doctors!appointments_doctor_id_clinic_id_fkey(member:clinic_members(profile:profiles!clinic_members_user_id_fkey(full_name))), " +
   "type:appointment_types!appointments_appointment_type_id_clinic_id_fkey(name)";
 const PATIENT = "patient:patients!appointments_patient_id_clinic_id_fkey";
 
 /** What the calendar reads of each appointment, its patient, its doctor's name and its type's, in one query. */
-const CALENDAR_COLUMNS = `${OWN_COLUMNS}, ${PATIENT}(full_name, patient_number), ${DOCTOR_AND_TYPE}`;
+const CALENDAR_COLUMNS = `${OWN_COLUMNS}, ${PATIENT}(full_name, patient_number, phone), ${DOCTOR_AND_TYPE}`;
 
 /** An appointment in a patient's history (D167): the calendar's, and why it was cancelled. */
 const HISTORY_COLUMNS = `${CALENDAR_COLUMNS}, cancel_reason`;
@@ -197,7 +197,7 @@ const HISTORY_COLUMNS = `${CALENDAR_COLUMNS}, cancel_reason`;
 /** An appointment's detail (D160): the calendar's, what it says of itself, and who booked and cancelled it. */
 const DETAIL_COLUMNS =
   `${OWN_COLUMNS}, appointment_type_id, notes, created_at, cancelled_at, cancel_reason, ` +
-  `${PATIENT}(full_name, patient_number, archived_at), ${DOCTOR_AND_TYPE}, ` +
+  `${PATIENT}(full_name, patient_number, phone, archived_at), ${DOCTOR_AND_TYPE}, ` +
   "booker:profiles!appointments_created_by_fkey(full_name), canceller:profiles!appointments_cancelled_by_fkey(full_name)";
 
 /** A row as the calendar reads it, in the shape every screen holds. */
@@ -207,6 +207,7 @@ function toCalendarAppointment(row: CalendarAppointmentRow): CalendarAppointment
     patientId: row.patient_id,
     patientName: row.patient.full_name,
     patientNumber: row.patient.patient_number,
+    patientPhone: row.patient.phone,
     doctorId: row.doctor_id,
     doctorName: row.doctor?.member?.profile?.full_name ?? null,
     typeName: row.type.name,
@@ -216,6 +217,7 @@ function toCalendarAppointment(row: CalendarAppointmentRow): CalendarAppointment
     minutes: row.duration_minutes,
     day: row.local_date,
     token: row.token_number,
+    remindedAt: row.reminded_at,
   };
 }
 
@@ -407,6 +409,27 @@ export async function markArrived(tenant: Tenant, id: string, requestId?: string
     });
   }
   return { id, patientId: data.patient_id, doctorId: data.doctor_id, token: data.token_number };
+}
+
+/**
+ * A reminder sent on WhatsApp (plan §22.1; D180, D184) through
+ * `mark_reminded`: stamped now, for a booking still to come. Audited from
+ * when it was last sent to now. Waits on two round trips after the session:
+ * the stamp, the audit row.
+ */
+export async function markReminded(tenant: Tenant, id: string, requestId?: string): Promise<{ remindedAt: string }> {
+  const { data, error } = await tenant.supabase
+    .rpc("mark_reminded", { p_appointment_id: id })
+    .single<{ reminded_at: string; previously: string | null }>();
+  if (error) throw fromPostgrestError(error);
+  await logActionSafe(tenant, {
+    action: "UPDATE",
+    entityType: TABLE,
+    entityId: id,
+    changes: { reminded_at: { from: data.previously, to: data.reminded_at } },
+    requestId,
+  });
+  return { remindedAt: data.reminded_at };
 }
 
 /** What today's queue holds (plan §11.4): those still to come, arrived, with a doctor, and done — none cancelled. */

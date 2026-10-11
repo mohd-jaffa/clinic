@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { Permission } from "@/constants/permissions";
-import { actionsFor, isMovable } from "@/features/appointments/actions";
+import { actionsFor, isMovable, isRemindable } from "@/features/appointments/actions";
 import { anAppointmentDetail } from "@tests/support/appointments";
 
 // Tuesday 13 October 2026, 10:07 AM in Kochi; the appointment is at 9:00 AM.
@@ -22,6 +22,7 @@ describe("actionsFor (plan §11.2; D161 – D164)", () => {
   it("offers a scheduled booking everything its status allows: confirm, reschedule, a no-show once its time has come, cancel", () => {
     expect(actionsFor(anAppointmentDetail(), desk(ALL), now)).toEqual({
       arrive: true,
+      remind: true,
       confirm: true,
       reschedule: true,
       editNotes: false,
@@ -45,6 +46,7 @@ describe("actionsFor (plan §11.2; D161 – D164)", () => {
     const walkIn = anAppointmentDetail({ source: "WALK_IN", status: "ARRIVED", token: 3 });
     expect(actionsFor(walkIn, desk(ALL), now)).toEqual({
       arrive: false,
+      remind: false,
       confirm: false,
       reschedule: false,
       editNotes: true,
@@ -53,6 +55,7 @@ describe("actionsFor (plan §11.2; D161 – D164)", () => {
     });
     expect(actionsFor(anAppointmentDetail({ status: "CANCELLED" }), desk(ALL), now)).toEqual({
       arrive: false,
+      remind: false,
       confirm: false,
       reschedule: false,
       editNotes: true,
@@ -64,6 +67,7 @@ describe("actionsFor (plan §11.2; D161 – D164)", () => {
   it("asks appointments.edit for all but cancel, which asks appointments.cancel", () => {
     expect(actionsFor(anAppointmentDetail(), desk(["appointments.cancel"]), now)).toEqual({
       arrive: false,
+      remind: false,
       confirm: false,
       reschedule: false,
       editNotes: false,
@@ -75,6 +79,7 @@ describe("actionsFor (plan §11.2; D161 – D164)", () => {
 
   it("offers nothing for an archived patient (D103)", () => {
     expect(Object.values(actionsFor(anAppointmentDetail({ patientArchived: true }), desk(ALL), now))).toEqual([
+      false,
       false,
       false,
       false,
@@ -95,5 +100,26 @@ describe("actionsFor (plan §11.2; D161 – D164)", () => {
     expect(actionsFor(tomorrow, desk(ALL), now).arrive).toBe(false);
     expect(actionsFor(anAppointmentDetail({ status: "IN_PROGRESS" }), desk(ALL), now).arrive).toBe(false);
     expect(actionsFor(anAppointmentDetail({ status: "ARRIVED" }), desk(ALL), now).arrive).toBe(false);
+  });
+
+  it("offers a reminder for a booking still to come, today or later, to whoever may change appointments (D182, D184)", () => {
+    const tomorrow = anAppointmentDetail({
+      day: "2026-10-14",
+      scheduledAt: "2026-10-14T03:30:00Z",
+      status: "CONFIRMED",
+    });
+    expect(actionsFor(tomorrow, desk(ALL), now).remind).toBe(true);
+    expect(actionsFor(tomorrow, desk(["appointments.cancel"]), now).remind).toBe(false);
+  });
+});
+
+describe("isRemindable (D184)", () => {
+  it("is a booking scheduled or confirmed, today or later", () => {
+    const booking = { source: "BOOKED" as const, status: "SCHEDULED" as const };
+    expect(isRemindable({ ...booking, day: "2026-10-13" }, "2026-10-13")).toBe(true);
+    expect(isRemindable({ ...booking, day: "2026-10-12" }, "2026-10-13")).toBe(false);
+    expect(isRemindable({ ...booking, status: "ARRIVED", day: "2026-10-13" }, "2026-10-13")).toBe(false);
+    expect(isRemindable({ source: "WALK_IN", status: "SCHEDULED", day: "2026-10-13" }, "2026-10-13")).toBe(false);
+    expect(isRemindable({ ...booking, day: "2999-01-01" })).toBe(true);
   });
 });

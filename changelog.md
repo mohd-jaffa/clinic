@@ -2346,3 +2346,65 @@ first: D176 – D178. The race tests found two faults, now fixed.
 
 ### Blockers
 - None.
+
+## 2026-10-12 — Reminders on WhatsApp (R5.7)
+
+The front desk reminds a patient of their appointment on WhatsApp, with no
+WhatsApp API: the chat opens with the message written, and a person presses
+send. Asked of the user first: D179 – D184.
+
+### Added
+- **Remind on WhatsApp (`RemindButton`, plan §22.1):**
+  - **Where (D179):** in an appointment's detail, after Confirm; as a round
+    WhatsApp icon on the queue's Still to come rows, beside Arrived; and on
+    the calendar's day list for today and the days to come.
+  - **The message (`WHATSAPP_TEXT`, `reminderText`):** "Reminder: your
+    appointment with Dr. Maya Rao at Smile Care on Tue 14 Oct, 10:30 AM." —
+    "Dr." once, and no doctor once they are gone from the team.
+  - **Noted when tapped (D180):** "Reminded" on the row, and when in the
+    detail, at once, while it stays open. Again each time it is tapped.
+  - **View-only (D181):** it still opens WhatsApp, and nothing is noted; the
+    detail offers the reminder alone.
+  - **Who and which (D182, D184):** `appointments.edit`; a booking scheduled
+    or confirmed, today or later.
+- **`POST /api/appointments/[id]/reminded`** (`markReminded`): through
+  `mark_reminded` in the unreleased `0017`, audited from when it was last
+  sent; anything but a booking still to come is refused
+  (`APPOINTMENT_NOT_REMINDABLE`).
+- **`IconLink`** (kit): a round icon link out of the app, opened in a new tab.
+- **`formatShortDay`** ("Tue 14 Oct"), `isRemindable`.
+
+### Changed
+- **The calendar's reads carry each patient's mobile and when they were
+  last reminded.** That covers the calendar, the queue, the detail, the next
+  appointment and the history.
+- **The share helper** (a PDF to WhatsApp through the share sheet, or
+  downloaded on a desktop) moves to R6.8, with the first PDF sent (D183).
+- **Plan:**
+  - D179 – D184 in the decision log;
+  - §22.1 and §30;
+  - the tracker: R5.7 DONE, and R6.8 now carries the share helper.
+- **DESIGN.md:** `IconLink`, Remind on WhatsApp.
+
+### Speed (§37.1)
+- **Round trips:**
+  - Remind opens WhatsApp at once.
+  - Noting it waits on two round trips after the session: the stamp, the
+    audit row.
+- **No new query:** the mobile and the reminder come with each read
+  already made.
+
+### Validation
+- Typecheck, lint and format check passed.
+- Unit and integration tests passed, coverage 100%. `reminders.test.ts`
+  (integration) covers:
+  - noted again each time, audited from the last;
+  - a confirmed booking and one later today;
+  - walk-ins, cancelled and past ones refused;
+  - `appointments.edit`, and a view-only clinic.
+- E2E (phone and desktop, axe): `appointment-detail.spec.ts` opens the
+  reminder — the chat's link checked — and finds it noted.
+- The full E2E suite passed: 106 tests.
+
+### Blockers
+- None.

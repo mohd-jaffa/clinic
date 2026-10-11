@@ -8,7 +8,9 @@ import { UI_TEXT } from "@/constants/messages";
 import { APPOINTMENT_STATUS_LABELS, APPOINTMENT_STATUS_TONES } from "@/constants/statuses";
 import { formatTime } from "@/lib/format/date";
 
+import { isRemindable } from "../actions";
 import { kindOf } from "../describe";
+import { RemindButton } from "./RemindButton";
 import type { CalendarAppointment } from "../types";
 
 const { calendar, appointments: words } = UI_TEXT;
@@ -16,14 +18,17 @@ const { calendar, appointments: words } = UI_TEXT;
 /**
  * A day as a list by time — the phone's calendar (plan §11.5): each
  * appointment's time, patient, kind (its type, or Walk-in and its token, D154),
- * the doctor while every doctor's are shown, and its status; a tap opens it
- * (D160). A day with nothing booked says so, with **Book appointment** for
+ * the doctor while every doctor's are shown, whether they have been
+ * reminded, and its status; a tap opens it (D160). A booking still to come
+ * carries a WhatsApp reminder on its row for whoever may change appointments
+ * (D179). A day with nothing booked says so, with **Book appointment** for
  * whoever may.
  */
 export function DayList({
   label,
   appointments,
   showDoctor,
+  canRemind,
   onBook,
   onOpen,
 }: {
@@ -31,6 +36,8 @@ export function DayList({
   label: string;
   appointments: readonly CalendarAppointment[];
   showDoctor: boolean;
+  /** Who may change appointments, view-only or not (D181, D182). */
+  canRemind: boolean;
   /** None for someone who may not book now. */
   onBook?: () => void;
   onOpen: (appointment: CalendarAppointment) => void;
@@ -51,7 +58,12 @@ export function DayList({
         <Row
           key={appointment.id}
           title={appointment.patientName}
-          subtitle={[formatTime(appointment.scheduledAt), kindOf(appointment), showDoctor && appointment.doctorName]
+          subtitle={[
+            formatTime(appointment.scheduledAt),
+            kindOf(appointment),
+            showDoctor && appointment.doctorName,
+            appointment.remindedAt && UI_TEXT.appointment.reminded,
+          ]
             .filter(Boolean)
             .join(" · ")}
           detail={
@@ -60,6 +72,8 @@ export function DayList({
               tone={APPOINTMENT_STATUS_TONES[appointment.status]}
             />
           }
+          trailing={canRemind && isRemindable(appointment) && <RemindButton appointment={appointment} look="icon" />}
+          wrap
           onClick={() => onOpen(appointment)}
         />
       ))}

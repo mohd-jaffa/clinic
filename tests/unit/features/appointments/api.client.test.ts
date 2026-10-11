@@ -53,4 +53,11 @@ describe("AppointmentsClient (plan §30)", () => {
       "3f2b1c4d-0a1b-4c2d-8e3f-1a2b3c4d5e6f",
     );
   });
+
+  it("notes a reminder sent", async () => {
+    mockFetch.mockResolvedValue({ ok: true, status: 200, json: async () => ({ data: { remindedAt: "now" } }) });
+    expect(await AppointmentsClient.remind("a-1")).toEqual({ remindedAt: "now" });
+    const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+    expect([url, init.method]).toEqual(["/api/appointments/a-1/reminded", "POST"]);
+  });
 });

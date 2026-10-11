@@ -265,6 +265,12 @@ earlier lines are never rewritten.
 | D176 | **The race tests prove bookings, moves, tokens and repeated keys** (the user): ten desks booking one doctor's time at once book one and are told the rest is taken; overlapping times booked at once leave none overlapping, each refusal naming one that stands; two moves into one time move one; ten arrivals and walk-ins for one doctor at once take tokens 1 to 10, another doctor's apart; the same booking, walk-in or arrival sent twice at once makes one. Against the real database, each request its own transaction (`appointment-races.test.ts`). | 2026-10-12 |
 | D177 | **Phase 5's journey runs as the plan's, its members joining by invite** (the user): the owner invites a receptionist and a doctor, each joins by their link with the real presets; the receptionist adds a patient (mobile-match hint), books, has a booking into that time refused, adds a walk-in and arrives the booked patient, each with a token; the doctor cannot open a patient booked only with another doctor; a second clinic reaches none of it (`front-desk-journey.spec.ts`). | 2026-10-12 |
 | D178 | **The journey proves the queue refreshes on its own** (the user): the doctor keeps their queue open on their own device, and the walk-in the desk adds shows there within the 15-second refresh, without a reload. | 2026-10-12 |
+| D179 | **Remind sits in the detail and on the lists' rows** (the user): "Remind on WhatsApp" in an appointment's detail; a round WhatsApp icon on the queue's Still to come rows, beside Arrived, and on the calendar's day list for today and the days to come — §22.1's "tomorrow's list". | 2026-10-12 |
+| D180 | **A reminder is noted when Remind is tapped** (the user): WhatsApp opens with the message and "Reminded" is noted at once — the app cannot see whether Send was pressed — again each time it is tapped. The detail says when; the rows say "Reminded". `POST /api/appointments/[id]/reminded` (`mark_reminded`). | 2026-10-12 |
+| D181 | **In a view-only clinic Remind still opens WhatsApp, and nothing is noted** (the user): sharing what is there still works (§7.2); nothing new is written. The detail offers the reminder alone. | 2026-10-12 |
+| D182 | **Reminders are for those who may change appointments** (the user): `appointments.edit`, the front desk that confirms and arrives. | 2026-10-12 |
+| D183 | **The share helper comes with its first PDF** (the user): handing a PDF to WhatsApp through the share sheet, or downloading it on a desktop, is built in R6.8 with the prescription, the first PDF sent — not in R5.7 with nothing to share. R5.7 keeps the link helper and reminders. | 2026-10-12 |
+| D184 | **Remind is offered for a booking still to come, today or later** (the user): scheduled or confirmed — a late patient today too — never a walk-in, nor anyone arrived, done, cancelled or a no-show. | 2026-10-12 |
 
 ## 3. Users and roles
 
@@ -1371,7 +1377,9 @@ clinic's name, the doctor, the date and time filled in; English in V1.
   and the PDF is downloaded to attach.
 - Every reminder sent is recorded where it was sent from (an appointment's
   "Reminded at", a follow-up contact with outcome *Reminder sent*), so the
-  desk knows who has been told.
+  desk knows who has been told. An appointment's is noted when Remind is
+  tapped, by those who may change appointments, for a booking still to come
+  (R5.7, D179 – D184); in a view-only clinic the message still opens, unnoted.
 - Messages carry no clinical detail beyond what the patient is being sent.
 
 ---
@@ -1876,7 +1884,7 @@ take an `Idempotency-Key` header.
 | Doctors | `GET /api/doctors` (active doctors, for pickers) |
 | Subscription | `GET /api/subscription` (state, dates, prices, contact, history — owner) · `GET /api/subscription/payments/[id]/receipt.pdf` |
 | Patients | `POST /api/patients` · `POST /api/patients/search` (the list, a page at a time: the words, the tab and the cursor in the body, D98) · `POST /api/patients/matches` (the mobile in the body, D98) · `GET, PATCH /api/patients/[id]` · `POST /api/patients/[id]/archive` · `POST /api/patients/[id]/restore` · `GET /api/patients/[id]/summary` (where they stand: the next appointment, D166; each part only with its permission) · `GET /api/patients/[id]/timeline` (their history, a page at a time: appointments, D167; each part only with its permission) · `GET /api/patients/[id]/last-prescription` · `GET, POST /api/patients/import` (the owner's: the import's limits, D128; a batch) · `POST /api/patients/import/matches` (the clinic's patients on a batch's mobiles, in the body, D98) · `GET, POST /api/patients/[id]/alerts` · `PATCH /api/patients/[id]/alerts/[alertId]` |
-| Appointments | `GET, POST /api/appointments` (the calendar's days, `?from&to&doctorId`, at most a week; a booking, with a new patient in its body when one is added, D145) · `GET /api/appointments/booked` (a doctor's taken times on a day, D147) · `GET, PATCH /api/appointments/[id]` (its detail, D160; its notes, or moved, D161) · `POST /api/appointments/[id]/status` (confirmed, scheduled, a no-show — `appointments.edit` — or cancelled with its reason — `appointments.cancel`, D162) · `POST /api/appointments/[id]/arrived` (the token, D173) · `POST /api/appointments/[id]/reminded` · `POST /api/appointments/walk-in` (once per key, the token, D171, D173) |
+| Appointments | `GET, POST /api/appointments` (the calendar's days, `?from&to&doctorId`, at most a week; a booking, with a new patient in its body when one is added, D145) · `GET /api/appointments/booked` (a doctor's taken times on a day, D147) · `GET, PATCH /api/appointments/[id]` (its detail, D160; its notes, or moved, D161) · `POST /api/appointments/[id]/status` (confirmed, scheduled, a no-show — `appointments.edit` — or cancelled with its reason — `appointments.cancel`, D162) · `POST /api/appointments/[id]/arrived` (the token, D173) · `POST /api/appointments/[id]/reminded` (a reminder noted, D180) · `POST /api/appointments/walk-in` (once per key, the token, D171, D173) |
 | Queue | `GET /api/queue` (today's: still to come, arrived, with a doctor, done — and anyone still with a doctor from before; `?doctorId`, D170) · `POST /api/queue/send-in` · `POST /api/queue/done` · `POST /api/queue/next` |
 | Visits | `POST /api/visits` · `GET, PATCH /api/visits/[id]` · `PUT /api/visits/[id]/vitals` · `POST /api/visits/[id]/no-charge` |
 | Prescriptions | `GET, PUT /api/visits/[id]/prescription` · `GET /api/visits/[id]/prescription.pdf` · `GET /api/prescriptions/medicines?q=` · `GET, POST /api/prescription-templates` · `PATCH /api/prescription-templates/[id]` |
@@ -2388,7 +2396,7 @@ in the row's one commit (D136).
 | R5.4 | Appointment detail: confirm, reschedule, cancel (reason), no-show; the profile's next appointment and its appointments in the history (D101; D160 – D167) | §11.2, §10.3 | — | DONE (2026-10-11) |
 | R5.5 | Walk-ins, arrival tokens, today's queue (Waiting, With doctor, Still to come, Done) with 15 s refresh (D168 – D175) | §11.3, §11.4 | — | DONE (2026-10-12) |
 | R5.6 | Integration (concurrent bookings, concurrent tokens) + E2E (D176 – D178) | §34 | — | DONE (2026-10-12) |
-| R5.7 | WhatsApp click-to-send: the link and share helpers; appointment reminders and `reminded_at` | §22.1 | — | TODO |
+| R5.7 | WhatsApp click-to-send: the link helper; appointment reminders and `reminded_at` (D179 – D184; the share helper moves to R6.8, D183) | §22.1 | — | DONE (2026-10-12) |
 
 ### Phase 6 — Visits, vitals and prescriptions
 
@@ -2401,7 +2409,7 @@ in the row's one commit (D136).
 | R6.5 | Patient timeline with visits and prescriptions; the patients list's last visit (D101) | §10.3, §10.2 | — | TODO |
 | R6.6 | Integration + E2E: queue → visit → prescription PDF | §34 | — | TODO |
 | R6.7 | Repeat last prescription; prescription templates (save, apply, edit, archive) | §13 | — | TODO |
-| R6.8 | Send prescription on WhatsApp | §22.1 | — | TODO |
+| R6.8 | Send prescription on WhatsApp, with the share helper: the PDF through the share sheet, or downloaded on a desktop (D183) | §22.1 | — | TODO |
 
 ### Phase 7 — Treatments and follow-ups
 

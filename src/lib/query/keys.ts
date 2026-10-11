@@ -81,6 +81,7 @@ export const apiRoutes = {
     one: (id: string) => `/api/appointments/${id}`,
     status: (id: string) => `/api/appointments/${id}/status`,
     arrived: (id: string) => `/api/appointments/${id}/arrived`,
+    reminded: (id: string) => `/api/appointments/${id}/reminded`,
     walkIn: "/api/appointments/walk-in",
   },
   // Today's queue (plan §11.4): one doctor's, or every doctor's.

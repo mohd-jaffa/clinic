@@ -64,7 +64,8 @@ export function Queue() {
 
   const canAdd = membership !== null && hasAccess(membership, "appointments.create");
   const adds = canAdd && !readOnly;
-  const arrives = membership !== null && hasAccess(membership, "appointments.edit") && !readOnly;
+  const edits = membership !== null && hasAccess(membership, "appointments.edit");
+  const arrives = edits && !readOnly;
   const showDoctor = !doctorId;
   const open = (appointment: QueueAppointment) => opened.show(appointment);
 
@@ -108,6 +109,7 @@ export function Queue() {
               appointment={appointment}
               now={now}
               showDoctor={showDoctor}
+              canRemind={edits}
               canArrive={arrives}
               onOpen={open}
             />

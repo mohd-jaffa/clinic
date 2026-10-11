@@ -8,7 +8,8 @@ import type { AppointmentChanged, Arrival, Booked } from "./types";
  * The appointments' endpoints the browser calls (plan §30): booking one, once
  * per key however often it is sent; changing one — its notes, or moved
  * (D161); setting its status from its detail; and a patient joining the
- * queue — a walk-in, once per key, or a booking arrived — with their token.
+ * queue — a walk-in, once per key, or a booking arrived — with their token;
+ * and a reminder sent on WhatsApp, noted (D180).
  */
 export const AppointmentsClient = {
   book: ({ input, key }: { input: BookingInput; key: string }) =>
@@ -18,6 +19,7 @@ export const AppointmentsClient = {
   setStatus: ({ id, ...change }: StatusChangeInput & { id: string }) =>
     postJson<AppointmentChanged>(apiRoutes.appointments.status(id), change),
   arrive: (id: string) => postJson<Arrival>(apiRoutes.appointments.arrived(id)),
+  remind: (id: string) => postJson<{ remindedAt: string }>(apiRoutes.appointments.reminded(id)),
   addWalkIn: ({ input, key }: { input: WalkInInput; key: string }) =>
     postOnce<Arrival>(apiRoutes.appointments.walkIn, input, key),
 };

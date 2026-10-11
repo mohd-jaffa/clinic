@@ -20,6 +20,7 @@ const {
   listPatientAppointments,
   listQueue,
   markArrived,
+  markReminded,
   nextAppointment,
 } = await import("@/features/appointments/api");
 
@@ -270,7 +271,8 @@ const calendarRow = {
   duration_minutes: 15,
   local_date: "2026-10-13",
   token_number: null,
-  patient: { full_name: "Rohan Mehta", patient_number: 1012 },
+  reminded_at: null,
+  patient: { full_name: "Rohan Mehta", patient_number: 1012, phone: "+919876543210" },
   doctor: { member: { profile: { full_name: "Maya Rao" } } },
   type: { name: "Consultation" },
 };
@@ -279,6 +281,7 @@ const asRead = {
   patientId: "p-1",
   patientName: "Rohan Mehta",
   patientNumber: 1012,
+  patientPhone: "+919876543210",
   doctorId: "d-1",
   doctorName: "Maya Rao",
   typeName: "Consultation",
@@ -288,6 +291,7 @@ const asRead = {
   minutes: 15,
   day: "2026-10-13",
   token: null,
+  remindedAt: null,
 };
 
 describe("getAppointment (D160)", () => {
@@ -298,7 +302,7 @@ describe("getAppointment (D160)", () => {
     created_at: "2026-10-10T06:00:00+00:00",
     cancelled_at: "2026-10-11T06:00:00+00:00",
     cancel_reason: "Patient asked",
-    patient: { full_name: "Rohan Mehta", patient_number: 1012, archived_at: null },
+    patient: { full_name: "Rohan Mehta", patient_number: 1012, phone: "+919876543210", archived_at: null },
     booker: { full_name: "Priya Nair" },
     canceller: null,
   };
@@ -701,5 +705,30 @@ describe("listQueue (plan §11.4)", () => {
     ]);
     const { tenant } = tenantWith({ answer: () => ({ error: postgrestError("42501") }) });
     await expect(listQueue(tenant, {})).rejects.toMatchObject({ code: "AUTH_PERMISSION_DENIED" });
+  });
+});
+
+describe("markReminded (plan §22.1, D180)", () => {
+  it("notes the reminder through mark_reminded, audited from when it was last sent", async () => {
+    const { tenant, rpcs } = tenantWith({
+      rpc: () => ({ data: { reminded_at: "2026-10-12T05:00:00+00:00", previously: "2026-10-11T05:00:00+00:00" } }),
+    });
+    expect(await markReminded(tenant, "a-1", "req_r")).toEqual({ remindedAt: "2026-10-12T05:00:00+00:00" });
+    expect(rpcs).toEqual([{ name: "mark_reminded", args: { p_appointment_id: "a-1" } }]);
+    expect(logActionSafe).toHaveBeenCalledWith(tenant, {
+      action: "UPDATE",
+      entityType: "appointments",
+      entityId: "a-1",
+      changes: { reminded_at: { from: "2026-10-11T05:00:00+00:00", to: "2026-10-12T05:00:00+00:00" } },
+      requestId: "req_r",
+    });
+  });
+
+  it("says why it was refused", async () => {
+    const { tenant } = tenantWith({
+      rpc: () => ({ error: { ...postgrestError("P0001"), hint: "APPOINTMENT_NOT_REMINDABLE" } }),
+    });
+    await expect(markReminded(tenant, "a-1")).rejects.toMatchObject({ code: "APPOINTMENT_NOT_REMINDABLE" });
+    expect(logActionSafe).not.toHaveBeenCalled();
   });
 });

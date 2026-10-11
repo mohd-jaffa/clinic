@@ -611,6 +611,32 @@ exception
 end;
 $$;
 
+-- A reminder sent on WhatsApp (plan §22.1; D179 – D184): appointments.edit,
+-- while the clinic can write, for a booking still to come — scheduled or
+-- confirmed, today or later. Stamped when Remind is tapped, again each time
+-- (D180); the message itself is the person's to send. Hands back when, and
+-- when before, for the audit row.
+create or replace function public.mark_reminded(p_appointment_id uuid)
+returns table (reminded_at timestamptz, previously timestamptz)
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  was public.appointments := public.appointment_for_change(p_appointment_id, 'appointments.edit');
+  stamped timestamptz := now();
+begin
+  if was.source <> 'BOOKED' or was.status not in ('SCHEDULED', 'CONFIRMED')
+     or was.local_date < public.clinic_today(was.clinic_id) then
+    raise exception 'Only a booking still to come is reminded' using hint = 'APPOINTMENT_NOT_REMINDABLE';
+  end if;
+  update public.appointments as appointment
+     set reminded_at = stamped
+   where appointment.id = was.id;
+  return query select stamped, was.reminded_at;
+end;
+$$;
+
 -- A walk-in (plan §11.3): appointments.create, while the clinic can write,
 -- for a patient the caller may see and a doctor and type of the clinic's —
 -- refused on a clinic holiday or the doctor's leave like a booking (D139).
@@ -674,11 +700,13 @@ revoke all on function public.update_appointment(uuid, jsonb) from public, anon;
 revoke all on function public.change_appointment_status(uuid, text, text) from public, anon;
 revoke all on function public.mark_arrived(uuid) from public, anon;
 revoke all on function public.add_walk_in(jsonb, uuid) from public, anon;
+revoke all on function public.mark_reminded(uuid) from public, anon;
 grant execute on function public.create_appointment(jsonb, uuid) to authenticated;
 grant execute on function public.update_appointment(uuid, jsonb) to authenticated;
 grant execute on function public.change_appointment_status(uuid, text, text) to authenticated;
 grant execute on function public.mark_arrived(uuid) to authenticated;
 grant execute on function public.add_walk_in(jsonb, uuid) to authenticated;
+grant execute on function public.mark_reminded(uuid) to authenticated;
 
 -- ------------------------------------------------------------
 -- 6. Archiving a patient with appointments to come (D140)

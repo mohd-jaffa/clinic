@@ -4,10 +4,12 @@ import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { aQueueAppointment } from "@tests/support/appointments";
+import { authStub } from "@tests/support/auth";
 import { Providers } from "@tests/support/providers";
 
-const { client } = vi.hoisted(() => ({ client: { arrive: vi.fn() } }));
+const { client } = vi.hoisted(() => ({ client: { arrive: vi.fn(), remind: vi.fn() } }));
 vi.mock("@/features/appointments/api.client", () => ({ AppointmentsClient: client }));
+vi.mock("@/features/auth/AuthProvider", () => ({ useAuth: () => authStub() }));
 
 const { ComingRow, DoneRow, QueueSection, tokenNumeral, WaitingRow, WithDoctorRow } =
   await import("@/features/appointments/components/QueueRows");
@@ -110,7 +112,7 @@ describe("WithDoctorRow", () => {
 describe("ComingRow (D172, D174)", () => {
   it("says the booked time, how late once it has passed, the kind and the doctor — and marks them arrived on the row", async () => {
     const late = aQueueAppointment({ scheduledAt: "2026-10-13T04:55:00Z", doctorName: null });
-    inList(<ComingRow appointment={late} now={now} showDoctor canArrive onOpen={onOpen} />);
+    inList(<ComingRow appointment={late} now={now} showDoctor canRemind={false} canArrive onOpen={onOpen} />);
     const row = screen.getByRole("listitem");
     expect(row).toHaveTextContent("Rohan Mehta10:25 AM · Late 35 min · Consultation · No longer on the team");
     expect(within(row).getByText("Late 35 min")).toHaveClass("text-coral");
@@ -130,6 +132,7 @@ describe("ComingRow (D172, D174)", () => {
         appointment={aQueueAppointment({ scheduledAt: "2026-10-13T06:30:00Z" })}
         now={now}
         showDoctor={false}
+        canRemind={false}
         canArrive={false}
         onOpen={onOpen}
       />,
@@ -141,9 +144,36 @@ describe("ComingRow (D172, D174)", () => {
   it("says why an arrival was refused", async () => {
     const { ApiError } = await import("@/lib/api/client");
     client.arrive.mockRejectedValue(new ApiError(409, "APPOINTMENT_SLOT_TAKEN", "Taken.", "req_1"));
-    inList(<ComingRow appointment={aQueueAppointment()} now={now} showDoctor={false} canArrive onOpen={onOpen} />);
+    inList(
+      <ComingRow
+        appointment={aQueueAppointment()}
+        now={now}
+        showDoctor={false}
+        canRemind={false}
+        canArrive
+        onOpen={onOpen}
+      />,
+    );
     await userEvent.click(screen.getByRole("button", { name: "Mark Rohan Mehta arrived" }));
     expect(await screen.findByRole("alertdialog", { name: "That wasn’t marked arrived" })).toBeInTheDocument();
+  });
+});
+
+describe("ComingRow's reminder (D179)", () => {
+  it("offers a WhatsApp reminder beside Arrived, and says when they have been reminded", () => {
+    inList(
+      <ComingRow
+        appointment={aQueueAppointment({ scheduledAt: "2026-10-13T06:30:00Z", remindedAt: "2026-10-12T05:00:00Z" })}
+        now={now}
+        showDoctor={false}
+        canRemind
+        canArrive={false}
+        onOpen={onOpen}
+      />,
+    );
+    expect(screen.getByRole("listitem")).toHaveTextContent("12:00 PM · Consultation · Reminded");
+    expect(screen.getByRole("link", { name: "Remind Rohan Mehta on WhatsApp" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /arrived/ })).not.toBeInTheDocument();
   });
 });
 

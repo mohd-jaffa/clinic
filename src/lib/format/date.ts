@@ -114,6 +114,13 @@ export function formatDayRange(from: string, to: string, today: string = todayKe
 
 const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
+/** A day short, for a message: "Tue 14 Oct". */
+export function formatShortDay(isoDate: string | null | undefined): string {
+  const day = formatDayMonth(isoDate);
+  if (day === "—") return day;
+  return `${WEEKDAYS[new Date(`${isoDate}T00:00:00Z`).getUTCDay()].slice(0, 3)} ${day}`;
+}
+
 /** A day in full, for a heading: "Saturday, 26 Sep 2026". */
 export function formatLongDate(isoDate: string | null | undefined): string {
   const day = formatDate(isoDate);

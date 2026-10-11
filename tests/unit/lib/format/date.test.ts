@@ -1,17 +1,18 @@
 import { describe, it, expect } from "vitest";
 import {
+  formatClock,
   formatDate,
   formatDateTime,
   formatDayMonth,
   formatDayRange,
   formatDaysAgo,
-  formatRecent,
-  formatLongDate,
-  formatClock,
   formatHour,
+  formatLongDate,
   formatMonth,
   formatMonthName,
   formatMonthYear,
+  formatRecent,
+  formatShortDay,
   formatTime,
 } from "@/lib/format/date";
 
@@ -179,5 +180,13 @@ describe("formatHour", () => {
     expect(formatHour("09")).toBe("9 AM");
     expect(formatHour("12")).toBe("12 PM");
     expect(formatHour("18")).toBe("6 PM");
+  });
+});
+
+describe("formatShortDay", () => {
+  it("writes a day short, for a message", () => {
+    expect(formatShortDay("2026-10-14")).toBe("Wed 14 Oct");
+    expect(formatShortDay("2026-10-11")).toBe("Sun 11 Oct");
+    expect(formatShortDay(null)).toBe("—");
   });
 });

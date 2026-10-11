@@ -24,6 +24,8 @@ export interface CalendarAppointment {
   patientId: string;
   patientName: string;
   patientNumber: number;
+  /** Their mobile, for a reminder on WhatsApp (D179). */
+  patientPhone: string;
   doctorId: string;
   /** None once the doctor's account is gone. */
   doctorName: string | null;
@@ -35,6 +37,8 @@ export interface CalendarAppointment {
   /** Its day in the clinic's timezone. */
   day: string;
   token: number | null;
+  /** When a reminder was last sent on WhatsApp (D180), or never. */
+  remindedAt: string | null;
 }
 
 /** An `appointments` row as the calendar reads it, with its patient, doctor and type. */
@@ -48,7 +52,8 @@ export interface CalendarAppointmentRow {
   duration_minutes: number;
   local_date: string;
   token_number: number | null;
-  patient: { full_name: string; patient_number: number };
+  reminded_at: string | null;
+  patient: { full_name: string; patient_number: number; phone: string };
   doctor: { member: { profile: { full_name: string } | null } | null } | null;
   type: { name: string };
 }
@@ -78,7 +83,7 @@ export interface AppointmentDetailRow extends Omit<CalendarAppointmentRow, "pati
   created_at: string;
   cancelled_at: string | null;
   cancel_reason: string | null;
-  patient: { full_name: string; patient_number: number; archived_at: string | null };
+  patient: { full_name: string; patient_number: number; phone: string; archived_at: string | null };
   booker: { full_name: string } | null;
   canceller: { full_name: string } | null;
 }
