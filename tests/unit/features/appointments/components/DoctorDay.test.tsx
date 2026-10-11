@@ -40,4 +40,13 @@ describe("DoctorDay (D147)", () => {
     rerender(<DoctorDay doctorId="d-1" doctorName="Maya Rao" date="2026-10-13" />);
     expect(container).toHaveTextContent("");
   });
+
+  it("leaves out the time of an appointment being moved (D161)", () => {
+    booked.current = [
+      { startsAt: "2026-10-13T04:30:00Z", endsAt: "2026-10-13T05:00:00Z" },
+      { startsAt: "2026-10-13T10:30:00Z", endsAt: "2026-10-13T10:45:00Z" },
+    ];
+    render(<DoctorDay doctorId="d-1" doctorName="Maya Rao" date="2026-10-13" except="2026-10-13T04:30:00+00:00" />);
+    expect(screen.getByText(/^Maya Rao that day:/)).toHaveTextContent("Maya Rao that day: 4:00 PM – 4:15 PM.");
+  });
 });

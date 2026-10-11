@@ -11,6 +11,7 @@ describe("DayList (plan §11.5)", () => {
       <DayList
         label="Appointments, Tuesday, 13 Oct 2026"
         showDoctor
+        onOpen={vi.fn()}
         appointments={[
           aCalendarAppointment(),
           aCalendarAppointment({ id: "a-2", patientName: "Kiran Das", source: "WALK_IN", token: 3, status: "ARRIVED" }),
@@ -22,18 +23,26 @@ describe("DayList (plan §11.5)", () => {
     );
     expect(rows[0]).toHaveTextContent("Rohan Mehta9:00 AM · Consultation · Maya RaoScheduled");
     expect(rows[1]).toHaveTextContent("Kiran Das9:00 AM · Walk-in #3 · Maya RaoArrived");
-    rerender(<DayList label="Day" showDoctor={false} appointments={[aCalendarAppointment()]} />);
+    rerender(<DayList label="Day" showDoctor={false} appointments={[aCalendarAppointment()]} onOpen={vi.fn()} />);
     expect(screen.getByRole("listitem")).toHaveTextContent("9:00 AM · Consultation");
     expect(screen.getByRole("listitem")).not.toHaveTextContent("Maya Rao");
   });
 
   it("says a day has nothing booked, with Book appointment for whoever may book", async () => {
     const onBook = vi.fn();
-    const { rerender } = render(<DayList label="Day" showDoctor appointments={[]} onBook={onBook} />);
+    const { rerender } = render(<DayList label="Day" showDoctor appointments={[]} onBook={onBook} onOpen={vi.fn()} />);
     expect(screen.getByRole("heading", { name: "Nothing booked" })).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Book appointment" }));
     expect(onBook).toHaveBeenCalled();
-    rerender(<DayList label="Day" showDoctor appointments={[]} />);
+    rerender(<DayList label="Day" showDoctor appointments={[]} onOpen={vi.fn()} />);
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
+  });
+
+  it("opens an appointment tapped (D160)", async () => {
+    const onOpen = vi.fn();
+    const rohan = aCalendarAppointment();
+    render(<DayList label="Day" showDoctor appointments={[rohan]} onOpen={onOpen} />);
+    await userEvent.click(screen.getByRole("button", { name: "Rohan Mehta" }));
+    expect(onOpen).toHaveBeenCalledWith(rohan);
   });
 });

@@ -71,11 +71,15 @@ export const apiRoutes = {
     restore: (id: string) => `/api/patients/${id}/restore`,
     alerts: (id: string) => `/api/patients/${id}/alerts`,
     alert: (id: string, alertId: string) => `/api/patients/${id}/alerts/${alertId}`,
+    summary: (id: string) => `/api/patients/${id}/summary`,
+    timeline: (id: string) => `/api/patients/${id}/timeline`,
   },
   // Appointments (plan §11, §30): a doctor's day is who and which day, never a patient.
   appointments: {
     list: "/api/appointments",
     booked: "/api/appointments/booked",
+    one: (id: string) => `/api/appointments/${id}`,
+    status: (id: string) => `/api/appointments/${id}/status`,
   },
 } as const;
 

@@ -1,4 +1,4 @@
-import type { CalendarAppointment } from "@/features/appointments/types";
+import type { AppointmentDetail, CalendarAppointment } from "@/features/appointments/types";
 
 /** An appointment as the calendar reads it, for a component test. */
 export function aCalendarAppointment(overrides: Partial<CalendarAppointment> = {}): CalendarAppointment {
@@ -16,6 +16,22 @@ export function aCalendarAppointment(overrides: Partial<CalendarAppointment> = {
     minutes: 15,
     day: "2026-10-13",
     token: null,
+    ...overrides,
+  };
+}
+
+/** An appointment's detail (D160), for a component test: the calendar's, with what it says of itself. */
+export function anAppointmentDetail(overrides: Partial<AppointmentDetail> = {}): AppointmentDetail {
+  return {
+    ...aCalendarAppointment(),
+    typeId: "t-1",
+    patientArchived: false,
+    notes: null,
+    bookedAt: "2026-10-10T06:00:00Z",
+    bookedBy: "Priya Nair",
+    cancelledAt: null,
+    cancelledBy: null,
+    cancelReason: null,
     ...overrides,
   };
 }

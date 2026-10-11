@@ -25,4 +25,15 @@ describe("AppointmentsClient (plan §30)", () => {
     });
     expect((init.headers as Record<string, string>)["Idempotency-Key"]).toBe("3f2b1c4d-0a1b-4c2d-8e3f-1a2b3c4d5e6f");
   });
+
+  it("changes one — its notes, or moved — and sets its status, each in the body", async () => {
+    mockFetch.mockResolvedValue({ ok: true, status: 200, json: async () => ({ data: { id: "a-1" } }) });
+    await AppointmentsClient.change({ id: "a-1", input: { notes: "Bring reports" } });
+    await AppointmentsClient.setStatus({ id: "a-1", status: "CANCELLED", reason: "Patient asked" });
+    const sent = (mockFetch.mock.calls as [string, RequestInit][]).map(([url, init]) => [url, init.method, init.body]);
+    expect(sent).toEqual([
+      ["/api/appointments/a-1", "PATCH", JSON.stringify({ notes: "Bring reports" })],
+      ["/api/appointments/a-1/status", "POST", JSON.stringify({ status: "CANCELLED", reason: "Patient asked" })],
+    ]);
+  });
 });

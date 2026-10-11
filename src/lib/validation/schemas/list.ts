@@ -25,3 +25,6 @@ export const searchParam = optionalLine("Search", MAX_SEARCH_LENGTH);
 export const listQuerySchema = z.object({ cursor: cursorParam, search: searchParam });
 
 export type ListQuery = z.output<typeof listQuerySchema>;
+
+/** A list with no search — a patient's history (plan §10.3): where its page starts. */
+export const pageQuerySchema = z.object({ cursor: cursorParam });

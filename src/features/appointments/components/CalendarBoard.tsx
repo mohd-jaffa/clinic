@@ -27,7 +27,7 @@ function pickableFrom(day: string): number | undefined {
  * (D158). The hours run 8 AM to 8 PM, stretching to fit (D152). A clinic
  * holiday shades every column, a doctor's leave theirs. A tap on an empty
  * quarter books there, the doctor and day filled (D156) — never on a closed
- * column, nor in the past.
+ * column, nor in the past. A tap on an appointment opens it (D160).
  */
 export function CalendarBoard({
   view,
@@ -38,6 +38,7 @@ export function CalendarBoard({
   closures,
   appointments,
   onPick,
+  onOpen,
 }: {
   view: "DAY" | "WEEK";
   day: string;
@@ -49,6 +50,7 @@ export function CalendarBoard({
   /** What is shown, live ones only (D153). */
   appointments: readonly CalendarAppointment[];
   onPick?: (booking: { doctorId: string; date: string; minutes: number }) => void;
+  onOpen: (appointment: CalendarAppointment) => void;
 }) {
   const { from, to } = gridHours(appointments);
   const today = todayKey();
@@ -114,6 +116,8 @@ export function CalendarBoard({
       step={CALENDAR_STEP_MINUTES}
       items={items}
       columnWidth={view === "DAY" ? "wide" : "narrow"}
+      // An item is one of these appointments.
+      onOpen={(key) => onOpen(appointments.find((appointment) => appointment.id === key)!)}
       onPick={
         onPick &&
         ((column, minutes) =>

@@ -12,10 +12,24 @@ const { appointments } = UI_TEXT;
 /**
  * What the doctor already has on the day being booked (D147), under the
  * time: each taken time, start to end — never whose — or that nothing is
- * booked yet. Said politely as it changes; nothing while it is unknown.
+ * booked yet. Said politely as it changes; nothing while it is unknown. An
+ * appointment being moved leaves its own time out (D161): it is not in the
+ * way of itself.
  */
-export function DoctorDay({ doctorId, doctorName, date }: { doctorId: string; doctorName: string; date: string }) {
-  const { data } = useBookedTimes(doctorId, date);
+export function DoctorDay({
+  doctorId,
+  doctorName,
+  date,
+  except,
+}: {
+  doctorId: string;
+  doctorName: string;
+  date: string;
+  /** When the appointment being moved starts now, with this doctor. */
+  except?: string;
+}) {
+  const taken = useBookedTimes(doctorId, date).data;
+  const data = except ? taken?.filter(({ startsAt }) => Date.parse(startsAt) !== Date.parse(except)) : taken;
   const known = data !== undefined && doctorName !== "";
   return (
     <p aria-live="polite" className="-mt-2 text-small text-muted empty:hidden">

@@ -108,6 +108,15 @@ export const APPOINTMENT_STATUS_TRANSITIONS: Record<AppointmentStatus, readonly 
   CANCELLED: [],
 };
 
+/**
+ * The statuses an appointment's detail sets (plan §11.2), through
+ * `change_appointment_status` in 0017: confirmed, back to scheduled,
+ * cancelled with a reason, or a no-show. Arriving and the queue's moves have
+ * their own functions.
+ */
+export const APPOINTMENT_STATUS_CHANGES = ["SCHEDULED", "CONFIRMED", "CANCELLED", "NO_SHOW"] as const;
+export type AppointmentStatusChange = (typeof APPOINTMENT_STATUS_CHANGES)[number];
+
 /** The paper bills and prescriptions print on (D28). */
 export const PAPER_SIZES = ["A4", "A5"] as const;
 export type PaperSize = (typeof PAPER_SIZES)[number];

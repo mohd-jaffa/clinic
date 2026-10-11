@@ -27,7 +27,7 @@ export {
   wholeNumberText,
 } from "./primitives";
 
-export { cursorParam, listQuerySchema, searchParam, type ListQuery } from "./schemas/list";
+export { cursorParam, listQuerySchema, pageQuerySchema, searchParam, type ListQuery } from "./schemas/list";
 
 export {
   alertSchema,
@@ -130,19 +130,34 @@ export {
 } from "./schemas/catalogues";
 
 export {
+  appointmentChangeSchema,
+  appointmentNotesSchema,
   bookedTimesSchema,
   bookingSchema,
   calendarQuerySchema,
+  CANCEL_REASONS,
+  cancelSchema,
   HOURS,
   LENGTH_CHOICES,
   MINUTES,
   OTHER_LENGTH,
+  OTHER_REASON,
   PATIENT_MODES,
+  rescheduleSchema,
+  statusChangeSchema,
+  type AppointmentChangeInput,
+  type AppointmentChangePayload,
+  type AppointmentNotesInput,
   type BookedTimesPayload,
   type BookingInput,
   type BookingPayload,
   type CalendarQuery,
+  type CancelInput,
   type PatientMode,
+  type RescheduleInput,
+  type ReschedulePayload,
+  type StatusChangeInput,
+  type StatusChangePayload,
 } from "./schemas/appointments";
 
 export {

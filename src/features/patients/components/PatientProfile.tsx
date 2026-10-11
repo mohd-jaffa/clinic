@@ -13,6 +13,8 @@ import { SkeletonRows } from "@/components/ui/skeleton";
 import { UI_TEXT } from "@/constants/messages";
 import { PATIENTS_ROUTE } from "@/constants/navigation";
 import { hasAccess } from "@/constants/permissions";
+import { AppointmentPanel } from "@/features/appointments/components/AppointmentPanel";
+import { useOpenedAppointment } from "@/features/appointments/hooks/useOpenedAppointment";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { ReadOnlyNote } from "@/features/subscription/components/ReadOnlyNote";
 import { useReadOnly } from "@/features/subscription/hooks/useReadOnly";
@@ -22,8 +24,10 @@ import { callHref, formatPhoneDigits, whatsAppHref } from "@/lib/phone";
 import { describePatient } from "../describe";
 import { usePatient } from "../hooks/usePatient";
 import type { Patient } from "../types";
+import { NextAppointment } from "./NextAppointment";
 import { PatientAlerts } from "./PatientAlerts";
 import { PatientArchived } from "./PatientArchived";
+import { PatientHistory } from "./PatientHistory";
 import { PatientSheet } from "./PatientSheet";
 
 const { patients } = UI_TEXT;
@@ -51,8 +55,10 @@ function detailsOf(patient: Patient): Detail[] {
  * a doctor's own only (D3): who they are — age, gender, number and their
  * doctor — whether they are archived, their alerts, and **Call** and
  * **WhatsApp** (a chat, nothing typed); then their details, only what holds a
- * value, notes included, with **Edit** for those who may change them. One column until history arrives (D114); each
- * later phase adds its part (D101).
+ * value, notes included, with **Edit** for those who may change them. For
+ * those who see appointments, their next appointment — or **Book** — and
+ * their history of appointments, each opening its detail (D166, D167). One
+ * column until visits arrive (D114); each later phase adds its part (D101).
  */
 export function PatientProfile({ id }: { id: string }) {
   const query = usePatient(id);
@@ -80,7 +86,7 @@ export function PatientProfile({ id }: { id: string }) {
       </CoastHeader>
       <div className="px-4 pt-4 md:px-8">
         {patient ? (
-          <Details patient={patient} />
+          <Body patient={patient} />
         ) : query.error != null ? (
           <LoadFailed query={query} loadFailed="PATIENT_LOAD_FAILED" />
         ) : (
@@ -117,18 +123,47 @@ function Reach({ patient }: { patient: Patient }) {
   );
 }
 
-/** What holds a value of their details (D113), and Edit — not for an archived patient (D103). */
-function Details({ patient }: { patient: Patient }) {
+/**
+ * The profile's parts, in one column (D114): their next appointment, their
+ * details, their history — the appointments ones for `appointments.view` —
+ * and the detail of an appointment opened from either (D160).
+ */
+function Body({ patient }: { patient: Patient }) {
   const { membership } = useAuth();
-  const { readOnly } = useReadOnly();
-  const [editing, setEditing] = useState(false);
-  const headingId = useId();
+  const opened = useOpenedAppointment();
+  const seesAppointments = membership !== null && hasAccess(membership, "appointments.view");
   const mayEdit = membership !== null && hasAccess(membership, "patients.edit");
-  const edits = mayEdit && !readOnly && !patient.archivedAt;
 
   return (
     <div className="grid max-w-3xl grid-cols-1 gap-6">
       {mayEdit && <ReadOnlyNote />}
+      {seesAppointments && <NextAppointment patient={patient} onOpen={opened.show} />}
+      <Details patient={patient} mayEdit={mayEdit} />
+      {seesAppointments && (
+        <>
+          <PatientHistory patient={patient} onOpen={opened.show} />
+          <AppointmentPanel
+            key={opened.appointment?.id}
+            appointment={opened.appointment}
+            open={opened.open}
+            onClose={opened.close}
+            linkProfile={false}
+          />
+        </>
+      )}
+    </div>
+  );
+}
+
+/** What holds a value of their details (D113), and Edit — not for an archived patient (D103). */
+function Details({ patient, mayEdit }: { patient: Patient; mayEdit: boolean }) {
+  const { readOnly } = useReadOnly();
+  const [editing, setEditing] = useState(false);
+  const headingId = useId();
+  const edits = mayEdit && !readOnly && !patient.archivedAt;
+
+  return (
+    <>
       <section aria-labelledby={headingId}>
         <SectionHeading id={headingId} title={patients.details}>
           {edits && (
@@ -145,6 +180,6 @@ function Details({ patient }: { patient: Patient }) {
         <DetailList details={detailsOf(patient)} />
       </section>
       {edits && <PatientSheet open={editing} onClose={() => setEditing(false)} patient={patient} />}
-    </div>
+    </>
   );
 }

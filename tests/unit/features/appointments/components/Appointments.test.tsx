@@ -49,6 +49,25 @@ vi.mock("@/features/appointments/components/CalendarBoard", () => ({
   },
 }));
 
+vi.mock("@/features/appointments/components/AppointmentPanel", () => ({
+  AppointmentPanel: ({
+    appointment,
+    open,
+    onClose,
+  }: {
+    appointment: CalendarAppointment | null;
+    open: boolean;
+    onClose: () => void;
+  }) =>
+    open ? (
+      <div role="dialog" aria-label={appointment!.patientName}>
+        <button type="button" onClick={onClose}>
+          Close
+        </button>
+      </div>
+    ) : null,
+}));
+
 const { Appointments } = await import("@/features/appointments/components/Appointments");
 
 const draw = () =>
@@ -202,5 +221,14 @@ describe("Appointments — the calendar (plan §11.5, D152 – D159)", () => {
     expect(screen.getByText("The appointments couldn't be loaded.")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Try again" }));
     expect(query.current.mutate).toHaveBeenCalled();
+  });
+
+  it("opens an appointment tapped, and closes it (D160)", async () => {
+    query.current.data = [aCalendarAppointment({ day: "2026-10-13" })];
+    draw();
+    await userEvent.click(screen.getByRole("button", { name: "Rohan Mehta" }));
+    expect(screen.getByRole("dialog", { name: "Rohan Mehta" })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Close" }));
+    expect(screen.queryByRole("dialog", { name: "Rohan Mehta" })).not.toBeInTheDocument();
   });
 });

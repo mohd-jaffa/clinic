@@ -46,6 +46,7 @@ describe("CalendarBoard (plan §11.5)", () => {
           aCalendarAppointment({ id: "a-9", doctorId: "d-9", doctorName: "Ravi Kumar", patientName: "Kiran Das" }),
         ]}
         onPick={onPick}
+        onOpen={vi.fn()}
       />,
     );
     const grid = screen.getByRole("region", { name: "Appointments, Tuesday, 13 Oct 2026" });
@@ -74,6 +75,7 @@ describe("CalendarBoard (plan §11.5)", () => {
         closures={[]}
         appointments={[]}
         onPick={onPick}
+        onOpen={vi.fn()}
       />,
     );
     expect(screen.getAllByRole("list")).toHaveLength(1);
@@ -89,6 +91,7 @@ describe("CalendarBoard (plan §11.5)", () => {
         closures={[]}
         appointments={[]}
         onPick={onPick}
+        onOpen={vi.fn()}
       />,
     );
     fireEvent.click(steps(0)[0] as HTMLElement);
@@ -110,6 +113,7 @@ describe("CalendarBoard (plan §11.5)", () => {
         ]}
         appointments={[aCalendarAppointment({ day: "2026-10-14", scheduledAt: "2026-10-14T03:30:00Z" })]}
         onPick={onPick}
+        onOpen={vi.fn()}
       />,
     );
     const grid = screen.getByRole("region", { name: "Maya Rao’s appointments, 12 – 18 Oct" });
@@ -136,9 +140,29 @@ describe("CalendarBoard (plan §11.5)", () => {
         doctors={doctors}
         closures={[aClosure({ startsOn: "2026-10-14", endsOn: "2026-10-14", reason: "Diwali" })]}
         appointments={[]}
+        onOpen={vi.fn()}
       />,
     );
     expect(screen.getByRole("list", { name: "" })).toBeInTheDocument();
     expect(screen.getByText("Away: Diwali")).toBeInTheDocument();
+  });
+
+  it("opens an appointment tapped on the grid (D160)", () => {
+    const onOpen = vi.fn();
+    const rohan = aCalendarAppointment();
+    render(
+      <CalendarBoard
+        view="DAY"
+        day="2026-10-13"
+        week={week}
+        doctorId=""
+        doctors={doctors}
+        closures={[]}
+        appointments={[rohan]}
+        onOpen={onOpen}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "9:00 AM – 9:15 AM, Rohan Mehta, Consultation, Scheduled" }));
+    expect(onOpen).toHaveBeenCalledWith(rohan);
   });
 });

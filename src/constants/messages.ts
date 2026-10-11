@@ -105,6 +105,7 @@ export const ERROR_MESSAGES = {
   APPOINTMENT_TYPE_INACTIVE: "That appointment type is archived. Choose another.",
   CLOSURE_APPOINTMENTS_LOAD_FAILED: "The appointments on these days couldn't be checked.",
   APPOINTMENTS_LOAD_FAILED: "The appointments couldn't be loaded.",
+  APPOINTMENT_LOAD_FAILED: "This appointment couldn't be loaded.",
 
   // The browser could not reach the server (plan §21, D55): said by the client, never sent by the server.
   NETWORK_OFFLINE: "You're offline. Try again once the connection is back — what you typed is still here.",
@@ -605,6 +606,48 @@ export const UI_TEXT = {
     said: (time: string, patient: string, kind: string, status: string) => `${time}, ${patient}, ${kind}, ${status}`,
   },
 
+  /** One appointment (plan §11.2; D160 – D167): its detail, and what its status allows. */
+  appointment: {
+    whenLabel: "When",
+    doctorLabel: "Doctor",
+    typeLabel: "Type",
+    tokenLabel: "Token",
+    notesLabel: "Notes",
+    bookedLabel: "Booked",
+    addedLabel: "Added at the desk",
+    cancelledLabel: "Cancelled",
+    reasonLabel: "Reason",
+    /** Who did it and on which day; the day alone once their account is gone. */
+    by: (who: string | null, day: string) => (who ? `${who}, ${day}` : day),
+    when: (day: string, range: string) => `${day} · ${range}`,
+    formerDoctor: "No longer on the team",
+    openProfile: "Open profile",
+    openProfileOf: (name: string) => `Open ${name}’s profile`,
+    actions: "What to do",
+    confirm: "Confirm",
+    reschedule: "Reschedule",
+    rescheduleTitle: "Reschedule",
+    editNotes: "Edit notes",
+    noShow: "No-show",
+    cancel: "Cancel appointment",
+    cancelTitle: "Cancel the appointment",
+    keep: "Keep it",
+    reasonsLabel: "Why",
+    reasons: ["Patient asked", "Doctor unavailable", "Clinic closed", "Booked by mistake"],
+    otherReason: "Other",
+    cancelAsk: (patient: string) => `Cancel ${patient}’s appointment?`,
+    cancelAskBody: (when: string, doctor: string, reason: string) => `${when} with ${doctor}. Reason: ${reason}.`,
+    noShowAsk: (patient: string) => `Mark ${patient} a no-show?`,
+    noShowAskBody: "It can’t go back to scheduled. If they come later today, they can still be marked arrived.",
+    confirmed: (patient: string, when: string) => `Confirmed ${patient} · ${when}`,
+    cancelled: (patient: string, when: string) => `Cancelled ${patient} · ${when}`,
+    markedNoShow: (patient: string, when: string) => `${patient} marked a no-show · ${when}`,
+    moved: (patient: string, when: string, doctor: string) => `Moved ${patient} · ${when} with ${doctor}`,
+    notesSaved: (patient: string) => `Notes saved for ${patient}`,
+    notChanged: "That wasn’t changed",
+    archivedNote: "This patient is archived: their appointments can’t change until they are restored.",
+  },
+
   /** Holidays and leave (plan §9, D84 – D87): the days the clinic, or one doctor, is away. */
   closures: {
     count: (count: number) => (count === 0 ? "None coming up" : `${count} coming up`),
@@ -826,6 +869,13 @@ export const UI_TEXT = {
     restoreName: (name: string) => `Restore ${name}`,
     restoredNote: (name: string) => `${name} restored`,
     notRestored: "That patient wasn’t restored",
+    /** Their appointments (plan §10.3, D101, D166, D167). */
+    nextAppointment: "Next appointment",
+    noNextAppointment: "No appointment to come",
+    bookFor: (name: string) => `Book an appointment for ${name}`,
+    history: "History",
+    historyEmpty: "No appointments yet",
+    historyEmptyHint: "Their appointments show here, newest first — cancelled ones and no-shows too.",
   },
 
   /** A patient's alerts (plan §10.4, D117 – D120). */

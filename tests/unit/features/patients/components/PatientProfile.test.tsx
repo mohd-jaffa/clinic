@@ -2,8 +2,10 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { CalendarAppointment } from "@/features/appointments/types";
 import type { Patient } from "@/features/patients/types";
 import { ApiError } from "@/lib/api/client";
+import { aCalendarAppointment } from "@tests/support/appointments";
 import { authStub } from "@tests/support/auth";
 import { aPatient } from "@tests/support/patients";
 import { Providers } from "@tests/support/providers";
@@ -34,6 +36,28 @@ vi.mock("@/features/patients/components/PatientSheet", () => ({
       </div>
     ) : null;
   },
+}));
+
+vi.mock("@/features/patients/components/NextAppointment", () => ({
+  NextAppointment: ({ onOpen }: { onOpen: (appointment: CalendarAppointment) => void }) => (
+    <button type="button" onClick={() => onOpen(aCalendarAppointment())}>
+      Next appointment
+    </button>
+  ),
+}));
+vi.mock("@/features/patients/components/PatientHistory", () => ({
+  PatientHistory: () => <p>History</p>,
+}));
+vi.mock("@/features/appointments/components/AppointmentPanel", () => ({
+  AppointmentPanel: ({
+    appointment,
+    open,
+    linkProfile,
+  }: {
+    appointment: CalendarAppointment | null;
+    open: boolean;
+    linkProfile: boolean;
+  }) => (open ? <div role="dialog" aria-label={`${appointment!.patientName}, ${String(linkProfile)}`} /> : null),
 }));
 
 const { PatientProfile } = await import("@/features/patients/components/PatientProfile");
@@ -197,5 +221,22 @@ describe("PatientProfile while it loads", () => {
     expect(screen.getByRole("alert")).toHaveTextContent("That record could not be found. Refresh and try again.");
     await userEvent.click(screen.getByRole("button", { name: "Try again" }));
     expect(mutate).toHaveBeenCalledOnce();
+  });
+});
+
+describe("PatientProfile's appointments (D166, D167)", () => {
+  it("shows the next appointment and the history to whoever sees appointments, each opening its detail here", async () => {
+    draw();
+    expect(screen.getByText("History")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Next appointment" }));
+    // On the profile itself, the detail offers no way back to it.
+    expect(screen.getByRole("dialog", { name: "Rohan Mehta, false" })).toBeInTheDocument();
+  });
+
+  it("shows neither to someone who may not see appointments", () => {
+    auth.current = authStub({ role: "STAFF", permissions: ["patients.view"] });
+    draw();
+    expect(screen.queryByRole("button", { name: "Next appointment" })).not.toBeInTheDocument();
+    expect(screen.queryByText("History")).not.toBeInTheDocument();
   });
 });

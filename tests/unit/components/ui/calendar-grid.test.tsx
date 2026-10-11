@@ -117,4 +117,21 @@ describe("CalendarGrid (D66)", () => {
     expect(maya.children[8]).toBeEmptyDOMElement();
     expect(maya.children[8]).not.toHaveClass("cursor-pointer");
   });
+
+  it("opens an item by its button, named whole, with onOpen", () => {
+    const onOpen = vi.fn();
+    render(
+      <CalendarGrid
+        label="Appointments"
+        columns={columns}
+        from={480}
+        to={720}
+        step={15}
+        items={items}
+        onOpen={onOpen}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "10:00 AM – 11:00 AM, Anita Rao" }));
+    expect(onOpen).toHaveBeenCalledWith("a-2");
+  });
 });

@@ -1,14 +1,32 @@
 import { hasAccess } from "@/constants/permissions";
+import type { AppointmentStatus } from "@/constants/statuses";
 import { addPatient } from "@/features/patients/api";
 import type { PatientListItem } from "@/features/patients/types";
+import { pageWindow, toPage, type Page } from "@/lib/api/pagination";
 import { logActionSafe } from "@/lib/audit/auditLog";
 import { auditedChanges } from "@/lib/audit/changes";
-import { AppError, authorizationError, fromPostgrestError, validationError } from "@/lib/errors";
+import { todayKey } from "@/lib/dates/calendar";
+import { AppError, authorizationError, fromPostgrestError, notFoundError, validationError } from "@/lib/errors";
 import { allInOrder } from "@/lib/parallel";
 import type { Tenant } from "@/lib/supabase/tenant";
-import type { BookedTimesPayload, BookingPayload, CalendarQuery } from "@/lib/validation";
+import type {
+  AppointmentChangePayload,
+  BookedTimesPayload,
+  BookingPayload,
+  CalendarQuery,
+  StatusChangePayload,
+} from "@/lib/validation";
 
-import type { Booked, BookedTime, CalendarAppointment, CalendarAppointmentRow } from "./types";
+import type {
+  AppointmentChanged,
+  AppointmentDetail,
+  AppointmentDetailRow,
+  Booked,
+  BookedTime,
+  CalendarAppointment,
+  CalendarAppointmentRow,
+  PatientAppointment,
+} from "./types";
 
 /**
  * Appointments (plan §11): booked through `create_appointment` — never twice
@@ -102,12 +120,44 @@ export async function listBookedTimes(tenant: Tenant, { doctorId, date }: Booked
   }));
 }
 
-/** What the calendar reads of each appointment, its patient, its doctor's name and its type's, in one query. */
-const CALENDAR_COLUMNS =
-  "id, patient_id, doctor_id, source, status, scheduled_at, duration_minutes, local_date, token_number, " +
-  "patient:patients!appointments_patient_id_clinic_id_fkey(full_name, patient_number), " +
+/** What every read of an appointment holds, beside its patient: its own columns, its doctor's name and its type's. */
+const OWN_COLUMNS =
+  "id, patient_id, doctor_id, source, status, scheduled_at, duration_minutes, local_date, token_number";
+const DOCTOR_AND_TYPE =
   "doctor:doctors!appointments_doctor_id_clinic_id_fkey(member:clinic_members(profile:profiles!clinic_members_user_id_fkey(full_name))), " +
   "type:appointment_types!appointments_appointment_type_id_clinic_id_fkey(name)";
+const PATIENT = "patient:patients!appointments_patient_id_clinic_id_fkey";
+
+/** What the calendar reads of each appointment, its patient, its doctor's name and its type's, in one query. */
+const CALENDAR_COLUMNS = `${OWN_COLUMNS}, ${PATIENT}(full_name, patient_number), ${DOCTOR_AND_TYPE}`;
+
+/** An appointment in a patient's history (D167): the calendar's, and why it was cancelled. */
+const HISTORY_COLUMNS = `${CALENDAR_COLUMNS}, cancel_reason`;
+
+/** An appointment's detail (D160): the calendar's, what it says of itself, and who booked and cancelled it. */
+const DETAIL_COLUMNS =
+  `${OWN_COLUMNS}, appointment_type_id, notes, created_at, cancelled_at, cancel_reason, ` +
+  `${PATIENT}(full_name, patient_number, archived_at), ${DOCTOR_AND_TYPE}, ` +
+  "booker:profiles!appointments_created_by_fkey(full_name), canceller:profiles!appointments_cancelled_by_fkey(full_name)";
+
+/** A row as the calendar reads it, in the shape every screen holds. */
+function toCalendarAppointment(row: CalendarAppointmentRow): CalendarAppointment {
+  return {
+    id: row.id,
+    patientId: row.patient_id,
+    patientName: row.patient.full_name,
+    patientNumber: row.patient.patient_number,
+    doctorId: row.doctor_id,
+    doctorName: row.doctor?.member?.profile?.full_name ?? null,
+    typeName: row.type.name,
+    source: row.source,
+    status: row.status,
+    scheduledAt: row.scheduled_at,
+    minutes: row.duration_minutes,
+    day: row.local_date,
+    token: row.token_number,
+  };
+}
 
 /**
  * The calendar's appointments (plan §11.5): those of the days asked — a day
@@ -129,19 +179,195 @@ export async function listAppointments(
   if (doctorId) query = query.eq("doctor_id", doctorId);
   const { data, error } = await query.order("scheduled_at");
   if (error) throw fromPostgrestError(error);
-  return (data as unknown as CalendarAppointmentRow[]).map((row) => ({
-    id: row.id,
-    patientId: row.patient_id,
-    patientName: row.patient.full_name,
-    patientNumber: row.patient.patient_number,
-    doctorId: row.doctor_id,
-    doctorName: row.doctor?.member?.profile?.full_name ?? null,
-    typeName: row.type.name,
-    source: row.source,
-    status: row.status,
-    scheduledAt: row.scheduled_at,
-    minutes: row.duration_minutes,
-    day: row.local_date,
-    token: row.token_number,
-  }));
+  return (data as unknown as CalendarAppointmentRow[]).map(toCalendarAppointment);
+}
+
+/**
+ * One appointment's detail (plan §11.2, D160), in one query: the calendar's,
+ * its notes, who booked it and when, who cancelled it, when and why, and
+ * whether its patient is archived. Read as the member, so a doctor opens only
+ * their own patients' (D3).
+ */
+export async function getAppointment(tenant: Tenant, id: string): Promise<AppointmentDetail> {
+  const { data, error } = await tenant.supabase
+    .from(TABLE)
+    .select(DETAIL_COLUMNS)
+    .eq("clinic_id", tenant.clinicId)
+    .eq("id", id)
+    .maybeSingle();
+  if (error) throw fromPostgrestError(error);
+  if (data === null) throw notFoundError("RECORD_NOT_FOUND");
+  const row = data as unknown as AppointmentDetailRow;
+  return {
+    ...toCalendarAppointment(row),
+    typeId: row.appointment_type_id,
+    patientArchived: row.patient.archived_at !== null,
+    notes: row.notes,
+    bookedAt: row.created_at,
+    bookedBy: row.booker?.full_name ?? null,
+    cancelledAt: row.cancelled_at,
+    cancelledBy: row.canceller?.full_name ?? null,
+    cancelReason: row.cancel_reason,
+  };
+}
+
+/** What a change to an appointment is audited by: its own fields, and its status, which a move may set back (D142). */
+const CHANGED = ["doctor_id", "appointment_type_id", "scheduled_at", "duration_minutes", "notes", "status"] as const;
+
+interface ChangedRow {
+  id: string;
+  doctor_id: string;
+  appointment_type_id: string;
+  scheduled_at: string;
+  duration_minutes: number;
+  notes: string | null;
+  status: AppointmentStatus;
+}
+
+const toChanged = (row: ChangedRow): AppointmentChanged => ({
+  id: row.id,
+  doctorId: row.doctor_id,
+  status: row.status,
+  scheduledAt: row.scheduled_at,
+  minutes: row.duration_minutes,
+});
+
+/** The appointment as it stands before a change, for the audit row's "from" — read as the member. */
+async function standing(tenant: Tenant, id: string): Promise<ChangedRow> {
+  const { data, error } = await tenant.supabase
+    .from(TABLE)
+    .select(`id, ${CHANGED.join(", ")}`)
+    .eq("clinic_id", tenant.clinicId)
+    .eq("id", id)
+    .maybeSingle<ChangedRow>();
+  if (error) throw fromPostgrestError(error);
+  if (data === null) throw notFoundError("RECORD_NOT_FOUND");
+  return data;
+}
+
+/**
+ * Changes an appointment (plan §11.1, D161) through `update_appointment`: its
+ * notes alone, at any time — or moved to another doctor, day, time, type or
+ * length, only a booking not yet arrived, under every rule a booking keeps.
+ * A confirmed one moved to another time or doctor is scheduled again (D142).
+ * Audited with its values from what to what, its notes by name alone. Waits
+ * on three round trips after the session: the appointment as it stands, the
+ * change, the audit row (plan §37).
+ */
+export async function changeAppointment(
+  tenant: Tenant,
+  id: string,
+  changes: AppointmentChangePayload,
+  requestId?: string,
+): Promise<AppointmentChanged> {
+  const before = await standing(tenant, id);
+  const values =
+    "scheduledAt" in changes
+      ? {
+          doctor_id: changes.doctorId,
+          appointment_type_id: changes.typeId,
+          scheduled_at: changes.scheduledAt,
+          duration_minutes: changes.minutes,
+          notes: changes.notes,
+        }
+      : { notes: changes.notes };
+  const { data, error } = await tenant.supabase
+    .rpc("update_appointment", { p_appointment_id: id, p_changes: values })
+    .single<ChangedRow>();
+  if (error) throw fromPostgrestError(error);
+  const changed = auditedChanges(before, data, CHANGED, ["notes"]);
+  if (Object.keys(changed).length > 0) {
+    await logActionSafe(tenant, { action: "UPDATE", entityType: TABLE, entityId: id, changes: changed, requestId });
+  }
+  return toChanged(data);
+}
+
+/**
+ * Sets an appointment's status from its detail (plan §11.2) through
+ * `change_appointment_status`: confirmed, back to scheduled or a no-show with
+ * `appointments.edit`; cancelled, with its reason, with `appointments.cancel`
+ * (D162). The same status sent twice changes nothing more. Audited as a
+ * status change from what to what, the reason by name alone. Waits on three
+ * round trips after the session, as a change does.
+ */
+export async function changeAppointmentStatus(
+  tenant: Tenant,
+  id: string,
+  { status, reason }: StatusChangePayload,
+  requestId?: string,
+): Promise<AppointmentChanged> {
+  if (!hasAccess(tenant, status === "CANCELLED" ? "appointments.cancel" : "appointments.edit")) {
+    throw authorizationError();
+  }
+  const before = await standing(tenant, id);
+  const cancelling = status === "CANCELLED";
+  const { data, error } = await tenant.supabase
+    .rpc("change_appointment_status", {
+      p_appointment_id: id,
+      p_status: status,
+      p_reason: cancelling ? reason : null,
+    })
+    .single<ChangedRow>();
+  if (error) throw fromPostgrestError(error);
+  if (data.status !== before.status) {
+    await logActionSafe(tenant, {
+      action: "STATUS_CHANGE",
+      entityType: TABLE,
+      entityId: id,
+      changes: { status: { from: before.status, to: data.status }, ...(cancelling && { fields: ["cancel_reason"] }) },
+      requestId,
+    });
+  }
+  return toChanged(data);
+}
+
+/** What a patient may still come for (D140): booked, confirmed, arrived or under way, today or later. */
+const STILL_TO_COME: readonly AppointmentStatus[] = ["SCHEDULED", "CONFIRMED", "ARRIVED", "IN_PROGRESS"];
+
+/**
+ * A patient's next appointment (plan §10.3, D166): the soonest still to come,
+ * today or later — or none. One query, on the index on (clinic_id,
+ * patient_id, scheduled_at).
+ */
+export async function nextAppointment(tenant: Tenant, patientId: string): Promise<CalendarAppointment | null> {
+  const { data, error } = await tenant.supabase
+    .from(TABLE)
+    .select(CALENDAR_COLUMNS)
+    .eq("clinic_id", tenant.clinicId)
+    .eq("patient_id", patientId)
+    .in("status", STILL_TO_COME)
+    .gte("local_date", todayKey())
+    .order("scheduled_at")
+    .limit(1)
+    .maybeSingle();
+  if (error) throw fromPostgrestError(error);
+  return data === null ? null : toCalendarAppointment(data as unknown as CalendarAppointmentRow);
+}
+
+/**
+ * A page of a patient's appointments (plan §10.3, D167): every one, newest
+ * first — those still to come, then the past, cancelled ones and no-shows
+ * too, with their reason. One query, on the index on (clinic_id, patient_id,
+ * scheduled_at desc).
+ */
+export async function listPatientAppointments(
+  tenant: Tenant,
+  patientId: string,
+  start = 0,
+): Promise<Page<PatientAppointment>> {
+  const { from, to } = pageWindow(start);
+  const { data, error } = await tenant.supabase
+    .from(TABLE)
+    .select(HISTORY_COLUMNS)
+    .eq("clinic_id", tenant.clinicId)
+    .eq("patient_id", patientId)
+    .order("scheduled_at", { ascending: false })
+    .order("id", { ascending: false })
+    .range(from, to);
+  if (error) throw fromPostgrestError(error);
+  const rows = data as unknown as (CalendarAppointmentRow & { cancel_reason: string | null })[];
+  return toPage(
+    rows.map((row) => ({ ...toCalendarAppointment(row), cancelReason: row.cancel_reason })),
+    start,
+  );
 }

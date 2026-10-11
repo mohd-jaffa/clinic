@@ -1,6 +1,14 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { isOpenLayer, lower, onLayersChange, openLayer, raise, topLayer } from "@/components/ui/top-layer";
+import {
+  isOpenLayer,
+  isOpenStatus,
+  lower,
+  onLayersChange,
+  openLayer,
+  raise,
+  topLayer,
+} from "@/components/ui/top-layer";
 
 const layer = () => {
   const dialog = document.createElement("dialog");
@@ -44,11 +52,13 @@ describe("the modal layers", () => {
     const form = open();
     expect(topLayer()).toBe(form);
     expect(isOpenLayer(sheet.notices)).toBe(true);
+    expect(isOpenStatus(sheet.status)).toBe(true);
 
     closeSheet();
     expect(topLayer()).toBe(form);
     expect(isOpenLayer(sheet.notices)).toBe(false);
     expect(isOpenLayer(null)).toBe(false);
+    expect(isOpenStatus(sheet.status)).toBe(false);
     expect(heard).toHaveBeenCalledTimes(3);
 
     stop();

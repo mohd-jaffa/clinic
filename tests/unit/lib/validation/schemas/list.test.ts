@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { MAX_SEARCH_LENGTH } from "@/constants/limits";
 import { VALIDATION_MESSAGES } from "@/constants/messages";
-import { firstIssue, listQuerySchema } from "@/lib/validation";
+import { firstIssue, listQuerySchema, pageQuerySchema } from "@/lib/validation";
 
 describe("listQuerySchema", () => {
   it("starts at the beginning with no search", () => {
@@ -27,5 +27,13 @@ describe("listQuerySchema", () => {
   it("bounds the search", () => {
     const result = listQuerySchema.safeParse({ search: "a".repeat(MAX_SEARCH_LENGTH + 1) });
     expect(result.success).toBe(false);
+  });
+});
+
+describe("pageQuerySchema", () => {
+  it("reads where a page with no search starts", () => {
+    expect(pageQuerySchema.parse({})).toEqual({ cursor: undefined });
+    expect(pageQuerySchema.parse({ cursor: "20" })).toEqual({ cursor: 20 });
+    expect(pageQuerySchema.safeParse({ cursor: "x" }).success).toBe(false);
   });
 });

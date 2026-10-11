@@ -2065,3 +2065,117 @@ D159.
 
 ### Blockers
 - None.
+
+## 2026-10-11 — The appointment's detail (R5.4)
+
+An appointment now opens, and a patient's profile shows their appointments.
+Asked of the user first: D160 – D167.
+
+### Added
+- **The appointment's detail (`AppointmentSheet`, plan §11.2, D160):** a
+  sheet over the calendar or the profile, opened from the grid, the day's
+  list, the cancelled list, and the profile's next appointment and history.
+  - **It says:** who, when, with whom, what kind and where it stands; its
+    notes; who booked it and when; who cancelled it, when and why; **Open
+    profile** (not on the profile itself). It opens on what the calendar
+    holds and fills in.
+  - **Its actions, as the status allows** (`actionsFor`):
+    - **Confirm** a booking still scheduled;
+    - **Reschedule** a booking not yet arrived, or **Edit notes** once it
+      cannot move (D161);
+    - **No-show** once its time has passed, asking first (D163);
+    - **Cancel appointment** (`appointments.cancel`).
+  - An archived patient's appointment offers nothing, saying why (D103). A
+    view-only clinic hides the actions and says why. **Arrived** comes with
+    the queue in R5.5 (D164).
+  - Done, it closes with a card: "Confirmed Rohan Mehta · 13 Oct, 10:30 AM"
+    (D165).
+- **Cancelling (`CancelSheet`, D162):** a quick reason — Patient asked,
+  Doctor unavailable, Clinic closed, Booked by mistake — or **Other**, typed.
+  The coral card then asks first, naming when, with whom and why.
+- **Edit notes (`NotesSheet`, D161).**
+- **`AppointmentPanel`:** each action's sheet opens in the detail's place;
+  closing it goes back to the detail; done, everything closes.
+- **The profile (D166, D167), for `appointments.view`:**
+  - **Next appointment:** the soonest still to come, opening its detail; or
+    "No appointment to come" with **Book**, which opens the booking sheet on
+    the profile for them.
+  - **History:** every appointment, newest first, 20 at a time, cancelled
+    ones and no-shows quiet with their reason. It stays one column (D114).
+- **Routes:**
+  - `GET /api/appointments/[id]` (`getAppointment`);
+  - `PATCH /api/appointments/[id]` (`changeAppointment`): its notes alone,
+    or moved, through `update_appointment` — a confirmed one moved is
+    scheduled again (D142);
+  - `POST /api/appointments/[id]/status` (`changeAppointmentStatus`):
+    confirmed, scheduled or a no-show with `appointments.edit`, cancelled
+    with `appointments.cancel` — the status asks for its own permission;
+  - `GET /api/patients/[id]/summary` (`getPatientSummary`: the next
+    appointment) and `GET /api/patients/[id]/timeline`
+    (`listPatientTimeline`: the appointments, a page at a time). Each part
+    is given only with its permission.
+- **Schemas:** `rescheduleSchema`, `appointmentNotesSchema`,
+  `appointmentChangeSchema`, `statusChangeSchema`, `cancelSchema`,
+  `pageQuerySchema`.
+- **Constants:** `APPOINTMENT_STATUS_CHANGES` (kept equal to
+  `change_appointment_status` by the 0017 contract test), `UI_TEXT.appointment`,
+  the profile's words, `APPOINTMENT_LOAD_FAILED`.
+
+### Changed
+- **The booking sheet:**
+  - opens to move an appointment, the patient staying (`moving`). A time
+    kept where it is is not refused as passed. The doctor's taken times leave
+    its own out;
+  - opens for a patient from their profile (`patient`), starting on the
+    doctor;
+  - refreshes the patient's next appointment and history once it books.
+- **The calendar's grid** items are buttons that open the appointment; the
+  day's list and the cancelled list rows open it too.
+- **`AppointmentBlock`** is spans, as it sits inside that button, and has
+  small corners so a quarter-hour block keeps its edge straight.
+- **`FormSheet`** takes `initialFocus`.
+- **A card's announcement follows the card:** said inside a sheet that then
+  closes, it is said again where the card goes. A sheet closed through the
+  browser's history (the ＋'s forms) goes a moment after its card appears,
+  which left the announcement in a region no one could hear. The E2E suite
+  caught it as a flaky booking test (`isOpenStatus`, `response-card.tsx`).
+- **The profile page** reads the summary, the first page of the history and
+  the appointment types with its first data.
+- **Plan:**
+  - D160 – D167 in the decision log;
+  - §11.2, §10.3 and §30;
+  - the tracker: R5.4 DONE.
+- **DESIGN.md:** a record's detail sheet, a reason sheet, the profile's next
+  appointment and history, the grid's items as buttons.
+
+### Speed (§37.1)
+- **Round trips:**
+  - Opening an appointment is the session plus one query. It shows what the
+    calendar already holds while that query runs.
+  - The profile opens on the session, then everything at once: the patient,
+    the alerts, the summary, the history's first page, the doctors and the
+    types.
+  - A status change, a move or a notes change waits on 4: the session, the
+    appointment as it stands (for the audit's "from"), the change, the
+    audit row.
+- **Indexes:** the next appointment and the history are served by
+  `(clinic_id, patient_id, scheduled_at desc)` from R5.1; one appointment by
+  its primary key.
+
+### Validation
+- Typecheck, lint and format check passed.
+- Unit and integration tests passed, coverage 100%.
+  `appointment-detail.test.ts` (integration) covers the detail and the doctor
+  scope; confirm, cancel and no-show, each audited, and their permissions;
+  notes and a move (D142), a clash and a move refused; and the next
+  appointment, the paged history and the summary without permission.
+- E2E (phone and desktop, axe), `tests/e2e/appointment-detail.spec.ts`:
+  - **Phone:** opened from the day's list, confirmed, then cancelled with a
+    reason, asked first, and found folded away.
+  - **Desktop:** rescheduled from the grid an hour later; the profile's next
+    appointment and history, a detail opened there; **Book** for a patient
+    with nothing to come.
+- The full E2E suite passed: 102 tests.
+
+### Blockers
+- None.

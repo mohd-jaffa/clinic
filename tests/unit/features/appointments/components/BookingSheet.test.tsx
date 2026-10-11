@@ -7,12 +7,13 @@ import type { AppointmentType } from "@/features/clinic/types";
 import type { PatientListItem } from "@/features/patients/types";
 import { ApiError } from "@/lib/api/client";
 import { dayTime } from "@/lib/dates/calendar";
+import { anAppointmentDetail } from "@tests/support/appointments";
 import { authStub } from "@tests/support/auth";
 import { aPatientMatch } from "@tests/support/patients";
 import { Providers } from "@tests/support/providers";
 
 const { client, auth, doctors, types, search, matches } = vi.hoisted(() => ({
-  client: { book: vi.fn() },
+  client: { book: vi.fn(), change: vi.fn() },
   auth: { current: {} as ReturnType<typeof authStub> },
   doctors: { current: [] as { id: string; name: string }[] | undefined },
   types: { current: [] as AppointmentType[] | undefined },
@@ -386,5 +387,126 @@ describe("BookingSheet (plan §11.1; D144 – D151)", () => {
     expect(await screen.findByRole("alertdialog", { name: "That wasn’t booked" })).toHaveTextContent(
       "This patient is archived.",
     );
+  });
+});
+
+describe("BookingSheet for a patient, and to move an appointment (D161, D166)", () => {
+  const moving = anAppointmentDetail({
+    patientId: ROHAN.id,
+    doctorId: RAHUL.id,
+    doctorName: RAHUL.name,
+    typeId: CONSULTATION.id,
+    scheduledAt: "2026-10-13T03:30:00Z",
+    day: "2026-10-13",
+    minutes: 30,
+    notes: "First visit",
+  });
+  const onMoved = vi.fn();
+  const move = (appointment = moving) =>
+    render(
+      <Providers>
+        <BookingSheet open moving={appointment} onClose={onClose} onMoved={onMoved} />
+      </Providers>,
+    );
+  const moveSheet = () => screen.getByRole("dialog", { name: "Reschedule" });
+
+  beforeEach(() => {
+    client.change.mockImplementation(
+      async ({ input }: { input: { date: string; time: { hour: string; minute: string } } }) => ({
+        id: "a-1",
+        doctorId: RAHUL.id,
+        status: "SCHEDULED",
+        scheduledAt: dayTime(input.date, `${input.time.hour}:${input.time.minute}`),
+        minutes: 30,
+      }),
+    );
+  });
+
+  it("opens for the patient of a profile, who stays, the doctor first to fill (D166)", async () => {
+    render(
+      <Providers>
+        <BookingSheet open patient={{ id: ROHAN.id, name: ROHAN.name, number: ROHAN.number }} onClose={onClose} />
+      </Providers>,
+    );
+    const patient = within(sheet()).getByRole("list", { name: "Patient" });
+    expect(patient).toHaveTextContent("Rohan MehtaP-1012");
+    expect(within(sheet()).queryByRole("searchbox")).not.toBeInTheDocument();
+    expect(within(sheet()).queryByRole("button", { name: "New patient" })).not.toBeInTheDocument();
+    expect(within(sheet()).getByRole("combobox", { name: /^Doctor/ })).toHaveFocus();
+
+    await choose("Time, Hour", "4 PM");
+    await choose("Time, Minutes", ":00");
+    await book();
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(sentInput()).toMatchObject({ patient: { mode: "FOUND", id: ROHAN.id } });
+    // Held open here, the sheet has the card drawn over it as well as on the page.
+    expect(screen.getAllByText("Booked Rohan Mehta · 11 Oct, 4:00 PM with Rahul Nair").length).toBeGreaterThan(0);
+  });
+
+  it("starts where the appointment is, and moves it — the patient staying — closing everything with a card", async () => {
+    move();
+    expect(within(moveSheet()).getByRole("list", { name: "Patient" })).toHaveTextContent("Rohan MehtaP-1012");
+    expect(within(moveSheet()).getByRole("combobox", { name: /^Doctor/ })).toHaveTextContent("Rahul Nair");
+    expect(within(moveSheet()).getByRole("button", { name: /^Date/ })).toHaveTextContent("13 Oct 2026");
+    expect(within(moveSheet()).getByRole("combobox", { name: "Time, Hour" })).toHaveTextContent("9 AM");
+    expect(within(moveSheet()).getByRole("radio", { name: "30 min" })).toBeChecked();
+    expect(within(moveSheet()).getByRole("textbox", { name: /^Notes/ })).toHaveValue("First visit");
+
+    await userEvent.click(within(moveSheet()).getByRole("combobox", { name: "Time, Hour" }));
+    await userEvent.click(screen.getByRole("option", { name: "10 AM" }));
+    await userEvent.click(within(moveSheet()).getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(onMoved).toHaveBeenCalled());
+    expect(client.change).toHaveBeenCalledWith({
+      id: "a-1",
+      input: {
+        doctorId: RAHUL.id,
+        date: "2026-10-13",
+        time: { hour: "10", minute: "00" },
+        typeId: CONSULTATION.id,
+        length: { choice: "30", other: "" },
+        notes: "First visit",
+        was: "2026-10-13T03:30:00Z",
+      },
+    });
+    expect(client.book).not.toHaveBeenCalled();
+    expect(screen.getAllByText("Moved Rohan Mehta · 13 Oct, 10:00 AM with Rahul Nair").length).toBeGreaterThan(0);
+  });
+
+  it("keeps a passed time where it is, and the archived type it is on", async () => {
+    move(
+      anAppointmentDetail({
+        ...moving,
+        typeId: OLD.id,
+        typeName: OLD.name,
+        scheduledAt: "2026-10-10T03:30:00Z",
+        day: "2026-10-10",
+        notes: null,
+      }),
+    );
+    expect(within(moveSheet()).getByRole("combobox", { name: /^Type/ })).toHaveTextContent("Old");
+    expect(within(moveSheet()).getByRole("textbox", { name: /^Notes/ })).toHaveValue("");
+    await userEvent.click(within(moveSheet()).getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(client.change).toHaveBeenCalled());
+    expect(within(moveSheet()).queryByText(/already passed/)).not.toBeInTheDocument();
+  });
+
+  it("names a time taken when moved, and says plainly when it was not moved for another reason", async () => {
+    client.change
+      .mockRejectedValueOnce(
+        new ApiError(409, "APPOINTMENT_SLOT_TAKEN", "Taken.", "req_1", {
+          startsAt: "2026-10-13T04:30:00Z",
+          endsAt: "2026-10-13T05:00:00Z",
+        }),
+      )
+      .mockRejectedValueOnce(new ApiError(422, "APPOINTMENT_NOT_MOVABLE", "Only a booking can be moved.", "req_2"));
+    move();
+    await userEvent.click(within(moveSheet()).getByRole("button", { name: "Save" }));
+    const taken = await screen.findByRole("alertdialog", { name: "Rahul Nair is booked 10:00 AM – 10:30 AM" });
+    await userEvent.click(within(taken).getByRole("button", { name: "Close" }));
+    await userEvent.click(within(moveSheet()).getByRole("button", { name: "Save" }));
+    expect(await screen.findByRole("alertdialog", { name: "That wasn’t changed" })).toHaveTextContent(
+      "Only a booking can be moved.",
+    );
+    expect(onMoved).not.toHaveBeenCalled();
   });
 });

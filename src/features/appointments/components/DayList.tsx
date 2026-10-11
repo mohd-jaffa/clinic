@@ -16,14 +16,16 @@ const { calendar, appointments: words } = UI_TEXT;
 /**
  * A day as a list by time — the phone's calendar (plan §11.5): each
  * appointment's time, patient, kind (its type, or Walk-in and its token, D154),
- * the doctor while every doctor's are shown, and its status. A day with
- * nothing booked says so, with **Book appointment** for whoever may.
+ * the doctor while every doctor's are shown, and its status; a tap opens it
+ * (D160). A day with nothing booked says so, with **Book appointment** for
+ * whoever may.
  */
 export function DayList({
   label,
   appointments,
   showDoctor,
   onBook,
+  onOpen,
 }: {
   /** The day it is: "Appointments, Monday, 12 Oct 2026". */
   label: string;
@@ -31,6 +33,7 @@ export function DayList({
   showDoctor: boolean;
   /** None for someone who may not book now. */
   onBook?: () => void;
+  onOpen: (appointment: CalendarAppointment) => void;
 }) {
   if (appointments.length === 0) {
     return (
@@ -51,12 +54,13 @@ export function DayList({
           subtitle={[formatTime(appointment.scheduledAt), kindOf(appointment), showDoctor && appointment.doctorName]
             .filter(Boolean)
             .join(" · ")}
-          trailing={
+          detail={
             <StatusPill
               label={APPOINTMENT_STATUS_LABELS[appointment.status]}
               tone={APPOINTMENT_STATUS_TONES[appointment.status]}
             />
           }
+          onClick={() => onOpen(appointment)}
         />
       ))}
     </RowList>

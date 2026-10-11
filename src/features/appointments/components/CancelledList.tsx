@@ -15,15 +15,18 @@ const { calendar } = UI_TEXT;
 /**
  * The cancelled appointments and no-shows of what is shown, folded away and
  * counted (D153): the calendar shows what is still happening; these open on
- * asking, quiet, each with its status.
+ * asking, quiet, each with its status — and each opens its detail, to read
+ * why (D160).
  */
 export function CancelledList({
   appointments,
   showDay,
+  onOpen,
 }: {
   appointments: readonly CalendarAppointment[];
   /** Name each one's day — the week's list. */
   showDay: boolean;
+  onOpen: (appointment: CalendarAppointment) => void;
 }) {
   if (appointments.length === 0) return null;
   return (
@@ -42,12 +45,13 @@ export function CancelledList({
             subtitle={[showDay && formatDayMonth(appointment.day), timeOf(appointment), kindOf(appointment)]
               .filter(Boolean)
               .join(" · ")}
-            trailing={
+            detail={
               <StatusPill
                 label={APPOINTMENT_STATUS_LABELS[appointment.status]}
                 tone={APPOINTMENT_STATUS_TONES[appointment.status]}
               />
             }
+            onClick={() => onOpen(appointment)}
           />
         ))}
       </RowList>

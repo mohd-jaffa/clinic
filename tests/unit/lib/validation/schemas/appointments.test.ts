@@ -1,12 +1,20 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  appointmentChangeSchema,
+  appointmentNotesSchema,
   bookedTimesSchema,
   bookingSchema,
   calendarQuerySchema,
+  CANCEL_REASONS,
+  cancelSchema,
   HOURS,
   MINUTES,
+  OTHER_REASON,
+  rescheduleSchema,
+  statusChangeSchema,
   type BookingInput,
+  type RescheduleInput,
 } from "@/lib/validation";
 
 const PATIENT = "7b1e4a52-3c5d-4e6f-8a9b-0c1d2e3f4a5b";
@@ -153,5 +161,102 @@ describe("calendarQuerySchema (plan §11.5)", () => {
     expect(calendarQuerySchema.safeParse({ from: "2026-10-13", to: "2026-10-12" }).success).toBe(false);
     expect(calendarQuerySchema.safeParse({ from: "2026-10-12", to: "2026-10-19" }).success).toBe(false);
     expect(calendarQuerySchema.safeParse({ from: "2026-10-12", to: "2026-10-13", doctorId: "x" }).success).toBe(false);
+  });
+});
+
+describe("rescheduleSchema (D161)", () => {
+  const move = (overrides: Partial<RescheduleInput> = {}): RescheduleInput => ({
+    doctorId: DOCTOR,
+    date: "2026-10-13",
+    time: { hour: "11", minute: "00" },
+    typeId: TYPE,
+    length: { choice: "30", other: "" },
+    notes: "  Moved by phone ",
+    ...overrides,
+  });
+  const issues = (input: unknown) => {
+    const result = rescheduleSchema.safeParse(input);
+    return result.success ? [] : result.error.issues.map((issue) => [issue.path.join("."), issue.message]);
+  };
+
+  it("reads where it goes — its doctor, time, type, length and notes — the patient staying", () => {
+    expect(rescheduleSchema.parse({ ...move(), patient: { mode: "FOUND", id: PATIENT } })).toEqual({
+      doctorId: DOCTOR,
+      typeId: TYPE,
+      notes: "Moved by phone",
+      scheduledAt: "2026-10-13T05:30:00.000Z",
+      minutes: 30,
+    });
+  });
+
+  it("refuses a day passed or a time passed, unless it is where the appointment already is", () => {
+    expect(issues(move({ date: "2026-10-10" }))).toEqual([["date", "Date can’t be before today."]]);
+    const earlier = move({ date: "2026-10-11", time: { hour: "09", minute: "00" } });
+    expect(issues(earlier)).toEqual([["time", "That time has already passed. Choose a later time, or add a walk-in."]]);
+    expect(issues({ ...earlier, was: "2026-10-11T03:30:00+00:00" })).toEqual([]);
+    expect(issues({ ...earlier, was: "2026-10-11T03:00:00Z" })).toHaveLength(1);
+    expect(issues({ ...move(), was: "yesterday" })).toEqual([["was", "That value is not valid."]]);
+  });
+});
+
+describe("appointmentChangeSchema (D161)", () => {
+  it("takes notes alone, or the appointment moved", () => {
+    expect(appointmentNotesSchema.parse({ notes: " Bring reports " })).toEqual({ notes: "Bring reports" });
+    expect(appointmentChangeSchema.parse({ notes: "" })).toEqual({ notes: null });
+    expect(
+      appointmentChangeSchema.parse({
+        doctorId: DOCTOR,
+        date: "2026-10-13",
+        time: { hour: "11", minute: "00" },
+        typeId: TYPE,
+        length: { choice: "15", other: "" },
+        notes: "",
+      }),
+    ).toMatchObject({ doctorId: DOCTOR, minutes: 15 });
+  });
+
+  it("refuses a move half sent, rather than reading it as notes", () => {
+    const result = appointmentChangeSchema.safeParse({ notes: "x", doctorId: DOCTOR });
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0].message).toBe("That value is not valid.");
+  });
+});
+
+describe("statusChangeSchema (plan §11.2, D162)", () => {
+  it("takes the statuses the detail sets, a cancellation with its reason", () => {
+    expect(statusChangeSchema.parse({ status: "CONFIRMED" })).toEqual({ status: "CONFIRMED", reason: null });
+    expect(statusChangeSchema.parse({ status: "CANCELLED", reason: " Patient asked " })).toEqual({
+      status: "CANCELLED",
+      reason: "Patient asked",
+    });
+  });
+
+  it("refuses a cancellation without a reason, and a status the detail does not set", () => {
+    const bare = statusChangeSchema.safeParse({ status: "CANCELLED", reason: "  " });
+    expect(bare.error?.issues.map((issue) => [issue.path.join("."), issue.message])).toEqual([
+      ["reason", "Reason needs a value."],
+    ]);
+    expect(statusChangeSchema.safeParse({ status: "COMPLETED" }).error?.issues[0].message).toBe(
+      "That value is not valid.",
+    );
+  });
+});
+
+describe("cancelSchema (D162)", () => {
+  it("reads a quick reason as itself, and Other as what was typed", () => {
+    expect(cancelSchema.parse({ choice: CANCEL_REASONS[0], other: "" })).toEqual({ reason: "Patient asked" });
+    expect(cancelSchema.parse({ choice: OTHER_REASON, other: " Moved away  " })).toEqual({ reason: "Moved away" });
+  });
+
+  it("asks for a reason, and Other's to be typed", () => {
+    const none = cancelSchema.safeParse({ choice: "", other: "" });
+    expect(none.error?.issues.map((issue) => [issue.path.join("."), issue.message])).toEqual([
+      ["choice", "Choose why."],
+    ]);
+    const blank = cancelSchema.safeParse({ choice: OTHER_REASON, other: " " });
+    expect(blank.error?.issues.map((issue) => [issue.path.join("."), issue.message])).toEqual([
+      ["other", "Reason needs a value."],
+    ]);
+    expect(cancelSchema.safeParse(null).error?.issues[0].message).toBe("That value is not valid.");
   });
 });

@@ -25,7 +25,7 @@ import { MAP_MS, canAnimate } from "@/lib/motion";
 import { Button, IconButton, LinkButton } from "./button";
 import { cn } from "./cn";
 import { Dialog } from "./dialog";
-import { isOpenLayer, lower, onLayersChange, raise, topLayer } from "./top-layer";
+import { isOpenLayer, isOpenStatus, lower, onLayersChange, raise, topLayer } from "./top-layer";
 
 export type ResponseKind = "success" | "info" | "warning" | "error" | "confirm";
 
@@ -239,7 +239,10 @@ export function ResponseProvider({ children }: { children: ReactNode }) {
   }, [holder, noticeId]);
 
   // Announced, as it never takes focus, through the live region on top: the
-  // page's own is inert, and silent, while a modal is open.
+  // page's own is inert, and silent, while a modal is open. It follows the
+  // notice down when the sheet it was said in closes after it — a sheet closed
+  // through the browser's history goes a moment later — so it is not left in
+  // a region no one can hear.
   const pageStatus = useRef<HTMLParagraphElement>(null);
   const spoken = notice
     ? [notice.title, notice.message, ...(notice.facts ?? []).slice(0, 3).map((fact) => `${fact.label} ${fact.value}`)]
@@ -247,10 +250,20 @@ export function ResponseProvider({ children }: { children: ReactNode }) {
         .join(". ")
     : "";
   useLayoutEffect(() => {
-    const region = topLayer()?.status ?? pageStatus.current;
-    if (!spoken || !region) return;
+    if (!spoken) return;
+    // The page's own region is drawn with the provider, so it is there by now.
+    const regionOnTop = () => topLayer()?.status ?? pageStatus.current!;
+    let region = regionOnTop();
     region.textContent = spoken;
+    // Only when the sheet it was said in has closed: under a sheet opened after it, it has been said already.
+    const stop = onLayersChange(() => {
+      if (region === pageStatus.current || isOpenStatus(region)) return;
+      region.textContent = "";
+      region = regionOnTop();
+      region.textContent = spoken;
+    });
     return () => {
+      stop();
       region.textContent = "";
     };
   }, [spoken]);

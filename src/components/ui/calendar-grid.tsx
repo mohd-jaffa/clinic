@@ -82,6 +82,8 @@ const timeOf = (minutes: number) =>
  * the screen's own button does the same for a keyboard or a screen reader. A
  * step before a column's `pickableFrom` takes no tap.
  *
+ * With `onOpen`, each item is a button that opens it, named by its label.
+ *
  * Columns keep a readable width and the grid scrolls sideways when there are
  * more than the screen holds.
  */
@@ -94,6 +96,7 @@ export function CalendarGrid({
   items,
   columnWidth = "wide",
   onPick,
+  onOpen,
 }: {
   /** What the grid shows: "Appointments, Monday 12 Oct 2026". */
   label: string;
@@ -106,6 +109,7 @@ export function CalendarGrid({
   /** How narrow a column may get before the grid scrolls: a doctor's day reads wide; a week's seven fit a desktop. */
   columnWidth?: "wide" | "narrow";
   onPick?: (column: string, minutes: number) => void;
+  onOpen?: (key: string) => void;
 }) {
   const steps = Array.from({ length: (to - from) / step }, (_, index) => from + index * step);
   const hours = steps.filter((minutes) => minutes % 60 === 0);
@@ -194,10 +198,25 @@ export function CalendarGrid({
                         width: `${100 / lanes}%`,
                       }}
                     >
-                      <span className="sr-only">{item.label}</span>
-                      <div aria-hidden="true" className="h-full">
-                        {item.content}
-                      </div>
+                      {onOpen ? (
+                        <button
+                          type="button"
+                          onClick={() => onOpen(item.key)}
+                          className="block size-full rounded-[0.375rem] text-left hover:brightness-95 focus-visible:outline-offset-1"
+                        >
+                          <span className="sr-only">{item.label}</span>
+                          <span aria-hidden="true" className="block h-full">
+                            {item.content}
+                          </span>
+                        </button>
+                      ) : (
+                        <>
+                          <span className="sr-only">{item.label}</span>
+                          <div aria-hidden="true" className="h-full">
+                            {item.content}
+                          </div>
+                        </>
+                      )}
                     </li>
                   );
                 })}

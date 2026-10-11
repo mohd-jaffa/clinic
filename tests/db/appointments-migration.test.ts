@@ -4,6 +4,7 @@ import { APPOINTMENT_MINUTES, APPOINTMENT_STEP_MINUTES, TEXT_LIMITS } from "@/co
 import { isErrorMessageCode } from "@/constants/messages";
 import {
   APPOINTMENT_SOURCES,
+  APPOINTMENT_STATUS_CHANGES,
   APPOINTMENT_STATUS_TRANSITIONS,
   APPOINTMENT_STATUSES,
   type AppointmentStatus,
@@ -144,7 +145,10 @@ describe("0017 statuses (plan §11.2, D138)", () => {
 
   it("changes here only to scheduled, confirmed, cancelled or a no-show; a walk-in is never scheduled", () => {
     const change = functionBody(sql, "change_appointment_status");
-    expect(change).toContain("p_status not in ('SCHEDULED', 'CONFIRMED', 'CANCELLED', 'NO_SHOW')");
+    // The statuses the detail sets (APPOINTMENT_STATUS_CHANGES), and no other.
+    expect(change).toContain(
+      `p_status not in (${APPOINTMENT_STATUS_CHANGES.map((status) => `'${status}'`).join(", ")})`,
+    );
     expect(change).toContain("(was.source = 'WALK_IN' and p_status in ('SCHEDULED', 'CONFIRMED'))");
     expect(change).toContain(
       "case when p_status = 'CANCELLED' then 'appointments.cancel' else 'appointments.edit' end",

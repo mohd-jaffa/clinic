@@ -1,7 +1,7 @@
 "use client";
 
 import { Check, type LucideIcon } from "lucide-react";
-import { useId, type ReactNode } from "react";
+import { useId, type ReactNode, type RefObject } from "react";
 
 import { UI_TEXT } from "@/constants/messages";
 
@@ -14,7 +14,8 @@ import { Sheet } from "./sheet";
  * the scrolling body, reaching the form through its id. The form stays
  * mounted while the sheet is closed, so nothing typed is lost (D55). A
  * refusal about a field sits beside it; any other is a response card over the
- * sheet, which stays open beneath it to be put right.
+ * sheet, which stays open beneath it to be put right. Focus goes to its first
+ * typed field, or `initialFocus` where that is not the first to fill.
  */
 export function FormSheet({
   open,
@@ -25,6 +26,7 @@ export function FormSheet({
   submitIcon = Check,
   submitVariant = "primary",
   submitting = false,
+  initialFocus,
   children,
 }: {
   open: boolean;
@@ -36,6 +38,7 @@ export function FormSheet({
   /** `danger` for a sheet that confirms something that cannot be undone. */
   submitVariant?: ButtonVariant;
   submitting?: boolean;
+  initialFocus?: RefObject<HTMLElement | null>;
   children: ReactNode;
 }) {
   const formId = useId();
@@ -44,6 +47,7 @@ export function FormSheet({
       open={open}
       onClose={onClose}
       title={title}
+      initialFocus={initialFocus}
       footer={
         <Button
           type="submit"

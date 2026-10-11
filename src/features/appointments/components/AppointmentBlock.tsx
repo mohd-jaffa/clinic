@@ -16,24 +16,25 @@ const EDGES: Record<StatusTone, string> = {
  * An appointment as the grid draws it at its time (plan §11.5): its start and
  * the patient on the first line, what kind and where it stands under them
  * when there is room, a status edge down its side. A walk-in, which holds no
- * slot, is drawn on the soft green with its token (D154).
+ * slot, is drawn on the soft green with its token (D154). Spans all, as it
+ * sits inside the button that opens it.
  */
 export function AppointmentBlock({ appointment }: { appointment: CalendarAppointment }) {
   return (
-    <div
+    <span
       className={cn(
-        "h-full overflow-hidden rounded-[0.375rem] border-l-4 px-2 py-0.5 text-caption ring-1 ring-line ring-inset",
+        "block h-full overflow-hidden rounded-[0.375rem] border-l-4 px-2 py-0.5 text-caption ring-1 ring-line ring-inset",
         appointment.source === "WALK_IN" ? "bg-action-soft" : "bg-surface",
         EDGES[APPOINTMENT_STATUS_TONES[appointment.status]],
       )}
     >
-      <p className="truncate text-ink">
+      <span className="block truncate text-ink">
         <span className="tabular-nums">{formatTime(appointment.scheduledAt)}</span>{" "}
         <span className="font-bold">{appointment.patientName}</span>
-      </p>
-      <p className="truncate text-muted">
+      </span>
+      <span className="block truncate text-muted">
         {kindOf(appointment)} · {APPOINTMENT_STATUS_LABELS[appointment.status]}
-      </p>
-    </div>
+      </span>
+    </span>
   );
 }

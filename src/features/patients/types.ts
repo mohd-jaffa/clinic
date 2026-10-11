@@ -1,4 +1,5 @@
 import type { AlertKind, Gender } from "@/constants/statuses";
+import type { CalendarAppointment } from "@/features/appointments/types";
 
 /** A patient as the database reads them (0015), with their doctor's name and who archived them. */
 export interface PatientRow {
@@ -103,4 +104,13 @@ export interface ImportMatch {
 export interface ImportResult {
   imported: number;
   added: number;
+}
+
+/**
+ * Where a patient stands (plan §10.3): each part only for those who may see
+ * it, so a part left out is not shown. For now, their next appointment —
+ * none when nothing is to come (D166).
+ */
+export interface PatientSummary {
+  nextAppointment?: CalendarAppointment | null;
 }

@@ -2,12 +2,13 @@ import * as z from "zod";
 
 import { APPOINTMENT_MINUTES, APPOINTMENT_STEP_MINUTES, MAX_CALENDAR_DAYS, TEXT_LIMITS } from "@/constants/limits";
 import { UI_TEXT, VALIDATION_MESSAGES } from "@/constants/messages";
+import { APPOINTMENT_STATUS_CHANGES } from "@/constants/statuses";
 import { dayCount, dayTime, todayKey } from "@/lib/dates/calendar";
 
-import { optionalLines, requiredDay, wholeNumberText } from "../primitives";
+import { optionalLine, optionalLines, requiredDay, requiredLine, wholeNumberText } from "../primitives";
 import { newPatientSchema } from "./patients";
 
-const { appointments } = UI_TEXT;
+const { appointments, appointment } = UI_TEXT;
 
 /** How the patient is given (D144, D145): one found by the search, or a new one added with the booking. */
 export const PATIENT_MODES = ["FOUND", "NEW"] as const;
@@ -85,6 +86,22 @@ const length = z
     return z.NEVER;
   });
 
+/** Refuses a day before today, or a time already passed on the clinic's 5-minute steps. */
+function refusePast(date: string, at: string, ctx: z.RefinementCtx) {
+  if (date < todayKey()) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["date"],
+      message: VALIDATION_MESSAGES.notBeforeToday(appointments.dateLabel),
+    });
+    return;
+  }
+  const step = APPOINTMENT_STEP_MINUTES * 60_000;
+  if (Date.parse(dayTime(date, at)) < Math.floor(Date.now() / step) * step) {
+    ctx.addIssue({ code: "custom", path: ["time"], message: appointments.timePassed });
+  }
+}
+
 /**
  * A booking (plan §11.1; D144 – D151): the patient — found, or added with it —
  * the doctor, the day, the time on the clinic's steps, the type and its
@@ -104,20 +121,7 @@ export const bookingSchema = z
     notes: optionalLines(appointments.notesLabel, TEXT_LIMITS.notes),
     patientKey: z.uuid().optional(),
   })
-  .superRefine(({ date, time: at }, ctx) => {
-    if (date < todayKey()) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["date"],
-        message: VALIDATION_MESSAGES.notBeforeToday(appointments.dateLabel),
-      });
-      return;
-    }
-    const step = APPOINTMENT_STEP_MINUTES * 60_000;
-    if (Date.parse(dayTime(date, at)) < Math.floor(Date.now() / step) * step) {
-      ctx.addIssue({ code: "custom", path: ["time"], message: appointments.timePassed });
-    }
-  })
+  .superRefine(({ date, time: at }, ctx) => refusePast(date, at, ctx))
   .transform(({ date, time: at, length: minutes, ...booking }) => ({
     ...booking,
     scheduledAt: dayTime(date, at),
@@ -126,6 +130,95 @@ export const bookingSchema = z
 
 export type BookingInput = z.input<typeof bookingSchema>;
 export type BookingPayload = z.output<typeof bookingSchema>;
+
+/**
+ * An appointment moved (plan §11.1, D161): the booking sheet's fields without
+ * the patient, who stays. `was` is when it is now: kept there, a time already
+ * passed is not refused — only its notes may be changing — while a new time
+ * is refused in the past here and by `update_appointment`.
+ */
+export const rescheduleSchema = z
+  .object({
+    doctorId: chosenId(appointments.doctorLabel),
+    date: requiredDay(appointments.dateLabel),
+    time,
+    typeId: chosenId(appointments.typeLabel),
+    length,
+    notes: optionalLines(appointments.notesLabel, TEXT_LIMITS.notes),
+    was: z.iso.datetime({ offset: true, error: VALIDATION_MESSAGES.invalid }).optional(),
+  })
+  .superRefine(({ date, time: at, was }, ctx) => {
+    if (was === undefined || Date.parse(dayTime(date, at)) !== Date.parse(was)) refusePast(date, at, ctx);
+  })
+  .transform(({ doctorId, typeId, notes, date, time: at, length: minutes }) => ({
+    doctorId,
+    typeId,
+    notes,
+    scheduledAt: dayTime(date, at),
+    minutes,
+  }));
+
+export type RescheduleInput = z.input<typeof rescheduleSchema>;
+export type ReschedulePayload = z.output<typeof rescheduleSchema>;
+
+/** An appointment's notes alone (D161): changed at any time, whatever its status (plan §11.1). */
+export const appointmentNotesSchema = z.strictObject(
+  { notes: optionalLines(appointments.notesLabel, TEXT_LIMITS.notes) },
+  { error: VALIDATION_MESSAGES.invalid },
+);
+
+export type AppointmentNotesInput = z.input<typeof appointmentNotesSchema>;
+
+/** What `PATCH /api/appointments/[id]` takes: its notes alone, or the appointment moved. */
+export const appointmentChangeSchema = z.union([appointmentNotesSchema, rescheduleSchema], {
+  error: VALIDATION_MESSAGES.invalid,
+});
+
+export type AppointmentChangeInput = z.input<typeof appointmentChangeSchema>;
+export type AppointmentChangePayload = z.output<typeof appointmentChangeSchema>;
+
+/**
+ * A status set from the detail (plan §11.2): confirmed, back to scheduled, a
+ * no-show, or cancelled — which takes its reason (D162).
+ */
+export const statusChangeSchema = z
+  .object({
+    status: z.enum(APPOINTMENT_STATUS_CHANGES, { error: VALIDATION_MESSAGES.invalid }),
+    reason: optionalLine(appointment.reasonLabel, TEXT_LIMITS.reason),
+  })
+  .superRefine(({ status, reason }, ctx) => {
+    if (status === "CANCELLED" && reason === null) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["reason"],
+        message: VALIDATION_MESSAGES.required(appointment.reasonLabel),
+      });
+    }
+  });
+
+export type StatusChangeInput = z.input<typeof statusChangeSchema>;
+export type StatusChangePayload = z.output<typeof statusChangeSchema>;
+
+/** The quick reasons a cancellation is given by (D162); **Other** takes one typed. */
+export const CANCEL_REASONS = appointment.reasons;
+export const OTHER_REASON = "OTHER";
+
+/** Why it is cancelled (D162): a quick reason chosen, or Other's, typed — as the line it is saved as. */
+export const cancelSchema = z
+  .object({ choice: z.string(), other: z.string() }, { error: VALIDATION_MESSAGES.invalid })
+  .transform(({ choice, other }, ctx) => {
+    if ((CANCEL_REASONS as readonly string[]).includes(choice)) return { reason: choice };
+    if (choice !== OTHER_REASON) {
+      ctx.addIssue({ code: "custom", path: ["choice"], message: VALIDATION_MESSAGES.choose(appointment.reasonsLabel) });
+      return z.NEVER;
+    }
+    const typed = requiredLine(appointment.reasonLabel, { max: TEXT_LIMITS.reason }).safeParse(other);
+    if (typed.success) return { reason: typed.data };
+    ctx.addIssue({ code: "custom", path: ["other"], message: typed.error.issues[0].message });
+    return z.NEVER;
+  });
+
+export type CancelInput = z.input<typeof cancelSchema>;
 
 /** A doctor's day, for their booked times (D147): who and which day, never a patient — so in the address. */
 export const bookedTimesSchema = z.object({

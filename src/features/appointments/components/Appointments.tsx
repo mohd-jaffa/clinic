@@ -22,6 +22,8 @@ import { formatLongDate } from "@/lib/format/date";
 
 import { closuresOn, firstDoctorFilter, isLive, weekOf } from "../calendar";
 import { useAppointments } from "../hooks/useAppointments";
+import { useOpenedAppointment } from "../hooks/useOpenedAppointment";
+import { AppointmentPanel } from "./AppointmentPanel";
 import { BookingSheet, type BookingPrefill } from "./BookingSheet";
 import { CalendarBoard } from "./CalendarBoard";
 import { CalendarToolbar, type CalendarView } from "./CalendarToolbar";
@@ -41,8 +43,8 @@ const { calendar } = UI_TEXT;
  *
  * **Book appointment** — or the ＋'s Appointment (D67), or a tap on an empty
  * quarter of the grid with its doctor, day and time (D156) — opens the
- * booking sheet, for whoever may book, while the clinic can write. An
- * appointment does not open yet (D159): its detail comes with R5.4.
+ * booking sheet, for whoever may book, while the clinic can write. A tap on
+ * an appointment opens its detail, with what its status allows (D160).
  */
 export function Appointments() {
   const { membership } = useAuth();
@@ -54,6 +56,7 @@ export function Appointments() {
   const [view, setView] = useState<CalendarView>("DAY");
   const [doctorId, setDoctorId] = useState(() => (membership ? firstDoctorFilter(membership) : ""));
   const [prefill, setPrefill] = useState<{ count: number; values?: BookingPrefill }>({ count: 0 });
+  const opened = useOpenedAppointment();
 
   const week = weekOf(day);
   const range = view === "WEEK" ? week : { from: day, to: day };
@@ -103,6 +106,7 @@ export function Appointments() {
             appointments={live.filter((appointment) => appointment.day === day)}
             showDoctor={!doctorId}
             onBook={books ? () => book() : undefined}
+            onOpen={opened.show}
           />
         </div>
         <div className="hidden md:block">
@@ -127,9 +131,10 @@ export function Appointments() {
                     })
                 : undefined
             }
+            onOpen={opened.show}
           />
         </div>
-        <CancelledList appointments={folded} showDay={view === "WEEK"} />
+        <CancelledList appointments={folded} showDay={view === "WEEK"} onOpen={opened.show} />
       </>
     );
   }
@@ -163,6 +168,12 @@ export function Appointments() {
         </div>
       </div>
       {books && <BookingSheet key={prefill.count} prefill={prefill.values} open={adding.open} onClose={adding.close} />}
+      <AppointmentPanel
+        key={opened.appointment?.id}
+        appointment={opened.appointment}
+        open={opened.open}
+        onClose={opened.close}
+      />
     </>
   );
 }

@@ -49,6 +49,11 @@ export function isOpenLayer(notices: Element | null): boolean {
   return layers.some((layer) => layer.notices === notices);
 }
 
+/** Whether `status` is the live region of an open modal. */
+export function isOpenStatus(status: Element | null): boolean {
+  return layers.some((layer) => layer.status === status);
+}
+
 /** Calls `listener` whenever a modal opens or closes; answers how to stop. */
 export function onLayersChange(listener: () => void): () => void {
   listeners.add(listener);

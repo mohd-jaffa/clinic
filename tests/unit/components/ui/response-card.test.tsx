@@ -449,6 +449,21 @@ describe("a notice over a sheet", () => {
     expect(said(dialog("Visits"))).toBe("Visit saved");
   });
 
+  it("is said again where it goes when the sheet it was said in closes after it, as one closed through history does", () => {
+    const { respond, history, form } = stage();
+    act(() => history(true));
+    act(() => form(true));
+    act(() => respond.success({ title: "Vitals saved" }));
+    expect(said(dialog("Record vitals for Meena Gupta"))).toBe("Vitals saved");
+
+    act(() => form(false));
+    expect(said(dialog("Visits"))).toBe("Vitals saved");
+    act(() => history(false));
+    expect(page()).toHaveTextContent("Vitals saved");
+    fireEvent.animationEnd(countdown());
+    expect(page()).toHaveTextContent("");
+  });
+
   it("stays under a sheet opened after it; when its own closes, it goes to what is open, and then the page", () => {
     const { respond, history, form } = stage();
     act(() => history(true));
@@ -468,9 +483,11 @@ describe("a notice over a sheet", () => {
     act(() => respond.success({ title: "Patient saved" }));
     expect(notice()!.closest("dialog")).toBeNull();
     expect(page()).toHaveTextContent("Patient saved");
-    // A sheet opened after it leaves it where it was.
+    // A sheet opened after it leaves it where it was, said once.
     act(() => history(true));
     expect(notice()!.closest("dialog")).toBeNull();
+    expect(page()).toHaveTextContent("Patient saved");
+    expect(said(dialog("Visits"))).toBe("");
   });
 
   it("closes first on Escape, and the sheet under it on the next", async () => {
