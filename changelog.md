@@ -2408,3 +2408,61 @@ send. Asked of the user first: D179 – D184.
 
 ### Blockers
 - None.
+
+## 2026-10-12 — Speed, security and smoke tests before any release
+
+The user asked for performance, security and production smoke tests. They
+are set up in Phase 13 and pass on this machine before anything is pushed
+or deployed. This change records the plan only; no code changes. Asked of
+the user first: D185 – D189.
+
+### Changed
+- **Plan:**
+  - **D185:** Phase 13 sets up the speed, security and smoke tests. It is
+    DONE only when all three pass, and Phase 14 and any deployment wait on
+    that. Phase 13 is renamed "Speed and the release checks".
+  - **D186:** the smoke test runs before users see a release. The new
+    version is deployed without the domain, smoke-tested at its own address,
+    and promoted only when that passes.
+  - **D187:** the smoke test signs in to nothing, so no password is kept in
+    GitHub.
+  - **D188:** the dependency audit fails on high and critical advisories in
+    shipped code, on every push and weekly.
+  - **D189:** every test passes locally first. `npm run verify` runs
+    everything CI runs, a pre-push hook runs it, and a release also needs
+    `npm run test:speed` passed locally.
+- **New rows:**
+  - **R13.7, speed tests:** queries use their indexes, round trips are
+    counted, and first-load JS is checked, on every push. The load-seed
+    timings run before each release.
+  - **R13.8, security tests:** the dependency audit, Supabase's database
+    lints, and every API route behind its guard.
+  - **R13.9, the smoke test:** read-only, run against the built app and
+    then each new version.
+  - **R13.10, locally first:** `npm run verify` and the pre-push hook.
+- **Rows changed:**
+  - R14.5 re-runs the speed tests.
+  - R14.7's release runs every test, then deploys, smoke-tests and promotes.
+  - R14.8's live check is the smoke test.
+- **Sections:**
+  - §34.1 lists the three new layers.
+  - §34.3 adds "locally first".
+  - §35 covers CI, the release steps and the local gate. A migration must
+    keep the version before it working, since it is applied before the new
+    version takes the domain.
+  - §38: Phase 13 and 14's goals and done-when.
+  - §40: the definition of shippable.
+- **AGENTS.md §32:** the new checks and the local gate.
+
+### Notes
+- Today's shipped-code audit finds three advisories: `next` 16.2.x
+  (critical), `sharp` and `source-map-js` (high). R13.8 fixes them before
+  its gate is turned on.
+- Load-seed timings are not run on every push, because shared CI runners
+  time too unevenly. They run locally and in the release, before it deploys.
+
+### Validation
+- Docs only. No code, test or migration changed.
+
+### Blockers
+- None.

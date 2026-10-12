@@ -271,6 +271,11 @@ earlier lines are never rewritten.
 | D182 | **Reminders are for those who may change appointments** (the user): `appointments.edit`, the front desk that confirms and arrives. | 2026-10-12 |
 | D183 | **The share helper comes with its first PDF** (the user): handing a PDF to WhatsApp through the share sheet, or downloading it on a desktop, is built in R6.8 with the prescription, the first PDF sent — not in R5.7 with nothing to share. R5.7 keeps the link helper and reminders. | 2026-10-12 |
 | D184 | **Remind is offered for a booking still to come, today or later** (the user): scheduled or confirmed — a late patient today too — never a walk-in, nor anyone arrived, done, cancelled or a no-show. | 2026-10-12 |
+| D185 | **Speed, security and smoke tests are set up in Phase 13, and gate what follows** (the user): "make sure in phase 13 all these 3 tests will be setup and only after all the tests up and come back and passed, then we will move to deployment or next phase". Phase 13 adds speed checks (R13.7), security checks (R13.8) and a smoke test (R13.9), each run by CI. Phase 13 is DONE only when all three are set up and pass, and Phase 14 starts only then. From then on, a release deploys only when they pass (§35). | 2026-10-12 |
+| D186 | **The smoke test runs before users see a release** (the user): the release deploys the new version to its own address without the domain (`vercel deploy --prebuilt --prod --skip-domain`), runs the smoke test there, and moves the domain to it (`vercel promote`) only when it passes. A failure leaves the live version untouched. | 2026-10-12 |
+| D187 | **The smoke test signs in to nothing** (the user): no password is kept in GitHub; the DEV account, which extends plans and deletes clinics, is never a CI secret. It proves the database through the landing page's live price and Supabase Auth through a wrong password refused as the app refuses it. | 2026-10-12 |
+| D188 | **The dependency audit fails on high and critical advisories in shipped code** (the user): `npm audit --omit=dev --audit-level=high`, on every PR and weekly. Build and test tools are reported, not gated. The advisories open today in shipped code (`next` 16.2.x critical; `sharp` and `source-map-js` high) are fixed in R13.8. | 2026-10-12 |
+| D189 | **Every test passes locally before CI and before a release** (the user): "make sure these tests pass locally first before the deployment and CI run". `npm run verify` runs, on this machine and in CI's order, everything CI runs: lint, format, types, coverage, the security checks, the build, E2E, the speed checks and the smoke test. A git pre-push hook runs it and refuses the push when anything fails; a push is never sent with `--no-verify`. A release also needs `npm run test:speed` passed locally on the load seed before it is tagged. CI and the release workflow then run the same again. | 2026-10-12 |
 
 ## 3. Users and roles
 
@@ -2120,6 +2125,9 @@ As Brio (AGENTS.md §31), with coverage enforced (D16).
 | DB contracts | `tests/db/*-migration.test.ts` | `npm test` | each migration's SQL as text: constraints, policies, `CHECK` ↔ constants equality, platform-setting defaults ↔ `platform.ts`. |
 | Integration | `tests/db/integration/` | `npm run test:integration` (local Supabase only) | feature functions and RPCs against the real database: tenant isolation, the permission matrix, the doctor scope, read-only refusal, exclusion constraint, tokens under concurrency, idempotency, balances, purges, cascade on delete. |
 | E2E | `tests/e2e/` | `npm run build && npm run test:e2e` | journeys on the built app at **phone (390×844) and desktop (1440×900)**, with an axe check on every screen visited. |
+| Speed (R13.7) | `tests/db/integration/`, `tests/speed/` | `npm run verify` and CI on every push; `npm run test:speed` on the load seed, locally and in the release, before each release | every list, search, count and report served by an index; each screen and read within 2 round trips, each save within 4; first-load JS within 200 KB gzip; timed on the load seed, every list and search under 300 ms. |
+| Security (R13.8) | `tests/contract/`, CI | `npm run verify`, CI on every push and weekly | the dependency audit (high and critical in shipped code, D188); Supabase's database lints; every API route behind its guard. Beside them, run as before: tenant isolation, the permission matrix, the doctor scope, read-only refusal, redaction. |
+| Smoke (R13.9) | `tests/smoke/` | `npm run test:smoke`: in `npm run verify` and CI against the built app; in the release against each new version before it takes the domain | read-only and signed in to nothing (D187): the database, Supabase Auth, the API's refusal, the cron secret, the headers, the PWA files, the region. |
 
 ### 34.2 Coverage, enforced
 
@@ -2145,6 +2153,9 @@ As Brio (AGENTS.md §31), with coverage enforced (D16).
   the clinic-deletion test.
 - **Every permission** has a row in the permission-matrix test (allowed and
   refused, through the route and through RLS).
+- **Locally first** (D189, from R13.10): `npm run verify` passes on this
+  machine before anything is pushed — a pre-push hook runs it — and
+  `npm run test:speed` passes before a release is tagged.
 
 ### 34.4 The V1 critical journey (E2E)
 
@@ -2186,16 +2197,27 @@ As Brio (D17):
 - **`ci.yml`** on every push to `main` and every PR. `checks`: install → lint →
   format check → typecheck → unit tests. `app`: local Supabase (pinned CLI,
   every migration) → `test:coverage` (unit + integration, 100%) → build →
-  Playwright install → E2E (phone + desktop) → artifacts on failure.
+  Playwright install → E2E (phone + desktop) → artifacts on failure. From
+  Phase 13 it also runs the speed checks, the security checks (weekly too)
+  and the smoke test (R13.7 – R13.9, D185).
 - **`release.yml`** on a published GitHub release `vX.Y.Z` equal to
   `package.json`'s version: check the tag → call `ci.yml` on it → `supabase db
   push` to the hosted project → build on GitHub → `check-deploy-output.mjs`
   (no source, source maps or env files) → `vercel deploy --prebuilt --prod`.
   **Vercel is never connected to the repository.** A push deploys nothing.
+  From Phase 13 (D185, D186): `ci.yml` and `npm run test:speed` pass first;
+  the new version is deployed without the domain (`--skip-domain`), the
+  smoke test runs at its own address, and `vercel promote` gives it the
+  domain only when that passes. A failure leaves the live version
+  untouched — so a migration keeps the version before it working, since it
+  is applied before the new version takes the domain.
 - **Environments:** local (Docker Supabase + Mailpit) and production. No
   staging. `.env.example` lists every variable, validated at start by
   `src/lib/env`; `.env.local` holds local values; production values live in
   Vercel and GitHub secrets.
+- **Locally first** (D189): `npm run verify` runs everything CI runs, on this
+  machine; a pre-push hook runs it and refuses the push when anything fails.
+  A release is tagged only after `npm run test:speed` passes locally too.
 - **Branching:** work on a branch, PR to `main`, CI green before merge.
   Commit after every completed change with a short conventional message
   (`feat(patients): …`), as AGENTS.md says.
@@ -2302,8 +2324,8 @@ when the one it depends on is DONE.
 | **10 — Home and reports** | The operational Home and the daily/monthly reports. | 7, 8, 9 | Home and the reports agree with the underlying records for a seeded month. |
 | **11 — Subscription operations and the developer console** | The owner's Plan screen, the console (clinics, settings, extend, accounts, logs), expiry emails, the owner's activity log. | 10 | The admin extends a clinic and changes a setting from the console; expiry emails go out once each; DEV sees no clinic data. |
 | **12 — Landing, legal and PWA** | Landing with live pricing, privacy, terms, installable app, security headers, CSV export, deletion requests and the admin's delete. | 11 | Installable on Android Chrome and iOS Safari; opens offline to the offline page; an export holds every row; a deleted clinic leaves no rows but its trial claim. |
-| **13 — Speed** | Every screen, read and save measured on a load-seeded clinic; the session in one round trip; indexes and policies tuned; round trips cut to the budget; the hosting beside the database (D134). | 12 | Every screen and read waits on at most 2 round trips and every save on at most 4 (§37); every list and search is under 300 ms at the API on the load seed; Supabase's performance advisor reports nothing. |
-| **14 — Hardening and release v1.0.0** | Security and accessibility passes; speed checked again; the full journey; release workflow; production setup. | 13 | §34.4 passes at both widths in CI; the release checklist is complete; v1.0.0 is live and answers from `bom1` within §37's budgets. |
+| **13 — Speed and the release checks** | Every screen, read and save measured on a load-seeded clinic; the session in one round trip; indexes and policies tuned; round trips cut to the budget; the hosting beside the database (D134). The speed, security and smoke tests set up and run by CI (D185). | 12 | Every screen and read waits on at most 2 round trips and every save on at most 4 (§37); every list and search is under 300 ms at the API on the load seed; Supabase's performance advisor reports nothing; the speed checks, security checks and smoke test are set up and pass locally (`npm run verify`, the pre-push hook) and in CI. |
+| **14 — Hardening and release v1.0.0** | Security and accessibility passes; speed checked again; the full journey; release workflow; production setup. Starts only when Phase 13's checks pass (D185). | 13 | §34.4 passes at both widths in CI; the release checklist is complete; v1.0.0 is live and answers from `bom1` within §37's budgets. |
 
 ## 39. Tracker
 
@@ -2477,11 +2499,15 @@ in the row's one commit (D136).
 | R12.5 | `0027_clinic_deletion`: the owner's request and cancel (banner, emails), the admin's delete after the cooling-off | §9.1, §20 | — | TODO |
 | R12.6 | CSV export, one file per area, audited | §9 | — | TODO |
 
-### Phase 13 — Speed (D134)
+### Phase 13 — Speed and the release checks (D134, D185)
 
 Every screen, read and save built in Phases 0 – 12, made as fast as it can
 be before anyone uses it live. Each row measures before and after, and its
-changelog gives both.
+changelog gives both. Then the three tests that guard every release are set
+up: speed (R13.7), security (R13.8) and smoke (R13.9). They run locally first,
+through `npm run verify` and a pre-push hook (R13.10, D189). **Phase 13 is
+DONE only when all three pass locally and in CI; Phase 14, and any
+deployment, waits on that (D185).**
 
 | ID | Work | Source | Waits on | Status |
 |---|---|---|---|---|
@@ -2491,8 +2517,15 @@ changelog gives both.
 | R13.4 | Round trips cut to the budget. Reads that do not depend on each other go at once (`allInOrder`), records come with their children, writes answer from `returning`, and side work runs after the answer. Every screen and read within 2, every save within 4; every list and search under 300 ms at the API on the load seed | §37 | — | TODO |
 | R13.5 | Pages: the proxy starts only where it has work and loads the Supabase client only to renew. Heavy code loads when first needed; first-load JS within 200 KB gzip. Polling stops while the tab is hidden. Reusing a screen revisited within seconds (`staleTimes`) measured, kept only if it helps. LCP and INP within budget on the throttled phone | §37 | — | TODO |
 | R13.6 | Hosting: `vercel.json` with region `bom1` and fluid compute, sent by `vercel deploy --prebuilt` with every release; the release guide (R14.7) says so | §35, §37 | — | TODO |
+| R13.7 | Speed tests, so no later change makes it slow again. **Locally (`npm run verify`) and in CI on every push:** every list, search, count and report query EXPLAINed against the local database by an integration test, failing on a sequential scan of a clinic-owned table; every screen, read and save's database round trips counted, failing over 2 and 4; each signed-in screen's first-load JS checked on the build, failing over 200 KB gzip. **Timed:** R13.1's measurements as `npm run test:speed` on the load seed, failing when a list or search is over 300 ms at the API. Run locally before every release (D189), and again by the release workflow before it deploys (R14.7); not on every push, since shared CI runners time too unevenly | §34, §37 | R13.1 – R13.5 | TODO |
+| R13.8 | Security tests. **Locally (`npm run verify`), in CI on every push, and weekly:** the dependency audit, `npm audit --omit=dev --audit-level=high`, failing on a high or critical advisory in shipped code (D188), with today's (`next`, `sharp`, `source-map-js`) fixed here; Supabase's database lints (the security and performance advisors' checks) run against the local database, failing on any finding; a route test that finds every `src/app/api/**/route.ts` handler behind `withClinicRoute` naming its permission, `withDevRoute` or `withSessionRoute`, or on the short list of public routes. These join the tests already run: tenant isolation, the permission matrix, the doctor scope, read-only refusal, redaction | §27, §34, §35 | — | TODO |
+| R13.9 | The smoke test: `npm run test:smoke`, a short read-only Playwright run against any address, signing in to nothing (D187). It checks: the landing page shows the live price, so the database answers; a wrong password is refused as the app refuses it, so Supabase Auth answers; a signed-out API call is refused with the envelope and a request id; the cron endpoint refuses a call without its secret; the security headers are present; the manifest and service worker are served; the answer comes from `bom1` (production only). **Run locally (`npm run verify`) and in CI on every push** against the built app on port 3100, and by the release workflow against each new version before it takes the domain (D186, R14.7) | §34, §35 | R13.6 | TODO |
+| R13.10 | Locally first (D189): `npm run verify` runs everything CI runs, in CI's order — lint, format, types, coverage, the security checks (R13.8), the build, E2E, the speed checks (R13.7), the smoke test (R13.9) — and stops at the first failure. It refuses to start unless 55322 is ClinicDesk's own local database. A git pre-push hook, set up by `npm install`, runs it and refuses the push when it fails. The release guide (R14.7) has `npm run verify` and `npm run test:speed` passed locally before a release is tagged | §34, §35 | R13.7 – R13.9 | TODO |
 
 ### Phase 14 — Hardening and release v1.0.0
+
+Starts only when Phase 13 is DONE, its speed, security and smoke tests set up
+and passing locally and in CI (D185, D189).
 
 | ID | Work | Source | Waits on | Status |
 |---|---|---|---|---|
@@ -2500,10 +2533,10 @@ changelog gives both.
 | R14.2 | Security review: every table's policies, every service-role call, headers, session settings, redaction | §27 | — | TODO |
 | R14.3 | Patient-data review: logs, error log, audit, PDFs, cache headers, service worker | §27.6 | — | TODO |
 | R14.4 | Accessibility pass: axe on every screen; manual keyboard and screen reader | §37 | — | TODO |
-| R14.5 | Speed checked again: R13.1's measurements re-run after R14.1 – R14.4, nothing over budget | §37 | — | TODO |
+| R14.5 | Speed checked again: R13.1's measurements and R13.7's speed tests re-run after R14.1 – R14.4, nothing over budget | §37 | — | TODO |
 | R14.6 | The full critical journey (§34.4) at both widths in CI | §34.4 | — | TODO |
-| R14.7 | `release.yml`, `check-deploy-output.mjs`, `docs/RELEASE.md` (accounts, setup, each release, backups, rollback) | §35 | — | TODO |
-| R14.8 | Production: Supabase (ap-south-1), Vercel (bom1), domain, Gmail SMTP, Vault and env secrets (`CRON_SECRET`, `TRIAL_CLAIM_SECRET`), the DEV account, renewal contact set, the final product name; restore rehearsed; v1.0.0. The live app checked: it answers from `bom1::bom1`, warm and after idling, within §37's budgets | §35, §37 | Q1, Q3, Q22 | TODO |
+| R14.7 | `release.yml`, `check-deploy-output.mjs`, `docs/RELEASE.md` (accounts, setup, each release, backups, rollback). Each release: `npm run verify` and `npm run test:speed` pass locally before the tag (D189); the workflow then runs every test again, `ci.yml` (with R13.7's and R13.8's checks) and `npm run test:speed`. It then deploys the new version without the domain, runs the smoke test (R13.9) at its own address, and promotes it only when that passes (D186); a failure leaves the live version untouched | §35 | — | TODO |
+| R14.8 | Production: Supabase (ap-south-1), Vercel (bom1), domain, Gmail SMTP, Vault and env secrets (`CRON_SECRET`, `TRIAL_CLAIM_SECRET`), the DEV account, renewal contact set, the final product name; restore rehearsed; v1.0.0. The live app checked: the smoke test (R13.9) passes against it, and it answers from `bom1::bom1`, warm and after idling, within §37's budgets | §35, §37 | Q1, Q3, Q22 | TODO |
 
 ## 40. Definition of shippable
 
@@ -2511,6 +2544,8 @@ A phase is DONE when:
 
 - typecheck, lint, format check, unit, integration (with 100% coverage) and
   E2E are green in CI;
+- from Phase 13 on, the speed, security and smoke tests pass too, locally
+  (`npm run verify`) and in CI (D185, D189);
 - every screen it touched is checked at 360, 390, 414, 768, 1024 and 1440 px,
   in every theme, with no axe violations;
 - no hard-coded strings (all words in `messages.ts`), no business rule in code

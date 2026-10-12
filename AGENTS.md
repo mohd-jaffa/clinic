@@ -787,6 +787,15 @@ app:    local Supabase (every migration) → test:coverage (unit + integration, 
         → build → E2E (phone + desktop, axe)
 ```
 
+**From Phase 13 (plan D185 – D189)**, CI also runs the speed checks, the
+security checks (weekly too) and the smoke test (R13.7 – R13.9). **Every test
+passes locally first:** `npm run verify` runs everything CI runs, in its order;
+a pre-push hook runs it and refuses the push when anything fails; a push is
+never sent with `--no-verify`. A release is tagged only after
+`npm run test:speed` passes locally too. The release then runs every test
+again, deploys the new version without the domain, smoke-tests it there, and
+promotes it only when that passes.
+
 **A release deploys; a push does not** (`.github/workflows/release.yml`):
 publishing a GitHub release `vX.Y.Z` equal to `package.json`'s version re-runs
 CI on the tag, applies new migrations to the hosted Supabase, builds on GitHub,
