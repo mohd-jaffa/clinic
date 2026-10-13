@@ -2647,3 +2647,37 @@ D192 – D198.
 
 ### Blockers
 - None.
+
+## 2026-10-13 — A card's three actions stay inside it
+
+Found by the user in the R6.1 screenshots: on a desktop the busy-room card
+(D192) was cut off at its right edge, its message and its main button with
+it.
+
+### Fixed
+- **`src/components/ui/dialog.tsx`:** from 768 px a card's actions stood in
+  one row that never wrapped, inside a card at most 28rem wide. Three
+  actions — Cancel, **Keep both in**, **Mark done and send in** — are wider
+  than that, so the card's content ran past its edge and was clipped. Now:
+  - a card with three actions stacks them full-width at every width, the
+    main one on top, as on a phone (`stackActions`, set by the confirm card
+    when it carries a second action);
+  - any row of actions wraps rather than spilling past the card.
+- **`DESIGN.md`:** the card's rule says so.
+
+### Tests
+- **Unit:** the dialog's row wraps, and stacks when told; the confirm card
+  with a second action stacks its three.
+- **E2E** (`queue-moves.spec.ts`, desktop): each of the busy-room card's
+  actions stands within the card, and nothing in it scrolls sideways. On the
+  old build it failed: the main button ended 84 px past the card's edge.
+
+### Validation
+- Typecheck, lint, format check passed.
+- Unit and integration tests passed: 2562, coverage 100%.
+- E2E passed: 114 at phone and desktop, with axe; 8 skipped, each for one
+  width only.
+- The busy-room card was re-checked at desktop width, light and dark.
+
+### Blockers
+- None.

@@ -300,6 +300,8 @@ describe("a confirmation with a second way to go ahead (D192)", () => {
     });
     const card = screen.getByRole("alertdialog", { name: "Rahul Mehta is still with Maya Rao" });
     expect(within(card).getByRole("button", { name: "Mark done and send in" })).toHaveFocus();
+    // Three actions stand one under another at every width: a row of them is wider than the card.
+    expect(within(card).getByRole("button", { name: "Keep both in" }).parentElement).not.toHaveClass("sm:flex-row");
     await userEvent.click(within(card).getByRole("button", { name: "Keep both in" }));
     expect(keep).toHaveBeenCalledOnce();
     await expect(answer!).resolves.toBe(false);

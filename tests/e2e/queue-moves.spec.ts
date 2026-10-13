@@ -139,10 +139,16 @@ test("on a desktop the desk moves the queue from its columns", async ({ page }, 
   await waitingRow(page, "Kiran Das")
     .getByRole("button", { name: queue.sendInOf("Kiran Das") })
     .click();
-  await page
-    .getByRole("alertdialog", { name: queue.roomBusy("Rohan Mehta", false, "Maya Rao") })
-    .getByRole("button", { name: queue.finishAndSendIn })
-    .click();
+  const busy = page.getByRole("alertdialog", { name: queue.roomBusy("Rohan Mehta", false, "Maya Rao") });
+  // Its three actions stand within the card, none cut off at its edge, and nothing scrolls sideways in it.
+  const card = (await busy.boundingBox())!;
+  for (const name of [queue.finishAndSendIn, queue.keepBothIn, UI_TEXT.actions.cancel]) {
+    const button = (await busy.getByRole("button", { name }).boundingBox())!;
+    expect(button.x).toBeGreaterThanOrEqual(card.x);
+    expect(button.x + button.width).toBeLessThanOrEqual(card.x + card.width);
+  }
+  expect(await busy.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+  await busy.getByRole("button", { name: queue.finishAndSendIn }).click();
   await expect(notice(page, queue.sentIn("Kiran Das", "Maya Rao"))).toBeVisible();
   await expect(withDoctor.getByRole("listitem")).toHaveCount(1);
   await expect(withDoctor).toContainText("Kiran Das");

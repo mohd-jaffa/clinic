@@ -16,7 +16,10 @@ import { Modal } from "./modal";
  * sits in the middle. Its mark, beside the title, says what kind of card it
  * is; its title names it, its body says why, and its actions stand at the
  * end, the main one last — on a phone, one under another at full width, the
- * main one on top, nearest the thumb's reach and first to be read.
+ * main one on top, nearest the thumb's reach and first to be read. Three
+ * actions (`stackActions`) stand that way at every width: a row of them is
+ * wider than the card. A row that still runs out of room wraps; it never
+ * spills past the card's edge.
  */
 export function Dialog({
   open,
@@ -27,6 +30,7 @@ export function Dialog({
   mark,
   closable = false,
   actions,
+  stackActions = false,
   children,
 }: {
   open: boolean;
@@ -40,6 +44,8 @@ export function Dialog({
   /** A close button in its corner, calling `onDismiss`: for a card that tells, where a question is answered by its actions. */
   closable?: boolean;
   actions?: ReactNode;
+  /** One under another at every width, the main one on top: for three actions. */
+  stackActions?: boolean;
   children?: ReactNode;
 }) {
   const headingId = useId();
@@ -71,7 +77,16 @@ export function Dialog({
           </h2>
         </div>
         {children && <div className="text-muted">{children}</div>}
-        {actions && <div className="mt-2 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">{actions}</div>}
+        {actions && (
+          <div
+            className={cn(
+              "mt-2 flex flex-col-reverse gap-2",
+              !stackActions && "sm:flex-row sm:flex-wrap sm:justify-end",
+            )}
+          >
+            {actions}
+          </div>
+        )}
       </div>
     </Modal>
   );

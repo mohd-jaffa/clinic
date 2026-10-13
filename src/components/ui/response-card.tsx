@@ -351,6 +351,8 @@ function ResponseCard({ card, onClose }: { card: Card; onClose: (answer?: boolea
       initialFocus={danger ? safe : first}
       mark={<Mark look={danger ? DANGER_MARK : MARKS[card.kind]} size="md" />}
       closable={!confirming}
+      // Cancel, a second way to go ahead and the main one: a row of three is wider than the card.
+      stackActions={confirming && card.secondary !== undefined}
       actions={
         <>
           {confirming && (

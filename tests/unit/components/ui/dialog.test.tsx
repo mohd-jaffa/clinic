@@ -67,4 +67,12 @@ describe("Dialog", () => {
     render(<Dialog open role="alertdialog" title="Plan ends in 3 days" closable actions={<button>See plan</button>} />);
     expect(screen.queryByRole("button", { name: "Close" })).not.toBeInTheDocument();
   });
+
+  it("puts its actions in a row that wraps from a tablet up, or one under another at every width when told", () => {
+    const { rerender } = render(<Dialog open title="Sign out?" actions={<button type="button">Sign out</button>} />);
+    const row = screen.getByRole("button", { name: "Sign out" }).parentElement!;
+    expect(row).toHaveClass("flex-col-reverse", "sm:flex-row", "sm:flex-wrap");
+    rerender(<Dialog open title="Sign out?" stackActions actions={<button type="button">Sign out</button>} />);
+    expect(screen.getByRole("button", { name: "Sign out" }).parentElement).not.toHaveClass("sm:flex-row");
+  });
 });
