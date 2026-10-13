@@ -276,6 +276,7 @@ earlier lines are never rewritten.
 | D187 | **The smoke test signs in to nothing** (the user): no password is kept in GitHub; the DEV account, which extends plans and deletes clinics, is never a CI secret. It proves the database through the landing page's live price and Supabase Auth through a wrong password refused as the app refuses it. | 2026-10-12 |
 | D188 | **The dependency audit fails on high and critical advisories in shipped code** (the user): `npm audit --omit=dev --audit-level=high`, on every PR and weekly. Build and test tools are reported, not gated. The advisories open today in shipped code (`next` 16.2.x critical; `sharp` and `source-map-js` high) are fixed in R13.8. | 2026-10-12 |
 | D189 | **Every test passes locally before CI and before a release** (the user): "make sure these tests pass locally first before the deployment and CI run". `npm run verify` runs, on this machine and in CI's order, everything CI runs: lint, format, types, coverage, the security checks, the build, E2E, the speed checks and the smoke test. A git pre-push hook runs it and refuses the push when anything fails; a push is never sent with `--no-verify`. A release also needs `npm run test:speed` passed locally on the load seed before it is tagged. CI and the release workflow then run the same again. | 2026-10-12 |
+| D190 | **A screen opened again shows what its page was just read with, and is not read twice** (the user, "go ahead and fix it"): the data a page arrives with replaces what the browser kept from the last visit, so nothing older flashes first and the browser does not ask the API for it again. A list starts again from its first page. A page brought back by Back or Forward is the one read when it was first opened, so it changes nothing: the screen shows what the browser has and asks again. | 2026-10-13 |
 
 ## 3. Users and roles
 
@@ -2293,6 +2294,8 @@ Speed is built with each row, not added at the end. From R5.1 on, every row:
   up in the server or the browser.
 - **Keeps the browser light.**
   - One SWR key serves every reader of a route.
+  - A screen opened again shows the data its page arrived with and does not
+    read it twice; Back and Forward read it again (D190).
   - A screen polls only when it changes under you (the queue), and stops
     while the tab is hidden.
   - Heavy code (PDF drawing, Excel reading, charts) loads when it is first

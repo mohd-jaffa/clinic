@@ -2466,3 +2466,57 @@ the user first: D185 – D189.
 
 ### Blockers
 - None.
+
+## 2026-10-13 — A screen opened again is not read twice
+
+Asked by the user ("go ahead and fix it"; D190). A screen opened for the
+second time showed the copy the browser kept from the last visit, then asked
+the API for it again, although the server had just read it to draw the page.
+Opened again within two seconds of the browser's last read of it, it was not
+even asked again (SWR's deduping): the screen stayed on the old copy until the
+next refresh.
+
+### Fixed
+- **`src/lib/query/ServerData.tsx`:** the data a page arrives with now goes
+  into the SWR cache before the screen draws, replacing what the browser
+  kept. A list starts again from its first page.
+  - Each visit is told apart by Next's `useRouter().bfcacheId`: a new visit
+    has a new id, and Back and Forward bring a page back under its first id.
+  - A page brought back that way was read when it was first shown, so it
+    changes nothing: the screen shows what the browser has and asks again.
+  - A visit counts as shown once it is drawn (an effect), so a draw React
+    sets aside does not count.
+- **`src/lib/query/useSeeded.ts`:** the page's data counts as fresh while the
+  cache holds that same data, not only while the cache is empty.
+
+### Speed
+- A screen opened again waits on the page's own read only: 2 round trips (the
+  session, then its reads at once). It used to add one API call for each of
+  its reads after drawing, each another 2 round trips. Back and Forward ask
+  again, as before.
+
+### Tests
+- **Unit:**
+  - `ServerData` shows the page's data over an older cached copy, from the
+    list's first page, and asks nothing.
+  - A visit brought back by history leaves the cache as it is and asks
+    again.
+  - A new visit on the same screen takes its data without asking; data
+    handed again within the same visit puts nothing in the cache.
+  - `useSeeded` counts the page's data as fresh once it is in the cache.
+  - The first and last of these failed on the old code.
+- **E2E** (`tests/e2e/screen-data.spec.ts`, phone and desktop):
+  - Back to the patients screen shows a patient added since it was first
+    read, asked for again.
+  - Read again in the browser on return to the app, then left and opened
+    again, the screen shows a patient added meanwhile with no API call.
+  - On the old build, the opened-again check failed: the list stayed on
+    the browser's copy, without the patient added meanwhile.
+
+### Validation
+- Typecheck, lint, format check passed.
+- Unit and integration tests passed, coverage 100%.
+- E2E passed (phone, desktop).
+
+### Blockers
+- None.
