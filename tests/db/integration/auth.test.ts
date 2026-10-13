@@ -1,6 +1,7 @@
 import { afterAll, describe, expect, it } from "vitest";
 
 import { PLATFORM_SETTING_DEFAULTS } from "@/constants/platform";
+import { AUTH_ROUTES } from "@/constants/routes";
 import { DEFAULT_APPOINTMENT_TYPES, DEFAULT_CONSULTATION_SERVICE, DEFAULT_EXPENSE_CATEGORIES } from "@/constants/seeds";
 import { updateProfile } from "@/features/auth/account";
 import { changePassword, completePasswordReset, requestPasswordReset } from "@/features/auth/password";
@@ -53,7 +54,7 @@ describe("signing up a clinic", () => {
     const email = await latestMessageTo(details.email);
     expect(email.subject).toMatch(/Confirm your email/);
     const link = await followAuthLink(authLinkIn(email.text));
-    expect(link.landing).toBe("http://localhost:3000/confirm-email");
+    expect(link.landing).toBe(`${process.env.NEXT_PUBLIC_APP_URL}${AUTH_ROUTES.confirmEmail}`);
 
     const session = await confirmEmail(createSupabaseAnonClient(), admin(), link);
     deleteAfter({ clinicId: session.membership!.clinicId });
@@ -235,7 +236,7 @@ describe("a forgotten password", () => {
     const email = await latestMessageTo(owner.email);
     expect(email.subject).toMatch(/Reset your/);
     const link = await followAuthLink(authLinkIn(email.text));
-    expect(link.landing).toBe("http://localhost:3000/reset-password");
+    expect(link.landing).toBe(`${process.env.NEXT_PUBLIC_APP_URL}${AUTH_ROUTES.resetPassword}`);
 
     const password = aPassword();
     const session = await completePasswordReset(

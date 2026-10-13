@@ -2705,3 +2705,24 @@ workflow only; no code changes.
 
 ### Blockers
 - None.
+
+## 2026-10-13 — The sign-up and reset link tests read the app's address
+
+The first CI run on GitHub failed at coverage: two integration tests in
+`tests/db/integration/auth.test.ts` expected the emailed links to land on
+`http://localhost:3000`. On a laptop the app's address is port 3000. CI sets
+it to 3100, the port its journeys run on.
+
+### Fixed
+- **`auth.test.ts`:** the confirm-email and reset-password links are
+  checked against `NEXT_PUBLIC_APP_URL` and `AUTH_ROUTES`, which is what the
+  app builds them from, so the test holds on any address.
+
+### Validation
+- `auth.test.ts` passed with the laptop's address and with CI's
+  (`NEXT_PUBLIC_APP_URL=http://localhost:3100`).
+- Typecheck, lint, format check passed. Unit and integration tests passed,
+  coverage 100%.
+
+### Blockers
+- None.
