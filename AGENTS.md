@@ -72,11 +72,11 @@ specifies.
   **one short, straight conventional line** — `feat: add patient search` —
   with no body and **no co-author or other attribution trailer** (the user,
   2026-10-02). Commit as **`jaFFa <jafakash.14@gmail.com>`** (plan D38).
-  **Until the first release** (`v1.0.0`), commit on `main` and push it to
-  `origin` (github.com/mohd-jaffa/clinic) directly, once the whole suite has
-  passed locally; CI runs on every push. From the first release on, work on
-  a branch and merge to `main` through a PR with CI green (the user,
-  2026-10-13; plan D199).
+  **Until the first release** (`v1.0.0`), commit on `main` once the whole
+  suite has passed locally, and **do not push**: the user pushes to `origin`
+  (github.com/mohd-jaffa/clinic) when they choose, and CI runs on every
+  push. From the first release on, work on a branch and merge to `main`
+  through a PR with CI green (the user, 2026-10-13; plan D199, D200).
 - **One commit per change, docs included** (the user, 2026-10-05; plan
   D136): the code, its tests, the plan's decisions and tracker row,
   `DESIGN.md` and `changelog.md` go in the same commit. Docs are never

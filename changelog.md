@@ -2726,3 +2726,21 @@ it to 3100, the port its journeys run on.
 
 ### Blockers
 - None.
+
+## 2026-10-13 — The user pushes
+
+The user asked that changes be committed on `main` and not pushed: they push
+when they choose (D200). This change records the workflow only; no code
+changes.
+
+### Changed
+- **AGENTS.md §2.3 and plan §35:** until the first release, each finished
+  change is committed on `main` once the whole suite has passed locally. The
+  agent does not push; the user does, and CI runs then. D200 narrows D199.
+
+### Validation
+- Docs only. The whole suite passed locally on the commit before this one
+  (6e3dbd7).
+
+### Blockers
+- None.

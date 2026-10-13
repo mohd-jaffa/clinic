@@ -286,6 +286,7 @@ earlier lines are never rewritten.
 | D197 | **Back to waiting removes an empty visit, and keeps one with anything recorded** (the user): with nothing recorded (from R6.2: vitals, notes, a prescription), the visit Send in opened is removed, so the booking can still be cancelled or marked a no-show. With anything recorded it stays open and continues when they are sent in again; that appointment then ends only with Done (`APPOINTMENT_HAS_VISIT`). | 2026-10-13 |
 | D198 | **A waiting patient may be marked Stepped out** (the user: "in some case the patient in the queue wont be present there so someone else is sent in and later that guy is sent in"): from the appointment's detail (`appointments.edit`), they keep their token and place in Waiting, shown "Stepped out", and Next patient skips them; **Send in** still works on them, and **Back** clears it. `appointments.stepped_out_at`, cleared when they are sent in or their appointment changes status. | 2026-10-13 |
 | D199 | **Push straight to `main` until the first release** (the user: "until i release a version no need of creating pr and merging to main, can directly push to main, later we can do the formalities"): the code lives at github.com/mohd-jaffa/clinic, public by the user's choice. Each commit goes on `main` and is pushed once the whole suite has passed locally; CI runs on every push. Branches and PRs with CI green start with the first release. | 2026-10-13 |
+| D200 | **The user pushes; the agent only commits** (the user: "no need of you to push, just commit to main until release, i will push when needed"): until the first release, each finished change is committed on `main` after the whole suite passed locally, and is not pushed. The user pushes when they choose, and CI runs then. This narrows D199, which had the agent push each commit. | 2026-10-13 |
 
 ## 3. Users and roles
 
@@ -2246,9 +2247,10 @@ As Brio (D17):
 - **Locally first** (D189): `npm run verify` runs everything CI runs, on this
   machine; a pre-push hook runs it and refuses the push when anything fails.
   A release is tagged only after `npm run test:speed` passes locally too.
-- **Branching** (D199): until the first release, commit on `main` and push
-  it directly to github.com/mohd-jaffa/clinic, the whole suite passed
-  locally first; CI runs on every push. From the first release on, work on a
+- **Branching** (D199, D200): until the first release, commit on `main`,
+  the whole suite passed locally first. The user pushes it to
+  github.com/mohd-jaffa/clinic when they choose; the agent does not push.
+  CI runs on every push. From the first release on, work on a
   branch, PR to `main`, CI green before merge. Commit after every completed
   change with a short conventional message (`feat(patients): …`), as
   AGENTS.md says.
