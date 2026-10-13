@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import useSWRInfinite from "swr/infinite";
 
 import { fetcher, postJson } from "@/lib/api/client";
@@ -15,11 +15,14 @@ import { useSeeded } from "./useSeeded";
  * each time **Show more** is pressed. It answers in the shape `ListScreen`
  * reads, with the pages already joined.
  *
- * A new `key` — another search, another tab — starts again from its first
- * page, while the rows of the last one stay on screen until it arrives, so a
- * list being searched does not flash empty with every letter. Every page shown
- * is read again whenever the list is refreshed, so a change to one row cannot
- * leave a stale copy of it further down.
+ * A new `key` starts again from its first page. Within one `list` — the
+ * same tab or filter, searched for something else — the rows of the last key
+ * stay on screen until the new ones arrive, so a list being searched does not
+ * flash empty with every letter. Another list — another tab or filter, or a
+ * hook that names none — shows its own rows if they have been read, and is
+ * loading otherwise: never the last list's rows under its name (D191). Every
+ * page shown is read again whenever the list is refreshed, so a change to one
+ * row cannot leave a stale copy of it further down.
  *
  * A route whose page carries more than its rows — a list's count or
  * total — names its shape as `P`, and reads it from `first`.
@@ -34,7 +37,10 @@ import { useSeeded } from "./useSeeded";
  * only, and each page is asked as a POST with the key's query as its body,
  * so what was typed never reaches an address.
  */
-export function useApiPages<T, P extends Page<T> = Page<T>>(key: string | null, { post = false } = {}) {
+export function useApiPages<T, P extends Page<T> = Page<T>>(
+  key: string | null,
+  { post = false, list }: { post?: boolean; list?: string } = {},
+) {
   const seeded = useSeeded(key === null ? null : pageKey(key));
   const { data, error, isLoading, isValidating, mutate, size, setSize } = useSWRInfinite<P>(
     (index, previous: P | null) => {
@@ -43,21 +49,27 @@ export function useApiPages<T, P extends Page<T> = Page<T>>(key: string | null, 
       return previous?.nextCursor ? withQuery(key, { cursor: previous.nextCursor }) : null;
     },
     post ? posted : fetcher,
-    { revalidateAll: true, keepPreviousData: true, ...(seeded && { revalidateOnMount: false }) },
+    { revalidateAll: true, ...(seeded && { revalidateOnMount: false }) },
   );
 
-  const rows = useMemo(() => data?.flatMap((page) => page.items), [data]);
-  const hasMore = Boolean(data?.[data.length - 1]?.nextCursor);
+  // The pages last read, and the list they are: what a search in the same
+  // list shows until its own pages come.
+  const [last, setLast] = useState<{ list?: string; pages: P[] } | null>(null);
+  if (data !== undefined && last?.pages !== data) setLast({ list, pages: data });
+  const pages = data ?? (list !== undefined && last?.list === list ? last.pages : undefined);
+
+  const rows = useMemo(() => pages?.flatMap((page) => page.items), [pages]);
+  const hasMore = Boolean(pages?.[pages.length - 1]?.nextCursor);
   return {
     data: rows,
-    first: data?.[0],
+    first: pages?.[0],
     error,
     isLoading,
     isValidating,
     mutate,
     hasMore,
     // Asked for a page that has not come yet — and there is one to come.
-    loadingMore: hasMore && data !== undefined && data.length < size,
+    loadingMore: hasMore && pages !== undefined && pages.length < size,
     loadMore: () => {
       if (hasMore) void setSize(size + 1);
     },

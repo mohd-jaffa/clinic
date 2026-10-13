@@ -7,8 +7,11 @@ vi.mock("@/lib/query/useApiPages", () => ({ useApiPages }));
 const { usePatients } = await import("@/features/patients/hooks/usePatients");
 
 describe("usePatients (plan §10.2, D98)", () => {
-  it("asks for the list a page at a time, each as a POST", () => {
+  it("asks for the list a page at a time, each as a POST, each tab its own list (D191)", () => {
     renderHook(() => usePatients("Mehta", "ARCHIVED"));
-    expect(useApiPages).toHaveBeenCalledWith("/api/patients/search?search=Mehta&tab=ARCHIVED", { post: true });
+    expect(useApiPages).toHaveBeenCalledWith("/api/patients/search?search=Mehta&tab=ARCHIVED", {
+      post: true,
+      list: "ARCHIVED",
+    });
   });
 });

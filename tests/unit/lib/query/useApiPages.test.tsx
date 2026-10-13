@@ -85,6 +85,61 @@ describe("useApiPages", () => {
     expect(result.current.hasMore).toBe(false);
   });
 
+  describe("while a new key's rows come (D191)", () => {
+    /** Answers held until let go, so a test can look at the list while they come. */
+    function held() {
+      const waiting = new Map<string, (page: unknown) => void>();
+      fetcher.mockImplementation((key: string) => new Promise((settle) => waiting.set(key, settle)));
+      return (key: string, items: string[]) => act(async () => waiting.get(key)!({ items, nextCursor: null }));
+    }
+
+    function listOf(key: string, list?: string) {
+      return renderHook(({ key: asked, list: named }) => useApiPages<string>(asked, { list: named }), {
+        wrapper,
+        initialProps: { key, list },
+      });
+    }
+
+    it("keeps the last rows on screen while what is searched changes within the same list", async () => {
+      const answer = held();
+      const { result, rerender } = listOf("/api/patients?tab=ALL", "ALL");
+      await answer("/api/patients?tab=ALL", ["Ravi", "Meena"]);
+      await waitFor(() => expect(result.current.data).toEqual(["Ravi", "Meena"]));
+
+      rerender({ key: "/api/patients?tab=ALL&search=me", list: "ALL" });
+      expect(result.current.data).toEqual(["Ravi", "Meena"]);
+      await answer("/api/patients?tab=ALL&search=me", ["Meena"]);
+      await waitFor(() => expect(result.current.data).toEqual(["Meena"]));
+    });
+
+    it("shows another list loading, never the last list's rows, and its own rows at once once read", async () => {
+      const answer = held();
+      const { result, rerender } = listOf("/api/patients?tab=ALL", "ALL");
+      await answer("/api/patients?tab=ALL", ["Ravi", "Meena"]);
+      await waitFor(() => expect(result.current.data).toEqual(["Ravi", "Meena"]));
+
+      rerender({ key: "/api/patients?tab=ARCHIVED", list: "ARCHIVED" });
+      expect(result.current.data).toBeUndefined();
+      expect(result.current.first).toBeUndefined();
+      expect(result.current.isLoading).toBe(true);
+      await answer("/api/patients?tab=ARCHIVED", ["Lakshmi"]);
+      await waitFor(() => expect(result.current.data).toEqual(["Lakshmi"]));
+
+      rerender({ key: "/api/patients?tab=ALL", list: "ALL" });
+      expect(result.current.data).toEqual(["Ravi", "Meena"]);
+    });
+
+    it("keeps nothing for a hook that names no list", async () => {
+      const answer = held();
+      const { result, rerender } = listOf("/api/patients/p-1/timeline");
+      await answer("/api/patients/p-1/timeline", ["first visit"]);
+      await waitFor(() => expect(result.current.data).toEqual(["first visit"]));
+
+      rerender({ key: "/api/patients/p-2/timeline", list: undefined });
+      expect(result.current.data).toBeUndefined();
+    });
+  });
+
   it("waits while its key is unknown", () => {
     const { result } = renderHook(() => useApiPages<string>(null), { wrapper });
     expect(result.current.data).toBeUndefined();

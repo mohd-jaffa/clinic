@@ -277,6 +277,7 @@ earlier lines are never rewritten.
 | D188 | **The dependency audit fails on high and critical advisories in shipped code** (the user): `npm audit --omit=dev --audit-level=high`, on every PR and weekly. Build and test tools are reported, not gated. The advisories open today in shipped code (`next` 16.2.x critical; `sharp` and `source-map-js` high) are fixed in R13.8. | 2026-10-12 |
 | D189 | **Every test passes locally before CI and before a release** (the user): "make sure these tests pass locally first before the deployment and CI run". `npm run verify` runs, on this machine and in CI's order, everything CI runs: lint, format, types, coverage, the security checks, the build, E2E, the speed checks and the smoke test. A git pre-push hook runs it and refuses the push when anything fails; a push is never sent with `--no-verify`. A release also needs `npm run test:speed` passed locally on the load seed before it is tagged. CI and the release workflow then run the same again. | 2026-10-12 |
 | D190 | **A screen opened again shows what its page was just read with, and is not read twice** (the user, "go ahead and fix it"): the data a page arrives with replaces what the browser kept from the last visit, so nothing older flashes first and the browser does not ask the API for it again. A list starts again from its first page. A page brought back by Back or Forward is the one read when it was first opened, so it changes nothing: the screen shows what the browser has and asks again. | 2026-10-13 |
+| D191 | **A list's tab or filter shows its own rows, never the last one's** (the user, chosen over fixing Brio as well): while what is searched changes within one tab or filter, the last rows stay on screen until the new ones arrive; another tab or filter shows its own rows if they have been read, and loading rows while they come. Brio showed the last tab's rows under the new tab's name until the answer came. | 2026-10-13 |
 
 ## 3. Users and roles
 
@@ -2091,6 +2092,9 @@ These hold whatever the direction:
   that cannot be undone asks first** (confirm card): cancel appointment, void
   bill or payment, archive, deactivate, delete clinic, sign out, extend plan,
   save platform settings.
+- **A list shows its own rows:** while what is searched changes, the last rows
+  stay until the new ones arrive; another tab or filter shows its own rows, or
+  loading rows while they come, never the last tab's under its name (D191).
 - **Read-only mode:** disabled controls say why ("Your clinic is view-only —
   renew to make changes").
 - **Device:** safe-area insets through `--safe-*`; heights in `dvh`, never

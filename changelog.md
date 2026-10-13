@@ -2520,3 +2520,43 @@ next refresh.
 
 ### Blockers
 - None.
+
+## 2026-10-13 — A list's tab shows its own rows
+
+Asked by the user, of Brio's notifications and orders: switching a filter
+showed the last filter's rows for a moment, then the right ones. ClinicDesk's
+list hook, ported from Brio, did the same on the Patients tabs (D191). The
+user chose to fix it here only.
+
+### Fixed
+- **`src/lib/query/useApiPages.ts`:** the last rows were kept on screen for
+  every new key (SWR's `keepPreviousData`), meant for typing a search. Under
+  a new tab they were the wrong list, shown under its name until its answer
+  came. Rows are now kept only within one `list`, which a hook names:
+  - the same tab or filter, searched for something else, keeps the last
+    rows until the new ones arrive;
+  - another tab or filter shows its own rows if they have been read, and
+    loading rows while they come;
+  - a hook that names no list keeps nothing (a patient's timeline no longer
+    shows the last patient's while another's comes).
+- **`src/features/patients/hooks/usePatients.ts`:** each tab is its own list.
+
+### Speed
+- Unchanged: a list asks for what it asked before, and a tab read before is
+  shown from the cache at once.
+
+### Tests
+- **Unit:** a search within one list keeps the last rows; another list is
+  loading, never the last list's rows, and shows its own at once once read; a
+  hook that names no list keeps nothing. The last two failed on the old hook.
+- **E2E** (`tests/e2e/patients.spec.ts`, phone and desktop): with the
+  archived held back, the Archived tab shows none of the list's patients and
+  passes axe while loading, then shows the archived.
+
+### Validation
+- Typecheck, lint, format check passed.
+- Unit and integration tests passed, coverage 100%.
+- E2E passed (phone, desktop).
+
+### Blockers
+- None.

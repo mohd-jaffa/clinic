@@ -22,7 +22,8 @@ import { addMember, admin, aMobileNumber, registerClinic, removeAll } from "@tes
  * The list (plan §10.2; R4.3, D104, D110 – D112): a receptionist pages
  * through the clinic's patients, finds one by name, mobile and number, adds
  * someone a search did not find with what was typed, and opens the
- * archived; a doctor finds only their own.
+ * archived; a doctor finds only their own. A tab shows its own patients, or
+ * loading rows while they come, never the last tab's (D191).
  *
  * The profile (plan §10.3; R4.4, D113 – D116): a receptionist opens a
  * patient from the list, reads what their details hold, reaches them by
@@ -223,6 +224,38 @@ test("a receptionist finds patients by name, mobile and number, and adds one not
   await expect(shelf.getByRole("listitem")).toHaveCount(1);
   await expect(shelf.getByRole("listitem")).toContainText("Walk-in 02");
   await expectAccessible(page);
+});
+
+test("a tab shows its own patients, never the last tab's on the way (D191)", async ({ page }) => {
+  const clinic = await registerClinic({ fullName: "Asha Menon", clinicName: "Smile Care" });
+  await imported(clinic.owner.tenant, [{ name: "Ravi Kumar" }, { name: "Lakshmi Rao" }]);
+  await clinic.owner.tenant.supabase
+    .from("patients")
+    .update({ archived_at: new Date().toISOString() })
+    .eq("clinic_id", clinic.clinicId)
+    .eq("full_name", "Lakshmi Rao");
+  await signIn(page, clinic.owner.email, clinic.owner.password);
+
+  await page.goto("/patients");
+  const shelf = page.getByRole("tabpanel");
+  await expect(shelf.getByRole("link", { name: /^Ravi Kumar/ })).toBeVisible();
+
+  // The archived are held back, so the tab can be looked at while they come.
+  let letGo!: () => void;
+  const held = new Promise<void>((settle) => (letGo = settle));
+  await page.route("**/api/patients/search", async (route) => {
+    if (route.request().postDataJSON()?.tab === "ARCHIVED") await held;
+    await route.continue();
+  });
+  const archived = page.getByRole("tab", { name: patients.tabs.ARCHIVED });
+  await archived.click();
+  await expect(archived).toHaveAttribute("aria-selected", "true");
+  expect(await shelf.getByRole("link", { name: /^Ravi Kumar/ }).count()).toBe(0);
+  await expectAccessible(page);
+
+  letGo();
+  await expect(shelf.getByRole("link", { name: /^Lakshmi Rao/ })).toBeVisible();
+  await expect(shelf.getByRole("link", { name: /^Ravi Kumar/ })).toBeHidden();
 });
 
 test("a doctor finds only their own patients (D3)", async ({ page }) => {
