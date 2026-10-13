@@ -30,12 +30,15 @@ export function AlertSheet({
   onClose,
   patientId,
   alert,
+  also = [],
 }: {
   open: boolean;
   onClose: () => void;
   patientId: string;
   /** The alert being changed; none to add one. */
   alert?: PatientAlert;
+  /** Other reads that show the alerts — a visit's (D207) — made stale too. */
+  also?: readonly string[];
 }) {
   const respond = useResponse();
   const initial: AlertInput = alert
@@ -53,7 +56,7 @@ export function AlertSheet({
     resetOptions: FORM_RESET_OPTIONS,
   });
 
-  const revalidate = [apiRoutes.patients.alerts(patientId)];
+  const revalidate = [apiRoutes.patients.alerts(patientId), ...also];
   const added = useApiMutation(AlertsClient.add, {
     revalidate,
     onSuccess: (saved) => {

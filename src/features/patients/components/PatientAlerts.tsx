@@ -84,6 +84,50 @@ export function PatientAlerts({ patient }: { patient: Patient }) {
 }
 
 /**
+ * **Alerts** on a visit (D207): the same sheet as the profile's, opened from
+ * the visit's header, where the chips are the visit's own — so a newly found
+ * allergy is added mid-visit, and the visit shows it. Its alerts are read
+ * once it is first opened; a change makes the visit's read stale too.
+ */
+export function VisitAlerts({
+  patientId,
+  archived,
+  visitRoute,
+}: {
+  patientId: string;
+  archived: boolean;
+  /** The visit's own read, made stale by a change. */
+  visitRoute: string;
+}) {
+  const { membership } = useAuth();
+  const { readOnly } = useReadOnly();
+  const [sheet, setSheet] = useState({ open: false, opened: false });
+  const query = useAlerts(patientId, sheet.opened);
+  const mayEdit = membership !== null && hasAccess(membership, "visits.edit");
+  const edits = mayEdit && !readOnly && !archived;
+  return (
+    <>
+      <Button
+        label={words.open}
+        icon={edits ? Pencil : Eye}
+        variant="secondary"
+        size="sm"
+        onClick={() => setSheet({ open: true, opened: true })}
+      />
+      <AlertsSheet
+        open={sheet.open}
+        onClose={() => setSheet((now) => ({ ...now, open: false }))}
+        patientId={patientId}
+        query={query}
+        edits={edits}
+        mayEdit={mayEdit}
+        also={[visitRoute]}
+      />
+    </>
+  );
+}
+
+/**
  * The alerts sheet (D117 – D120): each active alert with its note, with
  * **Edit** and **Turn off** (asked first) for those who may; **Add alert**;
  * and the turned-off ones folded at the foot, read only.
@@ -95,10 +139,13 @@ function AlertsSheet({
   query,
   edits,
   mayEdit,
+  also = [],
 }: {
   open: boolean;
   onClose: () => void;
   patientId: string;
+  /** Other reads that show the alerts — a visit's (D207) — made stale by a change. */
+  also?: readonly string[];
   query: ReturnType<typeof useAlerts>;
   /** Whether alerts may be changed here and now. */
   edits: boolean;
@@ -113,7 +160,7 @@ function AlertsSheet({
   const off = all.filter((alert) => !alert.active).sort(byKind);
 
   const turnedOff = useApiMutation(AlertsClient.update, {
-    revalidate: [apiRoutes.patients.alerts(patientId)],
+    revalidate: [apiRoutes.patients.alerts(patientId), ...also],
     onSuccess: (saved) => respond.success({ title: words.turnedOff(saved.label) }),
     onError: (failure) => respond.failure(failure, { title: words.notTurnedOff }),
   });
@@ -189,6 +236,7 @@ function AlertsSheet({
           onClose={() => setForm((current) => ({ ...current, open: false }))}
           patientId={patientId}
           alert={form.alert}
+          also={also}
         />
       )}
     </>

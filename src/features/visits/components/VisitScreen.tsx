@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import { CoastHeader } from "@/components/ui/coast-header";
 import { DetailList, type Detail } from "@/components/ui/detail-list";
 import { Lake } from "@/components/ui/lake";
@@ -17,25 +18,30 @@ import { UrgentTag } from "@/features/appointments/components/UrgentTag";
 import { useDone, useNextPatient, type QueueParty } from "@/features/appointments/hooks/useQueueMoves";
 import { minutesSince } from "@/features/appointments/queue";
 import { useAuth } from "@/features/auth/AuthProvider";
-import { describePatient } from "@/features/patients/describe";
 import { AlertChips } from "@/features/patients/components/AlertChips";
+import { VisitAlerts } from "@/features/patients/components/PatientAlerts";
+import { describePatient } from "@/features/patients/describe";
 import { ReadOnlyNote } from "@/features/subscription/components/ReadOnlyNote";
 import { useReadOnly } from "@/features/subscription/hooks/useReadOnly";
 import { useNow } from "@/hooks/useNow";
 import { formatLongDate, formatTime } from "@/lib/format/date";
-import { Button } from "@/components/ui/button";
+import { apiRoutes } from "@/lib/query/keys";
 
 import { useVisit } from "../hooks/useVisit";
-import type { VisitHeader } from "../types";
+import { useFinishVisit } from "../hooks/useVisitMoves";
+import type { Visit } from "../types";
+import { FollowUpSection } from "./FollowUpSection";
+import { NotesSection } from "./NotesSection";
+import { VitalsSection } from "./VitalsSection";
 
 const { visit: words, queue, appointment } = UI_TEXT;
 
 /** What the visit's detail says (D195), each line only when it holds something. */
-function detailsOf(visit: VisitHeader): Detail[] {
+function detailsOf(visit: Visit): Detail[] {
   const lines: [string, string | null][] = [
     [words.dayLabel, formatLongDate(visit.day)],
     [words.tokenLabel, visit.appointment?.token ? tokenNumeral(visit.appointment.token) : null],
-    [words.startedLabel, formatTime(visit.startedAt)],
+    [words.startedLabel, visit.startedAt && formatTime(visit.startedAt)],
     [words.doneLabel, visit.completedAt && formatTime(visit.completedAt)],
     [words.billingLabel, visit.billingStatus && BILLING_STATUS_LABELS[visit.billingStatus]],
   ];
@@ -43,13 +49,20 @@ function detailsOf(visit: VisitHeader): Detail[] {
 }
 
 /**
- * A visit's screen — `/visits/[id]` (plan §12.2; D195): the patient, their
- * doctor and their alerts — and Urgent, for a patient marked so (D201) —
- * always in view; while they are in, the lake with
- * their token and how long they have been in, and **Done** and **Next
- * patient** for whoever may move the queue (D193). Next patient opens the
- * next patient's visit, or the queue when no one is waiting (D194). Vitals,
- * notes and the rest of the visit come with R6.2.
+ * A visit's screen — `/visits/[id]` (plan §12.2; D195, D202 – D209). Its
+ * land holds the patient, their doctor and their alerts — with **Alerts** to
+ * change them mid-visit (D207) — and Urgent for a patient marked so (D201),
+ * always in view; while they are in, the lake with their token and how long
+ * they have been in, and **Done** and **Next patient** for whoever may move
+ * the queue (D193) — or, for a visit started from their profile, **Done**
+ * (D204). Next patient opens the next patient's visit, or the queue when no
+ * one is waiting (D194).
+ *
+ * Under it, what the visit records, each section optional and saving alone
+ * (D202): vitals, complaint, diagnosis and notes, and the follow-up — fields
+ * for whoever may write them, read-outs for whoever may only read. A phone
+ * stacks them; from a tablet the notes stand beside the vitals and the
+ * follow-up (D209). Then the visit's own details.
  */
 export function VisitScreen({ id }: { id: string }) {
   const query = useVisit(id);
@@ -72,17 +85,23 @@ export function VisitScreen({ id }: { id: string }) {
                   ) : (
                     <span className="text-small text-land-muted">{UI_TEXT.alerts.none}</span>
                   )}
+                  <VisitAlerts
+                    patientId={visit.patient.id}
+                    archived={visit.patient.archived}
+                    visitRoute={apiRoutes.visits.one(visit.id)}
+                  />
                 </div>
               )
             }
             back={QUEUE_ROUTE}
           />
           {visit?.appointment?.status === "IN_PROGRESS" && <InRoom visit={visit} appointment={visit.appointment} />}
+          {visit && visit.appointment === null && visit.status === "OPEN" && <StartedHere visit={visit} />}
         </div>
       </CoastHeader>
-      <div className="px-4 pt-4 md:px-8">
+      <div className="px-4 pt-4 pb-8 md:px-8">
         {visit ? (
-          <DetailList details={detailsOf(visit)} />
+          <Records visit={visit} />
         ) : query.error != null ? (
           <LoadFailed query={query} loadFailed="VISIT_LOAD_FAILED" />
         ) : (
@@ -95,14 +114,44 @@ export function VisitScreen({ id }: { id: string }) {
   );
 }
 
+/**
+ * What the visit records, each section for whoever may write it (D202): the
+ * vitals with `visits.create` while it is open, everything with `visits.edit`
+ * — and only `visits.edit` once it is done (D208); none for an archived
+ * patient (D103) or a view-only clinic, which is said.
+ */
+function Records({ visit }: { visit: Visit }) {
+  const { membership } = useAuth();
+  const { readOnly } = useReadOnly();
+  const may = (permission: Parameters<typeof hasAccess>[1]) => membership !== null && hasAccess(membership, permission);
+  const vitalsBy = visit.status === "COMPLETED" ? "visits.edit" : "visits.create";
+  const writable = !readOnly && !visit.patient.archived;
+  return (
+    <div className="grid gap-6">
+      {(may(vitalsBy) || may("visits.edit")) && <ReadOnlyNote />}
+      <div className="grid grid-cols-1 items-start gap-6 md:grid-cols-2 md:grid-rows-[auto_auto_1fr]">
+        <VitalsSection visit={visit} writes={writable && may(vitalsBy)} className="md:col-start-1 md:row-start-1" />
+        <NotesSection
+          visit={visit}
+          writes={writable && may("visits.edit")}
+          className="md:col-start-2 md:row-span-3 md:row-start-1"
+        />
+        <FollowUpSection
+          visit={visit}
+          writes={writable && may("visits.edit")}
+          books={writable && may("appointments.create")}
+          className="md:col-start-1 md:row-start-2"
+        />
+        <div className="md:col-start-1 md:row-start-3">
+          <DetailList details={detailsOf(visit)} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /** The patient in, in the lake (plan §32.1): their token, since when and for how long, and **Done** and **Next patient** (D193). */
-function InRoom({
-  visit,
-  appointment: inRoom,
-}: {
-  visit: VisitHeader;
-  appointment: NonNullable<VisitHeader["appointment"]>;
-}) {
+function InRoom({ visit, appointment: inRoom }: { visit: Visit; appointment: NonNullable<Visit["appointment"]> }) {
   const { membership } = useAuth();
   const { readOnly } = useReadOnly();
   const now = useNow(QUEUE_REFRESH_MS);
@@ -122,13 +171,15 @@ function InRoom({
     fromVisit: true,
   });
   const edits = membership !== null && hasAccess(membership, "appointments.edit");
+  // In progress, the patient has gone in: Send in set when.
+  const since = visit.startedAt!;
   return (
     <Lake
       label={`${queue.withDoctor}: ${visit.patient.name}`}
       lead={inRoom.token ? tokenNumeral(inRoom.token) : undefined}
       leadLabel={queue.token}
-      title={words.since(formatTime(visit.startedAt))}
-      detail={queue.minutes(minutesSince(visit.startedAt, now))}
+      title={words.since(formatTime(since))}
+      detail={queue.minutes(minutesSince(since, now))}
     >
       {edits && !readOnly && (
         <>
@@ -152,6 +203,34 @@ function InRoom({
         </>
       )}
       {edits && <ReadOnlyNote />}
+    </Lake>
+  );
+}
+
+/** A visit started from the profile, open (D204): the lake with since when, and **Done** for `visits.create`. */
+function StartedHere({ visit }: { visit: Visit }) {
+  const { membership } = useAuth();
+  const { readOnly } = useReadOnly();
+  const now = useNow(QUEUE_REFRESH_MS);
+  const { finish, finishing } = useFinishVisit(visit);
+  const creates = membership !== null && hasAccess(membership, "visits.create");
+  // Started from the profile, it went in as it opened.
+  const since = visit.startedAt!;
+  return (
+    <Lake
+      label={`${words.title}: ${visit.patient.name}`}
+      title={words.since(formatTime(since))}
+      detail={queue.minutes(minutesSince(since, now))}
+    >
+      {creates && !readOnly && (
+        <Button
+          label={queue.done}
+          aria-label={queue.doneOf(visit.patient.name)}
+          size="sm"
+          loading={finishing}
+          onClick={() => void finish()}
+        />
+      )}
     </Lake>
   );
 }

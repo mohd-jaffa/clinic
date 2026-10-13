@@ -47,4 +47,15 @@ describe("the app's words", () => {
     expect([words.column("C", "Mobile No."), words.column("D", "")]).toEqual(["C · Mobile No.", "Column D"]);
     expect([words.row(14, "Rohan"), words.row(15, "")]).toEqual(["Row 14 · Rohan", "Row 15"]);
   });
+
+  it("says what became of a visit, its follow-up and a waiting patient's vitals (D203 – D205)", () => {
+    const words = UI_TEXT.visit;
+    expect(words.followUpSaved("Tuesday, 20 Oct 2026")).toBe("Review on Tuesday, 20 Oct 2026");
+    expect(words.started("Asha Iyer")).toBe("Asha Iyer’s visit started");
+    expect(words.openedAgain("Asha Iyer", "Maya Rao")).toBe("Asha Iyer is already in with Maya Rao");
+    expect(words.finished("Asha Iyer")).toBe("Asha Iyer’s visit is done");
+    expect(words.takeVitalsOf("Asha Iyer")).toBe("Take Asha Iyer’s vitals");
+    expect(words.vitalsFor("Asha Iyer")).toBe("Vitals for Asha Iyer");
+    expect(words.vitalsSavedFor("Asha Iyer")).toBe("Vitals saved for Asha Iyer");
+  });
 });

@@ -125,6 +125,18 @@ describe("actionsFor (plan §11.2; D161 – D164)", () => {
     expect(actionsFor(waiting, desk(["appointments.cancel"]), now).markUrgent).toBe(false);
   });
 
+  it("offers Vitals to a patient waiting, for visits.create alone — not before they arrive, once in, or archived (D203)", () => {
+    const taker = desk(["visits.create"]);
+    const waiting = anAppointmentDetail({ status: "ARRIVED", token: 4 });
+    expect(actionsFor(waiting, taker, now)).toEqual({ ...NO_ACTIONS, takeVitals: true });
+    expect(actionsFor(waiting, desk(ALL), now).takeVitals).toBe(false);
+    expect(actionsFor(anAppointmentDetail(), taker, now).takeVitals).toBe(false);
+    expect(actionsFor(anAppointmentDetail({ status: "IN_PROGRESS", visitId: "v-1" }), taker, now).takeVitals).toBe(
+      false,
+    );
+    expect(actionsFor({ ...waiting, patientArchived: true }, taker, now).takeVitals).toBe(false);
+  });
+
   it("opens the visit for whoever reads visits, and offers no no-show or cancel once one is kept (D195, D197)", () => {
     const kept = anAppointmentDetail({ status: "ARRIVED", visitId: "v-1" });
     expect(actionsFor(kept, desk([...ALL, "visits.view"]), now)).toMatchObject({

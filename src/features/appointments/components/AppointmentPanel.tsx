@@ -2,19 +2,21 @@
 
 import { useState } from "react";
 
+import { WaitingVitalsSheet } from "@/features/visits/components/WaitingVitalsSheet";
+
 import type { AppointmentDetail, CalendarAppointment } from "../types";
 import { AppointmentSheet } from "./AppointmentSheet";
 import { BookingSheet } from "./BookingSheet";
 import { CancelSheet } from "./CancelSheet";
 import { NotesSheet } from "./NotesSheet";
 
-type Step = "DETAIL" | "CANCEL" | "MOVE" | "NOTES";
+type Step = "DETAIL" | "CANCEL" | "MOVE" | "NOTES" | "VITALS";
 
 /**
  * An appointment opened (plan §11.2; D160 – D165), from the calendar or a
  * patient's profile: its detail, and the sheet each of its actions opens over
  * the screen in its place — the booking sheet to reschedule it, its notes,
- * the reason it is cancelled. Closing one of those goes back to the detail;
+ * the reason it is cancelled, a waiting patient's vitals (D203). Closing one of those goes back to the detail;
  * done, everything closes, and the card says so. The screen keys it by the
  * appointment, so each opens afresh.
  */
@@ -52,6 +54,7 @@ export function AppointmentPanel({
         onClose={done}
         onReschedule={hold("MOVE")}
         onEditNotes={hold("NOTES")}
+        onTakeVitals={hold("VITALS")}
         onCancel={() => setStep("CANCEL")}
         linkProfile={linkProfile}
       />
@@ -69,6 +72,13 @@ export function AppointmentPanel({
             key={`notes-${held.count}`}
             appointment={held.detail}
             open={open && step === "NOTES"}
+            onClose={back}
+            onDone={done}
+          />
+          <WaitingVitalsSheet
+            key={`vitals-${held.count}`}
+            appointment={held.detail}
+            open={open && step === "VITALS"}
             onClose={back}
             onDone={done}
           />

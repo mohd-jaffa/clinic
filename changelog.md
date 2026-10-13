@@ -2821,3 +2821,135 @@ doctor sees it; set from the appointment's detail.
 
 ### Blockers
 - None.
+
+## 2026-10-13 — R6.2: the visit workspace
+
+The visit screen now records the visit: vitals, complaint, diagnosis and
+notes, and follow-up. Each section saves alone. The user's choices are
+recorded as D202 – D209:
+- fields on the screen, with a Save per section;
+- vitals may be taken while the patient waits;
+- New visit from a profile;
+- follow-up chips for 3 days, 1 week, 2 weeks and 1 month;
+- a save made from an older copy is refused;
+- Alerts can be changed from the visit;
+- after Done, any change needs `visits.edit`;
+- two columns on a wider screen.
+
+### Added
+- **`0020_visit_records`:**
+  - **Vitals before Send in (D203):** `visits.started_at` may be empty, for a
+    visit opened by vitals taken while the patient waits. `check_visit`
+    dates such a visit by the day it opened. `start_appointment` continues it
+    and starts it then.
+  - **What counts as recorded:** `visit_is_empty` counts a reading taken, not
+    a vitals row whose readings were all cleared. `back_to_waiting` removes
+    that emptied row with its empty visit.
+  - **`save_vitals(p_visit_id, p_appointment_id, p_vitals, p_seen)`:**
+    - saves the readings whole, for a visit, or for a patient waiting or in,
+      whose visit opens with the first reading;
+    - is refused with `VISIT_CHANGED` when `p_seen` is not what is there
+      (D206);
+    - needs `visits.create` while the visit is open, and `visits.edit` once
+      it is done (D208).
+  - **`update_visit(p_visit_id, p_changes, p_seen)`:** saves complaint,
+    diagnosis and notes, or the follow-up date, the same way. The follow-up
+    must fall after the visit's day. Needs `visits.edit`.
+  - **`start_visit(p_patient_id, p_doctor_id)`** (D204): needs
+    `visits.create`, the clinic's own patient and an active doctor. It
+    reopens the visit already open with that doctor rather than starting a
+    second, under the doctor's queue lock.
+  - **`finish_visit(p_visit_id)`:** closes a visit with no appointment as To
+    bill. A visit from the queue is done there.
+  - Each function checks the clinic can write, the doctor scope and an
+    archived patient.
+  - Later migrations move up one: prescriptions is now `0021`.
+- **Routes:**
+  - `POST /api/visits` (New visit);
+  - `PATCH /api/visits/[id]` (a section, with its copy read);
+  - `PUT /api/visits/[id]/vitals`, gated by `visits.view`; the database
+    decides create or edit;
+  - `POST /api/visits/[id]/done`;
+  - `PUT /api/appointments/[id]/vitals` (a waiting patient's vitals).
+- **`features/visits`:**
+  - `records.ts`: `saveVitals`, `updateVisit`, `startVisit`, `finishVisit`.
+    Vitals and clinical text are audited by field name alone, the follow-up
+    by its value.
+  - `vitals.ts`: column names, conversions, BMI, labels.
+  - `api.client.ts`.
+  - Hooks: `useVisitSection` (D206: an untouched section follows newer saves;
+    while typed into, another's save is held beside it) and `useVisitMoves`.
+  - The visit screen's sections: `VitalsSection`, `NotesSection`,
+    `FollowUpSection`, `ChangedMeanwhile`, `VitalsFields`, `VitalsReadout`.
+  - `NewVisit` on the profile, and `WaitingVitalsSheet` from a waiting
+    patient's detail.
+- **The visit screen:**
+  - **Header:** Alerts in the header (D207).
+  - **Lake:** a lake with Done for a visit started from the profile.
+  - **Sections:** each with fields for whoever may write it, read-outs for
+    whoever may only read (vitals in big numerals).
+  - **Layout:** two columns from 768 px (D209); details at the foot.
+- **Kit:** `Panel`, a titled section on a surface card.
+  - `AlertSheet` and the alerts sheet take `also`, so a change makes the
+    visit's read stale too.
+- **Words:** `ERROR_MESSAGES.VISIT_CHANGED`, `UI_TEXT.visit` sections,
+  `UI_TEXT.vitals`, and `VALIDATION_MESSAGES.number`, `decimals`,
+  `bloodPressure` and `afterVisit`.
+- **Constants:** `VITAL_SIGNS`, `VITAL_DECIMALS`, `FOLLOW_UP_CHOICES`.
+
+### Found while building
+- **Saving snapped back:** after a save, a section briefly showed the copy
+  from before the save until the visit was read again. If that read failed,
+  the next save was refused as "changed meanwhile". `useVisitSection` now
+  also remembers which copy was read when it saved, and ignores it.
+- **Use theirs left the old text:** in the built app, a second reset of the
+  same form updated the form's state but not the text boxes. React Hook
+  Form forgets which fields are on the screen after a reset, and with the
+  React Compiler they never register again. The hook now sets each field
+  after a reset. The journey caught it; unit tests run without the
+  compiler.
+
+### Speed (plan §37)
+- **The visit screen** still waits on one query after the session; the
+  vitals and the follow-up come in it.
+- **Reads that wait for a sheet:** the vitals sheet reads the visit, and the
+  visit's Alerts sheet reads the alerts, only once first opened.
+- **Saves** (vitals, notes, follow-up, New visit, Done) each wait on two
+  round trips after the session: the function, then the audit rows.
+- **Indexes:** no new index. New visit's search for an open visit is on the
+  patient's visits index, and a waiting patient's visit on the unique
+  appointment.
+
+### Tests
+- **Contract:** `tests/db/visit-records-migration.test.ts`.
+- **Integration** (`visit-records.test.ts`, 13 cases):
+  - vitals taken and then changed from the copy read, audited by which
+    reading changed, and refused when the copy is older;
+  - limits held, blood pressure both or neither;
+  - `visits.create` while open, `visits.edit` after Done, an archived
+    patient refused, the doctor scope held;
+  - an emptied visit removed by Back to waiting;
+  - a waiting patient's vitals opening a visit that is not yet started,
+    which blocks a no-show and which Send in continues;
+  - notes and follow-up saved from the copy read;
+  - New visit reopening the open one, its Done, and its refusals.
+- **Permission, isolation and read-only rows** for the four functions.
+- **Unit:** schemas, server functions, routes, client, hooks, every
+  component, and the profile, alerts and appointment changes.
+- **E2E** (`visit-records.spec.ts`, phone and desktop, axe):
+  - the assistant takes Rohan's vitals while he waits;
+  - the doctor sends him in and finds them, with BMI;
+  - the doctor writes and saves the complaint and diagnosis, and sets a
+    review in a week;
+  - the assistant saves the notes meanwhile: the doctor's save is refused,
+    theirs is shown, and the doctor takes it;
+  - the assistant starts a visit for Sunil from his profile, for Maya, and
+    marks it done.
+
+### Validation
+- Typecheck, lint, format check passed.
+- Unit and integration tests passed, coverage 100%.
+- E2E passed (phone, desktop), with axe.
+
+### Blockers
+- None.

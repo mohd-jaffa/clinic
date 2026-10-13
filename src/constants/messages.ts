@@ -112,6 +112,7 @@ export const ERROR_MESSAGES = {
   // The queue's moves and visits (plan §11.4, §12.1; D192, D197).
   DOCTOR_ROOM_TAKEN: "Someone else is now with this doctor. Look at the queue again, then send them in.",
   APPOINTMENT_HAS_VISIT: "Their visit has something recorded. Send them in and mark them done instead.",
+  VISIT_CHANGED: "Someone saved this part of the visit meanwhile. Their version is shown; what you typed is kept.",
   VISIT_LOAD_FAILED: "This visit couldn't be loaded.",
 
   // The browser could not reach the server (plan §21, D55): said by the client, never sent by the server.
@@ -157,6 +158,11 @@ export const VALIDATION_MESSAGES = {
   tooLong: (label: string, max: number) => `${label} can be at most ${max} characters.`,
   tooShort: (label: string, min: number) => `${label} must be at least ${min} characters.`,
   between: (label: string, min: number, max: number) => `${label} must be from ${min} to ${max}.`,
+  number: (label: string) => `${label} must be a number.`,
+  decimals: (label: string, places: number) =>
+    `${label} can have at most ${places} decimal place${places === 1 ? "" : "s"}.`,
+  bloodPressure: "Enter both readings, the upper one higher.",
+  afterVisit: (label: string) => `${label} must be after the visit.`,
   day: (label: string) => `${label} must be a date.`,
   notBeforeToday: (label: string) => `${label} can’t be before today.`,
   endsBeforeStart: (last: string, first: string) => `${last} can’t be before the ${first.toLowerCase()}.`,
@@ -700,6 +706,72 @@ export const UI_TEXT = {
     startedLabel: "Went in",
     doneLabel: "Done",
     billingLabel: "Billing",
+    /** Its sections (plan §12.2; D202): each optional, each saving alone. */
+    sections: "The visit’s records",
+    vitalsTitle: "Vitals",
+    notesTitle: "Complaint, diagnosis and notes",
+    followUpTitle: "Follow-up",
+    saveVitals: "Save vitals",
+    saveNotes: "Save notes",
+    saveFollowUp: "Save follow-up",
+    vitalsSaved: "Vitals saved",
+    notesSaved: "Notes saved",
+    followUpSaved: (day: string) => `Review on ${day}`,
+    followUpRemoved: "Follow-up removed",
+    notSaved: "That wasn’t saved",
+    complaintLabel: "Complaint",
+    diagnosisLabel: "Diagnosis",
+    notesLabel: "Notes",
+    nothingRecorded: "Nothing recorded",
+    /** Someone else saved the section meanwhile (D206): theirs, beside what is being typed. */
+    changedMeanwhile: "Someone saved this meanwhile",
+    changedMeanwhileHint: "Theirs is below. Save to keep yours instead, or use theirs.",
+    useTheirs: "Use theirs",
+    /** Follow-up (D205). */
+    followUpLabel: "Review on",
+    followUpHint: "A day after the visit.",
+    followUpChoices: { "3_DAYS": "3 days", "1_WEEK": "1 week", "2_WEEKS": "2 weeks", "1_MONTH": "1 month" },
+    followUpChoicesLabel: "Review in",
+    noFollowUp: "No follow-up",
+    removeFollowUp: "Remove",
+    bookNext: "Book next appointment",
+    /** New visit, from a profile (D204), and its Done. */
+    newVisit: "New visit",
+    startVisit: "Start visit",
+    started: (patient: string) => `${patient}’s visit started`,
+    openedAgain: (patient: string, doctor: string) => `${patient} is already in with ${doctor}`,
+    notStarted: "The visit wasn’t started",
+    finished: (patient: string) => `${patient}’s visit is done`,
+    notFinished: "That wasn’t marked done",
+    /** Vitals of a patient still waiting (D203), from their appointment. */
+    takeVitals: "Vitals",
+    takeVitalsOf: (patient: string) => `Take ${patient}’s vitals`,
+    vitalsFor: (patient: string) => `Vitals for ${patient}`,
+    vitalsSavedFor: (patient: string) => `Vitals saved for ${patient}`,
+  },
+
+  /** The readings of a visit (plan §12.2), with their units. */
+  vitals: {
+    bloodPressure: "Blood pressure",
+    systolic: "Systolic",
+    diastolic: "Diastolic",
+    pulse: "Pulse",
+    temperatureF: "Temperature",
+    spo2: "SpO₂",
+    respiratoryRate: "Respiratory rate",
+    weightKg: "Weight",
+    heightCm: "Height",
+    bmi: "BMI",
+    units: {
+      bloodPressure: "mmHg",
+      pulse: "/min",
+      temperatureF: "°F",
+      spo2: "%",
+      respiratoryRate: "/min",
+      weightKg: "kg",
+      heightCm: "cm",
+    },
+    notTaken: "—",
   },
 
   /** One appointment (plan §11.2; D160 – D167): its detail, and what its status allows. */

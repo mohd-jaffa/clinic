@@ -55,6 +55,7 @@ let developer: SignedIn;
 /** A's patient and their appointment, which B's owner goes looking for. */
 let patientId: string;
 let appointmentId: string;
+let visitId: string;
 let doctorId: string;
 
 beforeAll(async () => {
@@ -99,6 +100,7 @@ beforeAll(async () => {
     .select("id")
     .single();
   if (unvisited) throw unvisited;
+  visitId = visit.id as string;
   const { error: unrecorded } = await admin()
     .from("vitals")
     .insert({ clinic_id: a.clinicId, patient_id: patientId, visit_id: visit.id, pulse: 72 });
@@ -210,6 +212,20 @@ describe("as clinic B's owner, with a valid token", () => {
       p_idempotency_key: randomUUID(),
     });
     expect(booked?.hint).toBe("RECORD_NOT_FOUND");
+  });
+
+  it("finds none of A's visits to record into or close, and starts none on A's patient (0020)", async () => {
+    const { supabase } = b.owner.tenant;
+    for (const [name, args] of [
+      ["save_vitals", { p_visit_id: visitId, p_appointment_id: null, p_vitals: { pulse: 99 }, p_seen: { pulse: 72 } }],
+      ["save_vitals", { p_visit_id: null, p_appointment_id: appointmentId, p_vitals: { pulse: 99 }, p_seen: null }],
+      ["update_visit", { p_visit_id: visitId, p_changes: { notes: "Planted" }, p_seen: { notes: null } }],
+      ["start_visit", { p_patient_id: patientId, p_doctor_id: doctorId }],
+      ["finish_visit", { p_visit_id: visitId }],
+    ] as const) {
+      const { error } = await supabase.rpc(name, args);
+      expect(error?.hint, name).toBe("RECORD_NOT_FOUND");
+    }
   });
 
   it("reaches none of the platform's tables, nor those only the database reads", async () => {

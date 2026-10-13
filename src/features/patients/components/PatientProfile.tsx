@@ -18,6 +18,7 @@ import { useOpenedAppointment } from "@/features/appointments/hooks/useOpenedApp
 import { useAuth } from "@/features/auth/AuthProvider";
 import { ReadOnlyNote } from "@/features/subscription/components/ReadOnlyNote";
 import { useReadOnly } from "@/features/subscription/hooks/useReadOnly";
+import { NewVisit } from "@/features/visits/components/NewVisit";
 import { formatDate } from "@/lib/format/date";
 import { callHref, formatPhoneDigits, whatsAppHref } from "@/lib/phone";
 
@@ -76,7 +77,10 @@ export function PatientProfile({ id }: { id: string }) {
                 <>
                   {patient.archivedAt && <PatientArchived patient={patient} archivedAt={patient.archivedAt} />}
                   <PatientAlerts patient={patient} />
-                  <Reach patient={patient} />
+                  <div className="flex flex-wrap gap-2">
+                    <Reach patient={patient} />
+                    <NewVisit patient={patient} />
+                  </div>
                 </>
               )
             }

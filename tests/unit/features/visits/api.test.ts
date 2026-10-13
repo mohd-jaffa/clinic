@@ -20,6 +20,10 @@ const row = {
   started_at: "2026-10-13T05:00:00+00:00",
   completed_at: null,
   billing_status: null,
+  complaint: "Fever, 3 days",
+  diagnosis: null,
+  notes: "Rest",
+  follow_up_on: "2026-10-20",
   patient: {
     full_name: "Asha Iyer",
     patient_number: 1012,
@@ -34,10 +38,31 @@ const row = {
   },
   doctor: { member: { profile: { full_name: "Maya Rao" } } },
   appointment: { status: "IN_PROGRESS", token_number: 7, urgent_at: "2026-10-13T04:55:00Z" },
+  vitals: {
+    systolic: 120,
+    diastolic: 80,
+    pulse: null,
+    temperature_f: 98.6,
+    spo2: null,
+    respiratory_rate: null,
+    weight_kg: 64.5,
+    height_cm: null,
+  },
 };
 
-describe("getVisit (plan §12.2, D195)", () => {
-  it("reads the header in one query: the patient, the doctor, the token, and active alerts with allergies first", async () => {
+const read = {
+  systolic: 120,
+  diastolic: 80,
+  pulse: null,
+  temperatureF: 98.6,
+  spo2: null,
+  respiratoryRate: null,
+  weightKg: 64.5,
+  heightCm: null,
+};
+
+describe("getVisit (plan §12.2, D195, D202)", () => {
+  it("reads the visit in one query: what it records, the patient, the doctor, the token, its vitals, and active alerts with allergies first", async () => {
     const { tenant, queries, argsOf } = tenantWith({ answer: () => ({ data: row }) });
     expect(await getVisit(tenant, "v-1")).toEqual({
       id: "v-1",
@@ -61,8 +86,18 @@ describe("getVisit (plan §12.2, D195)", () => {
         { id: "al-2", kind: "ALLERGY", label: "Penicillin", note: "Rash", active: true },
         { id: "al-1", kind: "MEDICATION", label: "Metformin", note: null, active: true },
       ],
+      complaint: "Fever, 3 days",
+      diagnosis: null,
+      notes: "Rest",
+      followUpOn: "2026-10-20",
+      vitals: read,
     });
     expect(queries).toHaveLength(1);
+    const [columns] = argsOf(queries[0], "select")[0] as [string];
+    expect(columns).toContain("complaint, diagnosis, notes, follow_up_on");
+    expect(columns).toContain(
+      "vitals:vitals!vitals_visit_id_clinic_id_fkey(systolic, diastolic, pulse, temperature_f, spo2, respiratory_rate, weight_kg, height_cm)",
+    );
     expect(argsOf(queries[0], "eq")).toEqual([
       ["clinic_id", "clinic-1"],
       ["id", "v-1"],
@@ -86,6 +121,15 @@ describe("getVisit (plan §12.2, D195)", () => {
       doctorName: null,
       patient: { archived: true },
     });
+  });
+
+  it("reads its vitals however they are embedded — one row, a list of one, an empty list — and none before any are taken", async () => {
+    const asListed = tenantWith({ answer: () => ({ data: { ...row, vitals: [row.vitals] } }) });
+    expect((await getVisit(asListed.tenant, "v-1")).vitals).toEqual(read);
+    const empty = tenantWith({ answer: () => ({ data: { ...row, vitals: [] } }) });
+    expect((await getVisit(empty.tenant, "v-1")).vitals).toBeNull();
+    const none = tenantWith({ answer: () => ({ data: { ...row, vitals: null, started_at: null } }) });
+    expect(await getVisit(none.tenant, "v-1")).toMatchObject({ vitals: null, startedAt: null });
   });
 
   it("finds none it may not read, and says why it could not", async () => {

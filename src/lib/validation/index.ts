@@ -179,6 +179,30 @@ export {
 } from "./schemas/queue";
 
 export {
+  followUpFormSchema,
+  followUpSchema,
+  saveVitalsSchema,
+  startVisitSchema,
+  visitChangeSchema,
+  visitNotesSchema,
+  vitalsSchema,
+  VISIT_SECTIONS,
+  type FollowUpInput,
+  type FollowUpPayload,
+  type SaveVitalsInput,
+  type SaveVitalsPayload,
+  type StartVisitInput,
+  type StartVisitPayload,
+  type VisitChangeInput,
+  type VisitChangePayload,
+  type VisitNotesInput,
+  type VisitNotesPayload,
+  type VisitSection,
+  type VitalsInput,
+  type VitalsPayload,
+} from "./schemas/visits";
+
+export {
   closureDaysSchema,
   closureSchema,
   WHOLE_CLINIC,

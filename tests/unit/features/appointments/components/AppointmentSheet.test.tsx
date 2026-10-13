@@ -2,6 +2,7 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { UI_TEXT } from "@/constants/messages";
 import type { Permission } from "@/constants/permissions";
 import type { AppointmentDetail } from "@/features/appointments/types";
 import { ApiError } from "@/lib/api/client";
@@ -32,7 +33,13 @@ vi.mock("@/features/appointments/hooks/useAppointment", () => ({ useAppointment:
 const { AppointmentSheet } = await import("@/features/appointments/components/AppointmentSheet");
 
 const ALL: Permission[] = ["patients.view", "appointments.view", "appointments.edit", "appointments.cancel"];
-const handlers = { onClose: vi.fn(), onReschedule: vi.fn(), onEditNotes: vi.fn(), onCancel: vi.fn() };
+const handlers = {
+  onClose: vi.fn(),
+  onReschedule: vi.fn(),
+  onEditNotes: vi.fn(),
+  onTakeVitals: vi.fn(),
+  onCancel: vi.fn(),
+};
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -274,6 +281,21 @@ describe("AppointmentSheet (plan §11.2; D160 – D165)", () => {
     draw(aCalendarAppointment({ status: "ARRIVED", token: 4 }));
     await userEvent.click(within(actions()!).getByRole("button", { name: "Mark Rohan Mehta back" }));
     expect(client.stepOut).toHaveBeenCalledWith({ appointmentId: "a-1", out: false });
+  });
+
+  it("offers a waiting patient's vitals to whoever takes them, handing on the detail (D203)", async () => {
+    const waiting = anAppointmentDetail({ status: "ARRIVED", token: 4 });
+    read.current = { data: waiting, mutate: vi.fn(), isValidating: false };
+    const { unmount } = draw(aCalendarAppointment({ status: "ARRIVED", token: 4 }));
+    expect(
+      within(actions()!).queryByRole("button", { name: UI_TEXT.visit.takeVitalsOf("Rohan Mehta") }),
+    ).not.toBeInTheDocument();
+    unmount();
+
+    auth.current = authStub({ role: "STAFF", permissions: [...ALL, "visits.create"] });
+    draw(aCalendarAppointment({ status: "ARRIVED", token: 4 }));
+    await userEvent.click(within(actions()!).getByRole("button", { name: UI_TEXT.visit.takeVitalsOf("Rohan Mehta") }));
+    expect(handlers.onTakeVitals).toHaveBeenCalledWith(waiting);
   });
 
   it("marks a waiting patient urgent, with no tag before it is (D201)", async () => {

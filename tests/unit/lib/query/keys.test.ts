@@ -30,6 +30,13 @@ describe("apiRoutes", () => {
     expect(apiRoutes.closures.one("h-1")).toBe("/api/closures/h-1");
   });
 
+  it("names a visit's own addresses, and a waiting patient's vitals (D202 – D204)", () => {
+    expect(apiRoutes.visits.list).toBe("/api/visits");
+    expect(apiRoutes.visits.vitals("v-1")).toBe("/api/visits/v-1/vitals");
+    expect(apiRoutes.visits.done("v-1")).toBe("/api/visits/v-1/done");
+    expect(apiRoutes.appointments.vitals("a-1")).toBe("/api/appointments/a-1/vitals");
+  });
+
   it("names only routes that exist", () => {
     // A route of an id — or of an id and another's — at the folders named for its parameters: [id], [alertId].
     const folders = (named: (...ids: string[]) => string) =>

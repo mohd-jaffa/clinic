@@ -8,12 +8,14 @@ import { authStub } from "@tests/support/auth";
 import { aPatient } from "@tests/support/patients";
 import { Providers } from "@tests/support/providers";
 
-const { auth, query, client, sheet } = vi.hoisted(() => ({
+const { auth, query, client, sheet, refresh } = vi.hoisted(() => ({
   auth: { current: {} as ReturnType<typeof authStub> },
   query: { current: {} as Record<string, unknown>, asked: vi.fn() },
   client: { update: vi.fn() },
-  sheet: { alert: undefined as PatientAlert | undefined },
+  sheet: { alert: undefined as PatientAlert | undefined, also: undefined as readonly string[] | undefined },
+  refresh: vi.fn<(routes: readonly string[]) => Promise<void>>(async () => undefined),
 }));
+vi.mock("@/lib/query/useRevalidate", () => ({ useRevalidate: () => refresh }));
 vi.mock("@/features/auth/AuthProvider", () => ({ useAuth: () => auth.current }));
 vi.mock("@/features/patients/api.client", () => ({ AlertsClient: client }));
 vi.mock("@/features/patients/hooks/useAlerts", () => ({
@@ -23,8 +25,19 @@ vi.mock("@/features/patients/hooks/useAlerts", () => ({
   },
 }));
 vi.mock("@/features/patients/components/AlertSheet", () => ({
-  AlertSheet: ({ open, onClose, alert }: { open: boolean; onClose: () => void; alert?: PatientAlert }) => {
+  AlertSheet: ({
+    open,
+    onClose,
+    alert,
+    also,
+  }: {
+    open: boolean;
+    onClose: () => void;
+    alert?: PatientAlert;
+    also?: readonly string[];
+  }) => {
     sheet.alert = alert;
+    sheet.also = also;
     return open ? (
       <div role="dialog" aria-label={alert ? `Edit ${alert.label}` : "Add an alert"}>
         <button type="button" onClick={onClose}>
@@ -35,7 +48,7 @@ vi.mock("@/features/patients/components/AlertSheet", () => ({
   },
 }));
 
-const { PatientAlerts } = await import("@/features/patients/components/PatientAlerts");
+const { PatientAlerts, VisitAlerts } = await import("@/features/patients/components/PatientAlerts");
 
 const alert = (overrides: Partial<PatientAlert>): PatientAlert => ({
   id: "a-1",
@@ -74,6 +87,7 @@ beforeEach(() => {
   auth.current = authStub();
   query.current = { data: ALERTS, isLoading: false };
   sheet.alert = undefined;
+  sheet.also = undefined;
   client.update.mockImplementation(async ({ alertId }: { alertId: string }) => ({
     ...ALERTS.find(({ id }) => id === alertId)!,
     active: false,
@@ -224,5 +238,67 @@ describe("PatientAlerts' sheet (D117 – D120)", () => {
     draw(aPatient({ archivedAt: "2026-10-01T05:00:00Z" }));
     const alerts = await openSheet();
     expect(within(alerts).queryByRole("button", { name: /^(Edit|Turn off|Add alert)/ })).not.toBeInTheDocument();
+  });
+});
+
+describe("VisitAlerts on a visit (D207)", () => {
+  const VISIT = "/api/visits/v-1";
+  const drawOnVisit = (archived = false) =>
+    render(
+      <Providers>
+        <VisitAlerts patientId="p-1" archived={archived} visitRoute={VISIT} />
+      </Providers>,
+    );
+  const button = () => screen.getByRole("button", { name: "Alerts" });
+
+  it("reads the alerts only once the sheet is first opened, and keeps them read once it is closed", async () => {
+    drawOnVisit();
+    expect(query.asked).toHaveBeenLastCalledWith("p-1", false);
+    expect(button().querySelector(".lucide-pencil")).not.toBeNull();
+    const alerts = await openSheet();
+    expect(query.asked).toHaveBeenLastCalledWith("p-1", true);
+    expect(rows(alerts)).toHaveLength(4);
+    await userEvent.click(within(alerts).getByRole("button", { name: "Close" }));
+    expect(screen.queryByRole("dialog", { name: "Alerts" })).not.toBeInTheDocument();
+    expect(query.asked).toHaveBeenLastCalledWith("p-1", true);
+  });
+
+  it("makes the visit stale too when one is turned off, and hands it to the add sheet", async () => {
+    drawOnVisit();
+    const alerts = await openSheet();
+    await userEvent.click(within(alerts).getByRole("button", { name: "Turn off Peanuts" }));
+    await userEvent.click(
+      within(screen.getByRole("alertdialog", { name: "Turn off Peanuts?" })).getByRole("button", { name: "Turn off" }),
+    );
+    await waitFor(() => expect(refresh).toHaveBeenCalledWith(["/api/patients/p-1/alerts", VISIT]));
+    await userEvent.click(within(alerts).getByRole("button", { name: "Add alert" }));
+    expect(screen.getByRole("dialog", { name: "Add an alert" })).toBeInTheDocument();
+    expect(sheet.also).toEqual([VISIT]);
+  });
+
+  it("only shows them — an eye, nothing to change — to someone who may only read, for an archived patient, and in a view-only clinic", async () => {
+    auth.current = authStub({ role: "DOCTOR", permissions: ["patients.view", "visits.view"] });
+    const { unmount } = drawOnVisit();
+    expect(button().querySelector(".lucide-eye")).not.toBeNull();
+    let alerts = await openSheet();
+    expect(within(alerts).queryByRole("button", { name: /^(Edit|Turn off|Add alert)/ })).not.toBeInTheDocument();
+    unmount();
+
+    auth.current = authStub();
+    const archived = drawOnVisit(true);
+    alerts = await openSheet();
+    expect(within(alerts).queryByRole("button", { name: /^(Edit|Turn off|Add alert)/ })).not.toBeInTheDocument();
+    archived.unmount();
+
+    const stub = authStub();
+    auth.current = { ...stub, subscription: { ...stub.subscription!, state: "READ_ONLY" } };
+    const viewOnly = drawOnVisit();
+    alerts = await openSheet();
+    expect(within(alerts).getByText("Your clinic is view-only until its plan is renewed.")).toBeInTheDocument();
+    viewOnly.unmount();
+
+    auth.current = { ...authStub(), membership: null };
+    drawOnVisit();
+    expect(button().querySelector(".lucide-eye")).not.toBeNull();
   });
 });

@@ -85,6 +85,20 @@ describe("a read-only clinic", () => {
     expect(urgent?.hint).toBe("CLINIC_PLAN_EXPIRED");
   });
 
+  it("refuses recording into a visit and starting one in the database (0020)", async () => {
+    const { supabase } = clinic.owner.tenant;
+    for (const [name, args] of [
+      ["save_vitals", { p_visit_id: randomUUID(), p_appointment_id: null, p_vitals: { pulse: 70 }, p_seen: null }],
+      ["save_vitals", { p_visit_id: null, p_appointment_id: randomUUID(), p_vitals: { pulse: 70 }, p_seen: null }],
+      ["update_visit", { p_visit_id: randomUUID(), p_changes: { notes: "Hm" }, p_seen: { notes: null } }],
+      ["start_visit", { p_patient_id: randomUUID(), p_doctor_id: randomUUID() }],
+      ["finish_visit", { p_visit_id: randomUUID() }],
+    ] as const) {
+      const { error } = await supabase.rpc(name, args);
+      expect(error?.hint, name).toBe("CLINIC_PLAN_EXPIRED");
+    }
+  });
+
   it("refuses a write through a route with CLINIC_PLAN_EXPIRED, and still reads", async () => {
     const write = await withClinicRoute(request("POST"), { access: "settings.manage" }, async () => ({}));
     expect(write.status).toBe(422);

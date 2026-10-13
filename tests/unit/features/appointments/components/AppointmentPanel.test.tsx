@@ -37,6 +37,9 @@ vi.mock("@/features/appointments/components/AppointmentSheet", () => ({
         <button type="button" onClick={() => props.onEditNotes(detail)}>
           Edit notes
         </button>
+        <button type="button" onClick={() => props.onTakeVitals(detail)}>
+          Vitals
+        </button>
         <button type="button" onClick={() => props.onCancel()}>
           Cancel appointment
         </button>
@@ -49,6 +52,7 @@ vi.mock("@/features/appointments/components/AppointmentSheet", () => ({
 vi.mock("@/features/appointments/components/CancelSheet", () => ({ CancelSheet: stub("Cancel", "onDone") }));
 vi.mock("@/features/appointments/components/NotesSheet", () => ({ NotesSheet: stub("Notes", "onDone") }));
 vi.mock("@/features/appointments/components/BookingSheet", () => ({ BookingSheet: stub("Reschedule", "onMoved") }));
+vi.mock("@/features/visits/components/WaitingVitalsSheet", () => ({ WaitingVitalsSheet: stub("Vitals", "onDone") }));
 
 const { AppointmentPanel } = await import("@/features/appointments/components/AppointmentPanel");
 
@@ -70,10 +74,10 @@ describe("AppointmentPanel (D160 – D165)", () => {
 
   it("opens each action's sheet in the detail's place, and goes back to it on closing", async () => {
     draw();
-    for (const action of ["Reschedule", "Edit notes", "Cancel appointment"]) {
+    for (const action of ["Reschedule", "Edit notes", "Vitals", "Cancel appointment"]) {
       await userEvent.click(screen.getByRole("button", { name: action }));
       expect(only()).toEqual([
-        { Reschedule: "Reschedule", "Edit notes": "Notes", "Cancel appointment": "Cancel" }[action],
+        { Reschedule: "Reschedule", "Edit notes": "Notes", Vitals: "Vitals", "Cancel appointment": "Cancel" }[action],
       ]);
       await userEvent.click(screen.getByRole("button", { name: "Back" }));
       expect(only()).toEqual(["Detail, with profile"]);
@@ -88,6 +92,11 @@ describe("AppointmentPanel (D160 – D165)", () => {
     expect(onClose).toHaveBeenCalledTimes(1);
     await userEvent.click(screen.getByRole("button", { name: "Close" }));
     expect(onClose).toHaveBeenCalledTimes(2);
+    // A waiting patient's vitals saved (D203): everything closes too.
+    await userEvent.click(screen.getByRole("button", { name: "Vitals" }));
+    await userEvent.click(screen.getByRole("button", { name: "Done" }));
+    expect(onClose).toHaveBeenCalledTimes(3);
+    expect(only()).toEqual(["Detail, with profile"]);
   });
 
   it("is nothing while no appointment has been opened", () => {

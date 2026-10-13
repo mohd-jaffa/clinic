@@ -2,7 +2,8 @@ import { ALERT_KINDS, type AlertKind } from "@/constants/statuses";
 import { fromPostgrestError, notFoundError } from "@/lib/errors";
 import type { Tenant } from "@/lib/supabase/tenant";
 
-import type { VisitHeader, VisitHeaderRow } from "./types";
+import type { Visit, VisitRow, VitalsRow } from "./types";
+import { toVitals } from "./vitals";
 
 /**
  * Visits (plan §12): opened and closed by the queue's moves
@@ -11,34 +12,51 @@ import type { VisitHeader, VisitHeaderRow } from "./types";
  */
 const TABLE = "visits";
 
-/** What a visit's header reads (D195): the visit, its patient with their alerts, its doctor's name, its token and Urgent. */
-const HEADER_COLUMNS =
+/**
+ * What a visit's screen reads (D195, D202): the visit and what it records,
+ * its patient with their alerts, its doctor's name, its token and Urgent,
+ * and its vitals.
+ */
+const VISIT_COLUMNS =
   "id, patient_id, doctor_id, appointment_id, status, visit_date, started_at, completed_at, billing_status, " +
+  "complaint, diagnosis, notes, follow_up_on, " +
   "patient:patients!visits_patient_id_clinic_id_fkey(full_name, patient_number, date_of_birth, gender, archived_at, " +
   "alerts:patient_alerts(id, kind, label, note, active)), " +
   "doctor:doctors!visits_doctor_id_clinic_id_fkey(member:clinic_members(profile:profiles!clinic_members_user_id_fkey(full_name))), " +
-  "appointment:appointments!visits_appointment_id_clinic_id_fkey(status, token_number, urgent_at)";
+  "appointment:appointments!visits_appointment_id_clinic_id_fkey(status, token_number, urgent_at), " +
+  "vitals:vitals!vitals_visit_id_clinic_id_fkey(systolic, diastolic, pulse, temperature_f, spo2, respiratory_rate, weight_kg, height_cm)";
+
+/** An embedded row, however PostgREST gives it: one, a list of at most one, or none. */
+const oneOf = <Row>(embedded: Row | Row[] | null): Row | null =>
+  Array.isArray(embedded) ? (embedded[0] ?? null) : embedded;
+
+/** The readings embedded with a visit: none until a vitals row is made. */
+const vitalsOf = (embedded: VitalsRow | VitalsRow[] | null) => {
+  const row = oneOf(embedded);
+  return row === null ? null : toVitals(row);
+};
 
 /** Allergies first, then conditions, then medications (plan §12.2). */
 const byKind = (a: { kind: AlertKind }, b: { kind: AlertKind }) =>
   ALERT_KINDS.indexOf(a.kind) - ALERT_KINDS.indexOf(b.kind);
 
 /**
- * A visit's header (plan §12.2, D195), in one query: the visit, its patient
- * and their active alerts, its doctor and its token. Read as the member, so
- * a doctor opens only their own patients' (D3), and only with `visits.view`.
- * The visit screen waits on it alone after the session (plan §37).
+ * A visit (plan §12.2; D195, D202), in one query: the visit and what it
+ * records, its patient and their active alerts, its doctor, its token and its
+ * vitals. Read as the member, so a doctor opens only their own patients'
+ * (D3), and only with `visits.view`. The visit screen waits on it alone
+ * after the session (plan §37).
  */
-export async function getVisit(tenant: Tenant, id: string): Promise<VisitHeader> {
+export async function getVisit(tenant: Tenant, id: string): Promise<Visit> {
   const { data, error } = await tenant.supabase
     .from(TABLE)
-    .select(HEADER_COLUMNS)
+    .select(VISIT_COLUMNS)
     .eq("clinic_id", tenant.clinicId)
     .eq("id", id)
     .maybeSingle();
   if (error) throw fromPostgrestError(error);
   if (data === null) throw notFoundError("RECORD_NOT_FOUND");
-  const row = data as unknown as VisitHeaderRow;
+  const row = data as unknown as VisitRow;
   return {
     id: row.id,
     status: row.status,
@@ -65,6 +83,11 @@ export async function getVisit(tenant: Tenant, id: string): Promise<VisitHeader>
             token: row.appointment.token_number,
             urgentAt: row.appointment.urgent_at,
           },
+    complaint: row.complaint,
+    diagnosis: row.diagnosis,
+    notes: row.notes,
+    followUpOn: row.follow_up_on,
+    vitals: vitalsOf(row.vitals),
     alerts: row.patient.alerts
       .filter((alert) => alert.active)
       .sort(byKind)

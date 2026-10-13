@@ -488,6 +488,11 @@ Never `new Date().toISOString().slice(0, 10)`.
   is always in the visit doctor's name.
 - Allergies show wherever a prescription is written and at the top of every
   visit.
+- **Each section of a visit saves alone** (vitals, notes, follow-up), with
+  the section as the screen last read it; the database refuses a save made
+  from an older copy (`VISIT_CHANGED`), so two people never overwrite each
+  other unseen (plan D202, D206). Once a visit is done, any change needs
+  `visits.edit` (D208).
 - Clinical text is bounded and normalised like every other input (§24).
 - Nothing clinical is deleted; corrections are recorded with `updated_by`.
 

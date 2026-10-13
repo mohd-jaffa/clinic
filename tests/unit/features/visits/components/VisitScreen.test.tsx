@@ -3,27 +3,41 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Permission } from "@/constants/permissions";
-import type { VisitHeader } from "@/features/visits/types";
+import type { Visit } from "@/features/visits/types";
 import { authStub } from "@tests/support/auth";
 import { Providers } from "@tests/support/providers";
 
-const { client, auth, read } = vi.hoisted(() => ({
+const { client, visits, auth, read, alerts } = vi.hoisted(() => ({
   client: { done: vi.fn(), next: vi.fn() },
+  visits: { done: vi.fn(), saveVitals: vi.fn(), change: vi.fn() },
   auth: { current: {} as ReturnType<typeof authStub> },
   read: {
-    current: {} as { data?: VisitHeader; error?: unknown; mutate: () => void; isValidating: boolean },
+    current: {} as { data?: Visit; error?: unknown; mutate: () => void; isValidating: boolean },
   },
+  alerts: [] as { patientId: string; archived: boolean; visitRoute: string }[],
 }));
 vi.mock("@/features/appointments/api.client", () => ({ AppointmentsClient: client }));
+vi.mock("@/features/visits/api.client", () => ({ VisitsClient: visits }));
+// The alerts sheet is the profile's, tested there: here, only that it is offered, and for whom.
+vi.mock("@/features/patients/components/PatientAlerts", () => ({
+  VisitAlerts: (props: { patientId: string; archived: boolean; visitRoute: string }) => {
+    alerts.push(props);
+    return <button type="button">Alerts</button>;
+  },
+}));
+// The booking sheet is the calendar's, tested there.
+vi.mock("@/features/appointments/components/BookingSheet", () => ({ BookingSheet: () => null }));
 vi.mock("@/features/auth/AuthProvider", () => ({ useAuth: () => auth.current }));
 vi.mock("@/features/visits/hooks/useVisit", () => ({ useVisit: () => read.current }));
 
 const { VisitScreen } = await import("@/features/visits/components/VisitScreen");
 
 const DESK: Permission[] = ["patients.view", "appointments.view", "appointments.edit", "visits.view"];
+/** An assistant who records the visit and books, but moves no queue. */
+const NURSE: Permission[] = ["patients.view", "visits.view", "visits.create", "visits.edit", "appointments.create"];
 
 /** A visit in progress: Asha Iyer with Maya Rao, token 7, in since 10:30 AM in Kochi. */
-const aVisit = (overrides: Partial<VisitHeader> = {}): VisitHeader => ({
+const aVisit = (overrides: Partial<Visit> = {}): Visit => ({
   id: "v-1",
   status: "OPEN",
   billingStatus: null,
@@ -35,11 +49,17 @@ const aVisit = (overrides: Partial<VisitHeader> = {}): VisitHeader => ({
   doctorName: "Maya Rao",
   appointment: { id: "a-1", status: "IN_PROGRESS", token: 7, urgentAt: null },
   alerts: [{ id: "al-1", kind: "ALLERGY", label: "Penicillin", note: null, active: true }],
+  complaint: null,
+  diagnosis: null,
+  notes: null,
+  followUpOn: null,
+  vitals: null,
   ...overrides,
 });
 
 beforeEach(() => {
   vi.clearAllMocks();
+  alerts.length = 0;
   // Now, in Kochi: Tuesday 13 October 2026, 10:42 AM.
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(new Date("2026-10-13T05:12:00Z"));
@@ -141,5 +161,139 @@ describe("VisitScreen (plan §12.2; D193 – D195)", () => {
     expect(screen.getByText("This visit couldn't be loaded.")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Try again" }));
     expect(read.current.mutate).toHaveBeenCalled();
+  });
+
+  it("offers Alerts on the visit, for its patient (D207)", () => {
+    read.current.data = aVisit({ patient: { ...aVisit().patient, archived: true } });
+    draw();
+    expect(screen.getByRole("button", { name: "Alerts" })).toBeInTheDocument();
+    expect(alerts.at(-1)).toEqual({ patientId: "p-1", archived: true, visitRoute: "/api/visits/v-1" });
+  });
+});
+
+const fields = () => screen.queryAllByRole("textbox").map((field) => field.getAttribute("name"));
+
+describe("VisitScreen's records (plan §12.2; D202, D208, D209)", () => {
+  it("reads every section out to whoever may only read", () => {
+    read.current.data = aVisit({ complaint: "Fever, 3 days", followUpOn: "2026-10-20" });
+    draw();
+    expect(screen.getByRole("region", { name: "Vitals" })).toHaveTextContent("Nothing recorded");
+    expect(screen.getByRole("region", { name: "Complaint, diagnosis and notes" })).toHaveTextContent("Fever, 3 days");
+    expect(screen.getByRole("region", { name: "Follow-up" })).toHaveTextContent("Review on Tuesday, 20 Oct 2026");
+    expect(fields()).toEqual([]);
+    expect(screen.queryByRole("button", { name: "Book next appointment" })).not.toBeInTheDocument();
+  });
+
+  it("gives each section its fields for whoever may write it, and Book next appointment to whoever books", () => {
+    auth.current = authStub({ role: "STAFF", permissions: NURSE });
+    draw();
+    expect(fields()).toEqual([
+      "systolic",
+      "diastolic",
+      "pulse",
+      "temperatureF",
+      "spo2",
+      "respiratoryRate",
+      "weightKg",
+      "heightCm",
+      "complaint",
+      "diagnosis",
+      "notes",
+    ]);
+    expect(screen.getByRole("radiogroup", { name: "Review in" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Book next appointment" })).toBeInTheDocument();
+    expect(screen.queryByText(/view-only/)).not.toBeInTheDocument();
+  });
+
+  it("lets visits.create take the vitals of a visit open — and only visits.edit change anything once it is done", () => {
+    auth.current = authStub({ role: "STAFF", permissions: ["patients.view", "visits.view", "visits.create"] });
+    const { unmount } = draw();
+    expect(fields()).toHaveLength(8);
+    expect(screen.queryByRole("radiogroup", { name: "Review in" })).not.toBeInTheDocument();
+    unmount();
+
+    const done = aVisit({
+      status: "COMPLETED",
+      completedAt: "2026-10-13T05:20:00Z",
+      appointment: { id: "a-1", status: "COMPLETED", token: 7, urgentAt: null },
+    });
+    read.current.data = done;
+    const again = draw();
+    expect(fields()).toEqual([]);
+    again.unmount();
+
+    auth.current = authStub({ role: "STAFF", permissions: ["patients.view", "visits.view", "visits.edit"] });
+    draw();
+    expect(fields()).toHaveLength(11);
+  });
+
+  it("writes nothing for an archived patient, nor in a view-only clinic, saying why there", () => {
+    auth.current = authStub({ role: "STAFF", permissions: NURSE });
+    read.current.data = aVisit({ patient: { ...aVisit().patient, archived: true } });
+    const { unmount } = draw();
+    expect(fields()).toEqual([]);
+    expect(screen.queryByRole("button", { name: "Book next appointment" })).not.toBeInTheDocument();
+    unmount();
+
+    const nurse = authStub({ role: "STAFF", permissions: NURSE });
+    auth.current = { ...nurse, subscription: { ...nurse.subscription!, state: "READ_ONLY" } };
+    read.current.data = aVisit();
+    draw();
+    expect(fields()).toEqual([]);
+    expect(screen.getByText(/view-only/)).toBeInTheDocument();
+  });
+
+  it("writes nothing for someone with no clinic", () => {
+    auth.current = { ...authStub(), membership: null };
+    read.current.data = aVisit({ appointment: null });
+    draw();
+    expect(fields()).toEqual([]);
+    expect(screen.queryByRole("button", { name: /done/i })).not.toBeInTheDocument();
+  });
+
+  it("leaves out when a patient went in until they have — a visit their vitals opened while they wait (D203)", () => {
+    read.current.data = aVisit({
+      startedAt: null,
+      appointment: { id: "a-1", status: "ARRIVED", token: 4, urgentAt: null },
+    });
+    draw();
+    expect(screen.queryByRole("region", { name: /With doctor/ })).not.toBeInTheDocument();
+    const facts = screen.getAllByRole("definition").map((value) => value.textContent);
+    expect(facts).toEqual(["Tuesday, 13 Oct 2026", "04"]);
+  });
+});
+
+describe("A visit started from a profile (D204)", () => {
+  it("holds the patient in the lake while open, with Done for whoever starts visits", async () => {
+    visits.done.mockResolvedValue({ visitId: "v-1" });
+    auth.current = authStub({ role: "STAFF", permissions: NURSE });
+    read.current.data = aVisit({ appointment: null });
+    draw();
+    const started = screen.getByRole("region", { name: "Visit: Asha Iyer" });
+    expect(started).toHaveTextContent("In since 10:30 AM12 min");
+    await userEvent.click(within(started).getByRole("button", { name: "Mark Asha Iyer done" }));
+    expect(visits.done).toHaveBeenCalledWith("v-1");
+    expect((await screen.findAllByText("Asha Iyer’s visit is done"))[0]).toBeInTheDocument();
+  });
+
+  it("offers Done to no one else, nor in a view-only clinic, and has no lake once done", () => {
+    read.current.data = aVisit({ appointment: null });
+    const { unmount } = draw();
+    expect(
+      within(screen.getByRole("region", { name: "Visit: Asha Iyer" })).queryByRole("button"),
+    ).not.toBeInTheDocument();
+    unmount();
+
+    const nurse = authStub({ role: "STAFF", permissions: NURSE });
+    auth.current = { ...nurse, subscription: { ...nurse.subscription!, state: "READ_ONLY" } };
+    const viewOnly = draw();
+    expect(
+      within(screen.getByRole("region", { name: "Visit: Asha Iyer" })).queryByRole("button"),
+    ).not.toBeInTheDocument();
+    viewOnly.unmount();
+
+    read.current.data = aVisit({ appointment: null, status: "COMPLETED", completedAt: "2026-10-13T05:20:00Z" });
+    draw();
+    expect(screen.queryByRole("region", { name: "Visit: Asha Iyer" })).not.toBeInTheDocument();
   });
 });

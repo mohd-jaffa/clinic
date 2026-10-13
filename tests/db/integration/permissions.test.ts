@@ -347,7 +347,7 @@ describe("appointments.view, .create, .edit and .cancel, by the guard, RLS and t
   });
 });
 
-describe("visits.view and the queue's moves, by the guard, RLS and the 0018 functions", () => {
+describe("visits.view and the queue's moves, by the guard, RLS and the 0018 and 0020 functions", () => {
   let nurse: SignedIn & { memberId: string };
   let appointmentId: string;
   let doctorId: string;
@@ -419,6 +419,30 @@ describe("visits.view and the queue's moves, by the guard, RLS and the 0018 func
       .update({ notes: "Planted" })
       .eq("appointment_id", appointmentId);
     expect(error?.code).toBe("42501");
+  });
+
+  it("records a visit only with visits.create or visits.edit — not with visits.view (0020)", async () => {
+    const { data: visit } = await admin()
+      .from("visits")
+      .select("id, patient_id")
+      .eq("appointment_id", appointmentId)
+      .single();
+    for (const [name, args] of [
+      ["save_vitals", { p_visit_id: visit!.id, p_appointment_id: null, p_vitals: { pulse: 70 }, p_seen: null }],
+      ["save_vitals", { p_visit_id: null, p_appointment_id: appointmentId, p_vitals: { pulse: 70 }, p_seen: null }],
+      ["update_visit", { p_visit_id: visit!.id, p_changes: { notes: "Planted" }, p_seen: { notes: null } }],
+      ["start_visit", { p_patient_id: visit!.patient_id, p_doctor_id: doctorId }],
+      ["finish_visit", { p_visit_id: visit!.id }],
+    ] as const) {
+      const { error } = await nurse.tenant!.supabase.rpc(name, args);
+      expect(error?.hint, name).toBe("AUTH_PERMISSION_DENIED");
+    }
+    const { error } = await clinic.owner.tenant.supabase.rpc("update_visit", {
+      p_visit_id: visit!.id,
+      p_changes: { complaint: "Cough" },
+      p_seen: { complaint: null },
+    });
+    expect(error).toBeNull();
   });
 });
 

@@ -45,6 +45,9 @@ vi.mock("@/features/patients/components/NextAppointment", () => ({
     </button>
   ),
 }));
+vi.mock("@/features/visits/components/NewVisit", () => ({
+  NewVisit: ({ patient }: { patient: Patient }) => <button type="button">{`New visit for ${patient.name}`}</button>,
+}));
 vi.mock("@/features/patients/components/PatientHistory", () => ({
   PatientHistory: () => <p>History</p>,
 }));
@@ -114,6 +117,14 @@ describe("PatientProfile's header (plan §10.3, D115)", () => {
     const chat = screen.getByRole("link", { name: "WhatsApp Rohan Mehta" });
     expect(chat).toHaveAttribute("href", "https://wa.me/919876543210");
     expect(chat).toHaveAttribute("target", "_blank");
+  });
+
+  it("offers New visit beside them, which decides for itself who may start one (D204)", () => {
+    draw();
+    const visit = screen.getByRole("button", { name: "New visit for Rohan Mehta" });
+    expect(visit.parentElement).toContainElement(
+      screen.getByRole("link", { name: "WhatsApp Rohan Mehta" }).parentElement,
+    );
   });
 
   it("says when they have no doctor yet", () => {

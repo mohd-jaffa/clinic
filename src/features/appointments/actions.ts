@@ -23,6 +23,8 @@ export interface AppointmentActions {
   /** Urgent, or not (D201). */
   markUrgent: boolean;
   unmarkUrgent: boolean;
+  /** Vitals before they go in (D203). */
+  takeVitals: boolean;
   /** Reading its visit (D195): offered whatever else is not. */
   openVisit: boolean;
 }
@@ -43,6 +45,7 @@ export const NO_ACTIONS: AppointmentActions = {
   stepBack: false,
   markUrgent: false,
   unmarkUrgent: false,
+  takeVitals: false,
   openVisit: false,
 };
 
@@ -72,6 +75,7 @@ export const isMovable = (appointment: Pick<AppointmentDetail, "source" | "statu
  *   for a moment (D198); **Done** and **Back to waiting** for one in (D197).
  * - **Urgent** for a waiting patient; **Not urgent** while they wait or are
  *   in (D201).
+ * - **Vitals** for a waiting patient, with `visits.create` (D203).
  * - **Open visit** once there is one, to whoever reads visits (D195).
  *
  * The rest need `appointments.edit`. A no-show or a cancellation is not
@@ -111,6 +115,7 @@ export function actionsFor(
     stepBack: edits && waiting && appointment.steppedOutAt !== null,
     markUrgent: edits && waiting && appointment.urgentAt === null,
     unmarkUrgent: edits && (waiting || inRoom) && appointment.urgentAt !== null,
+    takeVitals: hasAccess(member, "visits.create") && waiting,
     openVisit,
   };
 }

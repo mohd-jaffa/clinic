@@ -7,6 +7,7 @@ import {
   CheckCheck,
   CircleOff,
   DoorOpen,
+  HeartPulse,
   LogIn,
   LogOut,
   NotebookPen,
@@ -82,7 +83,8 @@ function detailsOf(appointment: CalendarAppointment, detail: AppointmentDetail |
  * moves — **Send in** and **Stepped out** or **Back** for a patient waiting,
  * **Done** and **Back to waiting** for one in (D197, D198) — **Urgent** for
  * one waiting and **Not urgent** till they are done, with the tag beside the
- * status (D201), and **Open visit** once there is one (D195). An archived patient's appointment says
+ * status (D201), **Vitals** for one waiting (D203), and **Open visit** once
+ * there is one (D195). An archived patient's appointment says
  * why it offers nothing but its visit (D103); a read-only clinic, why nothing
  * can change — though a reminder may still be sent (D181), and a visit read.
  *
@@ -96,6 +98,7 @@ export function AppointmentSheet({
   onClose,
   onReschedule,
   onEditNotes,
+  onTakeVitals,
   onCancel,
   linkProfile,
 }: {
@@ -104,6 +107,8 @@ export function AppointmentSheet({
   onClose: () => void;
   onReschedule: (detail: AppointmentDetail) => void;
   onEditNotes: (detail: AppointmentDetail) => void;
+  /** Vitals of a patient still waiting (D203). */
+  onTakeVitals: (detail: AppointmentDetail) => void;
   onCancel: () => void;
   /** Offer **Open profile** — not on the profile itself. */
   linkProfile: boolean;
@@ -187,6 +192,16 @@ export function AppointmentSheet({
             size="sm"
             loading={stepping.stepping}
             onClick={() => void stepping.stepBack()}
+          />
+        )}
+        {actions.takeVitals && (
+          <Button
+            label={UI_TEXT.visit.takeVitals}
+            aria-label={UI_TEXT.visit.takeVitalsOf(appointment.patientName)}
+            icon={HeartPulse}
+            variant="secondary"
+            size="sm"
+            onClick={() => onTakeVitals(detail!)}
           />
         )}
         {actions.markUrgent && (

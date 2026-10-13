@@ -82,6 +82,7 @@ export const apiRoutes = {
     status: (id: string) => `/api/appointments/${id}/status`,
     arrived: (id: string) => `/api/appointments/${id}/arrived`,
     reminded: (id: string) => `/api/appointments/${id}/reminded`,
+    vitals: (id: string) => `/api/appointments/${id}/vitals`,
     walkIn: "/api/appointments/walk-in",
   },
   // Today's queue (plan §11.4): one doctor's, or every doctor's.
@@ -94,9 +95,12 @@ export const apiRoutes = {
     steppedOut: "/api/queue/stepped-out",
     urgent: "/api/queue/urgent",
   },
-  // Visits (plan §12, §30): opened and closed by the queue.
+  // Visits (plan §12, §30): opened and closed by the queue, or started from a profile (D204).
   visits: {
+    list: "/api/visits",
     one: (id: string) => `/api/visits/${id}`,
+    vitals: (id: string) => `/api/visits/${id}/vitals`,
+    done: (id: string) => `/api/visits/${id}/done`,
   },
 } as const;
 
