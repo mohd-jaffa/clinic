@@ -2681,3 +2681,27 @@ it.
 
 ### Blockers
 - None.
+
+## 2026-10-13 — The repository on GitHub
+
+The user asked to push the code to github.com/mohd-jaffa/clinic and work
+straight on `main` until the first release (D199). This change records the
+workflow only; no code changes.
+
+### Changed
+- **`main`** now starts from the phase branches. Each phase branch was
+  already part of the next, so all 100 commits are one line.
+- **The repository is public** by the user's choice.
+  - No secret is in its history.
+  - `.env.example` holds the Supabase CLI's public demo keys, which only
+    work against a local Supabase, and a local-only placeholder.
+- **AGENTS.md §2.3 and plan §35:** until the first release, each commit is
+  pushed straight to `main` once the whole suite has passed locally. CI runs
+  on every push. Branches and PRs start with the first release.
+
+### Validation
+- Docs only. The whole suite passed locally on the commit before this one
+  (a62eb2c).
+
+### Blockers
+- None.
