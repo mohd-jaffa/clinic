@@ -7,7 +7,8 @@ import type { ReactNode } from "react";
  * (**Done**, **Next patient**). With no one in, it holds a warm line instead.
  * It is a region named by `label`, so a screen reader can go straight to it.
  * With `onOpen`, the name opens what there is to know of them — the
- * appointment's detail, as any queue row does (D172).
+ * appointment's detail, as any queue row does (D172). `tag` sits under the
+ * line about them — Urgent (D201).
  */
 export function Lake({
   label,
@@ -16,6 +17,7 @@ export function Lake({
   title,
   detail,
   onOpen,
+  tag,
   children,
 }: {
   label: string;
@@ -27,6 +29,8 @@ export function Lake({
   detail?: string;
   /** What the name opens, when it opens something. */
   onOpen?: () => void;
+  /** A tag on the patient, under the line about them. */
+  tag?: ReactNode;
   /** The actions, side by side. */
   children?: ReactNode;
 }) {
@@ -52,6 +56,7 @@ export function Lake({
             <p className="truncate text-title font-bold">{title}</p>
           )}
           {detail && <p className="truncate text-small text-muted tabular-nums">{detail}</p>}
+          {tag && <div className="mt-1.5 flex">{tag}</div>}
         </div>
       </div>
       {children && <div className="flex flex-wrap gap-2.5">{children}</div>}

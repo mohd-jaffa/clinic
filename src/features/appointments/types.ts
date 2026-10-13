@@ -70,6 +70,8 @@ export interface AppointmentDetail extends CalendarAppointment {
   visitId: string | null;
   /** When a waiting patient stepped out (D198), or not. */
   steppedOutAt: string | null;
+  /** Since when they are marked Urgent (D201), or not: kept through their visit. */
+  urgentAt: string | null;
   patientArchived: boolean;
   notes: string | null;
   bookedAt: string;
@@ -89,6 +91,7 @@ export interface AppointmentDetailRow extends Omit<CalendarAppointmentRow, "pati
   cancel_reason: string | null;
   patient: { full_name: string; patient_number: number; phone: string; archived_at: string | null };
   stepped_out_at: string | null;
+  urgent_at: string | null;
   visit: VisitLink;
   booker: { full_name: string } | null;
   canceller: { full_name: string } | null;
@@ -115,6 +118,8 @@ export interface QueueAppointment extends CalendarAppointment {
   completedAt: string | null;
   /** When a waiting patient stepped out (D198): Next patient skips them. */
   steppedOutAt: string | null;
+  /** Since when they are marked Urgent (D201): a tag, which Next patient does not heed. */
+  urgentAt: string | null;
   /** Their visit, once sent in — read only with `visits.view` (D195). */
   visitId: string | null;
 }
@@ -147,6 +152,11 @@ export interface NextPatient {
 /** Stepped out, or back (D198): since when, or not. */
 export interface SteppedOut {
   steppedOutAt: string | null;
+}
+
+/** Urgent, or not (D201): since when, or not. */
+export interface Urgent {
+  urgentAt: string | null;
 }
 
 /** What a walk-in or an arrival answers (D173): the appointment, its patient and doctor, and the token given. */

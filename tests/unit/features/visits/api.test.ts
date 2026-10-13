@@ -33,7 +33,7 @@ const row = {
     ],
   },
   doctor: { member: { profile: { full_name: "Maya Rao" } } },
-  appointment: { status: "IN_PROGRESS", token_number: 7 },
+  appointment: { status: "IN_PROGRESS", token_number: 7, urgent_at: "2026-10-13T04:55:00Z" },
 };
 
 describe("getVisit (plan §12.2, D195)", () => {
@@ -56,7 +56,7 @@ describe("getVisit (plan §12.2, D195)", () => {
       },
       doctorId: "d-1",
       doctorName: "Maya Rao",
-      appointment: { id: "a-1", status: "IN_PROGRESS", token: 7 },
+      appointment: { id: "a-1", status: "IN_PROGRESS", token: 7, urgentAt: "2026-10-13T04:55:00Z" },
       alerts: [
         { id: "al-2", kind: "ALLERGY", label: "Penicillin", note: "Rash", active: true },
         { id: "al-1", kind: "MEDICATION", label: "Metformin", note: null, active: true },

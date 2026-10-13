@@ -36,6 +36,7 @@ export function anAppointmentDetail(overrides: Partial<AppointmentDetail> = {}):
     cancelReason: null,
     visitId: null,
     steppedOutAt: null,
+    urgentAt: null,
     ...overrides,
   };
 }
@@ -48,6 +49,7 @@ export function aQueueAppointment(overrides: Partial<QueueAppointment> = {}): Qu
     startedAt: null,
     completedAt: null,
     steppedOutAt: null,
+    urgentAt: null,
     visitId: null,
     ...overrides,
   };

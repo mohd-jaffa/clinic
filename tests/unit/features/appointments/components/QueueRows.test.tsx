@@ -125,6 +125,21 @@ describe("WaitingRow (D168)", () => {
     expect(screen.getByRole("listitem")).toHaveTextContent("Rohan MehtaStepped out · 9:00 AM · 25 min");
   });
 
+  it("leads the line of one marked urgent with the tag, keeping the rest (D201)", () => {
+    const urgent = aQueueAppointment({
+      status: "ARRIVED",
+      token: 6,
+      arrivedAt: "2026-10-13T05:05:00Z",
+      steppedOutAt: "2026-10-13T05:20:00Z",
+      urgentAt: "2026-10-13T05:10:00Z",
+    });
+    inList(
+      <WaitingRow appointment={urgent} now={now} showDoctor={false} inRoom={[]} canMove={false} onOpen={onOpen} />,
+    );
+    expect(screen.getByRole("listitem")).toHaveTextContent("Rohan MehtaUrgent Stepped out · 9:00 AM · 25 min");
+    expect(screen.getByText("Urgent")).toHaveClass("text-coral");
+  });
+
   it("sends them in from the row, for whoever may (D172, D192)", async () => {
     const waiting = aQueueAppointment({ status: "ARRIVED", token: 4, arrivedAt: "2026-10-13T05:05:00Z" });
     inList(<WaitingRow appointment={waiting} now={now} showDoctor={false} inRoom={[]} canMove onOpen={onOpen} />);
@@ -149,6 +164,17 @@ describe("WithDoctorRow", () => {
       </Providers>,
     );
     expect(screen.getByRole("listitem")).toHaveTextContent("With No longer on the team");
+  });
+
+  it("keeps the Urgent tag on one marked so while they are in (D201)", () => {
+    const urgent = aQueueAppointment({
+      status: "IN_PROGRESS",
+      token: 3,
+      startedAt: "2026-10-13T05:17:00Z",
+      urgentAt: "2026-10-13T05:00:00Z",
+    });
+    inList(<WithDoctorRow appointment={urgent} now={now} canMove={false} onOpen={onOpen} />);
+    expect(screen.getByRole("listitem")).toHaveTextContent("Token 03Rohan MehtaUrgent With Maya Rao · 13 min");
   });
 
   it("opens the visit for whoever reads visits, and offers Done and Next patient on the row (D193, D195)", async () => {

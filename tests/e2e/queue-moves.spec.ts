@@ -16,7 +16,9 @@ import { addMember, admin, registerClinic, removeAll } from "@tests/support/inte
  * and marks the other done. On a desktop the same from the columns. A doctor,
  * at either width, runs a session from the visit screen with Next patient
  * alone: the room free, the visit with the patient's allergy in view, the
- * next one's, and no one left. Each checked by axe, nothing wider than the
+ * next one's, and no one left. A patient marked Urgent is tagged for the
+ * desk and the doctor, waiting, in and on their visit, while Next patient
+ * still goes by token (D201). Each checked by axe, nothing wider than the
  * screen.
  */
 test.afterAll(removeAll);
@@ -210,4 +212,61 @@ test("a doctor runs a session with Next patient alone, from the queue to each vi
   await expect(page.getByRole("term").filter({ hasText: UI_TEXT.visit.doneLabel })).toBeVisible();
   await expect(page.getByRole("definition").filter({ hasText: "To bill" })).toBeVisible();
   await expect(lake(page, "Rohan Mehta")).toBeHidden();
+});
+
+test("an urgent patient is tagged for the desk and the doctor, while Next patient still goes by token", async ({
+  page,
+}, info) => {
+  const { desk, maya } = await aSessionWithMaya(["Rohan Mehta", "Kiran Das"]);
+  await signIn(page, desk.email, desk.password);
+  await page.goto("/queue");
+
+  // The desk marks Kiran urgent from their detail.
+  await waitingRow(page, "Kiran Das").getByRole("button", { name: "Kiran Das", exact: true }).click();
+  const detail = page.getByRole("dialog", { name: "Kiran Das" });
+  await expect(detail.getByRole("button", { name: queue.notUrgentOf("Kiran Das") })).toBeHidden();
+  await expectAccessible(page);
+  await detail.getByRole("button", { name: queue.urgentOf("Kiran Das") }).click();
+  await expect(notice(page, queue.urgentCard("Kiran Das"))).toBeVisible();
+  await expect(waitingRow(page, "Kiran Das")).toContainText(queue.urgent);
+  await expect(waitingRow(page, "Rohan Mehta")).not.toContainText(queue.urgent);
+  await expect(page.getByRole("list", { name: queue.waiting }).getByRole("listitem").first()).toContainText(
+    "Rohan Mehta",
+  );
+  await expectAccessible(page);
+  await fitsTheScreen(page);
+
+  // The doctor sees it too; Next patient takes Rohan, the lower token, then Kiran.
+  await signIn(page, maya.email, maya.password);
+  await page.goto("/queue");
+  await expect(waitingRow(page, "Kiran Das")).toContainText(queue.urgent);
+  await page.getByRole("button", { name: queue.nextPatientFor("Maya Rao") }).click();
+  await expect(notice(page, queue.sentIn("Rohan Mehta", "Maya Rao"))).toBeVisible();
+  await page.getByRole("button", { name: queue.nextPatientAfter("Rohan Mehta") }).click();
+  await expect(notice(page, queue.sentIn("Kiran Das", "Maya Rao"))).toBeVisible();
+  const phone = info.project.name === "phone";
+  const withDoctor = page.getByRole("list", { name: queue.withDoctor });
+  await expect(phone ? lake(page, "Kiran Das") : withDoctor).toContainText(queue.urgent);
+  await expectAccessible(page);
+
+  // Their visit says so at its top.
+  await (
+    phone
+      ? page.getByRole("link", { name: queue.openVisitOf("Kiran Das") })
+      : withDoctor.getByRole("link", { name: "Kiran Das", exact: true })
+  ).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Kiran Das" })).toBeVisible();
+  await expect(page.getByText(queue.urgent, { exact: true })).toBeVisible();
+  await expectAccessible(page);
+  await fitsTheScreen(page);
+
+  // The desk takes it off while they are in.
+  await signIn(page, desk.email, desk.password);
+  await page.goto("/queue");
+  await (phone ? lake(page, "Kiran Das") : withDoctor).getByRole("button", { name: "Kiran Das", exact: true }).click();
+  await expect(detail.getByText(queue.urgent, { exact: true })).toBeVisible();
+  await detail.getByRole("button", { name: queue.notUrgentOf("Kiran Das") }).click();
+  await expect(notice(page, queue.notUrgentCard("Kiran Das"))).toBeVisible();
+  await expect(phone ? lake(page, "Kiran Das") : withDoctor).not.toContainText(queue.urgent);
+  await expectAccessible(page);
 });

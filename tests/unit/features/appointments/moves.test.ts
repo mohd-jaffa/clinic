@@ -7,7 +7,7 @@ import { fakeSupabase, postgrestError, type FakeSupabaseOptions } from "@tests/s
 const { logActionsSafe } = vi.hoisted(() => ({ logActionsSafe: vi.fn() }));
 vi.mock("@/lib/audit/auditLog", () => ({ logActionsSafe }));
 
-const { backToWaiting, markDone, markSteppedOut, movesAudited, nextPatient, sendIn } =
+const { backToWaiting, markDone, markSteppedOut, markUrgent, movesAudited, nextPatient, sendIn } =
   await import("@/features/appointments/moves");
 
 function tenantWith(options: FakeSupabaseOptions) {
@@ -153,6 +153,39 @@ describe("markSteppedOut (D198)", () => {
       rpc: () => ({ error: { ...postgrestError("P0001"), hint: "APPOINTMENT_STATUS_NOT_ALLOWED" } }),
     });
     await expect(markSteppedOut(tenant, { appointmentId: "a-1", out: true })).rejects.toMatchObject({
+      code: "APPOINTMENT_STATUS_NOT_ALLOWED",
+    });
+  });
+});
+
+describe("markUrgent (D201)", () => {
+  it("marks it through mark_urgent, audited from when to when", async () => {
+    const { tenant, rpcs } = tenantWith({
+      rpc: () => ({ data: { urgent_at: "2026-10-13T05:00:00Z", previously: null } }),
+    });
+    expect(await markUrgent(tenant, { appointmentId: "a-1", urgent: true }, "req_u")).toEqual({
+      urgentAt: "2026-10-13T05:00:00Z",
+    });
+    expect(rpcs).toEqual([{ name: "mark_urgent", args: { p_appointment_id: "a-1", p_urgent: true } }]);
+    expect(logActionsSafe).toHaveBeenCalledWith(tenant, [
+      {
+        action: "UPDATE",
+        entityType: "appointments",
+        entityId: "a-1",
+        changes: { urgent_at: { from: null, to: "2026-10-13T05:00:00Z" } },
+        requestId: "req_u",
+      },
+    ]);
+  });
+
+  it("audits nothing when nothing changed, and says why it was refused", async () => {
+    const same = tenantWith({ rpc: () => ({ data: { urgent_at: null, previously: null } }) });
+    expect(await markUrgent(same.tenant, { appointmentId: "a-1", urgent: false })).toEqual({ urgentAt: null });
+    expect(logActionsSafe).not.toHaveBeenCalled();
+    const { tenant } = tenantWith({
+      rpc: () => ({ error: { ...postgrestError("P0001"), hint: "APPOINTMENT_STATUS_NOT_ALLOWED" } }),
+    });
+    await expect(markUrgent(tenant, { appointmentId: "a-1", urgent: true })).rejects.toMatchObject({
       code: "APPOINTMENT_STATUS_NOT_ALLOWED",
     });
   });

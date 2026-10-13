@@ -11,13 +11,13 @@ import type { VisitHeader, VisitHeaderRow } from "./types";
  */
 const TABLE = "visits";
 
-/** What a visit's header reads (D195): the visit, its patient with their alerts, its doctor's name, its token. */
+/** What a visit's header reads (D195): the visit, its patient with their alerts, its doctor's name, its token and Urgent. */
 const HEADER_COLUMNS =
   "id, patient_id, doctor_id, appointment_id, status, visit_date, started_at, completed_at, billing_status, " +
   "patient:patients!visits_patient_id_clinic_id_fkey(full_name, patient_number, date_of_birth, gender, archived_at, " +
   "alerts:patient_alerts(id, kind, label, note, active)), " +
   "doctor:doctors!visits_doctor_id_clinic_id_fkey(member:clinic_members(profile:profiles!clinic_members_user_id_fkey(full_name))), " +
-  "appointment:appointments!visits_appointment_id_clinic_id_fkey(status, token_number)";
+  "appointment:appointments!visits_appointment_id_clinic_id_fkey(status, token_number, urgent_at)";
 
 /** Allergies first, then conditions, then medications (plan §12.2). */
 const byKind = (a: { kind: AlertKind }, b: { kind: AlertKind }) =>
@@ -59,7 +59,12 @@ export async function getVisit(tenant: Tenant, id: string): Promise<VisitHeader>
     appointment:
       row.appointment_id === null || row.appointment === null
         ? null
-        : { id: row.appointment_id, status: row.appointment.status, token: row.appointment.token_number },
+        : {
+            id: row.appointment_id,
+            status: row.appointment.status,
+            token: row.appointment.token_number,
+            urgentAt: row.appointment.urgent_at,
+          },
     alerts: row.patient.alerts
       .filter((alert) => alert.active)
       .sort(byKind)

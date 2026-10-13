@@ -49,6 +49,7 @@ describe("actionsFor (plan §11.2; D161 – D164)", () => {
       ...NO_ACTIONS,
       sendIn: true,
       stepOut: true,
+      markUrgent: true,
       arrive: false,
       remind: false,
       confirm: false,
@@ -102,6 +103,26 @@ describe("actionsFor (plan §11.2; D161 – D164)", () => {
       openVisit: false,
     });
     expect(actionsFor(inRoom, desk(["appointments.cancel"]), now)).toMatchObject({ done: false, backToWaiting: false });
+  });
+
+  it("offers Urgent to a patient waiting, and Not urgent while they wait or are in, never once done (D201)", () => {
+    const waiting = anAppointmentDetail({ status: "ARRIVED", token: 4 });
+    expect(actionsFor(waiting, desk(ALL), now)).toMatchObject({ markUrgent: true, unmarkUrgent: false });
+    const urgent = { urgentAt: "2026-10-13T04:30:00Z" };
+    expect(actionsFor({ ...waiting, ...urgent }, desk(ALL), now)).toMatchObject({
+      markUrgent: false,
+      unmarkUrgent: true,
+    });
+    const inRoom = anAppointmentDetail({ status: "IN_PROGRESS", visitId: "v-1" });
+    expect(actionsFor(inRoom, desk(ALL), now)).toMatchObject({ markUrgent: false, unmarkUrgent: false });
+    expect(actionsFor({ ...inRoom, ...urgent }, desk(ALL), now)).toMatchObject({ unmarkUrgent: true });
+    const done = anAppointmentDetail({ status: "COMPLETED", visitId: "v-1", ...urgent });
+    expect(actionsFor(done, desk(ALL), now)).toMatchObject({ markUrgent: false, unmarkUrgent: false });
+    expect(actionsFor({ ...waiting, ...urgent }, desk(["appointments.cancel"]), now)).toMatchObject({
+      markUrgent: false,
+      unmarkUrgent: false,
+    });
+    expect(actionsFor(waiting, desk(["appointments.cancel"]), now).markUrgent).toBe(false);
   });
 
   it("opens the visit for whoever reads visits, and offers no no-show or cancel once one is kept (D195, D197)", () => {

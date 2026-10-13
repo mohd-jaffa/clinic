@@ -20,6 +20,9 @@ export interface AppointmentActions {
   backToWaiting: boolean;
   stepOut: boolean;
   stepBack: boolean;
+  /** Urgent, or not (D201). */
+  markUrgent: boolean;
+  unmarkUrgent: boolean;
   /** Reading its visit (D195): offered whatever else is not. */
   openVisit: boolean;
 }
@@ -38,6 +41,8 @@ export const NO_ACTIONS: AppointmentActions = {
   backToWaiting: false,
   stepOut: false,
   stepBack: false,
+  markUrgent: false,
+  unmarkUrgent: false,
   openVisit: false,
 };
 
@@ -65,6 +70,8 @@ export const isMovable = (appointment: Pick<AppointmentDetail, "source" | "statu
  * - **Cancel** while it is still to happen — `appointments.cancel`.
  * - **Send in** a waiting patient; **Stepped out** and **Back** for one away
  *   for a moment (D198); **Done** and **Back to waiting** for one in (D197).
+ * - **Urgent** for a waiting patient; **Not urgent** while they wait or are
+ *   in (D201).
  * - **Open visit** once there is one, to whoever reads visits (D195).
  *
  * The rest need `appointments.edit`. A no-show or a cancellation is not
@@ -75,7 +82,7 @@ export const isMovable = (appointment: Pick<AppointmentDetail, "source" | "statu
 export function actionsFor(
   appointment: Pick<
     AppointmentDetail,
-    "source" | "status" | "scheduledAt" | "day" | "patientArchived" | "steppedOutAt" | "visitId"
+    "source" | "status" | "scheduledAt" | "day" | "patientArchived" | "steppedOutAt" | "urgentAt" | "visitId"
   >,
   member: { role: ClinicRole; permissions: readonly Permission[] },
   now: Date = new Date(),
@@ -102,6 +109,8 @@ export function actionsFor(
     backToWaiting: edits && inRoom,
     stepOut: edits && waiting && appointment.steppedOutAt === null,
     stepBack: edits && waiting && appointment.steppedOutAt !== null,
+    markUrgent: edits && waiting && appointment.urgentAt === null,
+    unmarkUrgent: edits && (waiting || inRoom) && appointment.urgentAt !== null,
     openVisit,
   };
 }

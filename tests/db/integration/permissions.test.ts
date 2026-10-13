@@ -386,6 +386,7 @@ describe("visits.view and the queue's moves, by the guard, RLS and the 0018 func
       ["mark_done", { p_appointment_id: appointmentId }],
       ["back_to_waiting", { p_appointment_id: appointmentId }],
       ["mark_stepped_out", { p_appointment_id: appointmentId, p_out: true }],
+      ["mark_urgent", { p_appointment_id: appointmentId, p_urgent: true }],
       ["next_patient", { p_doctor_id: doctorId }],
     ] as const) {
       const { error } = await nurse.tenant!.supabase.rpc(name, args);

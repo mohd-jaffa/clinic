@@ -41,6 +41,7 @@ import {
   WaitingRow,
   WithDoctorRow,
 } from "./QueueRows";
+import { UrgentTag } from "./UrgentTag";
 import { WalkInSheet } from "./WalkInSheet";
 
 const { queue, appointment: words } = UI_TEXT;
@@ -198,6 +199,7 @@ export function Queue() {
                       queue.minutes(minutesSince(appointment.startedAt, now)),
                     )}
                     onOpen={() => open(appointment)}
+                    tag={appointment.urgentAt && <UrgentTag />}
                   >
                     {(moves || (readsVisits && appointment.visitId)) && (
                       <>

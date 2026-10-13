@@ -42,3 +42,11 @@ export const steppedOutSchema = z.object({
 });
 
 export type SteppedOutPayload = z.output<typeof steppedOutSchema>;
+
+/** Urgent, or not (D201): a patient waiting — or, to take it off, in. */
+export const urgentSchema = z.object({
+  appointmentId,
+  urgent: z.boolean({ error: VALIDATION_MESSAGES.invalid }),
+});
+
+export type UrgentPayload = z.output<typeof urgentSchema>;

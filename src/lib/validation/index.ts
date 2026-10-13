@@ -170,10 +170,12 @@ export {
   queueMoveSchema,
   sendInSchema,
   steppedOutSchema,
+  urgentSchema,
   type NextPatientPayload,
   type QueueMovePayload,
   type SendInPayload,
   type SteppedOutPayload,
+  type UrgentPayload,
 } from "./schemas/queue";
 
 export {

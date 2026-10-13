@@ -39,4 +39,9 @@ describe("Lake", () => {
     await userEvent.click(screen.getByRole("button", { name: "Rohan Mehta" }));
     expect(onOpen).toHaveBeenCalledOnce();
   });
+
+  it("carries a tag under the line about them (D201)", () => {
+    render(<Lake label="With the doctor" lead="07" title="Rohan Mehta" detail="6 min" tag={<span>Urgent</span>} />);
+    expect(screen.getByRole("region", { name: "With the doctor" })).toHaveTextContent("07Rohan Mehta6 minUrgent");
+  });
 });

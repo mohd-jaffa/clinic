@@ -186,3 +186,25 @@ export function useStepOut(appointment: QueueParty, onDone?: () => void) {
     stepBack: () => stepping.submit({ appointmentId: appointment.id, out: false }),
   };
 }
+
+/** **Urgent** and **Not urgent** (D201): a tag the desk and the doctor see; Next patient still goes by token. */
+export function useUrgent(appointment: QueueParty, onDone?: () => void) {
+  const respond = useResponse();
+  const marking = useApiMutation(AppointmentsClient.urgent, {
+    revalidate: movedRoutes(appointment),
+    onSuccess: ({ urgentAt }) => {
+      onDone?.();
+      if (urgentAt) {
+        respond.success({ title: queue.urgentCard(appointment.patientName), message: queue.urgentBody });
+      } else {
+        respond.success({ title: queue.notUrgentCard(appointment.patientName) });
+      }
+    },
+    onError: (failure) => respond.failure(failure, { title: queue.notMoved }),
+  });
+  return {
+    marking: marking.submitting,
+    markUrgent: () => marking.submit({ appointmentId: appointment.id, urgent: true }),
+    unmarkUrgent: () => marking.submit({ appointmentId: appointment.id, urgent: false }),
+  };
+}

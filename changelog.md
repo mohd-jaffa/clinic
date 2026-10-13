@@ -2744,3 +2744,80 @@ changes.
 
 ### Blockers
 - None.
+
+## 2026-10-13 — R6.9: Urgent, a tag on a waiting patient
+
+The user asked that anyone with `appointments.edit` can mark a waiting
+patient Urgent, as a tag only: Next patient does not take them first (D201).
+The user also chose: marked only while waiting; kept through the visit so the
+doctor sees it; set from the appointment's detail.
+
+### Added
+- **`0019_urgent`:**
+  - `appointments.urgent_at`. Its `CHECK` allows it only while the patient is
+    arrived, in progress or completed.
+  - The `clear_urgent` trigger drops it when an appointment leaves the queue
+    another way (back to booked, no-show, cancelled), whichever function
+    moved it.
+  - `mark_urgent(p_appointment_id, p_urgent)`:
+    - needs `appointments.edit` while the clinic can write, and takes the
+      doctor's queue lock, as Stepped out does;
+    - marks only while waiting, and takes it off while waiting or in;
+    - hands back when it was marked, and when before, for the audit row.
+  - Later migrations move up one: prescriptions is now `0020`, and so on to
+    `0030_faster_reads` (plan §29 and the tracker).
+- **`POST /api/queue/urgent`** (`urgentSchema`), `markUrgent` in
+  `appointments/moves.ts`. Audited as an `UPDATE` of `urgent_at`, from when
+  to when, only when it changed.
+- **Screens:**
+  - The appointment's detail offers **Urgent** to a waiting patient and
+    **Not urgent** while they wait or are in.
+  - The **Urgent** tag (`UrgentTag`: the coral `StatusPill` with a siren)
+    shows:
+    - beside the status in the detail;
+    - leading the line of a Waiting or With doctor row;
+    - under the line in the phone's lake;
+    - at the top of the visit, beside its status.
+  - A row keeps its place in the list.
+- **Kit:** `StatusPill` takes an `icon` in place of its dot; `Lake` takes a
+  `tag` under its detail line.
+
+### Speed (plan §37)
+- No new read and no index: the queue, the detail and the visit read
+  `urgent_at` with the row they already read. Each still waits on one query
+  after the session.
+- Marking or unmarking waits on two round trips after the session, the move
+  and the audit row, as every queue move does.
+
+### Tests
+- **Contract:** `tests/db/urgent-migration.test.ts`.
+- **Integration** (`visits.test.ts`):
+  - the tag is kept through Next patient and Done, and Next patient still
+    takes the lower token first;
+  - it is audited once per change;
+  - it is refused once the patient is in or done, taken off while in, and
+    dropped by a no-show;
+  - it needs `appointments.edit` and stays within the doctor scope.
+- **Permission, isolation and read-only rows** for `mark_urgent`.
+- **Unit:** the route, schema, move, reads, actions, hook, detail, rows,
+  lake, pill and visit header.
+- **E2E** (`queue-moves.spec.ts`, phone and desktop):
+  - the desk marks Kiran urgent;
+  - the doctor sees the tag, and Next patient still sends Rohan, the lower
+    token, in first;
+  - the tag shows in With doctor and on Kiran's visit;
+  - the desk takes it off.
+
+### Validation
+- Typecheck, lint, format check passed.
+- Unit and integration tests passed: 2586, coverage 100%.
+- E2E passed: 116 at phone and desktop, with axe; 8 skipped, each for one
+  width only.
+- The tag was checked on screenshots at phone and desktop, light and dark:
+  - the waiting row and the card;
+  - the detail, with Urgent and Not urgent;
+  - the lake and the With doctor row;
+  - the visit header.
+
+### Blockers
+- None.

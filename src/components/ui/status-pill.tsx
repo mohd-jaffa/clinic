@@ -1,3 +1,5 @@
+import type { LucideIcon } from "lucide-react";
+
 import type { StatusTone } from "@/constants/statuses";
 
 import { cn } from "./cn";
@@ -13,8 +15,18 @@ const TONES: Record<StatusTone, string> = {
  * capsule with a dot. The tone comes from the maps in src/constants/statuses.ts,
  * so the same status cannot be green on one screen and grey on another. The
  * word carries the meaning; the colour only repeats it (plan §32.2).
+ * A tag that is not a status — Urgent — carries its own mark, `icon`, in
+ * place of the dot.
  */
-export function StatusPill({ label, tone = "neutral" }: { label: string; tone?: StatusTone }) {
+export function StatusPill({
+  label,
+  tone = "neutral",
+  icon: Icon,
+}: {
+  label: string;
+  tone?: StatusTone;
+  icon?: LucideIcon;
+}) {
   return (
     <span
       className={cn(
@@ -22,7 +34,11 @@ export function StatusPill({ label, tone = "neutral" }: { label: string; tone?: 
         TONES[tone],
       )}
     >
-      <span aria-hidden="true" className="size-1.5 rounded-full bg-current" />
+      {Icon ? (
+        <Icon size={14} strokeWidth={2.5} aria-hidden="true" className="shrink-0" />
+      ) : (
+        <span aria-hidden="true" className="size-1.5 rounded-full bg-current" />
+      )}
       {label}
     </span>
   );

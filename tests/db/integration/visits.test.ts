@@ -4,7 +4,14 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import type { Permission } from "@/constants/permissions";
 import { addWalkIn, changeAppointmentStatus, getAppointment, listQueue } from "@/features/appointments/api";
-import { backToWaiting, markDone, markSteppedOut, nextPatient, sendIn } from "@/features/appointments/moves";
+import {
+  backToWaiting,
+  markDone,
+  markSteppedOut,
+  markUrgent,
+  nextPatient,
+  sendIn,
+} from "@/features/appointments/moves";
 import { getVisit } from "@/features/visits/api";
 import { walkInSchema } from "@/lib/validation";
 import {
@@ -21,7 +28,8 @@ import {
  * Send in opens the visit — asking what becomes of anyone already in — Done
  * closes it as To bill, Next patient finishes the one it is for and sends in
  * the lowest waiting token not stepped out, Back to waiting removes an empty
- * visit and keeps one with anything recorded. Each move is audited, each
+ * visit and keeps one with anything recorded; Urgent is a tag Next patient
+ * does not heed (D201). Each move is audited, each
  * twice changes nothing more, each needs appointments.edit; a visit is read
  * with visits.view, a doctor only their own patients'.
  */
@@ -381,6 +389,83 @@ describe("markSteppedOut (D198)", () => {
     await sendIn(desk.tenant!, { appointmentId: asha.appointmentId });
     await expect(markSteppedOut(desk.tenant!, { appointmentId: asha.appointmentId, out: true })).rejects.toMatchObject({
       code: "APPOINTMENT_STATUS_NOT_ALLOWED",
+    });
+  });
+});
+
+describe("markUrgent (D201)", () => {
+  it("tags a waiting patient, audited, kept through their visit — and Next patient still goes by token", async () => {
+    const first = await waiting("Kavya Iyer");
+    const urgent = await waiting("Lokesh Rao");
+    const { urgentAt } = await markUrgent(desk.tenant!, { appointmentId: urgent.appointmentId, urgent: true });
+    expect(urgentAt).toEqual(expect.any(String));
+    // Marked twice, it keeps when it was first marked.
+    expect(await markUrgent(desk.tenant!, { appointmentId: urgent.appointmentId, urgent: true })).toEqual({
+      urgentAt,
+    });
+
+    const { sent } = await nextPatient(desk.tenant!, { doctorId: doctors.A });
+    expect(sent?.appointmentId).toBe(first.appointmentId);
+    const { sent: then } = await nextPatient(desk.tenant!, {
+      doctorId: doctors.A,
+      appointmentId: first.appointmentId,
+    });
+    expect(then?.appointmentId).toBe(urgent.appointmentId);
+
+    expect((await getVisit(nurse.tenant!, then!.visitId)).appointment).toMatchObject({ urgentAt });
+    const queue = await listQueue(nurse.tenant!, { doctorId: doctors.A });
+    expect(queue.find((row) => row.id === urgent.appointmentId)).toMatchObject({ status: "IN_PROGRESS", urgentAt });
+    expect(queue.find((row) => row.id === first.appointmentId)).toMatchObject({ urgentAt: null });
+
+    // Done, it stays on the record — neither marked again nor taken off.
+    await markDone(desk.tenant!, { appointmentId: urgent.appointmentId });
+    expect((await getAppointment(desk.tenant!, urgent.appointmentId)).urgentAt).toBe(urgentAt);
+    await expect(
+      markUrgent(desk.tenant!, { appointmentId: urgent.appointmentId, urgent: false }),
+    ).rejects.toMatchObject({ code: "APPOINTMENT_STATUS_NOT_ALLOWED" });
+
+    const audits = (await auditsOf(urgent.appointmentId)).filter((audit) => audit.action === "UPDATE");
+    expect(audits.map((audit) => audit.changes)).toEqual([{ urgent_at: { from: null, to: expect.any(String) } }]);
+  });
+
+  it("is taken off while waiting or in, and never first marked once in", async () => {
+    const asha = await waiting("Meera Pillai");
+    await markUrgent(desk.tenant!, { appointmentId: asha.appointmentId, urgent: true });
+    expect(await markUrgent(desk.tenant!, { appointmentId: asha.appointmentId, urgent: false })).toEqual({
+      urgentAt: null,
+    });
+    await sendIn(desk.tenant!, { appointmentId: asha.appointmentId });
+    await expect(markUrgent(desk.tenant!, { appointmentId: asha.appointmentId, urgent: true })).rejects.toMatchObject({
+      code: "APPOINTMENT_STATUS_NOT_ALLOWED",
+    });
+
+    const ravi = await waiting("Nikhil Jain");
+    await markUrgent(desk.tenant!, { appointmentId: ravi.appointmentId, urgent: true });
+    await sendIn(desk.tenant!, { appointmentId: ravi.appointmentId, others: "KEEP" });
+    expect(await markUrgent(desk.tenant!, { appointmentId: ravi.appointmentId, urgent: false })).toEqual({
+      urgentAt: null,
+    });
+  });
+
+  it("drops off one who leaves the queue another way, and needs appointments.edit within the doctor scope", async () => {
+    const asha = await waiting("Pallavi Sen");
+    await markUrgent(desk.tenant!, { appointmentId: asha.appointmentId, urgent: true });
+    await changeAppointmentStatus(desk.tenant!, asha.appointmentId, { status: "NO_SHOW", reason: null });
+    expect((await getAppointment(desk.tenant!, asha.appointmentId)).urgentAt).toBeNull();
+    await expect(markUrgent(desk.tenant!, { appointmentId: asha.appointmentId, urgent: true })).rejects.toMatchObject({
+      code: "APPOINTMENT_STATUS_NOT_ALLOWED",
+    });
+
+    const ravi = await waiting("Qadir Khan");
+    const elsewhere = await waiting("Ria Das", doctors.B);
+    await expect(
+      markUrgent(watcher.tenant!, { appointmentId: ravi.appointmentId, urgent: true }),
+    ).rejects.toMatchObject({ code: "AUTH_PERMISSION_DENIED" });
+    await expect(
+      markUrgent(doctorA.tenant!, { appointmentId: elsewhere.appointmentId, urgent: true }),
+    ).rejects.toMatchObject({ code: "RECORD_NOT_FOUND" });
+    expect(await markUrgent(doctorA.tenant!, { appointmentId: ravi.appointmentId, urgent: true })).toEqual({
+      urgentAt: expect.any(String),
     });
   });
 });

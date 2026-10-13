@@ -13,6 +13,7 @@ import { kindOf } from "../describe";
 import { useArrival } from "../hooks/useArrival";
 import { useDone, useNextPatient, useSendIn } from "../hooks/useQueueMoves";
 import { RemindButton } from "./RemindButton";
+import { UrgentTag } from "./UrgentTag";
 import { lateBy, minutesSince } from "../queue";
 import type { QueueAppointment } from "../types";
 
@@ -30,6 +31,17 @@ function line(...parts: ReactNode[]) {
       {part}
     </Fragment>
   ));
+}
+
+/** A row's line, led by the Urgent tag for a patient marked so (D201). */
+function tagged(appointment: QueueAppointment, parts: ReactNode) {
+  return appointment.urgentAt ? (
+    <>
+      <UrgentTag /> {parts}
+    </>
+  ) : (
+    parts
+  );
 }
 
 /** The doctor's name — or that they are gone — when every doctor's queue is shown. */
@@ -74,7 +86,8 @@ export function QueueSection({
 
 /**
  * A patient waiting (D168, D172): their token, name, Walk-in or booked time,
- * how long they have waited — and that they stepped out (D198); on the row,
+ * how long they have waited — and that they stepped out (D198), or are
+ * urgent (D201), which changes nothing of their place; on the row,
  * **Send in** for whoever may, asking first while the doctor has someone in
  * (D192).
  */
@@ -99,11 +112,14 @@ export function WaitingRow({
       look={appointment.steppedOutAt ? "quiet" : "surface"}
       leading={<RowToken value={tokenNumeral(appointment.token)} label={queue.token} />}
       title={appointment.patientName}
-      subtitle={line(
-        appointment.steppedOutAt && <span className="font-bold text-ink">{queue.steppedOut}</span>,
-        appointment.source === "WALK_IN" ? calendar.walkIn : formatTime(appointment.scheduledAt),
-        queue.minutes(minutesSince(appointment.arrivedAt, now)),
-        doctorOf(appointment, showDoctor),
+      subtitle={tagged(
+        appointment,
+        line(
+          appointment.steppedOutAt && <span className="font-bold text-ink">{queue.steppedOut}</span>,
+          appointment.source === "WALK_IN" ? calendar.walkIn : formatTime(appointment.scheduledAt),
+          queue.minutes(minutesSince(appointment.arrivedAt, now)),
+          doctorOf(appointment, showDoctor),
+        ),
       )}
       wrap
       trailing={canMove && <SendInButton appointment={appointment} inRoom={inRoom} />}
@@ -128,7 +144,7 @@ function SendInButton({ appointment, inRoom }: { appointment: QueueAppointment; 
 
 /**
  * A patient in with a doctor: their token, name, and how long they have been
- * in; on the row, **Done** and **Next patient** for whoever may (D193). It
+ * in — and Urgent, kept from waiting (D201); on the row, **Done** and **Next patient** for whoever may (D193). It
  * opens their visit for whoever reads visits (D195), or the appointment's
  * detail.
  */
@@ -147,9 +163,12 @@ export function WithDoctorRow({
     <Row
       leading={<RowToken value={tokenNumeral(appointment.token)} label={queue.token} />}
       title={appointment.patientName}
-      subtitle={queue.withDoctorLine(
-        appointment.doctorName ?? words.formerDoctor,
-        queue.minutes(minutesSince(appointment.startedAt, now)),
+      subtitle={tagged(
+        appointment,
+        queue.withDoctorLine(
+          appointment.doctorName ?? words.formerDoctor,
+          queue.minutes(minutesSince(appointment.startedAt, now)),
+        ),
       )}
       wrap
       trailing={canMove && <InRoomButtons appointment={appointment} />}

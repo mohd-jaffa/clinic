@@ -3,8 +3,8 @@ import type { PatientAlert } from "@/features/patients/types";
 
 /**
  * A visit as its screen's header shows it (plan §12.2, D195): whose it is —
- * the patient, their doctor, their token — where it stands, and the
- * patient's active alerts, allergies first, always in view.
+ * the patient, their doctor, their token — where it stands, whether they are
+ * urgent, and the patient's active alerts, allergies first, always in view.
  */
 export interface VisitHeader {
   id: string;
@@ -26,8 +26,11 @@ export interface VisitHeader {
   doctorId: string;
   /** None once the doctor's account is gone. */
   doctorName: string | null;
-  /** The appointment it was opened for — none for a visit started from a profile (R6.2). */
-  appointment: { id: string; status: AppointmentStatus; token: number | null } | null;
+  /**
+   * The appointment it was opened for — none for a visit started from a
+   * profile (R6.2) — and since when it is marked Urgent (D201), or not.
+   */
+  appointment: { id: string; status: AppointmentStatus; token: number | null; urgentAt: string | null } | null;
   alerts: PatientAlert[];
 }
 
@@ -51,5 +54,5 @@ export interface VisitHeaderRow {
     alerts: { id: string; kind: AlertKind; label: string; note: string | null; active: boolean }[];
   };
   doctor: { member: { profile: { full_name: string } | null } | null } | null;
-  appointment: { status: AppointmentStatus; token_number: number | null } | null;
+  appointment: { status: AppointmentStatus; token_number: number | null; urgent_at: string | null } | null;
 }

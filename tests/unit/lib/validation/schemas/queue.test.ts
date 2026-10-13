@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { nextPatientSchema, queueMoveSchema, sendInSchema, steppedOutSchema } from "@/lib/validation";
+import { nextPatientSchema, queueMoveSchema, sendInSchema, steppedOutSchema, urgentSchema } from "@/lib/validation";
 
 const A = "0b6f2a1e-3c4d-4e5f-8a9b-1c2d3e4f5a6b";
 const D = "7b1e4a52-3c5d-4e6f-8a9b-0c1d2e3f4a5b";
@@ -30,5 +30,11 @@ describe("the queue's moves (plan §11.4, §30)", () => {
   it("mark a patient stepped out or back (D198)", () => {
     expect(steppedOutSchema.parse({ appointmentId: A, out: false })).toEqual({ appointmentId: A, out: false });
     expect(issue(steppedOutSchema.safeParse({ appointmentId: A, out: "yes" }))).toBe("That value is not valid.");
+  });
+
+  it("mark a patient urgent or not (D201)", () => {
+    expect(urgentSchema.parse({ appointmentId: A, urgent: true })).toEqual({ appointmentId: A, urgent: true });
+    expect(issue(urgentSchema.safeParse({ appointmentId: A, urgent: "yes" }))).toBe("That value is not valid.");
+    expect(issue(urgentSchema.safeParse({ appointmentId: "a-1", urgent: true }))).toBe("That value is not valid.");
   });
 });

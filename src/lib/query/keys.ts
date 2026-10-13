@@ -92,6 +92,7 @@ export const apiRoutes = {
     next: "/api/queue/next",
     waiting: "/api/queue/waiting",
     steppedOut: "/api/queue/stepped-out",
+    urgent: "/api/queue/urgent",
   },
   // Visits (plan §12, §30): opened and closed by the queue.
   visits: {

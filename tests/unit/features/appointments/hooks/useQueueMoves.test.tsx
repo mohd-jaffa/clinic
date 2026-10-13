@@ -13,13 +13,14 @@ const { client, router } = vi.hoisted(() => ({
     next: vi.fn(),
     backToWaiting: vi.fn(),
     stepOut: vi.fn(),
+    urgent: vi.fn(),
   },
   router: { push: vi.fn() },
 }));
 vi.mock("@/features/appointments/api.client", () => ({ AppointmentsClient: client }));
 vi.mock("next/navigation", () => ({ useRouter: () => router }));
 
-const { useBackToWaiting, useDone, useNextPatient, useSendIn, useStepOut } =
+const { useBackToWaiting, useDone, useNextPatient, useSendIn, useStepOut, useUrgent } =
   await import("@/features/appointments/hooks/useQueueMoves");
 
 const asha = aQueueAppointment({ id: "a-1", patientName: "Asha Iyer", status: "ARRIVED", token: 4 });
@@ -69,6 +70,20 @@ function Away() {
       </button>
       <button type="button" onClick={() => void stepBack()}>
         Back
+      </button>
+    </>
+  );
+}
+
+function Urgency() {
+  const { markUrgent, unmarkUrgent } = useUrgent(asha);
+  return (
+    <>
+      <button type="button" onClick={() => void markUrgent()}>
+        Urgent
+      </button>
+      <button type="button" onClick={() => void unmarkUrgent()}>
+        Not urgent
       </button>
     </>
   );
@@ -247,6 +262,33 @@ describe("useStepOut (D198)", () => {
     client.stepOut.mockRejectedValue(new ApiError(422, "APPOINTMENT_STATUS_NOT_ALLOWED", "Refresh."));
     render(<Away />, { wrapper: Providers });
     await userEvent.click(screen.getByRole("button", { name: "Out" }));
+    expect(await card("The queue didn’t move")).toBeInTheDocument();
+  });
+});
+
+describe("useUrgent (D201)", () => {
+  it("marks a patient urgent and not, the card saying which", async () => {
+    client.urgent.mockResolvedValueOnce({ urgentAt: "2026-10-13T05:00:00Z" });
+    render(<Urgency />, { wrapper: Providers });
+    await userEvent.click(screen.getByRole("button", { name: "Urgent" }));
+    expect(client.urgent).toHaveBeenCalledWith({ appointmentId: "a-1", urgent: true });
+    expect(await notice("Asha Iyer is marked urgent")).toBeInTheDocument();
+    expect(
+      await notice(
+        "Everyone sees the tag, the doctor too. Next patient still goes by token, so send them in when the room is free.",
+      ),
+    ).toBeInTheDocument();
+
+    client.urgent.mockResolvedValueOnce({ urgentAt: null });
+    await userEvent.click(screen.getByRole("button", { name: "Not urgent" }));
+    expect(client.urgent).toHaveBeenLastCalledWith({ appointmentId: "a-1", urgent: false });
+    expect(await notice("Asha Iyer is no longer urgent")).toBeInTheDocument();
+  });
+
+  it("says why it was refused", async () => {
+    client.urgent.mockRejectedValue(new ApiError(422, "APPOINTMENT_STATUS_NOT_ALLOWED", "Refresh."));
+    render(<Urgency />, { wrapper: Providers });
+    await userEvent.click(screen.getByRole("button", { name: "Urgent" }));
     expect(await card("The queue didn’t move")).toBeInTheDocument();
   });
 });

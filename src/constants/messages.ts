@@ -672,6 +672,15 @@ export const UI_TEXT = {
     steppedOutCard: (patient: string) => `${patient} stepped out`,
     steppedOutBody: "They keep their token and place. Next patient skips them until they’re back.",
     backCard: (patient: string) => `${patient} is back`,
+    /** A tag on a patient (D201), from waiting through their visit; Next patient still goes by token. */
+    urgent: "Urgent",
+    urgentOf: (patient: string) => `Mark ${patient} urgent`,
+    notUrgent: "Not urgent",
+    notUrgentOf: (patient: string) => `Mark ${patient} not urgent`,
+    urgentCard: (patient: string) => `${patient} is marked urgent`,
+    urgentBody:
+      "Everyone sees the tag, the doctor too. Next patient still goes by token, so send them in when the room is free.",
+    notUrgentCard: (patient: string) => `${patient} is no longer urgent`,
     notSentIn: "They weren’t sent in",
     notDone: "That wasn’t marked done",
     notMoved: "The queue didn’t move",

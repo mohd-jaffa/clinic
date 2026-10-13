@@ -198,6 +198,7 @@ describe("as clinic B's owner, with a valid token", () => {
       ["mark_done", { p_appointment_id: appointmentId }],
       ["back_to_waiting", { p_appointment_id: appointmentId }],
       ["mark_stepped_out", { p_appointment_id: appointmentId, p_out: true }],
+      ["mark_urgent", { p_appointment_id: appointmentId, p_urgent: true }],
       ["next_patient", { p_doctor_id: doctorId, p_appointment_id: appointmentId }],
       ["next_patient", { p_doctor_id: doctorId }],
     ] as const) {

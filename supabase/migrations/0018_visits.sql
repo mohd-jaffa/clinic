@@ -180,7 +180,7 @@ alter table public.appointments
   add constraint appointments_stepped_out check (stepped_out_at is null or status = 'ARRIVED');
 
 -- Whether a visit holds nothing recorded (D197). Vitals, notes and a
--- follow-up so far; the prescription joins them with 0019.
+-- follow-up so far; the prescription joins them with 0020.
 create or replace function public.visit_is_empty(p_visit_id uuid)
 returns boolean
 language sql

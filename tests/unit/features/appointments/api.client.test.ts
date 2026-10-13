@@ -68,6 +68,7 @@ describe("AppointmentsClient (plan §30)", () => {
     await AppointmentsClient.next({ doctorId: "d-1", appointmentId: "a-1" });
     await AppointmentsClient.backToWaiting("a-1");
     await AppointmentsClient.stepOut({ appointmentId: "a-1", out: true });
+    await AppointmentsClient.urgent({ appointmentId: "a-1", urgent: true });
     const sent = (mockFetch.mock.calls as [string, RequestInit][]).map(([url, init]) => [url, init.method, init.body]);
     expect(sent).toEqual([
       ["/api/queue/send-in", "POST", JSON.stringify({ appointmentId: "a-1", others: "KEEP" })],
@@ -75,6 +76,7 @@ describe("AppointmentsClient (plan §30)", () => {
       ["/api/queue/next", "POST", JSON.stringify({ doctorId: "d-1", appointmentId: "a-1" })],
       ["/api/queue/waiting", "POST", JSON.stringify({ appointmentId: "a-1" })],
       ["/api/queue/stepped-out", "POST", JSON.stringify({ appointmentId: "a-1", out: true })],
+      ["/api/queue/urgent", "POST", JSON.stringify({ appointmentId: "a-1", urgent: true })],
     ]);
   });
 });

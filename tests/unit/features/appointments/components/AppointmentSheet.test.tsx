@@ -18,6 +18,7 @@ const { client, auth, read } = vi.hoisted(() => ({
     done: vi.fn(),
     backToWaiting: vi.fn(),
     stepOut: vi.fn(),
+    urgent: vi.fn(),
   },
   auth: { current: {} as ReturnType<typeof authStub> },
   read: {
@@ -273,6 +274,36 @@ describe("AppointmentSheet (plan §11.2; D160 – D165)", () => {
     draw(aCalendarAppointment({ status: "ARRIVED", token: 4 }));
     await userEvent.click(within(actions()!).getByRole("button", { name: "Mark Rohan Mehta back" }));
     expect(client.stepOut).toHaveBeenCalledWith({ appointmentId: "a-1", out: false });
+  });
+
+  it("marks a waiting patient urgent, with no tag before it is (D201)", async () => {
+    client.urgent.mockResolvedValue({ urgentAt: "2026-10-13T04:40:00Z" });
+    read.current = { data: anAppointmentDetail({ status: "ARRIVED", token: 4 }), mutate: vi.fn(), isValidating: false };
+    draw(aCalendarAppointment({ status: "ARRIVED", token: 4 }));
+    expect(within(sheet()).queryByText("Urgent", { selector: "span" })).not.toBeInTheDocument();
+    expect(within(actions()!).queryByRole("button", { name: "Mark Rohan Mehta not urgent" })).not.toBeInTheDocument();
+    await userEvent.click(within(actions()!).getByRole("button", { name: "Mark Rohan Mehta urgent" }));
+    expect(client.urgent).toHaveBeenCalledWith({ appointmentId: "a-1", urgent: true });
+    await waitFor(() => expect(handlers.onClose).toHaveBeenCalled());
+  });
+
+  it("tags one marked urgent beside their status, and takes it off while they are in (D201)", async () => {
+    client.urgent.mockResolvedValue({ urgentAt: null });
+    read.current = {
+      data: anAppointmentDetail({
+        status: "IN_PROGRESS",
+        token: 4,
+        visitId: "v-1",
+        urgentAt: "2026-10-13T04:30:00Z",
+      }),
+      mutate: vi.fn(),
+      isValidating: false,
+    };
+    draw(aCalendarAppointment({ status: "IN_PROGRESS", token: 4 }));
+    expect(within(sheet()).getByText("Urgent", { selector: "span" })).toBeInTheDocument();
+    expect(within(actions()!).queryByRole("button", { name: "Mark Rohan Mehta urgent" })).not.toBeInTheDocument();
+    await userEvent.click(within(actions()!).getByRole("button", { name: "Mark Rohan Mehta not urgent" }));
+    expect(client.urgent).toHaveBeenCalledWith({ appointmentId: "a-1", urgent: false });
   });
 
   it("marks a patient in done, or back to waiting, and opens their visit for whoever reads visits (D195, D197)", async () => {

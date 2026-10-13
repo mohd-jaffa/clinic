@@ -7,10 +7,11 @@ import type {
   SendInPayload,
   StatusChangeInput,
   SteppedOutPayload,
+  UrgentPayload,
   WalkInInput,
 } from "@/lib/validation";
 
-import type { AppointmentChanged, Arrival, Booked, NextPatient, SentIn, SteppedOut } from "./types";
+import type { AppointmentChanged, Arrival, Booked, NextPatient, SentIn, SteppedOut, Urgent } from "./types";
 
 /**
  * The appointments' endpoints the browser calls (plan §30): booking one, once
@@ -18,7 +19,7 @@ import type { AppointmentChanged, Arrival, Booked, NextPatient, SentIn, SteppedO
  * (D161); setting its status from its detail; and a patient joining the
  * queue — a walk-in, once per key, or a booking arrived — with their token;
  * a reminder sent on WhatsApp, noted (D180); and the queue's moves (plan
- * §11.4): Send in, Done, Next patient, Back to waiting, Stepped out.
+ * §11.4): Send in, Done, Next patient, Back to waiting, Stepped out, Urgent.
  */
 export const AppointmentsClient = {
   book: ({ input, key }: { input: BookingInput; key: string }) =>
@@ -37,4 +38,5 @@ export const AppointmentsClient = {
   backToWaiting: (appointmentId: string) =>
     postJson<{ appointmentId: string }>(apiRoutes.queue.waiting, { appointmentId }),
   stepOut: (input: SteppedOutPayload) => postJson<SteppedOut>(apiRoutes.queue.steppedOut, input),
+  urgent: (input: UrgentPayload) => postJson<Urgent>(apiRoutes.queue.urgent, input),
 };

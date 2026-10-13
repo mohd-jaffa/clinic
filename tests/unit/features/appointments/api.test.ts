@@ -306,6 +306,7 @@ describe("getAppointment (D160)", () => {
     booker: { full_name: "Priya Nair" },
     canceller: null,
     stepped_out_at: null,
+    urgent_at: null,
     visit: null,
   };
 
@@ -323,6 +324,7 @@ describe("getAppointment (D160)", () => {
       cancelReason: "Patient asked",
       visitId: null,
       steppedOutAt: null,
+      urgentAt: null,
     });
     expect(queries).toHaveLength(1);
     expect(argsOf(queries[0], "eq")).toEqual([
@@ -331,15 +333,23 @@ describe("getAppointment (D160)", () => {
     ]);
   });
 
-  it("names its visit — however it is embedded — and when its patient stepped out (D195, D198)", async () => {
+  it("names its visit — however it is embedded — and when its patient stepped out or was marked urgent (D195, D198, D201)", async () => {
     const one = tenantWith({ answer: () => ({ data: { ...detailRow, visit: { id: "v-1" } } }) });
     expect(await getAppointment(one.tenant, "a-1")).toMatchObject({ visitId: "v-1" });
     const listed = tenantWith({
-      answer: () => ({ data: { ...detailRow, visit: [{ id: "v-2" }], stepped_out_at: "2026-10-13T05:00:00Z" } }),
+      answer: () => ({
+        data: {
+          ...detailRow,
+          visit: [{ id: "v-2" }],
+          stepped_out_at: "2026-10-13T05:00:00Z",
+          urgent_at: "2026-10-13T04:55:00Z",
+        },
+      }),
     });
     expect(await getAppointment(listed.tenant, "a-1")).toMatchObject({
       visitId: "v-2",
       steppedOutAt: "2026-10-13T05:00:00Z",
+      urgentAt: "2026-10-13T04:55:00Z",
     });
     const none = tenantWith({ answer: () => ({ data: { ...detailRow, visit: [] } }) });
     expect(await getAppointment(none.tenant, "a-1")).toMatchObject({ visitId: null });
@@ -694,6 +704,7 @@ describe("listQueue (plan §11.4)", () => {
       started_at: null,
       completed_at: null,
       stepped_out_at: "2026-10-13T04:50:00+00:00",
+      urgent_at: "2026-10-13T04:45:00+00:00",
       visit: [],
     };
     const { tenant, queries, argsOf } = tenantWith({ answer: () => ({ data: [row] }) });
@@ -706,6 +717,7 @@ describe("listQueue (plan §11.4)", () => {
         startedAt: null,
         completedAt: null,
         steppedOutAt: "2026-10-13T04:50:00+00:00",
+        urgentAt: "2026-10-13T04:45:00+00:00",
         visitId: null,
       },
     ]);

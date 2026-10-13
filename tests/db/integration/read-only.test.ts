@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { PLATFORM_SETTING_DEFAULTS } from "@/constants/platform";
@@ -68,7 +70,7 @@ describe("a read-only clinic", () => {
     expect(data).toEqual([]);
   });
 
-  it("refuses the queue's moves in the database (0018)", async () => {
+  it("refuses the queue's moves in the database (0018, 0019)", async () => {
     const { data: doctor } = await admin()
       .from("doctors")
       .select("id")
@@ -76,6 +78,11 @@ describe("a read-only clinic", () => {
       .single();
     const { error } = await clinic.owner.tenant.supabase.rpc("next_patient", { p_doctor_id: doctor!.id });
     expect(error?.hint).toBe("CLINIC_PLAN_EXPIRED");
+    const { error: urgent } = await clinic.owner.tenant.supabase.rpc("mark_urgent", {
+      p_appointment_id: randomUUID(),
+      p_urgent: true,
+    });
+    expect(urgent?.hint).toBe("CLINIC_PLAN_EXPIRED");
   });
 
   it("refuses a write through a route with CLINIC_PLAN_EXPIRED, and still reads", async () => {

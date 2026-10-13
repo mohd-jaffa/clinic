@@ -206,8 +206,16 @@ describe("Queue (plan §11.4; D168 – D175)", () => {
   it("names a doctor gone from the team in the lake", () => {
     query.current.data = [aQueueAppointment({ status: "IN_PROGRESS", token: 3, doctorName: null })];
     draw();
+    const lake = screen.getByRole("region", { name: "With doctor: Rohan Mehta" });
+    expect(lake).toHaveTextContent("With No longer on the team");
+    expect(lake).not.toHaveTextContent("Urgent");
+  });
+
+  it("tags one marked urgent in the lake (D201)", () => {
+    query.current.data = [aQueueAppointment({ status: "IN_PROGRESS", token: 3, urgentAt: "2026-10-13T05:00:00Z" })];
+    draw();
     expect(screen.getByRole("region", { name: "With doctor: Rohan Mehta" })).toHaveTextContent(
-      "With No longer on the team",
+      "With Maya Rao · Just nowUrgent",
     );
   });
 

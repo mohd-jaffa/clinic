@@ -2,15 +2,21 @@ import { logActionsSafe } from "@/lib/audit/auditLog";
 import type { AuditEntry } from "@/lib/audit/types";
 import { fromPostgrestError } from "@/lib/errors";
 import type { Tenant } from "@/lib/supabase/tenant";
-import type { NextPatientPayload, QueueMovePayload, SendInPayload, SteppedOutPayload } from "@/lib/validation";
+import type {
+  NextPatientPayload,
+  QueueMovePayload,
+  SendInPayload,
+  SteppedOutPayload,
+  UrgentPayload,
+} from "@/lib/validation";
 
-import type { NextPatient, SentIn, SteppedOut } from "./types";
+import type { NextPatient, SentIn, SteppedOut, Urgent } from "./types";
 
 /**
- * The queue's moves (plan §11.4; D43, D192 – D198): Send in, Done, Next
- * patient, Back to waiting and Stepped out, each one function in 0018 that
- * moves the appointment and opens, closes or removes its visit in one
- * transaction, under the doctor's queue lock. Each hands back what it moved,
+ * The queue's moves (plan §11.4; D43, D192 – D198, D201): Send in, Done,
+ * Next patient, Back to waiting, Stepped out and Urgent, each one function
+ * (0018, 0019) that moves the appointment and opens, closes or removes its
+ * visit in one transaction, under the doctor's queue lock. Each hands back what it moved,
  * and each move is audited with its statuses from what to what — the
  * appointment's and the visit's — in one insert. Each waits on two round
  * trips after the session: the move, the audit rows (plan §37).
@@ -151,4 +157,32 @@ export async function markSteppedOut(
     ]);
   }
   return { steppedOutAt: data.stepped_out_at };
+}
+
+/**
+ * Urgent, or not (D201): a tag on a waiting patient, kept through their
+ * visit; Next patient still takes the lowest token. Audited from when to
+ * when, once it changes.
+ */
+export async function markUrgent(
+  tenant: Tenant,
+  { appointmentId, urgent }: UrgentPayload,
+  requestId?: string,
+): Promise<Urgent> {
+  const { data, error } = await tenant.supabase
+    .rpc("mark_urgent", { p_appointment_id: appointmentId, p_urgent: urgent })
+    .single<{ urgent_at: string | null; previously: string | null }>();
+  if (error) throw fromPostgrestError(error);
+  if (data.urgent_at !== data.previously) {
+    await logActionsSafe(tenant, [
+      {
+        action: "UPDATE",
+        entityType: "appointments",
+        entityId: appointmentId,
+        changes: { urgent_at: { from: data.previously, to: data.urgent_at } },
+        requestId,
+      },
+    ]);
+  }
+  return { urgentAt: data.urgent_at };
 }

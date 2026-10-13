@@ -13,6 +13,7 @@ import { QUEUE_ROUTE } from "@/constants/navigation";
 import { hasAccess } from "@/constants/permissions";
 import { BILLING_STATUS_LABELS, VISIT_STATUS_LABELS, VISIT_STATUS_TONES } from "@/constants/statuses";
 import { tokenNumeral } from "@/features/appointments/components/QueueRows";
+import { UrgentTag } from "@/features/appointments/components/UrgentTag";
 import { useDone, useNextPatient, type QueueParty } from "@/features/appointments/hooks/useQueueMoves";
 import { minutesSince } from "@/features/appointments/queue";
 import { useAuth } from "@/features/auth/AuthProvider";
@@ -43,7 +44,8 @@ function detailsOf(visit: VisitHeader): Detail[] {
 
 /**
  * A visit's screen — `/visits/[id]` (plan §12.2; D195): the patient, their
- * doctor and their alerts, always in view; while they are in, the lake with
+ * doctor and their alerts — and Urgent, for a patient marked so (D201) —
+ * always in view; while they are in, the lake with
  * their token and how long they have been in, and **Done** and **Next
  * patient** for whoever may move the queue (D193). Next patient opens the
  * next patient's visit, or the queue when no one is waiting (D194). Vitals,
@@ -64,6 +66,7 @@ export function VisitScreen({ id }: { id: string }) {
               visit && (
                 <div className="flex flex-wrap items-center gap-2">
                   <StatusPill label={VISIT_STATUS_LABELS[visit.status]} tone={VISIT_STATUS_TONES[visit.status]} />
+                  {visit.appointment?.urgentAt && <UrgentTag />}
                   {visit.alerts.length > 0 ? (
                     <AlertChips alerts={visit.alerts} />
                   ) : (

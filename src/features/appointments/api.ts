@@ -206,7 +206,7 @@ const DETAIL_COLUMNS =
   `${OWN_COLUMNS}, appointment_type_id, notes, created_at, cancelled_at, cancel_reason, ` +
   `${PATIENT}(full_name, patient_number, phone, archived_at), ${DOCTOR_AND_TYPE}, ` +
   "booker:profiles!appointments_created_by_fkey(full_name), canceller:profiles!appointments_cancelled_by_fkey(full_name), " +
-  `stepped_out_at, ${VISIT}`;
+  `stepped_out_at, urgent_at, ${VISIT}`;
 
 /** A row as the calendar reads it, in the shape every screen holds. */
 function toCalendarAppointment(row: CalendarAppointmentRow): CalendarAppointment {
@@ -280,6 +280,7 @@ export async function getAppointment(tenant: Tenant, id: string): Promise<Appoin
     cancelReason: row.cancel_reason,
     visitId: visitIdOf(row.visit),
     steppedOutAt: row.stepped_out_at,
+    urgentAt: row.urgent_at,
   };
 }
 
@@ -445,8 +446,8 @@ export async function markReminded(tenant: Tenant, id: string, requestId?: strin
 /** What today's queue holds (plan §11.4): those still to come, arrived, with a doctor, and done — none cancelled. */
 const QUEUE_STATUSES: readonly AppointmentStatus[] = ["SCHEDULED", "CONFIRMED", "ARRIVED", "IN_PROGRESS", "COMPLETED"];
 
-/** An appointment in the queue: the calendar's, when it arrived, went in and was done, whether it stepped out, and its visit. */
-const QUEUE_COLUMNS = `${CALENDAR_COLUMNS}, arrived_at, started_at, completed_at, stepped_out_at, ${VISIT}`;
+/** An appointment in the queue: the calendar's, when it arrived, went in and was done, whether it stepped out or is urgent, and its visit. */
+const QUEUE_COLUMNS = `${CALENDAR_COLUMNS}, arrived_at, started_at, completed_at, stepped_out_at, urgent_at, ${VISIT}`;
 
 /**
  * Today's queue (plan §11.4; D168, D170): today's appointments still to come,
@@ -473,6 +474,7 @@ export async function listQueue(tenant: Tenant, { doctorId }: QueueQuery): Promi
       started_at: string | null;
       completed_at: string | null;
       stepped_out_at: string | null;
+      urgent_at: string | null;
       visit: VisitLink;
     })[]
   ).map((row) => ({
@@ -481,6 +483,7 @@ export async function listQueue(tenant: Tenant, { doctorId }: QueueQuery): Promi
     startedAt: row.started_at,
     completedAt: row.completed_at,
     steppedOutAt: row.stepped_out_at,
+    urgentAt: row.urgent_at,
     visitId: visitIdOf(row.visit),
   }));
 }

@@ -33,7 +33,7 @@ const aVisit = (overrides: Partial<VisitHeader> = {}): VisitHeader => ({
   patient: { id: "p-1", name: "Asha Iyer", number: 1012, dateOfBirth: "1990-04-12", gender: "FEMALE", archived: false },
   doctorId: "d-1",
   doctorName: "Maya Rao",
-  appointment: { id: "a-1", status: "IN_PROGRESS", token: 7 },
+  appointment: { id: "a-1", status: "IN_PROGRESS", token: 7, urgentAt: null },
   alerts: [{ id: "al-1", kind: "ALLERGY", label: "Penicillin", note: null, active: true }],
   ...overrides,
 });
@@ -87,7 +87,7 @@ describe("VisitScreen (plan §12.2; D193 – D195)", () => {
       status: "COMPLETED",
       completedAt: "2026-10-13T05:20:00Z",
       billingStatus: "TO_BILL",
-      appointment: { id: "a-1", status: "COMPLETED", token: null },
+      appointment: { id: "a-1", status: "COMPLETED", token: null, urgentAt: "2026-10-13T04:50:00Z" },
       doctorName: null,
       alerts: [],
     });
@@ -96,6 +96,8 @@ describe("VisitScreen (plan §12.2; D193 – D195)", () => {
     expect(screen.getByText("Done", { selector: "span" })).toBeInTheDocument();
     expect(screen.getByText("With No longer on the team")).toBeInTheDocument();
     expect(screen.getByText("No alerts")).toBeInTheDocument();
+    // Urgent stays on the visit once done (D201).
+    expect(screen.getByText("Urgent", { selector: "span" })).toBeInTheDocument();
     const facts = screen.getAllByRole("definition").map((value) => value.textContent);
     expect(facts).toEqual(["Tuesday, 13 Oct 2026", "10:30 AM", "10:50 AM", "To bill"]);
   });
@@ -115,9 +117,10 @@ describe("VisitScreen (plan §12.2; D193 – D195)", () => {
   });
 
   it("has no lake for a visit with no appointment in, and no token without one", () => {
-    read.current.data = aVisit({ appointment: { id: "a-1", status: "IN_PROGRESS", token: null } });
+    read.current.data = aVisit({ appointment: { id: "a-1", status: "IN_PROGRESS", token: null, urgentAt: null } });
     const { unmount } = draw();
     expect(lake()).not.toHaveTextContent("Token");
+    expect(screen.queryByText("Urgent", { selector: "span" })).not.toBeInTheDocument();
     unmount();
     read.current.data = aVisit({ appointment: null });
     draw();
