@@ -34,11 +34,21 @@ export function anAppointmentDetail(overrides: Partial<AppointmentDetail> = {}):
     cancelledAt: null,
     cancelledBy: null,
     cancelReason: null,
+    visitId: null,
+    steppedOutAt: null,
     ...overrides,
   };
 }
 
 /** An appointment as today's queue reads it, for a component test. */
 export function aQueueAppointment(overrides: Partial<QueueAppointment> = {}): QueueAppointment {
-  return { ...aCalendarAppointment(), arrivedAt: null, startedAt: null, completedAt: null, ...overrides };
+  return {
+    ...aCalendarAppointment(),
+    arrivedAt: null,
+    startedAt: null,
+    completedAt: null,
+    steppedOutAt: null,
+    visitId: null,
+    ...overrides,
+  };
 }

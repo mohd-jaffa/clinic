@@ -99,6 +99,8 @@ const BUSINESS_RULES: ReadonlySet<ErrorMessageCode> = new Set<ErrorMessageCode>(
   "APPOINTMENT_NOT_REMINDABLE",
   "APPOINTMENT_TYPE_INACTIVE",
   "PATIENT_HAS_APPOINTMENTS",
+  // The queue (0018): an appointment whose visit was kept ends with Done (D197).
+  "APPOINTMENT_HAS_VISIT",
 ]);
 
 /**

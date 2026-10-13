@@ -7,7 +7,8 @@ import { aQueueAppointment } from "@tests/support/appointments";
 import { authStub } from "@tests/support/auth";
 import { Providers } from "@tests/support/providers";
 
-const { auth, adding, query, doctors, asked, sheet } = vi.hoisted(() => ({
+const { auth, adding, query, doctors, asked, sheet, client } = vi.hoisted(() => ({
+  client: { arrive: vi.fn(), remind: vi.fn(), sendIn: vi.fn(), done: vi.fn(), next: vi.fn() },
   auth: { current: {} as ReturnType<typeof authStub> },
   adding: { current: { open: false, show: vi.fn(), close: vi.fn() } },
   query: {
@@ -24,6 +25,7 @@ const { auth, adding, query, doctors, asked, sheet } = vi.hoisted(() => ({
   sheet: { doctorId: undefined as string | undefined },
 }));
 vi.mock("@/features/auth/AuthProvider", () => ({ useAuth: () => auth.current }));
+vi.mock("@/features/appointments/api.client", () => ({ AppointmentsClient: client }));
 vi.mock("@/hooks/useAddForm", () => ({ useAddForm: () => adding.current }));
 vi.mock("@/features/team/hooks/useDoctors", () => ({ useDoctors: () => ({ data: doctors.current }) }));
 vi.mock("@/features/appointments/hooks/useQueue", () => ({
@@ -59,6 +61,7 @@ const today = [
     status: "IN_PROGRESS",
     token: 3,
     startedAt: "2026-10-13T05:17:00Z",
+    visitId: "v-in",
   }),
   aQueueAppointment({
     id: "wait",
@@ -206,5 +209,74 @@ describe("Queue (plan §11.4; D168 – D175)", () => {
     expect(screen.getByRole("region", { name: "With doctor: Rohan Mehta" })).toHaveTextContent(
       "With No longer on the team",
     );
+  });
+
+  it("moves the queue from the lake and the rows: Done, Next patient and Open visit beside who is in, Send in on who waits (D193, D195)", async () => {
+    client.next.mockResolvedValue({ sent: null });
+    draw();
+    const lake = screen.getByRole("region", { name: "With doctor: Rohan Mehta" });
+    expect(within(lake).getByRole("button", { name: "Mark Rohan Mehta done" })).toBeInTheDocument();
+    expect(within(lake).getByRole("link", { name: "Open Rohan Mehta's visit" })).toHaveAttribute(
+      "href",
+      "/visits/v-in",
+    );
+    await userEvent.click(within(lake).getByRole("button", { name: "Next patient after Rohan Mehta" }));
+    expect(client.next).toHaveBeenCalledWith({ doctorId: "d-1", appointmentId: "in" });
+    expect(within(section(/^With doctor/)).getByRole("link", { name: "Rohan Mehta" })).toHaveAttribute(
+      "href",
+      "/visits/v-in",
+    );
+    expect(within(section(/^Waiting/)).getByRole("button", { name: "Send Anita Rao in" })).toBeInTheDocument();
+  });
+
+  it("opens the detail of the patient in from their name in the lake (D172)", async () => {
+    draw();
+    await userEvent.click(
+      within(screen.getByRole("region", { name: "With doctor: Rohan Mehta" })).getByRole("button", {
+        name: /^Rohan Mehta$/,
+      }),
+    );
+    expect(screen.getByRole("dialog", { name: "Rohan Mehta" })).toBeInTheDocument();
+  });
+
+  it("asks before sending someone in to a doctor who has someone in (D192)", async () => {
+    draw();
+    await userEvent.click(within(section(/^Waiting/)).getByRole("button", { name: "Send Anita Rao in" }));
+    expect(await screen.findByRole("alertdialog", { name: "Rohan Mehta is still with Maya Rao" })).toBeInTheDocument();
+    expect(client.sendIn).not.toHaveBeenCalled();
+  });
+
+  it("offers Next patient with the room free on one doctor's queue while someone waits — not on every doctor's (D196)", async () => {
+    query.current.data = today.filter((appointment) => appointment.status !== "IN_PROGRESS");
+    const { unmount } = draw();
+    expect(screen.queryByRole("button", { name: /next patient/ })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("radio", { name: "Maya Rao" }));
+    expect(
+      within(screen.getByRole("region", { name: "With doctor" })).getByRole("button", {
+        name: "Send in Maya Rao's next patient",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      within(section(/^With doctor/)).getByRole("button", { name: "Send in Maya Rao's next patient" }),
+    ).toBeInTheDocument();
+    unmount();
+
+    query.current.data = [];
+    draw();
+    await userEvent.click(screen.getByRole("radio", { name: "Maya Rao" }));
+    expect(screen.queryByRole("button", { name: /next patient/ })).not.toBeInTheDocument();
+  });
+
+  it("moves nothing for a member who may not, nor in a view-only clinic — though a visit is still opened", () => {
+    auth.current = authStub({ role: "STAFF", permissions: ["patients.view", "appointments.view", "visits.view"] });
+    const { unmount } = draw();
+    expect(screen.queryByRole("button", { name: /Send .* in|done|Next patient/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Open Rohan Mehta's visit" })).toBeInTheDocument();
+    unmount();
+
+    const viewOnly = authStub();
+    auth.current = { ...viewOnly, subscription: { ...viewOnly.subscription!, state: "READ_ONLY" } };
+    draw();
+    expect(screen.queryByRole("button", { name: /Send .* in|done|Next patient/ })).not.toBeInTheDocument();
   });
 });

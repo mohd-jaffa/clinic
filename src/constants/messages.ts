@@ -109,6 +109,11 @@ export const ERROR_MESSAGES = {
   APPOINTMENT_LOAD_FAILED: "This appointment couldn't be loaded.",
   QUEUE_LOAD_FAILED: "The queue couldn't be loaded.",
 
+  // The queue's moves and visits (plan §11.4, §12.1; D192, D197).
+  DOCTOR_ROOM_TAKEN: "Someone else is now with this doctor. Look at the queue again, then send them in.",
+  APPOINTMENT_HAS_VISIT: "Their visit has something recorded. Send them in and mark them done instead.",
+  VISIT_LOAD_FAILED: "This visit couldn't be loaded.",
+
   // The browser could not reach the server (plan §21, D55): said by the client, never sent by the server.
   NETWORK_OFFLINE: "You're offline. Try again once the connection is back — what you typed is still here.",
   NETWORK_UNREACHABLE: "ClinicDesk couldn't be reached. Check the connection and try again.",
@@ -639,6 +644,53 @@ export const UI_TEXT = {
     addWalkIn: "Add walk-in",
     walkInTitle: "Add a walk-in",
     notAdded: "The walk-in wasn’t added",
+    // The queue's moves (plan §11.4; D192 – D198).
+    sendIn: "Send in",
+    sendInOf: (patient: string) => `Send ${patient} in`,
+    doneOf: (patient: string) => `Mark ${patient} done`,
+    nextPatient: "Next patient",
+    nextPatientAfter: (patient: string) => `Next patient after ${patient}`,
+    nextPatientFor: (doctor: string) => `Send in ${doctor}'s next patient`,
+    backToWaiting: "Back to waiting",
+    stepOut: "Stepped out",
+    stepBack: "Back",
+    stepBackOf: (patient: string) => `Mark ${patient} back`,
+    /** On a waiting row (D198): away for a moment, skipped by Next patient. */
+    steppedOut: "Stepped out",
+    /** The card when the doctor already has someone in (D192). */
+    roomBusy: (patients: string, many: boolean, doctor: string) =>
+      `${patients} ${many ? "are" : "is"} still with ${doctor}`,
+    roomTaken: (doctor: string) => `Someone is still with ${doctor}`,
+    roomBusyBody: (patient: string) => `Mark them done and send ${patient} in — or keep both in, for a second chair.`,
+    finishAndSendIn: "Mark done and send in",
+    keepBothIn: "Keep both in",
+    sentIn: (patient: string, doctor: string) => `${patient} is in with ${doctor}`,
+    markedDone: (patient: string) => `${patient} is done`,
+    noOneWaiting: "No one is waiting",
+    noOneWaitingBody: "The visit is closed. Send in the next patient when they arrive.",
+    waitingAgain: (patient: string) => `${patient} is waiting again`,
+    steppedOutCard: (patient: string) => `${patient} stepped out`,
+    steppedOutBody: "They keep their token and place. Next patient skips them until they’re back.",
+    backCard: (patient: string) => `${patient} is back`,
+    notSentIn: "They weren’t sent in",
+    notDone: "That wasn’t marked done",
+    notMoved: "The queue didn’t move",
+    openVisit: "Open visit",
+    openVisitOf: (patient: string) => `Open ${patient}'s visit`,
+  },
+
+  /** A visit's screen (plan §12.2; D195): whose it is, where it stands, and the queue's controls. */
+  visit: {
+    title: "Visit",
+    withDoctor: (doctor: string) => `With ${doctor}`,
+    /** The lake's title on a visit in progress: since when the patient has been in. */
+    since: (time: string) => `In since ${time}`,
+    statusLabel: "Status",
+    dayLabel: "Day",
+    tokenLabel: "Token",
+    startedLabel: "Went in",
+    doneLabel: "Done",
+    billingLabel: "Billing",
   },
 
   /** One appointment (plan §11.2; D160 – D167): its detail, and what its status allows. */

@@ -87,6 +87,15 @@ export const apiRoutes = {
   // Today's queue (plan §11.4): one doctor's, or every doctor's.
   queue: {
     list: "/api/queue",
+    sendIn: "/api/queue/send-in",
+    done: "/api/queue/done",
+    next: "/api/queue/next",
+    waiting: "/api/queue/waiting",
+    steppedOut: "/api/queue/stepped-out",
+  },
+  // Visits (plan §12, §30): opened and closed by the queue.
+  visits: {
+    one: (id: string) => `/api/visits/${id}`,
   },
 } as const;
 

@@ -68,6 +68,16 @@ describe("a read-only clinic", () => {
     expect(data).toEqual([]);
   });
 
+  it("refuses the queue's moves in the database (0018)", async () => {
+    const { data: doctor } = await admin()
+      .from("doctors")
+      .select("id")
+      .eq("member_id", clinic.owner.session.membership!.id)
+      .single();
+    const { error } = await clinic.owner.tenant.supabase.rpc("next_patient", { p_doctor_id: doctor!.id });
+    expect(error?.hint).toBe("CLINIC_PLAN_EXPIRED");
+  });
+
   it("refuses a write through a route with CLINIC_PLAN_EXPIRED, and still reads", async () => {
     const write = await withClinicRoute(request("POST"), { access: "settings.manage" }, async () => ({}));
     expect(write.status).toBe(422);

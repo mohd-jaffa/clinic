@@ -52,11 +52,15 @@ const { places, hints } = UI_TEXT.nav;
 type Member = Parameters<typeof hasAccess>[0];
 
 const HOME: NavItem = { id: "home", label: places.home, icon: House, href: HOME_ROUTE, access: ROUTE_ACCESS.member };
+/** Today's queue (plan §11.4). */
+export const QUEUE_ROUTE = "/queue";
+/** A visit's screen (plan §12.2, D195). */
+export const visitRoute = (id: string) => `/visits/${id}`;
 const QUEUE: NavItem = {
   id: "queue",
   label: places.queue,
   icon: ListOrdered,
-  href: "/queue",
+  href: QUEUE_ROUTE,
   access: "appointments.view",
 };
 const APPOINTMENTS: NavItem = {

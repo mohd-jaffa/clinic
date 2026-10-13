@@ -10,7 +10,15 @@ import { authStub } from "@tests/support/auth";
 import { Providers } from "@tests/support/providers";
 
 const { client, auth, read } = vi.hoisted(() => ({
-  client: { setStatus: vi.fn(), arrive: vi.fn(), remind: vi.fn() },
+  client: {
+    setStatus: vi.fn(),
+    arrive: vi.fn(),
+    remind: vi.fn(),
+    sendIn: vi.fn(),
+    done: vi.fn(),
+    backToWaiting: vi.fn(),
+    stepOut: vi.fn(),
+  },
   auth: { current: {} as ReturnType<typeof authStub> },
   read: {
     current: {} as { data?: AppointmentDetail; error?: unknown; mutate: () => void; isValidating: boolean },
@@ -240,5 +248,64 @@ describe("AppointmentSheet (plan §11.2; D160 – D165)", () => {
     expect(within(actions()!).getByRole("link", { name: "Remind Rohan Mehta on WhatsApp" })).toBeInTheDocument();
     expect(within(actions()!).queryByRole("button")).not.toBeInTheDocument();
     expect(within(sheet()).getByText(/view-only/)).toBeInTheDocument();
+  });
+
+  it("sends a waiting patient in, and marks them stepped out — closing with a card (D192, D198)", async () => {
+    client.sendIn.mockResolvedValue({ visitId: "v-1" });
+    client.stepOut.mockResolvedValue({ steppedOutAt: "2026-10-13T04:40:00Z" });
+    read.current = { data: anAppointmentDetail({ status: "ARRIVED", token: 4 }), mutate: vi.fn(), isValidating: false };
+    draw(aCalendarAppointment({ status: "ARRIVED", token: 4 }));
+    expect(within(actions()!).queryByRole("button", { name: "Back" })).not.toBeInTheDocument();
+    await userEvent.click(within(actions()!).getByRole("button", { name: "Send in" }));
+    expect(client.sendIn).toHaveBeenCalledWith({ appointmentId: "a-1" });
+    await waitFor(() => expect(handlers.onClose).toHaveBeenCalled());
+    await userEvent.click(within(actions()!).getByRole("button", { name: "Stepped out" }));
+    expect(client.stepOut).toHaveBeenCalledWith({ appointmentId: "a-1", out: true });
+  });
+
+  it("marks one stepped out back (D198)", async () => {
+    client.stepOut.mockResolvedValue({ steppedOutAt: null });
+    read.current = {
+      data: anAppointmentDetail({ status: "ARRIVED", token: 4, steppedOutAt: "2026-10-13T04:30:00Z" }),
+      mutate: vi.fn(),
+      isValidating: false,
+    };
+    draw(aCalendarAppointment({ status: "ARRIVED", token: 4 }));
+    await userEvent.click(within(actions()!).getByRole("button", { name: "Mark Rohan Mehta back" }));
+    expect(client.stepOut).toHaveBeenCalledWith({ appointmentId: "a-1", out: false });
+  });
+
+  it("marks a patient in done, or back to waiting, and opens their visit for whoever reads visits (D195, D197)", async () => {
+    client.done.mockResolvedValue({ appointmentId: "a-1" });
+    client.backToWaiting.mockResolvedValue({ appointmentId: "a-1" });
+    auth.current = authStub({ role: "STAFF", permissions: [...ALL, "visits.view"] });
+    read.current = {
+      data: anAppointmentDetail({ status: "IN_PROGRESS", token: 4, visitId: "v-1" }),
+      mutate: vi.fn(),
+      isValidating: false,
+    };
+    draw(aCalendarAppointment({ status: "IN_PROGRESS", token: 4 }));
+    expect(within(actions()!).getByRole("link", { name: "Open Rohan Mehta's visit" })).toHaveAttribute(
+      "href",
+      "/visits/v-1",
+    );
+    await userEvent.click(within(actions()!).getByRole("button", { name: "Done" }));
+    expect(client.done).toHaveBeenCalledWith("a-1");
+    await userEvent.click(within(actions()!).getByRole("button", { name: "Back to waiting" }));
+    expect(client.backToWaiting).toHaveBeenCalledWith("a-1");
+  });
+
+  it("opens a visit, and only that, in a view-only clinic — saying nothing of view-only for it alone", () => {
+    const viewOnly = authStub({ role: "STAFF", permissions: ["patients.view", "appointments.view", "visits.view"] });
+    auth.current = { ...viewOnly, subscription: { ...viewOnly.subscription!, state: "READ_ONLY" } };
+    read.current = {
+      data: anAppointmentDetail({ status: "COMPLETED", token: 4, visitId: "v-1" }),
+      mutate: vi.fn(),
+      isValidating: false,
+    };
+    draw(aCalendarAppointment({ status: "COMPLETED", token: 4 }));
+    expect(within(actions()!).getByRole("link", { name: "Open Rohan Mehta's visit" })).toBeInTheDocument();
+    expect(within(actions()!).getAllByRole("link")).toHaveLength(1);
+    expect(within(sheet()).queryByText(/view-only/)).not.toBeInTheDocument();
   });
 });

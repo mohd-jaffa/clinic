@@ -305,6 +305,8 @@ describe("getAppointment (D160)", () => {
     patient: { full_name: "Rohan Mehta", patient_number: 1012, phone: "+919876543210", archived_at: null },
     booker: { full_name: "Priya Nair" },
     canceller: null,
+    stepped_out_at: null,
+    visit: null,
   };
 
   it("reads one whole in one query: what the calendar shows, its notes, and who booked and cancelled it", async () => {
@@ -319,12 +321,28 @@ describe("getAppointment (D160)", () => {
       cancelledAt: "2026-10-11T06:00:00+00:00",
       cancelledBy: null,
       cancelReason: "Patient asked",
+      visitId: null,
+      steppedOutAt: null,
     });
     expect(queries).toHaveLength(1);
     expect(argsOf(queries[0], "eq")).toEqual([
       ["clinic_id", "clinic-1"],
       ["id", "a-1"],
     ]);
+  });
+
+  it("names its visit — however it is embedded — and when its patient stepped out (D195, D198)", async () => {
+    const one = tenantWith({ answer: () => ({ data: { ...detailRow, visit: { id: "v-1" } } }) });
+    expect(await getAppointment(one.tenant, "a-1")).toMatchObject({ visitId: "v-1" });
+    const listed = tenantWith({
+      answer: () => ({ data: { ...detailRow, visit: [{ id: "v-2" }], stepped_out_at: "2026-10-13T05:00:00Z" } }),
+    });
+    expect(await getAppointment(listed.tenant, "a-1")).toMatchObject({
+      visitId: "v-2",
+      steppedOutAt: "2026-10-13T05:00:00Z",
+    });
+    const none = tenantWith({ answer: () => ({ data: { ...detailRow, visit: [] } }) });
+    expect(await getAppointment(none.tenant, "a-1")).toMatchObject({ visitId: null });
   });
 
   it("names who cancelled it, says when its patient is archived, and reads a booker gone as no one", async () => {
@@ -675,6 +693,8 @@ describe("listQueue (plan §11.4)", () => {
       arrived_at: "2026-10-13T04:40:00+00:00",
       started_at: null,
       completed_at: null,
+      stepped_out_at: "2026-10-13T04:50:00+00:00",
+      visit: [],
     };
     const { tenant, queries, argsOf } = tenantWith({ answer: () => ({ data: [row] }) });
     expect(await listQueue(tenant, {})).toEqual([
@@ -685,6 +705,8 @@ describe("listQueue (plan §11.4)", () => {
         arrivedAt: "2026-10-13T04:40:00+00:00",
         startedAt: null,
         completedAt: null,
+        steppedOutAt: "2026-10-13T04:50:00+00:00",
+        visitId: null,
       },
     ]);
     expect(queries).toHaveLength(1);

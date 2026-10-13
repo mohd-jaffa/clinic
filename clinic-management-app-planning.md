@@ -278,6 +278,13 @@ earlier lines are never rewritten.
 | D189 | **Every test passes locally before CI and before a release** (the user): "make sure these tests pass locally first before the deployment and CI run". `npm run verify` runs, on this machine and in CI's order, everything CI runs: lint, format, types, coverage, the security checks, the build, E2E, the speed checks and the smoke test. A git pre-push hook runs it and refuses the push when anything fails; a push is never sent with `--no-verify`. A release also needs `npm run test:speed` passed locally on the load seed before it is tagged. CI and the release workflow then run the same again. | 2026-10-12 |
 | D190 | **A screen opened again shows what its page was just read with, and is not read twice** (the user, "go ahead and fix it"): the data a page arrives with replaces what the browser kept from the last visit, so nothing older flashes first and the browser does not ask the API for it again. A list starts again from its first page. A page brought back by Back or Forward is the one read when it was first opened, so it changes nothing: the screen shows what the browser has and asks again. | 2026-10-13 |
 | D191 | **A list's tab or filter shows its own rows, never the last one's** (the user, chosen over fixing Brio as well): while what is searched changes within one tab or filter, the last rows stay on screen until the new ones arrive; another tab or filter shows its own rows if they have been read, and loading rows while they come. Brio showed the last tab's rows under the new tab's name until the answer came. | 2026-10-13 |
+| D192 | **Sending in while a doctor has someone in asks, and may keep both** (the user, for a dentist working two chairs): "Rahul Mehta is still with Maya Rao" offers **Mark done and send in** (everyone with that doctor marked done, one transaction) or **Keep both in**. A doctor may have more than one patient in; each sits in the lake. Sent without a choice while someone is in, `send_in` refuses (`DOCTOR_ROOM_TAKEN`), so a second desk cannot slip past the question. | 2026-10-13 |
+| D193 | **Anyone with `appointments.edit` may press Next patient** (the user: "in cases where staffs are there, can the staff click next patient as doctors can be busy?"): beside each patient in the lake and the With doctor column, on a doctor's queue and on All doctors, and in the visit screen. Done and Send in stay, for when the desk wants someone else next. | 2026-10-13 |
+| D194 | **Next patient leaves you where you pressed it** (the user): from the visit screen, the next patient's visit opens; from the queue, the queue stays and the lake shows them. With no one waiting the visit closes, a card says so, and the visit screen goes back to the queue. | 2026-10-13 |
+| D195 | **R6.1's visit screen is its header and controls** (the user): `/visits/[id]` with the patient (name, age and sex, number), token, doctor, alerts, Open or Done, and **Done** and **Next patient**; opened from the patient's name in the lake, a With doctor row, or **Open visit** in the appointment's detail (`visits.view`). R6.2 adds its sections. | 2026-10-13 |
+| D196 | **With two in, Next patient finishes only the patient it is for** (the user): the visit on screen, or the lake patient it sits beside; the other chair's patient stays in. Then the doctor's lowest waiting token is sent in. Pressed twice for the same patient, it sends in one. With the room free it sends in the lowest token, once. | 2026-10-13 |
+| D197 | **Back to waiting removes an empty visit, and keeps one with anything recorded** (the user): with nothing recorded (from R6.2: vitals, notes, a prescription), the visit Send in opened is removed, so the booking can still be cancelled or marked a no-show. With anything recorded it stays open and continues when they are sent in again; that appointment then ends only with Done (`APPOINTMENT_HAS_VISIT`). | 2026-10-13 |
+| D198 | **A waiting patient may be marked Stepped out** (the user: "in some case the patient in the queue wont be present there so someone else is sent in and later that guy is sent in"): from the appointment's detail (`appointments.edit`), they keep their token and place in Waiting, shown "Stepped out", and Next patient skips them; **Send in** still works on them, and **Back** clears it. `appointments.stepped_out_at`, cleared when they are sent in or their appointment changes status. | 2026-10-13 |
 
 ## 3. Users and roles
 
@@ -948,8 +955,8 @@ doctors); a doctor sees their own.
 
 | Column | Holds | Actions |
 |---|---|---|
-| **Waiting** | Arrived, by token: name, token, booked time or "Walk-in", fee paid or not, wait so far. | **Send in** · No-show · Cancel |
-| **With doctor** | The patient in the room. | **Done** · Back to waiting |
+| **Waiting** | Arrived, by token: name, token, booked time or "Walk-in", fee paid or not, wait so far; "Stepped out" for one away (D198). | **Send in** · Stepped out / Back · No-show · Cancel |
+| **With doctor** | The patients in the room — more than one for a doctor working two chairs (D192). | **Done** · **Next patient** · Back to waiting |
 | **Still to come** | Booked for later today. | Arrived · No-show |
 | **To bill** (`payments.view`) | Finished visits waiting for checkout, from any day (§15.6). | **Bill** · No charge |
 | **Done** | Finished today and settled (billed or no charge). | — |
@@ -960,12 +967,23 @@ doctors); a doctor sees their own.
 - **Done** (`appointments.edit`): the appointment goes `COMPLETED` and its visit
   closes — whatever was or was not recorded — and the patient moves to **To
   bill**, or straight to **Done** when there is nothing to bill (§15.6).
-- **Next patient** — the doctor's one button, on their queue and in the visit
-  workspace: marks the patient with them Done and sends in the lowest waiting
-  token, in one transaction (`next_patient`). A doctor can run a session with
-  this button alone — or never touch the app.
+- **Next patient** — beside each patient with the doctor, on the queue and in
+  the visit screen, for anyone with `appointments.edit` (D193): marks that
+  patient Done — only that one, with two in (D196) — and sends in the
+  doctor's lowest waiting token not stepped out, in one transaction
+  (`next_patient`). With the room free it sends in the lowest token. From the
+  visit screen the next patient's visit opens; from the queue the queue stays
+  (D194). A doctor can run a session with this button alone — or never touch
+  the app.
 - Sending in a patient while another is still with that doctor asks first
-  ("Rahul is still with Dr. Maya — mark him done?").
+  ("Rahul Mehta is still with Maya Rao"): **Mark done and send in**, or **Keep
+  both in** for a second chair (D192).
+- **Back to waiting** (the detail): the patient waits again with their token;
+  the visit Send in opened is removed while nothing is recorded on it, and
+  kept to continue once something is (D197).
+- **Stepped out** (the detail, D198): a waiting patient away for a moment
+  keeps their token and place; Next patient skips them until **Back**. Send in
+  still works on them.
 - A patient still "With doctor" when the day ends heads the next day's queue,
   to be marked done.
 - Phone: stacked, as the shaped screen (§32.1, D168) — the patients with a
@@ -978,9 +996,9 @@ doctors); a doctor sees their own.
 
 **R5.5** builds the queue's Waiting, With doctor, Still to come and Done,
 **Add walk-in** (D171, D175) and **Arrived**, each giving the token on its
-card (D173). **Send in**, **Done**, **Back to waiting** and **Next patient**
-come with the visit (R6.1); To bill and the fee at arrival with billing
-(R8.1, R8.6).
+card (D173). **Send in**, **Done**, **Back to waiting**, **Stepped out** and
+**Next patient** come with the visit (R6.1, D192 – D198); To bill and the fee
+at arrival with billing (R8.1, R8.6).
 
 Refreshes every `QUEUE_REFRESH_MS` (15 s) and on focus; realtime is later
 (D34).
@@ -1015,7 +1033,10 @@ status `OPEN` → `COMPLETED`, and a **billing state** (§15.6).
   from a patient's profile (**New visit**) when there is no appointment.
 - **Closes by itself** with **Done** or **Next patient**. A visit may close
   with nothing recorded: the app never makes a doctor fill anything in to
-  finish a consultation (D43).
+  finish a consultation (D43). It closes as **To bill** (§15.6).
+- **Back to waiting** removes a visit with nothing recorded on it, and keeps
+  one with anything recorded, to continue when the patient is sent in again;
+  that appointment then ends only with Done (D197).
 - **Who records:** the doctor, or an assistant typing for them — vitals and
   notes with `visits.create`/`visits.edit`, the prescription with
   `prescriptions.write` (D45) — during the visit or after it closes.
@@ -1722,6 +1743,7 @@ appointments          id · clinic_id · patient_id · doctor_id · source (BOOK
                       · local_date (set by trigger, clinic timezone) · status
                       · token_number · arrived_at · started_at · completed_at
                       · notes · cancel_reason · cancelled_at · cancelled_by · reminded_at
+                      · stepped_out_at (only while arrived, D198)
                       · idempotency_key · created_by · updated_by
                       EXCLUDE USING gist (doctor_id WITH =, appointment_slot(scheduled_at,
                         duration_minutes) WITH &&)
@@ -1798,7 +1820,7 @@ expenses              id · clinic_id · category_id · description · amount_pa
 | `dashboard_summary()`, `report_daily(date)` (with the day-end collection summary), `report_monthly(month)` (with by doctor) | §17, §18. |
 | `register_clinic`, `invite_member`, `accept_invite`, `update_member`, `set_member_active` | accounts and team. |
 | `create_appointment`, `update_appointment`, `change_appointment_status`, `add_walk_in`, `mark_arrived` (token, optional fee bill) | appointments. |
-| `send_in`, `mark_done`, `next_patient` (each opens or closes the visit with the appointment) | the queue (§11.4). |
+| `send_in`, `mark_done`, `next_patient`, `back_to_waiting` (each opens, closes or removes the visit with the appointment), `mark_stepped_out` | the queue (§11.4; D192 – D198). |
 | `start_visit` (from a profile), `save_vitals`, `save_prescription`, `save_prescription_template` | visits. |
 | `import_patients(rows)` | one import batch (§10.5): validated, numbered, audited. |
 | `create_bill`, `void_bill`, `mark_no_charge`, `record_payment`, `void_payment` | money. |
@@ -1892,7 +1914,7 @@ take an `Idempotency-Key` header.
 | Subscription | `GET /api/subscription` (state, dates, prices, contact, history — owner) · `GET /api/subscription/payments/[id]/receipt.pdf` |
 | Patients | `POST /api/patients` · `POST /api/patients/search` (the list, a page at a time: the words, the tab and the cursor in the body, D98) · `POST /api/patients/matches` (the mobile in the body, D98) · `GET, PATCH /api/patients/[id]` · `POST /api/patients/[id]/archive` · `POST /api/patients/[id]/restore` · `GET /api/patients/[id]/summary` (where they stand: the next appointment, D166; each part only with its permission) · `GET /api/patients/[id]/timeline` (their history, a page at a time: appointments, D167; each part only with its permission) · `GET /api/patients/[id]/last-prescription` · `GET, POST /api/patients/import` (the owner's: the import's limits, D128; a batch) · `POST /api/patients/import/matches` (the clinic's patients on a batch's mobiles, in the body, D98) · `GET, POST /api/patients/[id]/alerts` · `PATCH /api/patients/[id]/alerts/[alertId]` |
 | Appointments | `GET, POST /api/appointments` (the calendar's days, `?from&to&doctorId`, at most a week; a booking, with a new patient in its body when one is added, D145) · `GET /api/appointments/booked` (a doctor's taken times on a day, D147) · `GET, PATCH /api/appointments/[id]` (its detail, D160; its notes, or moved, D161) · `POST /api/appointments/[id]/status` (confirmed, scheduled, a no-show — `appointments.edit` — or cancelled with its reason — `appointments.cancel`, D162) · `POST /api/appointments/[id]/arrived` (the token, D173) · `POST /api/appointments/[id]/reminded` (a reminder noted, D180) · `POST /api/appointments/walk-in` (once per key, the token, D171, D173) |
-| Queue | `GET /api/queue` (today's: still to come, arrived, with a doctor, done — and anyone still with a doctor from before; `?doctorId`, D170) · `POST /api/queue/send-in` · `POST /api/queue/done` · `POST /api/queue/next` |
+| Queue | `GET /api/queue` (today's: still to come, arrived, with a doctor, done — and anyone still with a doctor from before; `?doctorId`, D170) · `POST /api/queue/send-in` (what becomes of those in, D192) · `POST /api/queue/done` · `POST /api/queue/next` (D193, D196) · `POST /api/queue/waiting` (back to waiting, D197) · `POST /api/queue/stepped-out` (D198) |
 | Visits | `POST /api/visits` · `GET, PATCH /api/visits/[id]` · `PUT /api/visits/[id]/vitals` · `POST /api/visits/[id]/no-charge` |
 | Prescriptions | `GET, PUT /api/visits/[id]/prescription` · `GET /api/visits/[id]/prescription.pdf` · `GET /api/prescriptions/medicines?q=` · `GET, POST /api/prescription-templates` · `PATCH /api/prescription-templates/[id]` |
 | Treatments | `GET, POST /api/treatments` · `PATCH /api/treatments/[id]` · `POST /api/treatments/[id]/status` |
@@ -2431,7 +2453,7 @@ in the row's one commit (D136).
 
 | ID | Work | Source | Waits on | Status |
 |---|---|---|---|---|
-| R6.1 | `0018_visits`: visits (billing state), vitals, `send_in`, `mark_done`, `next_patient`; Send in, Done and Next patient in the queue and the workspace | §11.4, §12.1, §28.5 | — | TODO |
+| R6.1 | `0018_visits`: visits (billing state), vitals, `send_in`, `mark_done`, `next_patient`; Send in, Done and Next patient in the queue and the workspace (D192 – D198: a second chair, Next patient for the desk, Back to waiting, Stepped out, the visit screen's header) | §11.4, §12.1, §28.5 | — | DONE (2026-10-13) |
 | R6.2 | Visit workspace: alerts, vitals, complaint/diagnosis/notes, follow-up, per-section saves | §12.2 | — | TODO |
 | R6.3 | `0019_prescriptions`: items, advice, medicine suggestions, allergy warning; the doctor's own, or typed with `prescriptions.write` (`entered_by`) | §13, §8.2 | — | TODO |
 | R6.4 | `lib/pdf` letterhead (A4 and A5, footer) and the prescription PDF; share, download, print | §13, §33 | — | TODO |

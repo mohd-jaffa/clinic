@@ -1,6 +1,19 @@
 "use client";
 
-import { Ban, CalendarClock, Check, DoorOpen, NotebookPen, UserRound, UserX } from "lucide-react";
+import {
+  Ban,
+  CalendarClock,
+  Check,
+  CheckCheck,
+  DoorOpen,
+  LogIn,
+  LogOut,
+  NotebookPen,
+  Stethoscope,
+  Undo2,
+  UserRound,
+  UserX,
+} from "lucide-react";
 
 import { Button, LinkButton } from "@/components/ui/button";
 import { DetailList, type Detail } from "@/components/ui/detail-list";
@@ -9,7 +22,7 @@ import { Sheet } from "@/components/ui/sheet";
 import { SkeletonRows } from "@/components/ui/skeleton";
 import { StatusPill } from "@/components/ui/status-pill";
 import { UI_TEXT } from "@/constants/messages";
-import { patientRoute } from "@/constants/navigation";
+import { patientRoute, visitRoute } from "@/constants/navigation";
 import { APPOINTMENT_STATUS_LABELS, APPOINTMENT_STATUS_TONES } from "@/constants/statuses";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { ReadOnlyNote } from "@/features/subscription/components/ReadOnlyNote";
@@ -21,6 +34,7 @@ import { actionsFor, NO_ACTIONS } from "../actions";
 import { kindOf, timeOf } from "../describe";
 import { useAppointment } from "../hooks/useAppointment";
 import { useArrival } from "../hooks/useArrival";
+import { useBackToWaiting, useDone, useSendIn, useStepOut } from "../hooks/useQueueMoves";
 import { useStatusChange } from "../hooks/useStatusChange";
 import { RemindButton } from "./RemindButton";
 import type { AppointmentDetail, CalendarAppointment } from "../types";
@@ -61,13 +75,16 @@ function detailsOf(appointment: CalendarAppointment, detail: AppointmentDetail |
  * what its status allows the one looking: **Arrived** on its day, giving the
  * token (D164); **Remind on WhatsApp** a booking still to come (D179);
  * **Confirm**, **Reschedule** (or **Edit notes** once it cannot move),
- * **No-show** once its time has come, **Cancel appointment**. An archived
- * patient's appointment says why it offers nothing (D103); a read-only
- * clinic, why nothing can change — though a reminder may still be sent
- * (D181).
+ * **No-show** once its time has come, **Cancel appointment**; the queue's
+ * moves — **Send in** and **Stepped out** or **Back** for a patient waiting,
+ * **Done** and **Back to waiting** for one in (D197, D198) — and **Open
+ * visit** once there is one (D195). An archived patient's appointment says
+ * why it offers nothing but its visit (D103); a read-only clinic, why nothing
+ * can change — though a reminder may still be sent (D181), and a visit read.
  *
  * It opens on what the calendar already holds, and fills in as the rest
- * arrives. Arrived, Confirm and No-show close it, with a card (D165, D173).
+ * arrives. Arrived, Confirm, No-show and the queue's moves close it, with a
+ * card (D165, D173).
  */
 export function AppointmentSheet({
   appointment,
@@ -93,15 +110,80 @@ export function AppointmentSheet({
   const detail = query.data;
   const status = useStatusChange(appointment, onClose);
   const arrival = useArrival(appointment, onClose);
+  const moved = detail ?? appointment;
+  const sending = useSendIn(appointment, { onDone: onClose });
+  const marking = useDone(moved, onClose);
+  const returning = useBackToWaiting(moved, onClose);
+  const stepping = useStepOut(appointment, onClose);
   const offered = detail && membership ? actionsFor(detail, membership) : undefined;
-  const any = offered !== undefined && Object.values(offered).some(Boolean);
-  // A view-only clinic changes nothing, but a reminder is sharing what is there (D181).
-  const actions = offered && readOnly ? { ...NO_ACTIONS, remind: offered.remind } : offered;
+  const any = offered !== undefined && Object.values({ ...offered, openVisit: false }).some(Boolean);
+  // A view-only clinic changes nothing, but a reminder is sharing what is there (D181), and a visit is read.
+  const actions =
+    offered && readOnly ? { ...NO_ACTIONS, remind: offered.remind, openVisit: offered.openVisit } : offered;
 
   let footer;
   if (actions && Object.values(actions).some(Boolean)) {
     footer = (
       <div role="group" aria-label={words.actions} className="flex flex-wrap gap-2">
+        {actions.sendIn && (
+          <Button
+            label={UI_TEXT.queue.sendIn}
+            icon={LogIn}
+            size="sm"
+            loading={sending.sending}
+            onClick={() => void sending.sendIn()}
+          />
+        )}
+        {actions.done && (
+          <Button
+            label={UI_TEXT.queue.done}
+            icon={CheckCheck}
+            size="sm"
+            loading={marking.marking}
+            onClick={() => void marking.done()}
+          />
+        )}
+        {actions.openVisit && (
+          <LinkButton
+            href={visitRoute(detail!.visitId!)}
+            label={UI_TEXT.queue.openVisit}
+            accessibleName={UI_TEXT.queue.openVisitOf(appointment.patientName)}
+            icon={Stethoscope}
+            variant={actions.done || actions.sendIn ? "secondary" : "primary"}
+            size="sm"
+          />
+        )}
+        {actions.backToWaiting && (
+          <Button
+            label={UI_TEXT.queue.backToWaiting}
+            icon={Undo2}
+            variant="secondary"
+            size="sm"
+            loading={returning.moving}
+            onClick={() => void returning.backToWaiting()}
+          />
+        )}
+        {actions.stepOut && (
+          <Button
+            label={UI_TEXT.queue.stepOut}
+            icon={LogOut}
+            variant="secondary"
+            size="sm"
+            loading={stepping.stepping}
+            onClick={() => void stepping.stepOut()}
+          />
+        )}
+        {actions.stepBack && (
+          <Button
+            label={UI_TEXT.queue.stepBack}
+            aria-label={UI_TEXT.queue.stepBackOf(appointment.patientName)}
+            icon={DoorOpen}
+            variant="secondary"
+            size="sm"
+            loading={stepping.stepping}
+            onClick={() => void stepping.stepBack()}
+          />
+        )}
         {actions.arrive && (
           <Button
             label={UI_TEXT.queue.arrived}

@@ -71,6 +71,12 @@ export interface ConfirmCard {
   /** What the confirm button's chip holds; a check unless it says otherwise. */
   confirmIcon?: LucideIcon;
   cancelLabel?: string;
+  /**
+   * A second way to go ahead, beside the confirm button: "Keep both in" by
+   * "Mark done and send in" (D192). Its `onClick` runs, and the card answers
+   * `false`, as for Cancel.
+   */
+  secondary?: ResponseAction;
   /** `danger` for what destroys or voids: a coral card and button, and the focus on Cancel. */
   tone?: "danger";
 }

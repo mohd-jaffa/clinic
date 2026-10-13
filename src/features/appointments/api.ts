@@ -32,6 +32,7 @@ import type {
   CalendarAppointmentRow,
   PatientAppointment,
   QueueAppointment,
+  VisitLink,
 } from "./types";
 
 /**
@@ -187,6 +188,12 @@ const DOCTOR_AND_TYPE =
   "doctor:doctors!appointments_doctor_id_clinic_id_fkey(member:clinic_members(profile:profiles!clinic_members_user_id_fkey(full_name))), " +
   "type:appointment_types!appointments_appointment_type_id_clinic_id_fkey(name)";
 const PATIENT = "patient:patients!appointments_patient_id_clinic_id_fkey";
+/** An appointment's visit (plan §12.1), through the visit's foreign key — read as the member, so only with `visits.view`. */
+const VISIT = "visit:visits!visits_appointment_id_clinic_id_fkey(id)";
+
+/** The id of an appointment's visit, however PostgREST embedded it. */
+export const visitIdOf = (visit: VisitLink): string | null =>
+  Array.isArray(visit) ? (visit[0]?.id ?? null) : (visit?.id ?? null);
 
 /** What the calendar reads of each appointment, its patient, its doctor's name and its type's, in one query. */
 const CALENDAR_COLUMNS = `${OWN_COLUMNS}, ${PATIENT}(full_name, patient_number, phone), ${DOCTOR_AND_TYPE}`;
@@ -198,7 +205,8 @@ const HISTORY_COLUMNS = `${CALENDAR_COLUMNS}, cancel_reason`;
 const DETAIL_COLUMNS =
   `${OWN_COLUMNS}, appointment_type_id, notes, created_at, cancelled_at, cancel_reason, ` +
   `${PATIENT}(full_name, patient_number, phone, archived_at), ${DOCTOR_AND_TYPE}, ` +
-  "booker:profiles!appointments_created_by_fkey(full_name), canceller:profiles!appointments_cancelled_by_fkey(full_name)";
+  "booker:profiles!appointments_created_by_fkey(full_name), canceller:profiles!appointments_cancelled_by_fkey(full_name), " +
+  `stepped_out_at, ${VISIT}`;
 
 /** A row as the calendar reads it, in the shape every screen holds. */
 function toCalendarAppointment(row: CalendarAppointmentRow): CalendarAppointment {
@@ -270,6 +278,8 @@ export async function getAppointment(tenant: Tenant, id: string): Promise<Appoin
     cancelledAt: row.cancelled_at,
     cancelledBy: row.canceller?.full_name ?? null,
     cancelReason: row.cancel_reason,
+    visitId: visitIdOf(row.visit),
+    steppedOutAt: row.stepped_out_at,
   };
 }
 
@@ -435,8 +445,8 @@ export async function markReminded(tenant: Tenant, id: string, requestId?: strin
 /** What today's queue holds (plan §11.4): those still to come, arrived, with a doctor, and done — none cancelled. */
 const QUEUE_STATUSES: readonly AppointmentStatus[] = ["SCHEDULED", "CONFIRMED", "ARRIVED", "IN_PROGRESS", "COMPLETED"];
 
-/** An appointment in the queue: the calendar's, and when it arrived, went in and was done. */
-const QUEUE_COLUMNS = `${CALENDAR_COLUMNS}, arrived_at, started_at, completed_at`;
+/** An appointment in the queue: the calendar's, when it arrived, went in and was done, whether it stepped out, and its visit. */
+const QUEUE_COLUMNS = `${CALENDAR_COLUMNS}, arrived_at, started_at, completed_at, stepped_out_at, ${VISIT}`;
 
 /**
  * Today's queue (plan §11.4; D168, D170): today's appointments still to come,
@@ -444,7 +454,8 @@ const QUEUE_COLUMNS = `${CALENDAR_COLUMNS}, arrived_at, started_at, completed_at
  * before, who heads it — one doctor's or every doctor's, by time. Read as the
  * member, so a doctor finds only their own patients' (D3). One query, served
  * by the index on (clinic_id, local_date, scheduled_at) — or the doctor's —
- * and the partial one on those in progress.
+ * and the partial one on those in progress; each one's visit, for those who
+ * may read visits, by the visit's unique appointment.
  */
 export async function listQueue(tenant: Tenant, { doctorId }: QueueQuery): Promise<QueueAppointment[]> {
   let query = tenant.supabase
@@ -461,12 +472,16 @@ export async function listQueue(tenant: Tenant, { doctorId }: QueueQuery): Promi
       arrived_at: string | null;
       started_at: string | null;
       completed_at: string | null;
+      stepped_out_at: string | null;
+      visit: VisitLink;
     })[]
   ).map((row) => ({
     ...toCalendarAppointment(row),
     arrivedAt: row.arrived_at,
     startedAt: row.started_at,
     completedAt: row.completed_at,
+    steppedOutAt: row.stepped_out_at,
+    visitId: visitIdOf(row.visit),
   }));
 }
 

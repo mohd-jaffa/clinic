@@ -3,7 +3,6 @@
 import { BellOff, ChevronDown, Eye, Info, Pencil, Plus, TriangleAlert } from "lucide-react";
 import { useState, type ReactNode } from "react";
 
-import { AlertChip } from "@/components/ui/alert-chip";
 import { Button, IconButton } from "@/components/ui/button";
 import { Disclosure } from "@/components/ui/disclosure";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -23,6 +22,7 @@ import { useApiMutation } from "@/lib/query/useApiMutation";
 import { AlertsClient } from "../api.client";
 import { useAlerts } from "../hooks/useAlerts";
 import type { Patient, PatientAlert } from "../types";
+import { AlertChips } from "./AlertChips";
 import { AlertSheet } from "./AlertSheet";
 
 const { alerts: words } = UI_TEXT;
@@ -57,17 +57,7 @@ export function PatientAlerts({ patient }: { patient: Patient }) {
     <div className="flex flex-wrap items-center gap-2">
       {active.length > 0 ? (
         // Its own items in the row, so Alerts follows the last chip rather than taking a line.
-        <ul aria-label={words.title} className="contents">
-          {active.map((alert) => (
-            <li key={alert.id} className="max-w-full">
-              <AlertChip
-                label={alert.label}
-                kind={ALERT_KIND_LABELS[alert.kind]}
-                tone={alert.kind === "ALLERGY" ? "danger" : "note"}
-              />
-            </li>
-          ))}
-        </ul>
+        <AlertChips alerts={active} />
       ) : (
         query.data && <span className="text-small text-land-muted">{words.none}</span>
       )}

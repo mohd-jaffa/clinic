@@ -286,6 +286,26 @@ describe("a confirmation", () => {
   });
 });
 
+describe("a confirmation with a second way to go ahead (D192)", () => {
+  it("runs the second action and answers no, so the screen goes on its own way", async () => {
+    const respond = mount();
+    const keep = vi.fn();
+    let answer: Promise<boolean>;
+    act(() => {
+      answer = respond.confirm({
+        title: "Rahul Mehta is still with Maya Rao",
+        confirmLabel: "Mark done and send in",
+        secondary: { label: "Keep both in", onClick: keep },
+      });
+    });
+    const card = screen.getByRole("alertdialog", { name: "Rahul Mehta is still with Maya Rao" });
+    expect(within(card).getByRole("button", { name: "Mark done and send in" })).toHaveFocus();
+    await userEvent.click(within(card).getByRole("button", { name: "Keep both in" }));
+    expect(keep).toHaveBeenCalledOnce();
+    await expect(answer!).resolves.toBe(false);
+  });
+});
+
 describe("one card at a time", () => {
   it("lets a graver card replace a lighter one, and a lighter one wait", async () => {
     const respond = mount();

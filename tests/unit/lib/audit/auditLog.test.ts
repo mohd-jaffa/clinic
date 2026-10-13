@@ -10,7 +10,7 @@ const { server, captureError } = vi.hoisted(() => ({
 vi.mock("@/lib/supabase/server", () => ({ createSupabaseServiceRoleClient: () => server.fake.client }));
 vi.mock("@/lib/audit/errorLog", () => ({ captureError }));
 
-const { logActionSafe } = await import("@/lib/audit/auditLog");
+const { logActionSafe, logActionsSafe } = await import("@/lib/audit/auditLog");
 
 const tenant = { clinicId: "clinic-1", actorId: "user-1" } as Tenant;
 
@@ -71,5 +71,43 @@ describe("logActionSafe", () => {
 
     await logActionSafe(tenant, { action: "CREATE", entityType: "services", entityId: null });
     expect(captureError).toHaveBeenLastCalledWith(expect.objectContaining({ reference: undefined }));
+  });
+});
+
+describe("logActionsSafe", () => {
+  it("writes the rows of one change in one insert, each with the tenant's clinic and actor", async () => {
+    await logActionsSafe(tenant, [
+      { action: "STATUS_CHANGE", entityType: "appointments", entityId: "a-1", requestId: "req_3" },
+      { action: "CREATE", entityType: "visits", entityId: "v-1", changes: { status: { from: null, to: "OPEN" } } },
+    ]);
+    const calls = server.fake.find("audit_logs", "insert")!.calls;
+    expect(calls).toHaveLength(1);
+    expect(calls[0][1]).toEqual([
+      expect.objectContaining({ clinic_id: "clinic-1", actor_id: "user-1", entity_id: "a-1", request_id: "req_3" }),
+      expect.objectContaining({
+        clinic_id: "clinic-1",
+        actor_id: "user-1",
+        entity_id: "v-1",
+        changes: { status: { from: null, to: "OPEN" } },
+      }),
+    ]);
+  });
+
+  it("writes nothing when nothing changed", async () => {
+    await logActionsSafe(tenant, []);
+    expect(server.fake.find("audit_logs", "insert")).toBeUndefined();
+  });
+
+  it("logs rows it could not write instead of failing the request, naming the first", async () => {
+    server.answer = { error: postgrestError("23514") };
+    await expect(
+      logActionsSafe(tenant, [{ action: "DELETE", entityType: "visits", entityId: "v-2", requestId: "req_4" }]),
+    ).resolves.toBeUndefined();
+    expect(captureError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        reference: "req_4",
+        context: { action: "DELETE", entityType: "visits", entityId: "v-2" },
+      }),
+    );
   });
 });

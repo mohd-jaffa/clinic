@@ -61,7 +61,9 @@ export function cleanTextLimit(sql: string, table: string, column: string): numb
 
 /** The bounds of a column's `check (column between min and max)`. */
 export function betweenBounds(sql: string, table: string, column: string): { min: number; max: number } {
-  const match = new RegExp(`check \\(${column} between (\\d+) and (\\d+)\\)`).exec(columnLine(sql, table, column));
+  const match = new RegExp(`check \\(${column} between (\\d+(?:\\.\\d+)?) and (\\d+(?:\\.\\d+)?)\\)`).exec(
+    columnLine(sql, table, column),
+  );
   if (!match) throw new Error(`${table}.${column} has no between check`);
   return { min: Number(match[1]), max: Number(match[2]) };
 }

@@ -7,11 +7,13 @@ import { aQueueAppointment } from "@tests/support/appointments";
 import { authStub } from "@tests/support/auth";
 import { Providers } from "@tests/support/providers";
 
-const { client } = vi.hoisted(() => ({ client: { arrive: vi.fn(), remind: vi.fn() } }));
+const { client } = vi.hoisted(() => ({
+  client: { arrive: vi.fn(), remind: vi.fn(), sendIn: vi.fn(), done: vi.fn(), next: vi.fn() },
+}));
 vi.mock("@/features/appointments/api.client", () => ({ AppointmentsClient: client }));
 vi.mock("@/features/auth/AuthProvider", () => ({ useAuth: () => authStub() }));
 
-const { ComingRow, DoneRow, QueueSection, tokenNumeral, WaitingRow, WithDoctorRow } =
+const { ComingRow, DoneRow, InRoomButtons, NextPatientButton, QueueSection, tokenNumeral, WaitingRow, WithDoctorRow } =
   await import("@/features/appointments/components/QueueRows");
 
 // Now, in Kochi: Tuesday 13 October 2026, 11:00 AM.
@@ -21,6 +23,9 @@ const onOpen = vi.fn();
 beforeEach(() => {
   vi.clearAllMocks();
   client.arrive.mockResolvedValue({ id: "a-1", patientId: "p-1", doctorId: "d-1", token: 6 });
+  client.sendIn.mockResolvedValue({ visitId: "v-1" });
+  client.done.mockResolvedValue({ appointmentId: "a-1" });
+  client.next.mockResolvedValue({ sent: null });
 });
 
 const inList = (row: ReactNode) =>
@@ -55,6 +60,20 @@ describe("QueueSection (D168)", () => {
     expect(screen.getByText("No one is waiting")).toBeInTheDocument();
     expect(screen.queryByRole("list")).not.toBeInTheDocument();
   });
+
+  it("offers what may be done about an empty section beside its line (D196)", () => {
+    render(
+      <QueueSection
+        title="With doctor"
+        count={0}
+        empty="No one is with the doctor"
+        action={<button>Next patient</button>}
+      >
+        {null}
+      </QueueSection>,
+    );
+    expect(screen.getByRole("button", { name: "Next patient" })).toBeInTheDocument();
+  });
 });
 
 describe("WaitingRow (D168)", () => {
@@ -65,7 +84,9 @@ describe("WaitingRow (D168)", () => {
       token: 4,
       arrivedAt: "2026-10-13T05:05:00Z",
     });
-    const { rerender } = inList(<WaitingRow appointment={walkIn} now={now} showDoctor onOpen={onOpen} />);
+    const { rerender } = inList(
+      <WaitingRow appointment={walkIn} now={now} showDoctor inRoom={[]} canMove={false} onOpen={onOpen} />,
+    );
     expect(screen.getByRole("listitem")).toHaveTextContent("Token 04Rohan MehtaWalk-in · 25 min · Maya Rao");
     await userEvent.click(screen.getByRole("button", { name: "Rohan Mehta" }));
     expect(onOpen).toHaveBeenCalledWith(walkIn);
@@ -82,30 +103,75 @@ describe("WaitingRow (D168)", () => {
             })}
             now={now}
             showDoctor={false}
+            inRoom={[]}
+            canMove={false}
             onOpen={onOpen}
           />
         </ul>
       </Providers>,
     );
     expect(screen.getByRole("listitem")).toHaveTextContent("Rohan Mehta9:00 AM · Just now");
+    expect(screen.queryByRole("button", { name: "Send Rohan Mehta in" })).not.toBeInTheDocument();
+  });
+
+  it("says a patient stepped out, quieter, first on their line (D198)", () => {
+    const away = aQueueAppointment({
+      status: "ARRIVED",
+      token: 6,
+      arrivedAt: "2026-10-13T05:05:00Z",
+      steppedOutAt: "2026-10-13T05:20:00Z",
+    });
+    inList(<WaitingRow appointment={away} now={now} showDoctor={false} inRoom={[]} canMove={false} onOpen={onOpen} />);
+    expect(screen.getByRole("listitem")).toHaveTextContent("Rohan MehtaStepped out · 9:00 AM · 25 min");
+  });
+
+  it("sends them in from the row, for whoever may (D172, D192)", async () => {
+    const waiting = aQueueAppointment({ status: "ARRIVED", token: 4, arrivedAt: "2026-10-13T05:05:00Z" });
+    inList(<WaitingRow appointment={waiting} now={now} showDoctor={false} inRoom={[]} canMove onOpen={onOpen} />);
+    await userEvent.click(screen.getByRole("button", { name: "Send Rohan Mehta in" }));
+    expect(client.sendIn).toHaveBeenCalledWith({ appointmentId: "a-1" });
+    expect(onOpen).not.toHaveBeenCalled();
   });
 });
 
 describe("WithDoctorRow", () => {
   it("says who is in, with which doctor, and for how long — a doctor gone named so", async () => {
     const inside = aQueueAppointment({ status: "IN_PROGRESS", token: 3, startedAt: "2026-10-13T05:17:00Z" });
-    const { rerender } = inList(<WithDoctorRow appointment={inside} now={now} onOpen={onOpen} />);
+    const { rerender } = inList(<WithDoctorRow appointment={inside} now={now} canMove={false} onOpen={onOpen} />);
     expect(screen.getByRole("listitem")).toHaveTextContent("Token 03Rohan MehtaWith Maya Rao · 13 min");
     await userEvent.click(screen.getByRole("button", { name: "Rohan Mehta" }));
     expect(onOpen).toHaveBeenCalledWith(inside);
     rerender(
       <Providers>
         <ul>
-          <WithDoctorRow appointment={{ ...inside, doctorName: null }} now={now} onOpen={onOpen} />
+          <WithDoctorRow appointment={{ ...inside, doctorName: null }} now={now} canMove={false} onOpen={onOpen} />
         </ul>
       </Providers>,
     );
     expect(screen.getByRole("listitem")).toHaveTextContent("With No longer on the team");
+  });
+
+  it("opens the visit for whoever reads visits, and offers Done and Next patient on the row (D193, D195)", async () => {
+    const inside = aQueueAppointment({ status: "IN_PROGRESS", token: 3, visitId: "v-3" });
+    inList(<WithDoctorRow appointment={inside} now={now} canMove onOpen={onOpen} />);
+    expect(screen.getByRole("link", { name: "Rohan Mehta" })).toHaveAttribute("href", "/visits/v-3");
+    await userEvent.click(screen.getByRole("button", { name: "Mark Rohan Mehta done" }));
+    expect(client.done).toHaveBeenCalledWith("a-1");
+    await userEvent.click(screen.getByRole("button", { name: "Next patient after Rohan Mehta" }));
+    expect(client.next).toHaveBeenCalledWith({ doctorId: "d-1", appointmentId: "a-1" });
+  });
+});
+
+describe("InRoomButtons and NextPatientButton (D193, D196)", () => {
+  it("mark the patient in done or move on, and send in the lowest token with the room free", async () => {
+    render(
+      <Providers>
+        <InRoomButtons appointment={aQueueAppointment({ status: "IN_PROGRESS" })} />
+        <NextPatientButton doctorId="d-1" doctorName={null} />
+      </Providers>,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Send in No longer on the team's next patient" }));
+    expect(client.next).toHaveBeenCalledWith({ doctorId: "d-1", appointmentId: undefined });
   });
 });
 

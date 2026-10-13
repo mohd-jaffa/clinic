@@ -66,6 +66,10 @@ export interface CalendarAppointmentRow {
  */
 export interface AppointmentDetail extends CalendarAppointment {
   typeId: string;
+  /** Its visit, once sent in (plan §12.1) — read only with `visits.view`. */
+  visitId: string | null;
+  /** When a waiting patient stepped out (D198), or not. */
+  steppedOutAt: string | null;
   patientArchived: boolean;
   notes: string | null;
   bookedAt: string;
@@ -84,6 +88,8 @@ export interface AppointmentDetailRow extends Omit<CalendarAppointmentRow, "pati
   cancelled_at: string | null;
   cancel_reason: string | null;
   patient: { full_name: string; patient_number: number; phone: string; archived_at: string | null };
+  stepped_out_at: string | null;
+  visit: VisitLink;
   booker: { full_name: string } | null;
   canceller: { full_name: string } | null;
 }
@@ -107,6 +113,40 @@ export interface QueueAppointment extends CalendarAppointment {
   arrivedAt: string | null;
   startedAt: string | null;
   completedAt: string | null;
+  /** When a waiting patient stepped out (D198): Next patient skips them. */
+  steppedOutAt: string | null;
+  /** Their visit, once sent in — read only with `visits.view` (D195). */
+  visitId: string | null;
+}
+
+/**
+ * An appointment's visit as PostgREST embeds it through the visit's foreign
+ * key: one row, or a list of at most one — none when there is no visit, or
+ * the member may not read visits.
+ */
+export type VisitLink = { id: string } | { id: string }[] | null;
+
+/** Send in answered (D192): the visit the patient is in. */
+export interface SentIn {
+  visitId: string;
+}
+
+/** Who Next patient sent in (D196): their appointment, visit, token and name, for the card and the next visit. */
+export interface NextSent {
+  appointmentId: string;
+  visitId: string;
+  token: number | null;
+  patientName: string;
+}
+
+/** Next patient answered: who went in — or no one, with no one waiting. */
+export interface NextPatient {
+  sent: NextSent | null;
+}
+
+/** Stepped out, or back (D198): since when, or not. */
+export interface SteppedOut {
+  steppedOutAt: string | null;
 }
 
 /** What a walk-in or an arrival answers (D173): the appointment, its patient and doctor, and the token given. */

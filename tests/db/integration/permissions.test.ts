@@ -7,6 +7,7 @@ import { withClinicRoute } from "@/features/auth/guard";
 import { addDaysKey, dayHour, todayKey } from "@/lib/dates/calendar";
 import {
   addMember,
+  admin,
   registerClinic,
   removeAll,
   setMemberStatus,
@@ -15,7 +16,7 @@ import {
 } from "@tests/support/integration";
 
 /**
- * The permission matrix, so far (plan §34.3, R1.11, R3.8, R4.7, R5.1): every
+ * The permission matrix, so far (plan §34.3, R1.11, R3.8, R4.7, R5.1, R6.1): every
  * permission the schema enforces yet, allowed and refused — by the route
  * guard, and by RLS or a function with the member's own token. Each phase
  * adds the rows its tables bring; the patients routes themselves are asked in
@@ -343,6 +344,80 @@ describe("appointments.view, .create, .edit and .cancel, by the guard, RLS and t
     expect((await status(changer, id, "CONFIRMED")).error).toBeNull();
     expect((await status(changer, id, "CANCELLED")).error?.hint).toBe("AUTH_PERMISSION_DENIED");
     expect((await status(canceller, id, "CANCELLED")).error).toBeNull();
+  });
+});
+
+describe("visits.view and the queue's moves, by the guard, RLS and the 0018 functions", () => {
+  let nurse: SignedIn & { memberId: string };
+  let appointmentId: string;
+  let doctorId: string;
+
+  beforeAll(async () => {
+    nurse = await addMember(clinic.clinicId, { permissions: ["patients.view", "appointments.view", "visits.view"] });
+    const { supabase } = clinic.owner.tenant;
+    const { data: patient } = await supabase
+      .rpc("create_patient", {
+        p_patient: { full_name: "Visit Matrix", phone: "+919876543213", date_of_birth: "1990-04-12", gender: "MALE" },
+        p_idempotency_key: randomUUID(),
+      })
+      .single<{ patient_id: string }>();
+    const [{ data: type }, { data: doctor }] = await Promise.all([
+      supabase.from("appointment_types").select("id").eq("name", "Consultation").single(),
+      supabase.from("doctors").select("id").eq("member_id", clinic.owner.session.membership!.id).single(),
+    ]);
+    doctorId = doctor!.id as string;
+    const { data: walkIn } = await supabase
+      .rpc("add_walk_in", {
+        p_walk_in: { patient_id: patient!.patient_id, doctor_id: doctorId, appointment_type_id: type!.id },
+        p_idempotency_key: randomUUID(),
+      })
+      .single<{ appointment_id: string }>();
+    appointmentId = walkIn!.appointment_id;
+  });
+
+  it("lets visits.view through the guard to a visit, and no one without it", async () => {
+    await expect(ask(nurse, "visits.view", "GET")).resolves.toMatchObject({ status: 200 });
+    await expect(ask(receptionist, "visits.view", "GET")).resolves.toMatchObject({ status: 403 });
+  });
+
+  it("moves the queue only with appointments.edit — not with visits.view", async () => {
+    for (const [name, args] of [
+      ["send_in", { p_appointment_id: appointmentId }],
+      ["mark_done", { p_appointment_id: appointmentId }],
+      ["back_to_waiting", { p_appointment_id: appointmentId }],
+      ["mark_stepped_out", { p_appointment_id: appointmentId, p_out: true }],
+      ["next_patient", { p_doctor_id: doctorId }],
+    ] as const) {
+      const { error } = await nurse.tenant!.supabase.rpc(name, args);
+      expect(error?.hint, name).toBe("AUTH_PERMISSION_DENIED");
+    }
+    const { error } = await clinic.owner.tenant.supabase.rpc("send_in", { p_appointment_id: appointmentId });
+    expect(error).toBeNull();
+  });
+
+  it("reads visits and vitals with visits.view, and none with appointments.view alone", async () => {
+    const { data: visit } = await admin()
+      .from("visits")
+      .select("id, patient_id")
+      .eq("appointment_id", appointmentId)
+      .single();
+    await admin()
+      .from("vitals")
+      .insert({ clinic_id: clinic.clinicId, patient_id: visit!.patient_id, visit_id: visit!.id, spo2: 98 });
+    for (const table of ["visits", "vitals"]) {
+      const { data: seen } = await nurse.tenant!.supabase.from(table).select("id");
+      expect(seen, table).toHaveLength(1);
+      const { data: unseen } = await receptionist.tenant!.supabase.from(table).select("id");
+      expect(unseen, table).toEqual([]);
+    }
+  });
+
+  it("writes neither table directly, for anyone", async () => {
+    const { error } = await clinic.owner.tenant.supabase
+      .from("visits")
+      .update({ notes: "Planted" })
+      .eq("appointment_id", appointmentId);
+    expect(error?.code).toBe("42501");
   });
 });
 

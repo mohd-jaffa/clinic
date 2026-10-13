@@ -60,4 +60,21 @@ describe("AppointmentsClient (plan §30)", () => {
     const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
     expect([url, init.method]).toEqual(["/api/appointments/a-1/reminded", "POST"]);
   });
+
+  it("moves the queue, each move's ids in the body (plan §11.4)", async () => {
+    mockFetch.mockResolvedValue({ ok: true, status: 200, json: async () => ({ data: {} }) });
+    await AppointmentsClient.sendIn({ appointmentId: "a-1", others: "KEEP" });
+    await AppointmentsClient.done("a-1");
+    await AppointmentsClient.next({ doctorId: "d-1", appointmentId: "a-1" });
+    await AppointmentsClient.backToWaiting("a-1");
+    await AppointmentsClient.stepOut({ appointmentId: "a-1", out: true });
+    const sent = (mockFetch.mock.calls as [string, RequestInit][]).map(([url, init]) => [url, init.method, init.body]);
+    expect(sent).toEqual([
+      ["/api/queue/send-in", "POST", JSON.stringify({ appointmentId: "a-1", others: "KEEP" })],
+      ["/api/queue/done", "POST", JSON.stringify({ appointmentId: "a-1" })],
+      ["/api/queue/next", "POST", JSON.stringify({ doctorId: "d-1", appointmentId: "a-1" })],
+      ["/api/queue/waiting", "POST", JSON.stringify({ appointmentId: "a-1" })],
+      ["/api/queue/stepped-out", "POST", JSON.stringify({ appointmentId: "a-1", out: true })],
+    ]);
+  });
 });

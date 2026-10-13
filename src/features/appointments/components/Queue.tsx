@@ -1,9 +1,9 @@
 "use client";
 
-import { CheckCheck, Footprints } from "lucide-react";
+import { CheckCheck, Footprints, Stethoscope } from "lucide-react";
 import { useState } from "react";
 
-import { Button } from "@/components/ui/button";
+import { Button, LinkButton } from "@/components/ui/button";
 import { ChoiceChips } from "@/components/ui/choice-chips";
 import { CoastHeader } from "@/components/ui/coast-header";
 import { Disclosure } from "@/components/ui/disclosure";
@@ -14,7 +14,7 @@ import { RowList } from "@/components/ui/row";
 import { SkeletonRows } from "@/components/ui/skeleton";
 import { QUEUE_REFRESH_MS } from "@/constants/limits";
 import { UI_TEXT } from "@/constants/messages";
-import { ADD_FORMS } from "@/constants/navigation";
+import { ADD_FORMS, visitRoute } from "@/constants/navigation";
 import { hasAccess } from "@/constants/permissions";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { ReadOnlyNote } from "@/features/subscription/components/ReadOnlyNote";
@@ -31,7 +31,16 @@ import { useQueue } from "../hooks/useQueue";
 import { minutesSince, queueSections } from "../queue";
 import type { QueueAppointment } from "../types";
 import { AppointmentPanel } from "./AppointmentPanel";
-import { ComingRow, DoneRow, QueueSection, tokenNumeral, WaitingRow, WithDoctorRow } from "./QueueRows";
+import {
+  ComingRow,
+  DoneRow,
+  InRoomButtons,
+  NextPatientButton,
+  QueueSection,
+  tokenNumeral,
+  WaitingRow,
+  WithDoctorRow,
+} from "./QueueRows";
 import { WalkInSheet } from "./WalkInSheet";
 
 const { queue, appointment: words } = UI_TEXT;
@@ -48,8 +57,12 @@ const { queue, appointment: words } = UI_TEXT;
  * (D67) — opens its sheet (D171). It is read again every 15 s and on focus
  * (D34), and the minutes waited count on in between.
  *
- * Send in, Done and Next patient come with the visit (R6.1); To bill, with
- * billing (R8.6).
+ * The queue's moves (R6.1; D192 – D198): **Send in** on each waiting row,
+ * asking first while the doctor has someone in; **Done** and **Next patient**
+ * beside each patient in — in the lake, and the With doctor column — and
+ * **Next patient** alone on one doctor's queue with the room free. A patient
+ * in opens their visit for whoever reads visits. To bill comes with billing
+ * (R8.6).
  */
 export function Queue() {
   const { membership } = useAuth();
@@ -66,8 +79,14 @@ export function Queue() {
   const adds = canAdd && !readOnly;
   const edits = membership !== null && hasAccess(membership, "appointments.edit");
   const arrives = edits && !readOnly;
+  const moves = edits && !readOnly;
+  const readsVisits = membership !== null && hasAccess(membership, "visits.view");
   const showDoctor = !doctorId;
   const open = (appointment: QueueAppointment) => opened.show(appointment);
+  // One doctor's queue with the room free and someone waiting: Next patient sends in their lowest token (D196).
+  const shownDoctor = doctors.find((doctor) => doctor.id === doctorId);
+  const callsNext = moves && shownDoctor !== undefined && withDoctor.length === 0 && waiting.length > 0;
+  const nextFree = callsNext && <NextPatientButton doctorId={shownDoctor.id} doctorName={shownDoctor.name} />;
 
   let body;
   if (query.data === undefined && query.error != null) {
@@ -88,6 +107,8 @@ export function Queue() {
               appointment={appointment}
               now={now}
               showDoctor={showDoctor}
+              inRoom={withDoctor}
+              canMove={moves}
               onOpen={open}
             />
           ))}
@@ -97,9 +118,10 @@ export function Queue() {
           title={queue.withDoctor}
           count={withDoctor.length}
           empty={queue.noneWithDoctor}
+          action={nextFree}
         >
           {withDoctor.map((appointment) => (
-            <WithDoctorRow key={appointment.id} appointment={appointment} now={now} onOpen={open} />
+            <WithDoctorRow key={appointment.id} appointment={appointment} now={now} canMove={moves} onOpen={open} />
           ))}
         </QueueSection>
         <QueueSection title={queue.stillToCome} count={stillToCome.length} empty={queue.noneToCome}>
@@ -160,7 +182,9 @@ export function Queue() {
           {query.data !== undefined && (
             <div className="grid gap-3 md:hidden">
               {withDoctor.length === 0 ? (
-                <Lake label={queue.withDoctor} title={queue.roomFree} detail={queue.roomFreeHint} />
+                <Lake label={queue.withDoctor} title={queue.roomFree} detail={queue.roomFreeHint}>
+                  {nextFree}
+                </Lake>
               ) : (
                 withDoctor.map((appointment) => (
                   <Lake
@@ -173,7 +197,24 @@ export function Queue() {
                       appointment.doctorName ?? words.formerDoctor,
                       queue.minutes(minutesSince(appointment.startedAt, now)),
                     )}
-                  />
+                    onOpen={() => open(appointment)}
+                  >
+                    {(moves || (readsVisits && appointment.visitId)) && (
+                      <>
+                        {moves && <InRoomButtons appointment={appointment} />}
+                        {readsVisits && appointment.visitId && (
+                          <LinkButton
+                            href={visitRoute(appointment.visitId)}
+                            label={queue.openVisit}
+                            accessibleName={queue.openVisitOf(appointment.patientName)}
+                            icon={Stethoscope}
+                            variant="quiet"
+                            size="sm"
+                          />
+                        )}
+                      </>
+                    )}
+                  </Lake>
                 ))
               )}
             </div>

@@ -141,7 +141,7 @@ test("on a desktop: four columns, a late patient marked, one doctor's queue, and
   await coming.getByRole("button", { name: queue.markArrived("Kiran Das") }).click();
   const waiting = page.getByRole("list", { name: queue.waiting });
   await expect(waiting.getByRole("listitem")).toContainText("Kiran Das");
-  await waiting.getByRole("button", { name: "Kiran Das" }).click();
+  await waiting.getByRole("button", { name: "Kiran Das", exact: true }).click();
   const detail = page.getByRole("dialog", { name: "Kiran Das" });
   await detail.getByRole("button", { name: words.noShow }).click();
   await page

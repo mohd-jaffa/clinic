@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { Permission } from "@/constants/permissions";
-import { actionsFor, isMovable, isRemindable } from "@/features/appointments/actions";
+import { actionsFor, isMovable, isRemindable, NO_ACTIONS } from "@/features/appointments/actions";
 import { anAppointmentDetail } from "@tests/support/appointments";
 
 // Tuesday 13 October 2026, 10:07 AM in Kochi; the appointment is at 9:00 AM.
@@ -21,6 +21,7 @@ describe("isMovable (plan §11.1)", () => {
 describe("actionsFor (plan §11.2; D161 – D164)", () => {
   it("offers a scheduled booking everything its status allows: confirm, reschedule, a no-show once its time has come, cancel", () => {
     expect(actionsFor(anAppointmentDetail(), desk(ALL), now)).toEqual({
+      ...NO_ACTIONS,
       arrive: true,
       remind: true,
       confirm: true,
@@ -45,6 +46,9 @@ describe("actionsFor (plan §11.2; D161 – D164)", () => {
   it("offers notes alone, beside a no-show and cancel, once it cannot move — and nothing but notes when it is over", () => {
     const walkIn = anAppointmentDetail({ source: "WALK_IN", status: "ARRIVED", token: 3 });
     expect(actionsFor(walkIn, desk(ALL), now)).toEqual({
+      ...NO_ACTIONS,
+      sendIn: true,
+      stepOut: true,
       arrive: false,
       remind: false,
       confirm: false,
@@ -54,6 +58,7 @@ describe("actionsFor (plan §11.2; D161 – D164)", () => {
       cancel: true,
     });
     expect(actionsFor(anAppointmentDetail({ status: "CANCELLED" }), desk(ALL), now)).toEqual({
+      ...NO_ACTIONS,
       arrive: false,
       remind: false,
       confirm: false,
@@ -66,6 +71,7 @@ describe("actionsFor (plan §11.2; D161 – D164)", () => {
 
   it("asks appointments.edit for all but cancel, which asks appointments.cancel", () => {
     expect(actionsFor(anAppointmentDetail(), desk(["appointments.cancel"]), now)).toEqual({
+      ...NO_ACTIONS,
       arrive: false,
       remind: false,
       confirm: false,
@@ -77,16 +83,36 @@ describe("actionsFor (plan §11.2; D161 – D164)", () => {
     expect(actionsFor(anAppointmentDetail(), desk(["appointments.edit"]), now).cancel).toBe(false);
   });
 
-  it("offers nothing for an archived patient (D103)", () => {
-    expect(Object.values(actionsFor(anAppointmentDetail({ patientArchived: true }), desk(ALL), now))).toEqual([
-      false,
-      false,
-      false,
-      false,
-      false,
-      false,
-      false,
-    ]);
+  it("offers nothing for an archived patient but their visit (D103)", () => {
+    expect(actionsFor(anAppointmentDetail({ patientArchived: true }), desk(ALL), now)).toEqual(NO_ACTIONS);
+    const seen = anAppointmentDetail({ patientArchived: true, status: "COMPLETED", visitId: "v-1" });
+    expect(actionsFor(seen, desk([...ALL, "visits.view"]), now)).toEqual({ ...NO_ACTIONS, openVisit: true });
+  });
+
+  it("offers Send in and Stepped out to a patient waiting, Back to one stepped out, Done and Back to waiting to one in (D197, D198)", () => {
+    const waiting = anAppointmentDetail({ status: "ARRIVED", token: 4 });
+    expect(actionsFor(waiting, desk(ALL), now)).toMatchObject({ sendIn: true, stepOut: true, stepBack: false });
+    const away = anAppointmentDetail({ status: "ARRIVED", steppedOutAt: "2026-10-13T04:30:00Z" });
+    expect(actionsFor(away, desk(ALL), now)).toMatchObject({ sendIn: true, stepOut: false, stepBack: true });
+    const inRoom = anAppointmentDetail({ status: "IN_PROGRESS", visitId: "v-1" });
+    expect(actionsFor(inRoom, desk(ALL), now)).toMatchObject({
+      done: true,
+      backToWaiting: true,
+      sendIn: false,
+      openVisit: false,
+    });
+    expect(actionsFor(inRoom, desk(["appointments.cancel"]), now)).toMatchObject({ done: false, backToWaiting: false });
+  });
+
+  it("opens the visit for whoever reads visits, and offers no no-show or cancel once one is kept (D195, D197)", () => {
+    const kept = anAppointmentDetail({ status: "ARRIVED", visitId: "v-1" });
+    expect(actionsFor(kept, desk([...ALL, "visits.view"]), now)).toMatchObject({
+      openVisit: true,
+      noShow: false,
+      cancel: false,
+      sendIn: true,
+    });
+    expect(actionsFor(anAppointmentDetail({ visitId: "v-1" }), desk(ALL), now).openVisit).toBe(false);
   });
 
   it("goes by the clock when no time is given", () => {

@@ -6,6 +6,8 @@ import type { ReactNode } from "react";
  * token in display size, their name, a line about them, and what to do next
  * (**Done**, **Next patient**). With no one in, it holds a warm line instead.
  * It is a region named by `label`, so a screen reader can go straight to it.
+ * With `onOpen`, the name opens what there is to know of them — the
+ * appointment's detail, as any queue row does (D172).
  */
 export function Lake({
   label,
@@ -13,6 +15,7 @@ export function Lake({
   leadLabel,
   title,
   detail,
+  onOpen,
   children,
 }: {
   label: string;
@@ -22,6 +25,8 @@ export function Lake({
   leadLabel?: string;
   title: string;
   detail?: string;
+  /** What the name opens, when it opens something. */
+  onOpen?: () => void;
   /** The actions, side by side. */
   children?: ReactNode;
 }) {
@@ -35,7 +40,17 @@ export function Lake({
           </span>
         )}
         <div className="min-w-0">
-          <p className="truncate text-title font-bold">{title}</p>
+          {onOpen ? (
+            <button
+              type="button"
+              onClick={onOpen}
+              className="block max-w-full truncate text-left text-title font-bold underline-offset-4 hover:underline focus-visible:rounded-sm focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-action"
+            >
+              {title}
+            </button>
+          ) : (
+            <p className="truncate text-title font-bold">{title}</p>
+          )}
           {detail && <p className="truncate text-small text-muted tabular-nums">{detail}</p>}
         </div>
       </div>

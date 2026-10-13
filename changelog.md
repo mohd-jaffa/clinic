@@ -2560,3 +2560,90 @@ user chose to fix it here only.
 
 ### Blockers
 - None.
+
+## 2026-10-13 — R6.1 Visits and the queue's moves
+
+The queue now moves patients through the doctor's room, and each visit
+opens and closes with it (plan §11.4, §12.1). Asked of the user first:
+D192 – D198.
+
+### Added
+- **`0018_visits`:**
+  - `visits`: one consultation each, opened by Send in and closed as **To
+    bill** by Done or Next patient, whatever was recorded (D43, D46). Its
+    day in the clinic's timezone; its billing state, with No charge's reason
+    ready for R8.
+  - `vitals`: one set per visit, each reading within `VITAL_LIMITS`
+    (`src/constants/clinical.ts`), recorded from R6.2.
+  - `appointments.stepped_out_at` (D198).
+  - The moves, each one function under the doctor's queue lock, taken
+    before the appointment's row so two desks never cross:
+    - `send_in`: asks what becomes of anyone already in — marked done, or
+      kept in for a second chair — and refuses without a choice
+      (`DOCTOR_ROOM_TAKEN`) (D192).
+    - `mark_done`.
+    - `next_patient`: finishes only the patient it is for, then sends in the
+      doctor's lowest waiting token, skipping anyone stepped out; with the
+      room free it sends in one, once (D196, D198).
+    - `back_to_waiting`: removes an empty visit, keeps one with anything
+      recorded (D197).
+    - `mark_stepped_out` (D198).
+  - `change_appointment_status` refuses to cancel or no-show an appointment
+    whose visit was kept (`APPOINTMENT_HAS_VISIT`), and clears stepped out.
+  - A visit's doctor joins the doctor scope.
+- **Routes** (`appointments.edit`): `POST /api/queue/send-in`, `/done`,
+  `/next`, `/waiting`, `/stepped-out`. `GET /api/visits/[id]`
+  (`visits.view`).
+- **The queue:**
+  - Waiting rows carry **Send in**, with the busy-room card when the doctor
+    has someone in.
+  - The lake and the With doctor column carry **Done** and **Next patient**
+    for anyone with `appointments.edit` (D193). A free room on one doctor's
+    queue offers Next patient.
+  - A patient stepped out is shown so.
+  - A patient in links to their visit for whoever reads visits. On a phone,
+    the lake's name opens the appointment's detail.
+- **The appointment's detail:** Send in, Done, Back to waiting, Stepped out
+  / Back, Open visit.
+- **The visit screen** `/visits/[id]` (D195): the patient, doctor, status
+  and alerts; while they are in, the lake with Done and Next patient. Next
+  patient there opens the next patient's visit, or the queue when no one is
+  waiting (D194). It refreshes as the queue does.
+
+### Changed
+- **The confirm card** may carry a second way to go ahead ("Keep both in").
+- **`logActionsSafe`:** writes a change's several audit rows in one insert.
+- **`AlertChips`:** shared by the profile and the visit.
+- **`Lake`:** takes `onOpen`.
+- **`Row`:** the title keeps at least 8rem. In a narrow column — the
+  queue's four on a desktop — the actions go onto their own line under it,
+  instead of squeezing the name away (found by the desktop E2E).
+- **Plan:** D192 – D198; §11.4, §12.1, §28.4, §28.7 and §30.
+
+### Speed
+- **A queue move:** waits on 3 round trips — the session, the move, the
+  audit rows — within the save budget of 4. No read before the write: the
+  function hands back what it moved.
+- **The visit screen:** waits on 2 — the session, then its one read (the
+  visit with its patient, alerts, doctor and token).
+- **The queue:** still one read; each appointment's visit is embedded,
+  served by the visit's unique appointment index.
+- **Indexes:**
+  - `visits (clinic_id, patient_id, visit_date desc)` and
+    `(clinic_id, doctor_id, visit_date desc)`;
+  - `vitals (clinic_id, patient_id)`;
+  - every foreign key.
+
+### Validation
+- Typecheck, lint, format check passed.
+- Unit and integration tests passed: 2561 tests in 405 files, coverage 100%.
+  - The moves are run against the real database.
+  - Two desks at once send in one patient, and press Next patient for one.
+  - The permission matrix, tenant isolation and read-only cover the moves.
+- E2E passed: 114 at phone and desktop, with axe. The 8 skipped are each
+  for one width only. `queue-moves.spec.ts` is new.
+- Screenshots of the queue, the busy-room card, the detail and the visit
+  screen were checked at phone and desktop width, light and dark.
+
+### Blockers
+- None.

@@ -63,6 +63,9 @@ export function RowToken({ value, label }: { value: string; label?: string }) {
  * it, and what it leads to. With `href` or `onClick` the whole row is the
  * target — its title stretched over it — and `trailing` sits above that
  * target, so a row can open a patient and still carry its own **Send in**.
+ * The title keeps at least 8rem: in a narrow column — the queue's on a
+ * desktop — `trailing` goes onto a line of its own under it, at the end,
+ * rather than squeezing the name away.
  * `detail` is a value read at the row's end — a price, a length — and stays
  * part of the target. A chevron shows where the row goes when nothing else
  * is at its end.
@@ -114,7 +117,7 @@ export function Row({
   return (
     <li
       className={cn(
-        "relative flex min-h-16 items-center gap-3",
+        "relative flex min-h-16 flex-wrap items-center gap-3",
         menu ? "py-2 pr-1" : "rounded-row py-2.5 pr-2 pl-3.5",
         look === "surface" && "bg-surface",
         look === "quiet" && "ring-1 ring-line ring-inset",
@@ -125,7 +128,7 @@ export function Row({
       )}
     >
       {leading && <span className="shrink-0">{leading}</span>}
-      <span className="min-w-0 flex-1">
+      <span className="min-w-32 flex-1">
         {target}
         {subtitle && (
           <span
@@ -136,7 +139,7 @@ export function Row({
         )}
       </span>
       {detail && <span className="shrink-0 font-bold text-ink tabular-nums">{detail}</span>}
-      {trailing && <span className="relative z-[1] flex shrink-0 items-center gap-2">{trailing}</span>}
+      {trailing && <span className="relative z-[1] ml-auto flex shrink-0 items-center gap-2">{trailing}</span>}
       {goes && <ChevronRight size={20} strokeWidth={2.25} aria-hidden="true" className="mr-1.5 shrink-0 text-muted" />}
     </li>
   );

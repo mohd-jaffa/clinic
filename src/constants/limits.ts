@@ -63,6 +63,11 @@ export const TEXT_LIMITS = {
   alertLabel: 100,
   /** A line beside it: "rash, 2019". */
   alertNote: 200,
+  /** What brought them in, and what the doctor found (plan §12.2). */
+  complaint: 1000,
+  diagnosis: 1000,
+  /** A visit's notes: the doctor's longer account. */
+  clinicalNotes: 4000,
 } as const;
 
 /** How many digits a phone number has, mobile or landline, the country code included. */

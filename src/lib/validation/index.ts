@@ -166,6 +166,17 @@ export {
 } from "./schemas/appointments";
 
 export {
+  nextPatientSchema,
+  queueMoveSchema,
+  sendInSchema,
+  steppedOutSchema,
+  type NextPatientPayload,
+  type QueueMovePayload,
+  type SendInPayload,
+  type SteppedOutPayload,
+} from "./schemas/queue";
+
+export {
   closureDaysSchema,
   closureSchema,
   WHOLE_CLINIC,

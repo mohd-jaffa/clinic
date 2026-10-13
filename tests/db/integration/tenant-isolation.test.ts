@@ -35,6 +35,8 @@ const CLINIC_TABLES: readonly { table: string; column: string }[] = [
   { table: "patients", column: "clinic_id" },
   { table: "patient_alerts", column: "clinic_id" },
   { table: "appointments", column: "clinic_id" },
+  { table: "visits", column: "clinic_id" },
+  { table: "vitals", column: "clinic_id" },
   { table: "audit_logs", column: "clinic_id" },
 ];
 
@@ -53,6 +55,7 @@ let developer: SignedIn;
 /** A's patient and their appointment, which B's owner goes looking for. */
 let patientId: string;
 let appointmentId: string;
+let doctorId: string;
 
 beforeAll(async () => {
   [a, b] = await Promise.all([registerClinic({ clinicName: "Clinic A" }), registerClinic({ clinicName: "Clinic B" })]);
@@ -88,6 +91,18 @@ beforeAll(async () => {
     .single<{ appointment_id: string }>();
   if (refused) throw refused;
   appointmentId = appointment.appointment_id;
+  doctorId = doctor!.id as string;
+  // A's visit and its vitals, put in place as the queue and the visit screen leave them.
+  const { data: visit, error: unvisited } = await admin()
+    .from("visits")
+    .insert({ clinic_id: a.clinicId, patient_id: patientId, doctor_id: doctorId, appointment_id: appointmentId })
+    .select("id")
+    .single();
+  if (unvisited) throw unvisited;
+  const { error: unrecorded } = await admin()
+    .from("vitals")
+    .insert({ clinic_id: a.clinicId, patient_id: patientId, visit_id: visit.id, pulse: 72 });
+  if (unrecorded) throw unrecorded;
   developer = await makeDeveloper();
 });
 
@@ -173,12 +188,18 @@ describe("as clinic B's owner, with a valid token", () => {
     expect(archived).toEqual([]);
   });
 
-  it("finds none of A's appointments to change, and books none onto A's patient", async () => {
+  it("finds none of A's appointments to change or move in the queue, and books none onto A's patient", async () => {
     const { supabase } = b.owner.tenant;
     for (const [name, args] of [
       ["change_appointment_status", { p_appointment_id: appointmentId, p_status: "CANCELLED", p_reason: "Planted" }],
       ["mark_arrived", { p_appointment_id: appointmentId }],
       ["update_appointment", { p_appointment_id: appointmentId, p_changes: { notes: "Planted" } }],
+      ["send_in", { p_appointment_id: appointmentId, p_others: "FINISH" }],
+      ["mark_done", { p_appointment_id: appointmentId }],
+      ["back_to_waiting", { p_appointment_id: appointmentId }],
+      ["mark_stepped_out", { p_appointment_id: appointmentId, p_out: true }],
+      ["next_patient", { p_doctor_id: doctorId, p_appointment_id: appointmentId }],
+      ["next_patient", { p_doctor_id: doctorId }],
     ] as const) {
       const { error } = await supabase.rpc(name, args);
       expect(error?.hint, name).toBe("RECORD_NOT_FOUND");

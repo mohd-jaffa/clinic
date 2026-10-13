@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import userEvent from "@testing-library/user-event";
+import { describe, expect, it, vi } from "vitest";
 
 import { Button } from "@/components/ui/button";
 import { Lake } from "@/components/ui/lake";
@@ -30,5 +31,12 @@ describe("Lake", () => {
   it("reads a bare numeral as it is", () => {
     render(<Lake label="Next" lead="08" title="Priya Iyer" />);
     expect(screen.getByText("08")).toHaveTextContent(/^08$/);
+  });
+
+  it("opens what there is to know of them from their name, when told what (D172)", async () => {
+    const onOpen = vi.fn();
+    render(<Lake label="With the doctor: Rohan Mehta" lead="07" title="Rohan Mehta" onOpen={onOpen} />);
+    await userEvent.click(screen.getByRole("button", { name: "Rohan Mehta" }));
+    expect(onOpen).toHaveBeenCalledOnce();
   });
 });

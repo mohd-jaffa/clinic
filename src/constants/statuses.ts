@@ -117,6 +117,37 @@ export const APPOINTMENT_STATUS_TRANSITIONS: Record<AppointmentStatus, readonly 
 export const APPOINTMENT_STATUS_CHANGES = ["SCHEDULED", "CONFIRMED", "CANCELLED", "NO_SHOW"] as const;
 export type AppointmentStatusChange = (typeof APPOINTMENT_STATUS_CHANGES)[number];
 
+/**
+ * What becomes of those already in with a doctor when another is sent in
+ * (D192): marked done first, or kept in — a second chair. `send_in` in 0018.
+ */
+export const SEND_IN_CHOICES = ["FINISH", "KEEP"] as const;
+export type SendInChoice = (typeof SEND_IN_CHOICES)[number];
+
+/** A visit's status (plan §12.1): open while the patient is in, done once closed. */
+export const VISIT_STATUSES = ["OPEN", "COMPLETED"] as const;
+export type VisitStatus = (typeof VISIT_STATUSES)[number];
+export const VISIT_STATUS_LABELS: Record<VisitStatus, string> = { OPEN: "Open", COMPLETED: "Done" };
+export const VISIT_STATUS_TONES: Record<VisitStatus, StatusTone> = { OPEN: "live", COMPLETED: "neutral" };
+
+/** Where a closed visit stands with billing (plan §15.6, D46). */
+export const BILLING_STATUSES = ["TO_BILL", "BILLED", "NO_CHARGE"] as const;
+export type BillingStatus = (typeof BILLING_STATUSES)[number];
+export const BILLING_STATUS_LABELS: Record<BillingStatus, string> = {
+  TO_BILL: "To bill",
+  BILLED: "Billed",
+  NO_CHARGE: "No charge",
+};
+
+/** Why a visit is free (plan §15.6): Other takes a note. */
+export const NO_CHARGE_REASONS = ["REVIEW", "COURTESY", "OTHER"] as const;
+export type NoChargeReason = (typeof NO_CHARGE_REASONS)[number];
+export const NO_CHARGE_REASON_LABELS: Record<NoChargeReason, string> = {
+  REVIEW: "Review",
+  COURTESY: "Courtesy",
+  OTHER: "Other",
+};
+
 /** The paper bills and prescriptions print on (D28). */
 export const PAPER_SIZES = ["A4", "A5"] as const;
 export type PaperSize = (typeof PAPER_SIZES)[number];

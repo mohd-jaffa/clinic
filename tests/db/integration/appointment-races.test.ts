@@ -4,6 +4,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import type { Permission } from "@/constants/permissions";
 import { addWalkIn, bookAppointment, changeAppointment, markArrived } from "@/features/appointments/api";
+import { nextPatient, sendIn } from "@/features/appointments/moves";
 import { addDaysKey, dayHour, todayKey } from "@/lib/dates/calendar";
 import { appointmentChangeSchema, bookingSchema, walkInSchema } from "@/lib/validation";
 import {
@@ -19,10 +20,12 @@ import {
  * Requests that arrive at the same moment (plan §34.1; R5.6, D176): many
  * front desks booking one doctor's time at once, two moves into one slot,
  * arrivals and walk-ins for one doctor at once, and the same booking or
- * walk-in sent twice at once. Each request is its own transaction through
+ * walk-in sent twice at once; two desks moving one doctor's queue at once
+ * (R6.1). Each request is its own transaction through
  * PostgREST, so the database alone keeps them apart — the exclusion
  * constraint (D7), the token counter's row lock (§11.3), the idempotency
- * key's advisory lock (§26) — never a read before the write.
+ * key's advisory lock (§26), the doctor's queue lock (0018) — never a read
+ * before the write.
  */
 type Member = SignedIn & { memberId: string };
 
@@ -292,5 +295,51 @@ describe("tokens at once (plan §11.3, D141)", () => {
     expect(second).toEqual(first);
     const { data } = await admin().from("appointments").select("token_number").eq("idempotency_key", key);
     expect(data).toEqual([{ token_number: first.token }]);
+  });
+});
+
+describe("the queue at once (plan §11.4; D192, D196)", () => {
+  /** Patients walked in to doctor B now, waiting with tokens, in the order given. */
+  async function waitingWithB(patientIds: readonly string[]) {
+    const ids: string[] = [];
+    for (const patientId of patientIds) {
+      const arrival = await addWalkIn(
+        desks[0].tenant!,
+        walkInSchema.parse({ patient: { mode: "FOUND", id: patientId }, doctorId: doctors.B, typeId: consultation }),
+        randomUUID(),
+      );
+      ids.push(arrival.id);
+    }
+    return ids;
+  }
+  const inWithB = async () =>
+    (await admin().from("appointments").select("id").eq("doctor_id", doctors.B).eq("status", "IN_PROGRESS")).data!.map(
+      (row) => row.id as string,
+    );
+
+  it("sends one patient in when two desks send two in at once to a free room, and asks the other", async () => {
+    const [first, second] = await waitingWithB(patients.slice(AT_ONCE, AT_ONCE + 2));
+    const results = await atOnce(2, (desk, index) =>
+      sendIn(desk.tenant!, { appointmentId: index === 0 ? first : second }),
+    );
+    expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+    expect(results.find((result) => result.status === "rejected")).toMatchObject({
+      reason: { code: "DOCTOR_ROOM_TAKEN" },
+    });
+    expect(await inWithB()).toHaveLength(1);
+  });
+
+  it("sends in one next patient when two desks press Next patient for the same patient at once", async () => {
+    const [current] = await inWithB();
+    await waitingWithB(patients.slice(AT_ONCE + 2, AT_ONCE + 4));
+    const results = await atOnce(2, (desk) =>
+      nextPatient(desk.tenant!, { doctorId: doctors.B, appointmentId: current }),
+    );
+    const sent = results.flatMap((result) =>
+      result.status === "fulfilled" && result.value.sent ? [result.value.sent] : [],
+    );
+    expect(results.every((result) => result.status === "fulfilled")).toBe(true);
+    expect(sent).toHaveLength(1);
+    expect(await inWithB()).toEqual([sent[0].appointmentId]);
   });
 });

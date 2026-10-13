@@ -467,10 +467,12 @@ Never `new Date().toISOString().slice(0, 10)`.
   `max(token) + 1`.
 - Closures (holidays, leave) are checked by the booking function.
 - **The front desk runs the queue.** `IN_PROGRESS` and `COMPLETED` are reached
-  only through `send_in`, `mark_done` and `next_patient`, which open and close
-  the visit with the appointment. **Never require a doctor to record anything
-  to finish a consultation** — a visit may close empty; the doctor's only
-  queue control is **Next patient**.
+  only through `send_in`, `mark_done` and `next_patient` (and back through
+  `back_to_waiting`), which open and close the visit with the appointment,
+  each under the doctor's queue lock. **Never require a doctor to record
+  anything to finish a consultation** — a visit may close empty; the doctor's
+  only queue control is **Next patient**, which the desk may press too
+  (D193). A doctor may have more than one patient in (D192).
 
 ---
 
