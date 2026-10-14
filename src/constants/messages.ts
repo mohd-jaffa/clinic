@@ -118,6 +118,8 @@ export const ERROR_MESSAGES = {
   // Prescriptions (plan §13, §8.2 rule 4; D213).
   PRESCRIPTION_NEEDS_REGISTRATION:
     "The doctor’s registration number isn’t on their details yet. Add it in Team, then write the prescription.",
+  PRESCRIPTION_EMPTY: "This prescription has no medicines yet, so there’s nothing to print.",
+  PRESCRIPTION_PDF_FAILED: "The prescription’s PDF couldn’t be made.",
 
   // The browser could not reach the server (plan §21, D55): said by the client, never sent by the server.
   NETWORK_OFFLINE: "You're offline. Try again once the connection is back — what you typed is still here.",
@@ -799,6 +801,44 @@ export const UI_TEXT = {
       `${doctor} has no registration number yet, so a prescription can’t be written in their name.`,
     needsRegistrationHint: "It’s added in Team, with the doctor’s details.",
     openTeam: "Open Team",
+    /** Its PDF (D221, D222): opened to look at and print, or saved. */
+    print: "Print",
+    printOf: (patient: string) => `Print ${patient}’s prescription`,
+    download: "Download",
+    downloadOf: (patient: string) => `Download ${patient}’s prescription`,
+    downloaded: "Prescription downloaded",
+    savedAs: (name: string) => `Saved as “${name}”.`,
+    notDownloaded: "The prescription wasn’t downloaded",
+  },
+
+  /** What the PDFs say (plan §33; D218 – D224). */
+  documents: {
+    /** At the foot of every page (D30). */
+    footer: "Generated with ClinicDesk",
+    page: (page: number, of: number) => `Page ${page} of ${of}`,
+    /** Atop every page after the first: whose it is. */
+    running: (patient: string, about: string, day: string) => `${patient} · ${about} · ${day}`,
+    /** A doctor as the printout names them: "Dr. Maya Rao" — once, should their name already say it. */
+    doctor: (name: string) => (/^dr\.?\s/i.test(name) ? name : `Dr. ${name}`),
+    registration: (number: string) => `Reg. ${number}`,
+    rx: "Rx",
+    diagnosis: "Diagnosis",
+    advice: "Advice",
+    followUp: (day: string) => `Review on ${day}`,
+    prescriptionTitle: (patient: string, day: string) => `Prescription for ${patient}, ${day}`,
+    /** The file a prescription is saved as (D223). */
+    prescriptionFile: (patient: string, day: string) => `${patient} - ${day} - Prescription.pdf`,
+    /** The vitals in one line, each short. */
+    vitals: {
+      bloodPressure: "BP",
+      pulse: "Pulse",
+      temperatureF: "Temp",
+      spo2: "SpO₂",
+      respiratoryRate: "RR",
+      weightKg: "Weight",
+      heightCm: "Height",
+      bmi: "BMI",
+    },
   },
 
   /** The readings of a visit (plan §12.2), with their units. */

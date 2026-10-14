@@ -8,8 +8,16 @@ const { logActionSafe, warn } = vi.hoisted(() => ({ logActionSafe: vi.fn(), warn
 vi.mock("@/lib/audit/auditLog", () => ({ logActionSafe }));
 vi.mock("@/lib/logger", () => ({ logger: { warn, info: vi.fn(), error: vi.fn() } }));
 
-const { getClinic, readLogo, removeLogo, replaceLogo, toClinicProfile, updateClinic } =
-  await import("@/features/clinic/api");
+const {
+  downloadLogo,
+  getClinic,
+  getClinicForDocuments,
+  readLogo,
+  removeLogo,
+  replaceLogo,
+  toClinicProfile,
+  updateClinic,
+} = await import("@/features/clinic/api");
 
 const OLD = "0b6f5a4e-0c2e-4d8b-9f37-1c2d3e4f5a6b";
 const NEW = "7d1e2f3a-4b5c-4d6e-8f70-81920a1b2c3d";
@@ -292,6 +300,40 @@ describe("readLogo", () => {
     ).rejects.toMatchObject({ code: "EXTERNAL_SERVICE_ERROR" });
     await expect(
       readLogo(tenantWith({ answer: () => ({ data: row() }), storage: () => ({ data: new Blob(["text"]) }) }).tenant),
+    ).rejects.toMatchObject({ code: "EXTERNAL_SERVICE_ERROR" });
+  });
+});
+
+describe("getClinicForDocuments (plan §33)", () => {
+  it("reads the clinic once, with where its logo is stored — or none", async () => {
+    const { tenant, queries } = tenantWith({ answer: () => ({ data: row() }) });
+    expect(await getClinicForDocuments(tenant)).toEqual({
+      clinic: expect.objectContaining({ name: "Smile Care", paperSize: "A4", logoUrl: `/api/clinic/logo?v=${OLD}` }),
+      logoPath: `clinics/clinic-1/logo/${OLD}`,
+    });
+    expect(queries).toHaveLength(1);
+    expect(
+      (await getClinicForDocuments(tenantWith({ answer: () => ({ data: row({ logo_path: null }) }) }).tenant)).logoPath,
+    ).toBeNull();
+  });
+});
+
+describe("downloadLogo", () => {
+  it("reads the file at the path it is given, typed by its own first bytes, and nothing of the clinic's row", async () => {
+    const { tenant, queries, storageCalls } = tenantWith({ storage: () => ({ data: new Blob([PNG]) }) });
+    const { file, type } = await downloadLogo(tenant, "clinics/clinic-1/logo/x");
+    expect(type).toBe("image/png");
+    expect(file.size).toBe(PNG.length);
+    expect(queries).toEqual([]);
+    expect(storageCalls).toEqual([{ method: "download", bucket: "clinic-logos", args: ["clinics/clinic-1/logo/x"] }]);
+  });
+
+  it("says so when the file cannot be read, or is not an image", async () => {
+    await expect(
+      downloadLogo(tenantWith({ storage: () => ({ error: { message: "gone" } }) }).tenant, "p"),
+    ).rejects.toMatchObject({ code: "EXTERNAL_SERVICE_ERROR" });
+    await expect(
+      downloadLogo(tenantWith({ storage: () => ({ data: new Blob(["text"]) }) }).tenant, "p"),
     ).rejects.toMatchObject({ code: "EXTERNAL_SERVICE_ERROR" });
   });
 });

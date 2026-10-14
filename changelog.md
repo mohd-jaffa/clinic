@@ -3097,3 +3097,112 @@ name. The user's choices are recorded as D210 – D217:
 
 ### Blockers
 - None.
+
+## 2026-10-14 — R6.4: the prescription's PDF
+
+A saved prescription can be printed and downloaded, as a PDF on the
+clinic's own letterhead, in A4 or A5 by its paper size. The user's choices
+are recorded as D218 – D224:
+- the clinic across the top, the doctor under it with the date;
+- the medicines as a numbered list;
+- black and grey only;
+- Print opens the PDF itself in the viewer; Download saves it;
+- both once saved, Save in their place while typing;
+- the file is "{patient} - {date} - Prescription.pdf";
+- English letters now, Indian scripts later.
+
+Sharing it to WhatsApp comes with the share helper in R6.8 (D183).
+
+### Added
+- **`src/lib/pdf`** (ported from Brio's bill PDF):
+  - `fonts.ts`: Figtree Regular, SemiBold and Bold, read once a process
+    from `public/fonts/pdf` (fetched and cut to Latin and ₹ by
+    `scripts/pdf-fonts.mjs`, with their licence).
+  - `layout.ts`: a composer that lays a document out from the top —
+    wrapped text, a lead and its rest on one line, a row with text set
+    right, rules, the logo — and marks where a page may end. A line may
+    break only between parts (the vitals: "BMI 24.4" stays whole).
+  - `letterhead.ts`: the clinic's logo, name, address and phone.
+  - `render.ts`: laid out on A5's width, scaled to A4; paged at the marks;
+    a running line atop each later page; the signature at the foot of the
+    last page (on a page of its own when there is no room); "Generated with
+    ClinicDesk" and the page number on every page. Black and grey only.
+  - `response.ts`: the PDF answer — inline to open, or attachment to save,
+    named, `no-store`.
+- **`src/features/documents`:** `prescription.ts` (the prescription in its
+  printed words, and its layout), `names.ts` (the file's name), `api.ts`
+  (`getPrescriptionPdf`: the visit and the clinic read at once, then the
+  logo — a WebP logo turned into PNG by sharp, one that cannot be read
+  left out and logged without patient data), the `usePrescriptionDownload`
+  hook and `PrescriptionPdf` (Print and Download).
+- **Route:** `GET /api/visits/[id]/prescription.pdf` (`visits.view`, the
+  doctor scope, a view-only clinic too); `?download=1` to save it. Refused
+  with `PRESCRIPTION_EMPTY` while it has no medicine, and
+  `PRESCRIPTION_NEEDS_REGISTRATION` should the doctor's number be gone.
+- **The Prescription card:** Print and Download at its foot once saved
+  with a medicine on it, for whoever reads the visit; while typing, Save
+  in their place.
+- **Clinic:** `getClinicForDocuments` (the profile and where the logo is,
+  in one query) and `downloadLogo`, which `readLogo` now uses too.
+- **Kit:** `LinkButton` takes `file`: a plain anchor the router never
+  fetches ahead. `lib/download.ts` gains `saveFile`; `saveCsv` uses it.
+- **Words:** `UI_TEXT.documents`, the print and download words in
+  `UI_TEXT.prescription`, `ERROR_MESSAGES.PRESCRIPTION_EMPTY` and
+  `PRESCRIPTION_PDF_FAILED`.
+- **Dependencies:** `pdfkit` 0.17.2 (as Brio) with its types, and `sharp`
+  0.35.5 for the WebP logo — pinned above 0.35.4, which Next brings and
+  `npm audit` flags (a librsvg advisory).
+- **Config:** `next.config.ts` traces `public/fonts/pdf` into every
+  `/api/**/*.pdf` route.
+
+### Changed
+- **Plan:** §13 and §33 say how the PDF looks and opens (D218 – D224):
+  there is no preview sheet, the viewer is the preview (D221). §30 names
+  `?download=1`; §42 keeps Indian scripts in the PDFs for later (D224).
+
+### Speed (plan §37)
+- **The PDF** waits on two round trips after the session: the visit (with
+  its patient, doctor, vitals and prescription in one query) and the
+  clinic at once, then the logo when there is one.
+- **The visit screen** waits on nothing more: Print is a link, and
+  Download asks only when pressed.
+- **Indexes:** no new query shape: the visit by its id, the clinic by its
+  id.
+
+### Found while building
+- **The vitals' line broke inside a reading** ("BMI" at a line's end,
+  "24.4" on the next). It now breaks only between readings.
+- **A loose second page said nothing of whose it was.** Each later page
+  now starts with the patient, their details and the date.
+- **The PDF's new tab is opened by a plain link:** the router would
+  otherwise fetch the PDF ahead, as it does an app screen.
+
+### Tests
+- **Integration** (`prescription-pdf.test.ts`, 7 cases): the PDF itself,
+  inline or as an attachment under its name, `no-store`, in the app's
+  fonts; A5 and A4 by the clinic's paper size; for a reader; refused
+  outside the doctor scope and for another clinic; `PRESCRIPTION_EMPTY`
+  with no prescription or no medicine; `PRESCRIPTION_NEEDS_REGISTRATION`;
+  a WebP logo drawn, and a missing one left out; a view-only clinic's
+  reader still gets it. **Permission** and **isolation** rows for the
+  route.
+- **Unit:** the fonts, the composer and its wrapping, the letterhead, the
+  renderer (real PDFs: paper, scale, pages, the running line, the
+  signature's page, the logo), the response, the prescription's words and
+  layout, the read and its refusals, the logo's paths, the download hook,
+  the buttons, the route, and the card's foot.
+- **E2E** (`prescription-pdf.spec.ts`, phone and desktop, axe): a reader
+  opens Rohan's prescription with Print — a new tab asking for the inline
+  A5 PDF — and downloads it under its name; the doctor typing a change
+  sees Save until it is saved.
+
+### Validation
+- Typecheck, lint, format check passed.
+- Unit and integration tests passed (2934), coverage 100%.
+- E2E passed (phone, desktop), with axe: 121 passed, 9 skipped — 8 run at
+  one width only, and the front-desk journey skipped itself once as the
+  clinic's day closed at midnight; run again after, it passed at both
+  widths.
+
+### Blockers
+- None.

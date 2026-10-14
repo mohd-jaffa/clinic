@@ -203,6 +203,8 @@ export {
   type VitalsPayload,
 } from "./schemas/visits";
 
+export { documentQuerySchema, type DocumentQuery } from "./schemas/documents";
+
 export {
   medicineSearchSchema,
   prescriptionItemSchema,

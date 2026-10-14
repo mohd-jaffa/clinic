@@ -6,6 +6,12 @@ import { describe, expect, it, vi } from "vitest";
 
 import { Button, IconButton, IconLink, LinkButton } from "@/components/ui/button";
 
+// The router's link, marked, so a plain anchor can be told from it.
+vi.mock("next/link", async () => {
+  const { createElement } = await import("react");
+  return { default: (props: Record<string, unknown>) => createElement("a", { "data-router": "", ...props }) };
+});
+
 const chipOf = (button: HTMLElement) => button.querySelector("[data-chip]");
 
 describe("Button", () => {
@@ -141,6 +147,20 @@ describe("LinkButton", () => {
     expect(chat).toHaveAttribute("target", "_blank");
     expect(chat).toHaveAttribute("rel", "noopener noreferrer");
     expect(chat).toHaveClass("w-full");
+  });
+
+  it("goes through the router to a place in the app, but opens a file the server answers with as a plain link", () => {
+    render(
+      <>
+        <LinkButton href="/patients" label="Patients" />
+        <LinkButton href="/api/visits/v-1/prescription.pdf" label="Print" file newTab />
+      </>,
+    );
+    expect(screen.getByRole("link", { name: "Patients" })).toHaveAttribute("data-router");
+    const print = screen.getByRole("link", { name: "Print" });
+    expect(print).not.toHaveAttribute("data-router");
+    expect(print).toHaveAttribute("href", "/api/visits/v-1/prescription.pdf");
+    expect(print).toHaveAttribute("target", "_blank");
   });
 
   it("tells its screen as it is followed, so a card can close on its way", async () => {

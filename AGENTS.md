@@ -510,7 +510,10 @@ The bill and the prescription PDFs (`src/features/documents`, drawn with
 stored**: no table of generated documents, no storage bucket, no cache. They
 print in **A4 or A5** (the clinic's paper size) from one layout tested at both.
 The letterhead carries the clinic's own name, logo, address and phone; the app
-is credited in a small footer only.
+is credited in a small footer only. **Print** opens the PDF itself in the
+browser's viewer; **Download** saves it (plan D221). They are drawn in Figtree,
+Latin only for now (D224), from `public/fonts/pdf`, which `next.config.ts`
+traces into every `/api/**/*.pdf` route.
 
 ---
 

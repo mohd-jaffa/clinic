@@ -16,6 +16,7 @@ import { TEAM_ROUTE } from "@/constants/navigation";
 import { hasAccess } from "@/constants/permissions";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { AlertChips } from "@/features/patients/components/AlertChips";
+import { PrescriptionPdf } from "@/features/documents/components/PrescriptionPdf";
 import { ChangedMeanwhile } from "@/features/visits/components/ChangedMeanwhile";
 import { useVisitSection } from "@/features/visits/hooks/useVisitSection";
 import type { Visit } from "@/features/visits/types";
@@ -69,12 +70,22 @@ export function PrescriptionSection({
 }) {
   if (writes && visit.doctorRegistration !== null) return <PrescriptionForm visit={visit} className={className} />;
   return (
-    <Panel title={words.title} className={className}>
+    <Panel title={words.title} className={className} footer={printout(visit)}>
       <PrescriptionReadout prescription={visit.prescription} />
       <TypedBy prescription={visit.prescription} />
       {writes && <NeedsRegistration doctor={visit.doctorName ?? UI_TEXT.appointment.formerDoctor} />}
     </Panel>
   );
+}
+
+/**
+ * Print and Download, for a prescription saved with a medicine on it, its
+ * doctor with a registration number (D222) — for anyone who reads it, in a
+ * view-only clinic too — or nothing.
+ */
+function printout(visit: Visit) {
+  const printable = (visit.prescription?.items.length ?? 0) > 0 && visit.doctorRegistration !== null;
+  return printable && <PrescriptionPdf visitId={visit.id} patient={visit.patient.name} day={visit.day} />;
 }
 
 /** Who typed it for the doctor, when that was not the doctor (D45). */
@@ -167,7 +178,12 @@ function PrescriptionForm({ visit, className }: { visit: Visit; className?: stri
       title={words.title}
       className={className}
       footer={
-        section.dirty && <Button type="submit" form={formId} label={words.save} size="sm" loading={saving.submitting} />
+        // While typing, Save; once saved, its printout (D222).
+        section.dirty ? (
+          <Button type="submit" form={formId} label={words.save} size="sm" loading={saving.submitting} />
+        ) : (
+          printout(visit)
+        )
       }
     >
       <div className="flex flex-wrap items-center gap-2">

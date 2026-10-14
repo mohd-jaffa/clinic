@@ -140,13 +140,16 @@ export function Button({
  * WhatsApp on a profile. It stays an anchor, so it can be opened in a new tab
  * and read as a link. A place in the app goes through the router; anything
  * else — `tel:`, `wa.me` — is a plain anchor, and `newTab` opens it beside the
- * app without handing it the app's window.
+ * app without handing it the app's window. A `file` the server answers with —
+ * a prescription's PDF — is a plain anchor too, never fetched ahead by the
+ * router.
  */
 export function LinkButton({
   href,
   label,
   accessibleName,
   newTab = false,
+  file = false,
   variant = "primary",
   size = "md",
   icon,
@@ -158,6 +161,7 @@ export function LinkButton({
   /** A fuller name for a screen reader, which must begin with `label`: "Call Meena Gupta". */
   accessibleName?: string;
   newTab?: boolean;
+  file?: boolean;
   variant?: ButtonVariant;
   size?: ButtonSize;
   icon?: LucideIcon;
@@ -173,7 +177,7 @@ export function LinkButton({
     className: cn(className, "active:scale-[0.98]"),
     ...(newTab && { target: "_blank", rel: "noopener noreferrer" }),
   };
-  return href.startsWith("/") ? <Link {...props}>{body}</Link> : <a {...props}>{body}</a>;
+  return href.startsWith("/") && !file ? <Link {...props}>{body}</Link> : <a {...props}>{body}</a>;
 }
 
 const ICON_TONES = {

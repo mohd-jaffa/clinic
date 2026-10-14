@@ -4,6 +4,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { GET as medicinesRoute } from "@/app/api/prescriptions/medicines/route";
 import { PUT as prescriptionRoute } from "@/app/api/visits/[id]/prescription/route";
+import { GET as prescriptionPdfRoute } from "@/app/api/visits/[id]/prescription.pdf/route";
 import type { RouteAccess } from "@/constants/permissions";
 import { withClinicRoute } from "@/features/auth/guard";
 import { addDaysKey, dayHour, todayKey } from "@/lib/dates/calendar";
@@ -18,7 +19,7 @@ import {
 } from "@tests/support/integration";
 
 /**
- * The permission matrix, so far (plan §34.3, R1.11, R3.8, R4.7, R5.1, R6.1, R6.3): every
+ * The permission matrix, so far (plan §34.3, R1.11, R3.8, R4.7, R5.1, R6.1, R6.3, R6.4): every
  * permission the schema enforces yet, allowed and refused — by the route
  * guard, and by RLS or a function with the member's own token. Each phase
  * adds the rows its tables bring; the patients routes themselves are asked in
@@ -478,6 +479,18 @@ describe("a prescription: the visit's doctor or prescriptions.write, by the rout
     return { status: response.status, body: await response.json() };
   }
 
+  /** The prescription's PDF (R6.4), opened by one member: its status, and its type or refusal. */
+  async function print(member: SignedIn) {
+    const request = new Request(`http://localhost/api/visits/${visitId}/prescription.pdf`, {
+      headers: { authorization: `Bearer ${member.session.accessToken}` },
+    });
+    const response = await prescriptionPdfRoute(request, { params: Promise.resolve({ id: visitId }) });
+    const type = response.headers.get("content-type");
+    return type === "application/pdf"
+      ? { status: response.status, type }
+      : { status: response.status, body: await response.json() };
+  }
+
   /** The medicine suggestions, asked by one member. */
   async function suggest(member: SignedIn) {
     const request = new Request(`http://localhost/api/prescriptions/medicines?q=para&doctorId=${doctorId}`, {
@@ -543,6 +556,20 @@ describe("a prescription: the visit's doctor or prescriptions.write, by the rout
       body: { error: { code: "RECORD_NOT_FOUND" } },
     });
     await expect(save(receptionist)).resolves.toMatchObject({
+      status: 403,
+      body: { error: { code: "AUTH_PERMISSION_DENIED" } },
+    });
+  });
+
+  it("prints for whoever reads visits and the visit's doctor; refused without visits.view and outside the scope", async () => {
+    for (const member of [doctor, typist, reader]) {
+      await expect(print(member)).resolves.toEqual({ status: 200, type: "application/pdf" });
+    }
+    await expect(print(otherDoctor)).resolves.toMatchObject({
+      status: 404,
+      body: { error: { code: "RECORD_NOT_FOUND" } },
+    });
+    await expect(print(receptionist)).resolves.toMatchObject({
       status: 403,
       body: { error: { code: "AUTH_PERMISSION_DENIED" } },
     });

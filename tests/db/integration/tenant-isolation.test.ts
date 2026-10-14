@@ -4,6 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { addClosure } from "@/features/clinic/closures";
+import { getPrescriptionPdf } from "@/features/documents/api";
 import { addDaysKey, dayHour, todayKey } from "@/lib/dates/calendar";
 import { getServerEnv } from "@/lib/env/server";
 import {
@@ -261,6 +262,12 @@ describe("as clinic B's owner, with a valid token", () => {
       p_doctor_id: doctorId,
     });
     expect(own).toMatchObject([{ medicine: "Amoxicillin" }]);
+  });
+
+  it("prints none of A's prescriptions (R6.4)", async () => {
+    await expect(
+      getPrescriptionPdf(b.owner.tenant, visitId, { download: false, requestId: "req_test" }),
+    ).rejects.toMatchObject({ code: "RECORD_NOT_FOUND" });
   });
 
   it("reaches none of the platform's tables, nor those only the database reads", async () => {

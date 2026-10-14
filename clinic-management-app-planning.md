@@ -304,6 +304,13 @@ earlier lines are never rewritten.
 | D215 | **A prescription is changed after Done as before it** (the user): by the visit's doctor, or by `prescriptions.write` typing for them; D208's `visits.edit` is for the visit's own sections. `entered_by` and `updated_by` record who. | 2026-10-14 |
 | D216 | **Print the diagnosis is off until the doctor ticks it** (the user), so a diagnosis is printed only by choice (§13). | 2026-10-14 |
 | D217 | **A medicine's duration is typed in days** (the user): 1 to 365; a suggestion fills it. | 2026-10-14 |
+| D218 | **The printed prescription: the clinic on top, the doctor under it** (the user): the letterhead across the top (logo, name, address, phone); under a rule, the doctor's name with their qualifications, specialization and registration number on the left, the date on the right; then the patient, the vitals and the diagnosis when it prints. The signature line stands at the foot of the last page; a later page carries the patient's name and the date at its top. | 2026-10-14 |
+| D219 | **Medicines print as a numbered list** (the user), as on the screen: the name and strength in bold, how it is taken under it, then its instructions — no table, so long names never squeeze at A5. | 2026-10-14 |
+| D220 | **Black and grey only** (the user): the same on any printer, black-and-white included, and photocopied; the logo keeps its own colours. | 2026-10-14 |
+| D221 | **Print opens the PDF itself** (the user), in the browser's or phone's own viewer — the file as it will print, with its own print button; **Download** saves it. No preview sheet in the app: §33's on-screen preview is the viewer. | 2026-10-14 |
+| D222 | **Print and Download once saved** (the user): on the Prescription card once it is saved with a medicine on it — for anyone who reads the visit, a view-only clinic included; while there are unsaved changes, Save takes their place, so a printout never misses what is on the screen. | 2026-10-14 |
+| D223 | **The file is "{patient} - {date} - Prescription.pdf"** (the user): "Rohan Mehta - 14 Oct 2026 - Prescription.pdf", easy to find in Downloads or a chat. | 2026-10-14 |
+| D224 | **The PDF prints English letters now; Indian scripts later** (the user): its font (Figtree) covers Latin, accents and ₹; a name typed in another script prints as blank boxes, so clinics type names in English. Noto fonts for the Indian scripts are in §42. | 2026-10-14 |
 
 ## 3. Users and roles
 
@@ -1153,8 +1160,10 @@ recorded as `entered_by` (§8.2 rule 4, D45):
   and registration number, the patient's name,
   age/gender and number, the date, the vitals recorded, the diagnosis (if the
   doctor chooses to print it), the items, the advice and the follow-up date,
-  and a signature line. **Generated on demand, never stored.** Share (Web
-  Share API with the file), download, print.
+  and a signature line. **Generated on demand, never stored.** Laid out as
+  D218 – D220 say; **Print** opens it in the viewer and **Download** saves it
+  (D221 – D223), on the Prescription card once saved. Sharing it to WhatsApp
+  through the share sheet comes with the share helper in R6.8 (D183).
 
 ## 14. Treatments and follow-ups
 
@@ -1989,7 +1998,7 @@ take an `Idempotency-Key` header.
 | Appointments | `GET, POST /api/appointments` (the calendar's days, `?from&to&doctorId`, at most a week; a booking, with a new patient in its body when one is added, D145) · `GET /api/appointments/booked` (a doctor's taken times on a day, D147) · `GET, PATCH /api/appointments/[id]` (its detail, D160; its notes, or moved, D161) · `POST /api/appointments/[id]/status` (confirmed, scheduled, a no-show — `appointments.edit` — or cancelled with its reason — `appointments.cancel`, D162) · `POST /api/appointments/[id]/arrived` (the token, D173) · `POST /api/appointments/[id]/reminded` (a reminder noted, D180) · `POST /api/appointments/walk-in` (once per key, the token, D171, D173) |
 | Queue | `GET /api/queue` (today's: still to come, arrived, with a doctor, done — and anyone still with a doctor from before; `?doctorId`, D170) · `POST /api/queue/send-in` (what becomes of those in, D192) · `POST /api/queue/done` · `POST /api/queue/next` (D193, D196) · `POST /api/queue/waiting` (back to waiting, D197) · `POST /api/queue/stepped-out` (D198) · `POST /api/queue/urgent` (D201) |
 | Visits | `POST /api/visits` (New visit, D204) · `GET, PATCH /api/visits/[id]` (a section, with the copy read, D206) · `PUT /api/visits/[id]/vitals` · `POST /api/visits/[id]/done` (a profile visit's Done) · `PUT /api/appointments/[id]/vitals` (a waiting patient's, D203) · `POST /api/visits/[id]/no-charge` |
-| Prescriptions | `PUT /api/visits/[id]/prescription` (whole, with the copy read, D210; the visit's own read carries it) · `GET /api/visits/[id]/prescription.pdf` · `GET /api/prescriptions/medicines?q=&doctorId=` (D211) · `GET, POST /api/prescription-templates` · `PATCH /api/prescription-templates/[id]` |
+| Prescriptions | `PUT /api/visits/[id]/prescription` (whole, with the copy read, D210; the visit's own read carries it) · `GET /api/visits/[id]/prescription.pdf` (to open and print; `?download=1` to save, D221) · `GET /api/prescriptions/medicines?q=&doctorId=` (D211) · `GET, POST /api/prescription-templates` · `PATCH /api/prescription-templates/[id]` |
 | Treatments | `GET, POST /api/treatments` · `PATCH /api/treatments/[id]` · `POST /api/treatments/[id]/status` |
 | Follow-ups | `GET /api/follow-ups` · `GET /api/follow-ups/counts` · `POST /api/follow-ups/contacts` |
 | Billing | `GET /api/to-bill` · `GET, POST /api/bills` · `GET /api/bills/[id]` · `POST /api/bills/[id]/void` · `GET /api/bills/[id]/bill.pdf` · `GET, POST /api/payments` · `POST /api/payments/[id]/void` · `GET /api/outstanding` |
@@ -2208,9 +2217,20 @@ pdfkit and bundled fonts (with ₹), on a shared letterhead (`src/lib/pdf`), in
 **A4 or A5** by the clinic's paper size (D28) — one layout that scales, tested
 at both sizes, with the small ClinicDesk footer (D30). A
 PDF is built per request by its route, streamed with `no-store`, and never
-written anywhere. The same data renders an on-screen preview. Sharing uses the
-Web Share API with the file where available, else download; printing opens the
-PDF.
+written anywhere. Printing opens the PDF itself in the browser's or phone's
+viewer, which is its preview (D221); Download saves it (`?download=1`).
+Sharing uses the Web Share API with the file where available, else download
+(R6.8, D183).
+
+- **`src/lib/pdf`:** the faces (Figtree Regular, SemiBold and Bold, static
+  TrueType in `public/fonts/pdf`, cut to Latin and ₹ by
+  `scripts/pdf-fonts.mjs`, D224), a layout composer that wraps text and marks
+  where a page may end, the letterhead, and the renderer: laid out on A5's
+  width and scaled to A4's, paged at those marks, a running line atop each
+  later page, a foot (the signature) on the last, the footer on every page.
+  Black and grey only (D220). A WebP logo is turned into PNG (sharp) for it.
+- **Fonts on the server:** `next.config.ts` traces `public/fonts/pdf` into
+  every `/api/**/*.pdf` route.
 
 ## 34. Testing and coverage
 
@@ -2533,7 +2553,7 @@ in the row's one commit (D136).
 | R6.1 | `0018_visits`: visits (billing state), vitals, `send_in`, `mark_done`, `next_patient`; Send in, Done and Next patient in the queue and the workspace (D192 – D198: a second chair, Next patient for the desk, Back to waiting, Stepped out, the visit screen's header) | §11.4, §12.1, §28.5 | — | DONE (2026-10-13) |
 | R6.2 | `0020_visit_records`; visit workspace: alerts, vitals, complaint/diagnosis/notes, follow-up, per-section saves (D202 – D209: vitals while waiting, New visit, saves refused from an older copy) | §12.2 | — | DONE (2026-10-13) |
 | R6.3 | `0021_prescriptions`: items, advice, medicine suggestions, allergy warning; the doctor's own, or typed with `prescriptions.write` (`entered_by`) (D210 – D217: fields on the visit screen saved together, a suggestion fills the line, Save asks about an allergy, the registration number first) | §13, §8.2 | — | DONE (2026-10-14) |
-| R6.4 | `lib/pdf` letterhead (A4 and A5, footer) and the prescription PDF; share, download, print | §13, §33 | — | TODO |
+| R6.4 | `lib/pdf` letterhead (A4 and A5, footer) and the prescription PDF; download, print (D218 – D224: clinic on top and the doctor under it, a numbered list, black and grey, Print opens the PDF, once saved, the file's name, English letters now); share with R6.8 (D183) | §13, §33 | — | DONE (2026-10-14) |
 | R6.5 | Patient timeline with visits and prescriptions; the patients list's last visit (D101) | §10.3, §10.2 | — | TODO |
 | R6.6 | Integration + E2E: queue → visit → prescription PDF | §34 | — | TODO |
 | R6.7 | `0022_prescription_templates`; Repeat last prescription; prescription templates (save, apply, edit, archive) | §13 | — | TODO |
@@ -2723,7 +2743,9 @@ with its own section here first.
 - **GST billing**; **pre-printed-pad printing** and **80 mm thermal
   receipts** (D28); **Google / phone-OTP sign-in**; **changing the sign-in
   email**; **realtime queue**; **OpenAPI**; **Sentry/BugSnag**; **multiple
-  languages**; **prescription templates**; **a per-clinic temperature unit**.
+  languages**; **prescription templates**; **a per-clinic temperature unit**;
+  **Indian scripts in the PDFs** (Noto Sans for Hindi, Malayalam, Tamil,
+  Telugu, Kannada, Bengali, Gujarati, Punjabi and Odia, D224).
 
 ## 43. Changes from the initial draft
 

@@ -73,6 +73,40 @@ describe("the app's words", () => {
     expect(VALIDATION_MESSAGES.atMostMedicines(30)).toBe("A prescription holds at most 30 medicines.");
   });
 
+  it("names a prescription's printout, and what its PDF says (D218 – D224)", () => {
+    const words = UI_TEXT.prescription;
+    expect([words.printOf("Rohan Mehta"), words.downloadOf("Rohan Mehta")]).toEqual([
+      "Print Rohan Mehta’s prescription",
+      "Download Rohan Mehta’s prescription",
+    ]);
+    // An accessible name begins with the label it names.
+    expect(words.printOf("Rohan Mehta").startsWith(words.print)).toBe(true);
+    expect(words.downloadOf("Rohan Mehta").startsWith(words.download)).toBe(true);
+    expect(words.savedAs("a.pdf")).toBe("Saved as “a.pdf”.");
+
+    const documents = UI_TEXT.documents;
+    expect(documents.footer).toBe("Generated with ClinicDesk");
+    expect(documents.page(2, 3)).toBe("Page 2 of 3");
+    expect(documents.running("Rohan Mehta", "36 y · Male · P-1002", "14 Oct 2026")).toBe(
+      "Rohan Mehta · 36 y · Male · P-1002 · 14 Oct 2026",
+    );
+    // "Dr." once, whether or not their name already says it.
+    expect(["Maya Rao", "Dr. Maya Rao", "dr Maya Rao", "Drishti Rao"].map(documents.doctor)).toEqual([
+      "Dr. Maya Rao",
+      "Dr. Maya Rao",
+      "dr Maya Rao",
+      "Dr. Drishti Rao",
+    ]);
+    expect(documents.registration("KMC 12345")).toBe("Reg. KMC 12345");
+    expect(documents.followUp("Wednesday, 21 Oct 2026")).toBe("Review on Wednesday, 21 Oct 2026");
+    expect(documents.prescriptionTitle("Rohan Mehta", "14 Oct 2026")).toBe("Prescription for Rohan Mehta, 14 Oct 2026");
+    expect(documents.prescriptionFile("Rohan Mehta", "14 Oct 2026")).toBe(
+      "Rohan Mehta - 14 Oct 2026 - Prescription.pdf",
+    );
+    expect(ERROR_MESSAGES.PRESCRIPTION_EMPTY).toMatch(/no medicines yet/);
+    expect(ERROR_MESSAGES.PRESCRIPTION_PDF_FAILED).toMatch(/PDF/);
+  });
+
   it("says what became of a visit, its follow-up and a waiting patient's vitals (D203 – D205)", () => {
     const words = UI_TEXT.visit;
     expect(words.followUpSaved("Tuesday, 20 Oct 2026")).toBe("Review on Tuesday, 20 Oct 2026");

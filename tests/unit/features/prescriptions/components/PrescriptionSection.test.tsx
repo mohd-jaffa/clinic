@@ -314,3 +314,44 @@ describe("PrescriptionSection for whoever writes it (D210)", () => {
     expect(within(section()).queryByRole("status")).not.toBeInTheDocument();
   });
 });
+
+describe("PrescriptionSection's printout (D221, D222)", () => {
+  const print = () => within(section()).queryByRole("link", { name: "Print Asha Iyer’s prescription" });
+  const download = () => within(section()).queryByRole("button", { name: "Download Asha Iyer’s prescription" });
+
+  it("offers Print and Download for a saved prescription with a medicine — to whoever reads it too", () => {
+    const { unmount } = draw({ prescription: aPrescription() }, false);
+    expect(print()).toHaveAttribute("href", "/api/visits/v-1/prescription.pdf");
+    expect(download()).toBeInTheDocument();
+    unmount();
+
+    draw({ prescription: aPrescription() });
+    expect(print()).toBeInTheDocument();
+    expect(download()).toBeInTheDocument();
+    expect(save()).not.toBeInTheDocument();
+  });
+
+  it("has nothing to print with no prescription, no medicine on it, or a doctor with no registration number", () => {
+    for (const [overrides, writes] of [
+      [{ prescription: null }, false],
+      [{ prescription: null }, true],
+      [{ prescription: aPrescription({ items: [] }) }, false],
+      [{ prescription: aPrescription({ items: [] }) }, true],
+      [{ prescription: aPrescription(), doctorRegistration: null }, false],
+      [{ prescription: aPrescription(), doctorRegistration: null }, true],
+    ] as const) {
+      const { unmount } = draw(overrides, writes);
+      expect(print()).not.toBeInTheDocument();
+      expect(download()).not.toBeInTheDocument();
+      unmount();
+    }
+  });
+
+  it("gives way to Save while there are unsaved changes, so a printout never misses what is typed", async () => {
+    draw({ prescription: aPrescription() });
+    await userEvent.type(within(section()).getByRole("textbox", { name: "Advice" }), ". Rest");
+    expect(save()).toBeInTheDocument();
+    expect(print()).not.toBeInTheDocument();
+    expect(download()).not.toBeInTheDocument();
+  });
+});

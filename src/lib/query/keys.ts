@@ -102,6 +102,8 @@ export const apiRoutes = {
     vitals: (id: string) => `/api/visits/${id}/vitals`,
     done: (id: string) => `/api/visits/${id}/done`,
     prescription: (id: string) => `/api/visits/${id}/prescription`,
+    /** Its PDF (D221): to open and print; `?download=1` to save it. */
+    prescriptionPdf: (id: string) => `/api/visits/${id}/prescription.pdf`,
   },
   // Prescriptions (plan §13, §30): this clinic's medicines, as written before (D211).
   prescriptions: {

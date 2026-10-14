@@ -39,6 +39,7 @@ describe("apiRoutes", () => {
 
   it("names a visit's prescription, and the clinic's medicines written before (D210, D211)", () => {
     expect(apiRoutes.visits.prescription("v-1")).toBe("/api/visits/v-1/prescription");
+    expect(apiRoutes.visits.prescriptionPdf("v-1")).toBe("/api/visits/v-1/prescription.pdf");
     expect(apiRoutes.prescriptions.medicines).toBe("/api/prescriptions/medicines");
   });
 

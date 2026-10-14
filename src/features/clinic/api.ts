@@ -47,6 +47,17 @@ export async function getClinic(tenant: Tenant): Promise<ClinicProfile> {
   return toClinicProfile(await findClinic(tenant));
 }
 
+/**
+ * The clinic as a document heads it (plan §33): its profile, and where its
+ * logo is stored, to read beside it — one query.
+ */
+export async function getClinicForDocuments(
+  tenant: Tenant,
+): Promise<{ clinic: ClinicProfile; logoPath: string | null }> {
+  const row = await findClinic(tenant);
+  return { clinic: toClinicProfile(row), logoPath: row.logo_path };
+}
+
 /** The columns a change names, from what the route accepted. */
 function columnsOf({ details, paperSize, feeTiming }: UpdateClinicPayload): Partial<ClinicRow> {
   return {
@@ -154,7 +165,11 @@ export async function removeLogo(tenant: Tenant, requestId?: string): Promise<Cl
 export async function readLogo(tenant: Tenant): Promise<{ file: Blob; type: LogoMimeType }> {
   const { logo_path: path } = await findClinic(tenant);
   if (!path) throw notFoundError();
+  return downloadLogo(tenant, path);
+}
 
+/** The logo stored at `path`, typed by its own first bytes. */
+export async function downloadLogo(tenant: Tenant, path: string): Promise<{ file: Blob; type: LogoMimeType }> {
   const { data: file, error } = await tenant.supabase.storage.from(LOGO_BUCKET).download(path);
   if (error || !file) throw externalServiceError("EXTERNAL_SERVICE_ERROR", undefined, error);
   const type = sniffLogoType(new Uint8Array(await file.slice(0, SIGNATURE_BYTES).arrayBuffer()));
