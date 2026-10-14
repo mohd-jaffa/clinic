@@ -115,6 +115,10 @@ export const ERROR_MESSAGES = {
   VISIT_CHANGED: "Someone saved this part of the visit meanwhile. Their version is shown; what you typed is kept.",
   VISIT_LOAD_FAILED: "This visit couldn't be loaded.",
 
+  // Prescriptions (plan §13, §8.2 rule 4; D213).
+  PRESCRIPTION_NEEDS_REGISTRATION:
+    "The doctor’s registration number isn’t on their details yet. Add it in Team, then write the prescription.",
+
   // The browser could not reach the server (plan §21, D55): said by the client, never sent by the server.
   NETWORK_OFFLINE: "You're offline. Try again once the connection is back — what you typed is still here.",
   NETWORK_UNREACHABLE: "ClinicDesk couldn't be reached. Check the connection and try again.",
@@ -167,6 +171,7 @@ export const VALIDATION_MESSAGES = {
   notBeforeToday: (label: string) => `${label} can’t be before today.`,
   endsBeforeStart: (last: string, first: string) => `${last} can’t be before the ${first.toLowerCase()}.`,
   atMostDays: (max: number) => `It can last at most ${max} days.`,
+  atMostMedicines: (max: number) => `A prescription holds at most ${max} medicines.`,
   permissionsNeedOthers: "Some of these need others ticked too.",
   birthDate: `A date of birth can’t be in the future, or more than ${MAX_PATIENT_AGE} years ago.`,
   invalid: "That value is not valid.",
@@ -748,6 +753,52 @@ export const UI_TEXT = {
     takeVitalsOf: (patient: string) => `Take ${patient}’s vitals`,
     vitalsFor: (patient: string) => `Vitals for ${patient}`,
     vitalsSavedFor: (patient: string) => `Vitals saved for ${patient}`,
+  },
+
+  /** A visit's prescription (plan §13; D210 – D217). */
+  prescription: {
+    title: "Prescription",
+    save: "Save prescription",
+    saved: "Prescription saved",
+    none: "No prescription yet",
+    /** Each medicine's block, in order (D210). */
+    medicineN: (n: number) => `Medicine ${n}`,
+    medicineLabel: "Medicine",
+    strengthLabel: "Strength",
+    doseLabel: "Dose",
+    frequencyLabel: "Frequency",
+    /** The chip that opens a frequency to type (D214), and its field. */
+    otherFrequency: "Other",
+    otherFrequencyLabel: "Frequency, in words",
+    timingLabel: "Timing",
+    daysLabel: "Days",
+    instructionsLabel: "Instructions",
+    adviceLabel: "Advice",
+    printDiagnosis: "Print the diagnosis",
+    printDiagnosisHint: "On the printed prescription. Off until ticked.",
+    printsDiagnosis: "The diagnosis prints on it",
+    addMedicine: "Add medicine",
+    moveUp: (n: number) => `Move medicine ${n} up`,
+    moveDown: (n: number) => `Move medicine ${n} down`,
+    remove: (n: number) => `Remove medicine ${n}`,
+    /** The suggestions under a medicine (D211): this clinic's, as last written. */
+    suggestions: "Medicines written before",
+    days: (n: number) => `${n} day${n === 1 ? "" : "s"}`,
+    /** Allergies, above the prescription and on a line that matches one (plan §10.4, D212). */
+    allergiesLabel: "Allergies",
+    noAllergies: "No allergies recorded",
+    allergy: (labels: string) => `Allergy: ${labels}`,
+    allergyConfirmTitle: "Save it with an allergy?",
+    allergyLine: (medicine: string, labels: string) => `${medicine} matches the allergy to ${labels}`,
+    allergyConfirmBody: (lines: string) => `${lines}. Check it before saving.`,
+    saveAnyway: "Save anyway",
+    /** Who typed it for the doctor (D45). */
+    typedBy: (name: string) => `Typed by ${name}`,
+    /** The doctor has no registration number yet (D213). */
+    needsRegistration: (doctor: string) =>
+      `${doctor} has no registration number yet, so a prescription can’t be written in their name.`,
+    needsRegistrationHint: "It’s added in Team, with the doctor’s details.",
+    openTeam: "Open Team",
   },
 
   /** The readings of a visit (plan §12.2), with their units. */

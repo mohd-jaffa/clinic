@@ -493,6 +493,11 @@ Never `new Date().toISOString().slice(0, 10)`.
   from an older copy (`VISIT_CHANGED`), so two people never overwrite each
   other unseen (plan D202, D206). Once a visit is done, any change needs
   `visits.edit` (D208).
+- **The prescription saves whole** — its medicines, advice and diagnosis
+  tick — by the visit's doctor or `prescriptions.write`, open or done
+  (D210, D215), refused from an older copy like a section, and refused
+  until the doctor has a registration number (D213). Its medicine
+  suggestions are the clinic's own lines, never a drug database (D211).
 - Clinical text is bounded and normalised like every other input (§24).
 - Nothing clinical is deleted; corrections are recorded with `updated_by`.
 

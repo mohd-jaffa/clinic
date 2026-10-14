@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { ERROR_MESSAGES, getErrorMessage, isErrorMessageCode, MAIL_TEXT, UI_TEXT } from "@/constants/messages";
+import {
+  ERROR_MESSAGES,
+  getErrorMessage,
+  isErrorMessageCode,
+  MAIL_TEXT,
+  UI_TEXT,
+  VALIDATION_MESSAGES,
+} from "@/constants/messages";
 
 describe("the app's words", () => {
   it("names the app through one constant (plan D35)", () => {
@@ -46,6 +53,24 @@ describe("the app's words", () => {
     expect(words.stopped(200, 1240)).toMatch(/^The import stopped at 200 of 1,240\./);
     expect([words.column("C", "Mobile No."), words.column("D", "")]).toEqual(["C · Mobile No.", "Column D"]);
     expect([words.row(14, "Rohan"), words.row(15, "")]).toEqual(["Row 14 · Rohan", "Row 15"]);
+  });
+
+  it("names a prescription's medicines, their days, an allergy, who typed it and what it waits for (D210 – D217)", () => {
+    const words = UI_TEXT.prescription;
+    expect([words.medicineN(2), words.moveUp(2), words.moveDown(1), words.remove(3)]).toEqual([
+      "Medicine 2",
+      "Move medicine 2 up",
+      "Move medicine 1 down",
+      "Remove medicine 3",
+    ]);
+    expect([1, 5].map(words.days)).toEqual(["1 day", "5 days"]);
+    expect(words.allergy("Penicillin, Sulfa")).toBe("Allergy: Penicillin, Sulfa");
+    expect(words.allergyConfirmBody(words.allergyLine("Penicillin V", "Penicillin"))).toBe(
+      "Penicillin V matches the allergy to Penicillin. Check it before saving.",
+    );
+    expect(words.typedBy("Priya Nair")).toBe("Typed by Priya Nair");
+    expect(words.needsRegistration("Arjun Shah")).toMatch(/^Arjun Shah has no registration number yet/);
+    expect(VALIDATION_MESSAGES.atMostMedicines(30)).toBe("A prescription holds at most 30 medicines.");
   });
 
   it("says what became of a visit, its follow-up and a waiting patient's vitals (D203 – D205)", () => {

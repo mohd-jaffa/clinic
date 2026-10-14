@@ -148,6 +148,17 @@ export const NO_CHARGE_REASON_LABELS: Record<NoChargeReason, string> = {
   OTHER: "Other",
 };
 
+/** When a medicine is taken (plan §13): around food, or at bedtime. 0021's CHECK. */
+export const PRESCRIPTION_TIMINGS = ["BEFORE_FOOD", "AFTER_FOOD", "WITH_FOOD", "EMPTY_STOMACH", "BEDTIME"] as const;
+export type PrescriptionTiming = (typeof PRESCRIPTION_TIMINGS)[number];
+export const PRESCRIPTION_TIMING_LABELS: Record<PrescriptionTiming, string> = {
+  BEFORE_FOOD: "Before food",
+  AFTER_FOOD: "After food",
+  WITH_FOOD: "With food",
+  EMPTY_STOMACH: "Empty stomach",
+  BEDTIME: "Bedtime",
+};
+
 /** The paper bills and prescriptions print on (D28). */
 export const PAPER_SIZES = ["A4", "A5"] as const;
 export type PaperSize = (typeof PAPER_SIZES)[number];

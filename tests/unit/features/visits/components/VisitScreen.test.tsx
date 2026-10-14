@@ -47,6 +47,8 @@ const aVisit = (overrides: Partial<Visit> = {}): Visit => ({
   patient: { id: "p-1", name: "Asha Iyer", number: 1012, dateOfBirth: "1990-04-12", gender: "FEMALE", archived: false },
   doctorId: "d-1",
   doctorName: "Maya Rao",
+  doctorRegistration: "KMC 12345",
+  prescription: null,
   appointment: { id: "a-1", status: "IN_PROGRESS", token: 7, urgentAt: null },
   alerts: [{ id: "al-1", kind: "ALLERGY", label: "Penicillin", note: null, active: true }],
   complaint: null,
@@ -295,5 +297,66 @@ describe("A visit started from a profile (D204)", () => {
     read.current.data = aVisit({ appointment: null, status: "COMPLETED", completedAt: "2026-10-13T05:20:00Z" });
     draw();
     expect(screen.queryByRole("region", { name: "Visit: Asha Iyer" })).not.toBeInTheDocument();
+  });
+});
+
+describe("VisitScreen's prescription (plan §13; D45, D215)", () => {
+  const prescription = () => screen.getByRole("region", { name: "Prescription" });
+  const adds = () => within(prescription()).queryByRole("button", { name: "Add medicine" });
+  /** The visit's own doctor, who holds no permission to type for anyone. */
+  const ownDoctor = () => {
+    const doctor = authStub({ role: "DOCTOR", permissions: ["patients.view", "visits.view"] });
+    return { ...doctor, membership: { ...doctor.membership!, doctorId: "d-1" } };
+  };
+
+  it("is written by the visit's own doctor, done or not, without prescriptions.write", () => {
+    auth.current = ownDoctor();
+    const { unmount } = draw();
+    expect(adds()).toBeInTheDocument();
+    expect(screen.queryByText(/view-only/)).not.toBeInTheDocument();
+    unmount();
+
+    read.current.data = aVisit({
+      status: "COMPLETED",
+      completedAt: "2026-10-13T05:20:00Z",
+      appointment: { id: "a-1", status: "COMPLETED", token: 7, urgentAt: null },
+    });
+    draw();
+    expect(adds()).toBeInTheDocument();
+  });
+
+  it("is typed with prescriptions.write for another doctor's visit", () => {
+    auth.current = authStub({ role: "STAFF", permissions: ["patients.view", "visits.view", "prescriptions.write"] });
+    draw();
+    expect(adds()).toBeInTheDocument();
+  });
+
+  it("is read out to anyone else — another doctor too", () => {
+    read.current.data = aVisit({
+      prescription: { id: "rx-1", items: [], advice: "Rest", printDiagnosis: false, typedBy: null },
+    });
+    const { unmount } = draw();
+    expect(adds()).not.toBeInTheDocument();
+    expect(prescription()).toHaveTextContent("Rest");
+    unmount();
+
+    auth.current = authStub({ role: "DOCTOR", permissions: ["patients.view", "visits.view"] });
+    draw();
+    expect(adds()).not.toBeInTheDocument();
+  });
+
+  it("is written by no one for an archived patient, nor in a view-only clinic — said there to a prescriber alone", () => {
+    auth.current = ownDoctor();
+    read.current.data = aVisit({ patient: { ...aVisit().patient, archived: true } });
+    const { unmount } = draw();
+    expect(adds()).not.toBeInTheDocument();
+    unmount();
+
+    const doctor = ownDoctor();
+    auth.current = { ...doctor, subscription: { ...doctor.subscription!, state: "READ_ONLY" } };
+    read.current.data = aVisit();
+    draw();
+    expect(adds()).not.toBeInTheDocument();
+    expect(screen.getByText(/view-only/)).toBeInTheDocument();
   });
 });

@@ -2,6 +2,8 @@ import { randomUUID } from "node:crypto";
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import { GET as medicinesRoute } from "@/app/api/prescriptions/medicines/route";
+import { PUT as prescriptionRoute } from "@/app/api/visits/[id]/prescription/route";
 import type { RouteAccess } from "@/constants/permissions";
 import { withClinicRoute } from "@/features/auth/guard";
 import { addDaysKey, dayHour, todayKey } from "@/lib/dates/calendar";
@@ -16,7 +18,7 @@ import {
 } from "@tests/support/integration";
 
 /**
- * The permission matrix, so far (plan §34.3, R1.11, R3.8, R4.7, R5.1, R6.1): every
+ * The permission matrix, so far (plan §34.3, R1.11, R3.8, R4.7, R5.1, R6.1, R6.3): every
  * permission the schema enforces yet, allowed and refused — by the route
  * guard, and by RLS or a function with the member's own token. Each phase
  * adds the rows its tables bring; the patients routes themselves are asked in
@@ -443,6 +445,148 @@ describe("visits.view and the queue's moves, by the guard, RLS and the 0018 and 
       p_seen: { complaint: null },
     });
     expect(error).toBeNull();
+  });
+});
+
+describe("a prescription: the visit's doctor or prescriptions.write, by the routes, RLS and the 0021 functions", () => {
+  type Member = SignedIn & { memberId: string };
+  let doctor: Member;
+  let typist: Member;
+  let reader: Member;
+  let otherDoctor: Member;
+  let doctorId: string;
+  let visitId: string;
+
+  const line = {
+    medicine: "Paracetamol",
+    strength: "500 mg",
+    dose: "",
+    frequency: "",
+    timing: "",
+    durationDays: "",
+    instructions: "",
+  };
+
+  /** The prescription route, asked by one member as their browser asks it. */
+  async function save(member: SignedIn, seen: unknown = null) {
+    const request = new Request(`http://localhost/api/visits/${visitId}/prescription`, {
+      method: "PUT",
+      headers: { authorization: `Bearer ${member.session.accessToken}`, "content-type": "application/json" },
+      body: JSON.stringify({ prescription: { items: [line], advice: "", printDiagnosis: false }, seen }),
+    });
+    const response = await prescriptionRoute(request, { params: Promise.resolve({ id: visitId }) });
+    return { status: response.status, body: await response.json() };
+  }
+
+  /** The medicine suggestions, asked by one member. */
+  async function suggest(member: SignedIn) {
+    const request = new Request(`http://localhost/api/prescriptions/medicines?q=para&doctorId=${doctorId}`, {
+      headers: { authorization: `Bearer ${member.session.accessToken}` },
+    });
+    const response = await medicinesRoute(request);
+    return { status: response.status, body: await response.json() };
+  }
+
+  beforeAll(async () => {
+    [doctor, typist, reader, otherDoctor] = await Promise.all([
+      addMember(clinic.clinicId, { role: "DOCTOR", permissions: ["patients.view", "visits.view"] }),
+      addMember(clinic.clinicId, { permissions: ["patients.view", "visits.view", "prescriptions.write"] }),
+      addMember(clinic.clinicId, { permissions: ["patients.view", "visits.view"] }),
+      addMember(clinic.clinicId, { role: "DOCTOR", permissions: ["patients.view", "visits.view"] }),
+    ]);
+    const { data: row } = await admin().from("doctors").select("id").eq("member_id", doctor.memberId).single();
+    doctorId = row!.id as string;
+    await admin().from("doctors").update({ registration_number: "KMC 24680" }).eq("id", doctorId);
+    const { supabase } = clinic.owner.tenant;
+    const [{ data: patient }, { data: type }] = await Promise.all([
+      supabase
+        .rpc("create_patient", {
+          p_patient: { full_name: "Rx Matrix", phone: "+919876543214", date_of_birth: "1990-04-12", gender: "MALE" },
+          p_idempotency_key: randomUUID(),
+        })
+        .single<{ patient_id: string }>(),
+      supabase.from("appointment_types").select("id").eq("name", "Consultation").single(),
+    ]);
+    const { data: walkIn } = await supabase
+      .rpc("add_walk_in", {
+        p_walk_in: { patient_id: patient!.patient_id, doctor_id: doctorId, appointment_type_id: type!.id },
+        p_idempotency_key: randomUUID(),
+      })
+      .single<{ appointment_id: string }>();
+    const { error } = await supabase.rpc("send_in", { p_appointment_id: walkIn!.appointment_id });
+    if (error) throw error;
+    const { data: visit } = await admin()
+      .from("visits")
+      .select("id")
+      .eq("appointment_id", walkIn!.appointment_id)
+      .single();
+    visitId = visit!.id as string;
+  });
+
+  it("is written through its route by the visit's doctor, and typed over by prescriptions.write", async () => {
+    const written = await save(doctor);
+    expect(written).toMatchObject({
+      status: 200,
+      body: { data: { prescription: { items: [{ medicine: "Paracetamol" }] } } },
+    });
+    const typed = await save(typist, (written.body as { data: { prescription: unknown } }).data.prescription);
+    expect(typed.status).toBe(200);
+  });
+
+  it("is refused to a member with neither, to another doctor, and at the guard to one without visits.view", async () => {
+    await expect(save(reader)).resolves.toMatchObject({
+      status: 403,
+      body: { error: { code: "AUTH_PERMISSION_DENIED" } },
+    });
+    await expect(save(otherDoctor)).resolves.toMatchObject({
+      status: 404,
+      body: { error: { code: "RECORD_NOT_FOUND" } },
+    });
+    await expect(save(receptionist)).resolves.toMatchObject({
+      status: 403,
+      body: { error: { code: "AUTH_PERMISSION_DENIED" } },
+    });
+  });
+
+  it("suggests medicines to a doctor and to prescriptions.write, and to no one else", async () => {
+    for (const member of [doctor, typist, otherDoctor]) {
+      await expect(suggest(member)).resolves.toMatchObject({
+        status: 200,
+        body: { data: [{ medicine: "Paracetamol" }] },
+      });
+    }
+    for (const member of [reader, receptionist]) {
+      await expect(suggest(member)).resolves.toMatchObject({
+        status: 403,
+        body: { error: { code: "AUTH_PERMISSION_DENIED" } },
+      });
+    }
+  });
+
+  it("reads a prescription and its medicines with visits.view within the doctor scope, and none otherwise", async () => {
+    for (const table of ["prescriptions", "prescription_items"]) {
+      const { data: seen } = await reader.tenant!.supabase.from(table).select("id");
+      expect(seen, table).toHaveLength(1);
+      const { data: theirs } = await doctor.tenant!.supabase.from(table).select("id");
+      expect(theirs, table).toHaveLength(1);
+      const { data: notTheirs } = await otherDoctor.tenant!.supabase.from(table).select("id");
+      expect(notTheirs, table).toEqual([]);
+      const { data: unseen } = await receptionist.tenant!.supabase.from(table).select("id");
+      expect(unseen, table).toEqual([]);
+    }
+  });
+
+  it("writes neither table directly, for anyone", async () => {
+    const { error: updated } = await clinic.owner.tenant.supabase
+      .from("prescriptions")
+      .update({ advice: "Planted" })
+      .eq("visit_id", visitId);
+    expect(updated?.code).toBe("42501");
+    const { error: deleted } = await clinic.owner.tenant.supabase
+      .from("prescription_items")
+      .delete()
+      .eq("clinic_id", clinic.clinicId);
+    expect(deleted?.code).toBe("42501");
   });
 });
 

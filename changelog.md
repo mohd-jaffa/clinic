@@ -2953,3 +2953,147 @@ recorded as D202 – D209:
 
 ### Blockers
 - None.
+
+## 2026-10-14 — R6.3: prescriptions
+
+A visit now has its prescription: written by the visit's doctor, or typed
+for them by a member with `prescriptions.write`, always in the doctor's
+name. The user's choices are recorded as D210 – D217:
+- each medicine's fields on the visit screen, one Save for the whole;
+- a suggested medicine fills its whole line, as last written;
+- an allergy is warned on its line, and Save asks about it;
+- nothing is written until the doctor has a registration number;
+- frequency and timing are chips, with Other to type a frequency;
+- after Done, the same people may change it as before;
+- Print the diagnosis is off until ticked;
+- the duration is typed in days.
+
+### Added
+- **`0021_prescriptions`:**
+  - **`prescriptions`:** one per visit, in the visit doctor's name, with
+    the advice, `print_diagnosis` (false until ticked, D216) and
+    `entered_by`, who typed it as it stands (D45).
+  - **`prescription_items`:** the medicines in order — name, strength,
+    dose, frequency, timing (`PRESCRIPTION_TIMINGS`), days (1 to 365) and
+    instructions — at most 30, each bounded as the screen bounds it.
+  - **`save_prescription(p_visit_id, p_prescription, p_seen)`:** the
+    whole prescription at once (D210), by the visit's doctor or
+    `prescriptions.write`, open or done (D215), within the doctor scope,
+    while the clinic can write and the patient is not archived. Refused
+    with `PRESCRIPTION_NEEDS_REGISTRATION` while the doctor has no
+    registration number (D213), and with `VISIT_CHANGED` when saved from
+    an older copy (D206). The medicines are written again only when they
+    changed, so each keeps when it was written.
+  - **`medicine_suggestions(p_search, p_doctor_id)`:** this clinic's
+    medicines beginning with what is typed (taken literally), one for each
+    medicine and strength, with the line as this doctor last wrote it, or
+    anyone in the clinic (D211). For a doctor, or `prescriptions.write`.
+    Only the medicine's line comes back, nothing of whose it was.
+  - **What counts as recorded (D197):** a prescription with a medicine or
+    advice keeps its visit from Back to waiting; an emptied one goes with
+    its empty visit.
+  - Read with `visits.view` within the doctor scope; written only through
+    `save_prescription`.
+- **Routes:** `PUT /api/visits/[id]/prescription` (gated by `visits.view`;
+  the database decides who may write) and
+  `GET /api/prescriptions/medicines?q=&doctorId=`. The visit's own read
+  carries the prescription, the doctor's registration number and who typed
+  it, so there is no separate read.
+- **`features/prescriptions`:**
+  - `records.ts` (`savePrescription`): audited as a create or an update,
+    the medicines and advice by name alone, the diagnosis tick by its
+    value.
+  - `api.ts` (`medicineSuggestions`), `content.ts` (screen and database
+    shapes, the line's title and how it is taken), `allergies.ts` (D212),
+    `api.client.ts`, and the `useMedicineSuggestions` hook.
+  - Components: `PrescriptionSection` (the card), `MedicineLine` (one
+    medicine), `PrescriptionReadout`.
+- **The visit screen:** the Prescription card under the notes, in the right
+  column from 768 px (D209). For whoever writes it: the patient's
+  allergies at its top, each medicine a block with Move up, Move down and
+  Remove, Add medicine, the advice and Print the diagnosis, and **Save
+  prescription** once something is typed. "Typed by …" when an assistant
+  typed it. Until the doctor has a registration number, the card says so,
+  with **Open Team** for whoever manages the team.
+- **Kit:** `SuggestField`, a text field with suggestions under it (an
+  editable combobox).
+- **Words:** `ERROR_MESSAGES.PRESCRIPTION_NEEDS_REGISTRATION`,
+  `UI_TEXT.prescription`, `VALIDATION_MESSAGES.atMostMedicines`.
+- **Constants:** `PRESCRIPTION_TIMINGS` and their labels,
+  `PRESCRIPTION_FREQUENCIES`, `PRESCRIPTION_DAYS`,
+  `PRESCRIPTION_MAX_ITEMS`, and `TEXT_LIMITS` for the medicine, strength,
+  dose, frequency, instructions and advice.
+- **Validation:** `prescriptionSchema`, `savePrescriptionSchema`,
+  `medicineSearchSchema`, and the `optionalWholeNumberText` primitive.
+
+### Changed
+- **Prescription templates move to their own migration** with R6.7
+  (`0022_prescription_templates`). The tracker's R6.3 row names no
+  templates, so `0021` holds only what R6.3 builds. Later migrations move
+  up one: treatments is now `0023`, and so on to `0032_faster_reads`.
+- **Plan:** §8.2 rule 4 and §13 say when and by whom a prescription is
+  written (D213, D215) and how the card works (D210 – D212, D214, D216,
+  D217); §12.2, §28.5, §28.7, §29 and §30 follow.
+
+### Speed (plan §37)
+- **The visit screen** still waits on one query after the session; the
+  prescription and its medicines come in it.
+- **Suggestions** are asked for only while a medicine's name is being
+  typed, once the typing settles: one round trip after the session, on
+  `prescription_items (clinic_id, lower(medicine) text_pattern_ops)`. A
+  visit opened with five medicines on it asks nothing.
+- **Saving the prescription** waits on two round trips after the session:
+  the function, then the audit row.
+- **Indexes:** a patient's prescriptions and a doctor's lead with the
+  clinic; each person column has its own; the medicines are on their
+  prescription's unique (prescription, position) index.
+
+### Found while building
+- **Suggestions in a fixed order:** lines saved together share one moment,
+  so two suggestions could come in either order. They now come by name
+  after the doctor's own and the newest.
+- **The highlighted suggestion past a shorter list:** when the list shrank
+  under the keys, the field named an option no longer there. The keys now
+  rest on the last one.
+- **"Typed by" for readers:** the screenshots showed only the doctor saw
+  who typed it; the read-out says it too.
+
+### Tests
+- **Contract:** `tests/db/prescriptions-migration.test.ts` (17): the
+  columns and their bounds against the app's constants, the timing CHECK
+  against `PRESCRIPTION_TIMINGS`, the indexes, what counts as recorded,
+  who may save and when, the suggestions' order, the policies and grants.
+- **Integration** (`prescriptions.test.ts`, 9 cases):
+  - written by the doctor, typed over by an assistant from the copy read,
+    refused from an older copy, audited by name and the tick by value;
+  - the medicines written again only when they changed;
+  - the doctor's or a typist's alone, open or done, within the doctor
+    scope;
+  - refused until the doctor has a registration number, and for an
+    archived patient;
+  - each line held to its column, and at most 30;
+  - a prescription keeps its visit from Back to waiting; an emptied one
+    goes with it;
+  - suggestions by their beginning, one per strength, the doctor's own
+    first, typed text taken literally, and only for a doctor or a typist.
+- **Permission, isolation and read-only rows** for both tables, both
+  routes and both functions.
+- **Unit:** `SuggestField`, the schemas and primitive, the server
+  functions, routes, client and hook, `content` and `allergies`, the three
+  components, and the visit read and screen.
+- **E2E** (`prescriptions.spec.ts`, phone and desktop, axe):
+  - the assistant takes Paracetamol from the suggestions and it fills its
+    line;
+  - Penicillin V is warned against Rohan's allergy; Save asks, Cancel
+    saves nothing, Save anyway saves both, moved;
+  - the doctor finds it typed for her, in that order;
+  - a visit with a doctor who has no registration number says so instead.
+
+### Validation
+- Typecheck, lint, format check passed.
+- Unit and integration tests passed (2853), coverage 100%.
+- E2E passed (phone, desktop), with axe: 120 passed, 8 run at one width
+  only.
+
+### Blockers
+- None.

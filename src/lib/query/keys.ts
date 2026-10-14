@@ -101,6 +101,11 @@ export const apiRoutes = {
     one: (id: string) => `/api/visits/${id}`,
     vitals: (id: string) => `/api/visits/${id}/vitals`,
     done: (id: string) => `/api/visits/${id}/done`,
+    prescription: (id: string) => `/api/visits/${id}/prescription`,
+  },
+  // Prescriptions (plan §13, §30): this clinic's medicines, as written before (D211).
+  prescriptions: {
+    medicines: "/api/prescriptions/medicines",
   },
 } as const;
 

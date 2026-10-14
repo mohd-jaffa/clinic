@@ -37,6 +37,8 @@ const CLINIC_TABLES: readonly { table: string; column: string }[] = [
   { table: "appointments", column: "clinic_id" },
   { table: "visits", column: "clinic_id" },
   { table: "vitals", column: "clinic_id" },
+  { table: "prescriptions", column: "clinic_id" },
+  { table: "prescription_items", column: "clinic_id" },
   { table: "audit_logs", column: "clinic_id" },
 ];
 
@@ -105,6 +107,17 @@ beforeAll(async () => {
     .from("vitals")
     .insert({ clinic_id: a.clinicId, patient_id: patientId, visit_id: visit.id, pulse: 72 });
   if (unrecorded) throw unrecorded;
+  // And its prescription, with a medicine on it (0021).
+  const { data: prescription, error: unprescribed } = await admin()
+    .from("prescriptions")
+    .insert({ clinic_id: a.clinicId, patient_id: patientId, visit_id: visit.id, doctor_id: doctorId })
+    .select("id")
+    .single();
+  if (unprescribed) throw unprescribed;
+  const { error: unlisted } = await admin()
+    .from("prescription_items")
+    .insert({ clinic_id: a.clinicId, prescription_id: prescription.id, position: 1, medicine: "Amoxicillin" });
+  if (unlisted) throw unlisted;
   developer = await makeDeveloper();
 });
 
@@ -226,6 +239,28 @@ describe("as clinic B's owner, with a valid token", () => {
       const { error } = await supabase.rpc(name, args);
       expect(error?.hint, name).toBe("RECORD_NOT_FOUND");
     }
+  });
+
+  it("finds none of A's visits to prescribe on, and none of A's medicines among its suggestions (0021)", async () => {
+    const { supabase } = b.owner.tenant;
+    const { error } = await supabase.rpc("save_prescription", {
+      p_visit_id: visitId,
+      p_prescription: { items: [{ medicine: "Planted" }], advice: null, print_diagnosis: false },
+      p_seen: null,
+    });
+    expect(error?.hint).toBe("RECORD_NOT_FOUND");
+    // B's owner holds every permission and sees patients, so the suggestions answer — with nothing of A's.
+    const { data, error: unsuggested } = await supabase.rpc("medicine_suggestions", {
+      p_search: "Amox",
+      p_doctor_id: doctorId,
+    });
+    expect(unsuggested).toBeNull();
+    expect(data).toEqual([]);
+    const { data: own } = await a.owner.tenant.supabase.rpc("medicine_suggestions", {
+      p_search: "Amox",
+      p_doctor_id: doctorId,
+    });
+    expect(own).toMatchObject([{ medicine: "Amoxicillin" }]);
   });
 
   it("reaches none of the platform's tables, nor those only the database reads", async () => {

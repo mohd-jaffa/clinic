@@ -55,3 +55,23 @@ export const FOLLOW_UP_CHOICES = [
 ] as const;
 
 export type FollowUpChoice = (typeof FOLLOW_UP_CHOICES)[number]["key"];
+
+/**
+ * The frequency chips on a prescription's medicine (plan §13, D214): doses
+ * morning-noon-night, four times a day, or as needed. Anything else — "Once
+ * a week" — is typed under Other; the column holds the words either way.
+ */
+export const PRESCRIPTION_FREQUENCIES = [
+  "1-0-0",
+  "0-1-0",
+  "0-0-1",
+  "1-0-1",
+  "1-1-0",
+  "0-1-1",
+  "1-1-1",
+  "1-1-1-1",
+  "SOS",
+] as const;
+
+/** How many days a medicine is taken for (plan §13, D217): typed, within these. 0021's CHECK. */
+export const PRESCRIPTION_DAYS = { min: 1, max: 365 } as const;

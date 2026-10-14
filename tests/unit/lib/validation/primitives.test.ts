@@ -13,6 +13,7 @@ import {
   optionalLines,
   optionalPaiseText,
   optionalPhoneNumber,
+  optionalWholeNumberText,
   paiseAmount,
   paiseText,
   password,
@@ -144,6 +145,32 @@ describe("wholeNumberText", () => {
     expect(messageOf(minutes, "ten")).toBe(VALIDATION_MESSAGES.wholeNumber("Length"));
     expect(messageOf(minutes, "4")).toBe(VALIDATION_MESSAGES.between("Length", 5, 480));
     expect(messageOf(minutes, "481")).toBe(VALIDATION_MESSAGES.between("Length", 5, 480));
+  });
+});
+
+describe("optionalWholeNumberText", () => {
+  const days = optionalWholeNumberText("Days", { min: 1, max: 365 });
+
+  it("reads typed digits as a whole number within its bounds, and blank as none", () => {
+    expect(days.parse(" 7 ")).toBe(7);
+    expect(days.parse("1")).toBe(1);
+    expect(days.parse("365")).toBe(365);
+    expect(days.parse("")).toBeNull();
+    expect(days.parse("  ")).toBeNull();
+    expect(days.parse(undefined)).toBeNull();
+    expect(days.parse(null)).toBeNull();
+  });
+
+  it("parses what it produced to the same", () => {
+    expect(days.parse(7)).toBe(7);
+  });
+
+  it("says, in words, what is not whole, or out of bounds", () => {
+    expect(messageOf(days, "1.5")).toBe(VALIDATION_MESSAGES.wholeNumber("Days"));
+    expect(messageOf(days, "a week")).toBe(VALIDATION_MESSAGES.wholeNumber("Days"));
+    expect(messageOf(days, "-3")).toBe(VALIDATION_MESSAGES.wholeNumber("Days"));
+    expect(messageOf(days, "0")).toBe(VALIDATION_MESSAGES.between("Days", 1, 365));
+    expect(messageOf(days, "366")).toBe(VALIDATION_MESSAGES.between("Days", 1, 365));
   });
 });
 

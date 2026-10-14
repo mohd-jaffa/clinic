@@ -99,6 +99,25 @@ describe("a read-only clinic", () => {
     }
   });
 
+  it("refuses a prescription in the database, and still reads and suggests (0021)", async () => {
+    const { supabase } = clinic.owner.tenant;
+    const { error } = await supabase.rpc("save_prescription", {
+      p_visit_id: randomUUID(),
+      p_prescription: { items: [{ medicine: "Paracetamol" }], advice: null, print_diagnosis: false },
+      p_seen: null,
+    });
+    expect(error?.hint).toBe("CLINIC_PLAN_EXPIRED");
+    for (const table of ["prescriptions", "prescription_items"]) {
+      const { error: unread } = await supabase.from(table).select("id");
+      expect(unread, table).toBeNull();
+    }
+    const { error: unsuggested } = await supabase.rpc("medicine_suggestions", {
+      p_search: "Para",
+      p_doctor_id: randomUUID(),
+    });
+    expect(unsuggested).toBeNull();
+  });
+
   it("refuses a write through a route with CLINIC_PLAN_EXPIRED, and still reads", async () => {
     const write = await withClinicRoute(request("POST"), { access: "settings.manage" }, async () => ({}));
     expect(write.status).toBe(422);

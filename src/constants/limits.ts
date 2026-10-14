@@ -68,7 +68,20 @@ export const TEXT_LIMITS = {
   diagnosis: 1000,
   /** A visit's notes: the doctor's longer account. */
   clinicalNotes: 4000,
+  /** A prescription's medicine (plan §13): "Amoxicillin + Clavulanic acid". */
+  medicine: 120,
+  /** "500 mg", "1 tab", "1-0-1", or "Once a week" typed (D214). */
+  strength: 40,
+  dose: 40,
+  frequency: 40,
+  /** A line under a medicine: "Dissolve in water". */
+  instructions: 200,
+  /** The prescription's advice: diet, rest, what to watch for. */
+  advice: 2000,
 } as const;
+
+/** How many medicines one prescription holds (plan §13): more than any visit writes. 0021's CHECK. */
+export const PRESCRIPTION_MAX_ITEMS = 30;
 
 /** How many digits a phone number has, mobile or landline, the country code included. */
 export const PHONE_NUMBER_DIGITS = { min: 6, max: 15 } as const;

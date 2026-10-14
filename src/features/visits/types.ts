@@ -1,5 +1,6 @@
 import type { AlertKind, AppointmentStatus, BillingStatus, Gender, VisitStatus } from "@/constants/statuses";
 import type { PatientAlert } from "@/features/patients/types";
+import type { EmbeddedPrescriptionRow, Prescription } from "@/features/prescriptions/types";
 
 /** A visit's readings (plan §12.2), each as taken — or none. Temperature in °F (D31). */
 export interface Vitals {
@@ -59,6 +60,8 @@ export interface Visit extends VisitNotes {
   doctorId: string;
   /** None once the doctor's account is gone. */
   doctorName: string | null;
+  /** The doctor's registration number: a prescription is written only once there is one (D213). */
+  doctorRegistration: string | null;
   /**
    * The appointment it was opened for — none for a visit started from a
    * profile (D204) — and since when it is marked Urgent (D201), or not.
@@ -69,9 +72,11 @@ export interface Visit extends VisitNotes {
   vitals: Vitals | null;
   /** The day of the next review (D205), or none. */
   followUpOn: string | null;
+  /** None until one is saved (plan §13). */
+  prescription: Prescription | null;
 }
 
-/** A `visits` row as its screen reads it, with its patient and their alerts, its doctor, its appointment and vitals. */
+/** A `visits` row as its screen reads it, with its patient and their alerts, its doctor, its appointment, vitals and prescription. */
 export interface VisitRow {
   id: string;
   patient_id: string;
@@ -94,10 +99,15 @@ export interface VisitRow {
     archived_at: string | null;
     alerts: { id: string; kind: AlertKind; label: string; note: string | null; active: boolean }[];
   };
-  doctor: { member: { profile: { full_name: string } | null } | null } | null;
+  doctor: {
+    registration_number: string | null;
+    member: { user_id: string; profile: { full_name: string } | null } | null;
+  } | null;
   appointment: { status: AppointmentStatus; token_number: number | null; urgent_at: string | null } | null;
   /** Embedded through the vitals' foreign key: one row, or a list of at most one. */
   vitals: VitalsRow | VitalsRow[] | null;
+  /** Embedded through the prescription's foreign key, as the vitals are. */
+  prescription: EmbeddedPrescriptionRow | EmbeddedPrescriptionRow[] | null;
 }
 
 /** Vitals saved (D202, D203): the visit they are on — opened by them, for a patient still waiting — and the readings now. */

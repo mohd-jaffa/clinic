@@ -278,6 +278,26 @@ export function wholeNumberText(label: string, { min, max }: { min: number; max:
 }
 
 /**
+ * A whole number that may be left blank — a medicine's days (D217): blank is
+ * null, else read from its digits and held to its bounds. What it produced
+ * parses again to the same.
+ */
+export function optionalWholeNumberText(label: string, { min, max }: { min: number; max: number }) {
+  return z.optional(z.union([z.string(), z.number(), z.null()])).transform((typed, ctx) => {
+    const text = String(typed ?? "").trim();
+    if (text === "") return null;
+    const refuse = (message: string) => {
+      ctx.addIssue({ code: "custom", message });
+      return z.NEVER;
+    };
+    if (!/^\d{1,9}$/.test(text)) return refuse(VALIDATION_MESSAGES.wholeNumber(label));
+    const value = Number(text);
+    if (value < min || value > max) return refuse(VALIDATION_MESSAGES.between(label, min, max));
+    return value;
+  });
+}
+
+/**
  * A day a date field holds — "2026-10-20" — that must be given, and must be
  * a day of the calendar: "2026-02-30" is refused in words, not moved on.
  */

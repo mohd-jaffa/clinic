@@ -37,6 +37,8 @@ const aVisit = (vitals: Vitals | null): Visit => ({
   patient: { id: "p-1", name: "Asha Iyer", number: 1012, dateOfBirth: "1990-04-12", gender: "FEMALE", archived: false },
   doctorId: "d-1",
   doctorName: "Maya Rao",
+  doctorRegistration: "KMC 12345",
+  prescription: null,
   appointment: { id: "a-1", status: "IN_PROGRESS", token: 7, urgentAt: null },
   alerts: [],
   complaint: null,

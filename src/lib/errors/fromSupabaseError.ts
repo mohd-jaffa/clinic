@@ -101,6 +101,8 @@ const BUSINESS_RULES: ReadonlySet<ErrorMessageCode> = new Set<ErrorMessageCode>(
   "PATIENT_HAS_APPOINTMENTS",
   // The queue (0018): an appointment whose visit was kept ends with Done (D197).
   "APPOINTMENT_HAS_VISIT",
+  // Prescriptions (0021): only once the doctor has a registration number (D213).
+  "PRESCRIPTION_NEEDS_REGISTRATION",
 ]);
 
 /**

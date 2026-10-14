@@ -37,6 +37,11 @@ describe("apiRoutes", () => {
     expect(apiRoutes.appointments.vitals("a-1")).toBe("/api/appointments/a-1/vitals");
   });
 
+  it("names a visit's prescription, and the clinic's medicines written before (D210, D211)", () => {
+    expect(apiRoutes.visits.prescription("v-1")).toBe("/api/visits/v-1/prescription");
+    expect(apiRoutes.prescriptions.medicines).toBe("/api/prescriptions/medicines");
+  });
+
   it("names only routes that exist", () => {
     // A route of an id — or of an id and another's — at the folders named for its parameters: [id], [alertId].
     const folders = (named: (...ids: string[]) => string) =>
