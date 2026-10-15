@@ -3914,3 +3914,39 @@ the user first: D267 – D271.
 
 ### Blockers
 - None.
+
+## 2026-10-16 — R7.5: each follow-up on the right day
+
+### Added
+- `tests/db/integration/follow-up-days.test.ts` (plan §14.3, §34; D279 –
+  D281), through the feature's functions, as a nurse:
+  - **Every edge, from the clinic's today** (D279): due today in Today,
+    yesterday in Overdue, tomorrow in Upcoming; the last day of Overdue
+    against the first of Lapsed; the 30th day ahead in Upcoming, the 31st
+    in no tab; a treatment completed 30 days ago in Completed, 31 not; a
+    snooze back on its own day and not before.
+  - **The clinic's midnight** (D268, D279): a visit opened, and a
+    treatment's next sitting set, at 1:30 AM in India — 8 PM the day before
+    in UTC — are set on India's day: an appointment kept that same India day
+    does not close them, one the next day does. Checked against a copy of
+    `follow_up_rows` counting the set day in UTC, which the test fails.
+  - **Lapsed follows the DEV's setting** (D280): set to 7 days, a follow-up
+    10 days overdue lapses and one 7 days overdue stays; set to 60, one 40
+    days overdue is back in Overdue; each tab's count equals its list at
+    each setting; the old value is put back.
+
+### Changed
+- **Plan:** D279 – D281; the tracker: R7.5 DONE.
+
+### Speed (plan §37)
+- No code changed: tests only.
+
+### Validation
+- Typecheck, lint, format check passed.
+- Unit and integration tests passed (3359), coverage 100%; the new file's 7
+  tests among them, and `follow_up_lapsed_days` back at its value after.
+- E2E not run again: no code changed since R7.4's run (136 passed, 8
+  skipped, at phone and desktop width).
+
+### Blockers
+- None.

@@ -365,6 +365,9 @@ earlier lines are never rewritten.
 | D276 | **Book from a follow-up fills the booking, and the row leaves on its own** (the user): the patient, the follow-up's doctor and its day — today for one overdue. Booked for a later day, the follow-up is done (D268) and leaves its list; nothing more is noted. | 2026-10-15 |
 | D277 | **A treatment on Completed offers Call and the profile only** (the user): nothing is due, so there is no Remind, Book or Mark contacted; its sheet tells the treatment, the day it was completed and its doctor. | 2026-10-15 |
 | D278 | **One list for the clinic, a phone's and a desktop's alike** (the user): no doctor filter — each row names its doctor, and a doctor sees only their own patients (D3); on a desktop, the tabs and one column of rows, like Patients, with the same sheet as on a phone. | 2026-10-15 |
+| D279 | **The tabs are proven on the clinic's day at every edge, with no test clock in the app** (the user): the database's clock cannot be moved, so each edge is tested from the clinic's today — Today against yesterday, the last day of Overdue against the first of Lapsed, the 30th day ahead against the 31st, completed 30 days ago against 31, a snooze's own day — and the clinic's midnight where it can be fixed in time: a follow-up set at 1:30 AM in India, still the day before in UTC, is set on India's day, so an appointment kept that same India day does not close it and one the next day does. | 2026-10-16 |
+| D280 | **That Lapsed follows the DEV's setting is tested by changing it and putting it back** (the user): as the DEV, 7 days, then 60, each moving a follow-up between Overdue and Lapsed with the counts, then the old value restored — integration files run one at a time, so no other test sees it. | 2026-10-16 |
+| D281 | **R7.5 is database tests only** (the user): the tabs are worked out only in the database; the screen's words and counts were tested in R7.4's journeys. | 2026-10-16 |
 
 ## 3. Users and roles
 
@@ -2710,7 +2713,7 @@ in the row's one commit (D136).
 | R7.2 | `0025_treatment_screens`; treatments in the visit workspace and on the profile (D256 – D263: rows opening a sheet, the last sitting completing it in one save, begun today with the price list's estimate, the next sitting's own chips, open then Show closed on the profile, the whole story in the sheet, Tx in the history, between the notes and the prescription) | §14.1 | — | DONE (2026-10-15) |
 | R7.3 | `0026_follow_ups`: `follow_up_items`, contacts (D267 – D271: the front desk works them too; done once the patient is coming back; on hold with a date counts; the 30-day windows fixed; snoozed out of the counts) | §14.2 | — | DONE (2026-10-15) |
 | R7.4 | Follow-ups screen: tabs with counts, Call, WhatsApp, Book, Mark contacted (D272 – D278: Call on the row, the rest in its sheet; Remind noted as Reminder sent; "remind me on" chips; the last contact with who made it, `0027_follow_up_callers`; Book closes it; Completed offers Call and the profile; one list, no doctor filter) | §14.3 | — | DONE (2026-10-16) |
-| R7.5 | Integration: each tab on the right day in the clinic's timezone; lapsed follows the setting | §34 | — | TODO |
+| R7.5 | Integration: each tab on the right day in the clinic's timezone; lapsed follows the setting (D279 – D281: every edge from the clinic's today, the 1:30 AM case, the setting changed and put back; database tests only) | §34 | — | DONE (2026-10-16) |
 | R7.6 | Follow-up reminders on WhatsApp, recorded as a contact (built with R7.4, D273) | §14.3, §22.1 | — | DONE (2026-10-16) |
 
 ### Phase 8 — Billing and payments
