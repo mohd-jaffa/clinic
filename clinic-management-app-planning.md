@@ -353,6 +353,11 @@ earlier lines are never rewritten.
 | D264 | **Next.js 16.3.8** (the user): from 16.3.5, whose four critical advisories it fixes (remote code execution in `next/og`'s ImageResponse, which the app does not use; cache poisoning of self-hosted pages; a draft-mode leak; the dev server's MCP endpoint) — the same minor line, its own commit; `eslint-config-next` with it, and `source-map-js` (high, build-time only) to 1.2.2. One finding stays: a chain inside the lint tooling (`eslint-config-next` → `fast-glob` → `micromatch` → `braces`), never shipped, whose only fix npm offers is going back to `eslint-config-next` 14; R13.8's audit (`--omit=dev`) leaves development tools out, and the chain is updated once `eslint-config-next` ships a fix. | 2026-10-15 |
 | D265 | **A test that compares a database time with the test's clock allows 2 seconds of drift** (the user): the database runs in Docker, whose clock can run a few milliseconds ahead of the Mac's; `appointment-detail.test.ts` once failed on 46 ms. It still checks the booking was made just now. | 2026-10-15 |
 | D266 | **The vital-sign limits stay as they are** (the user): blood pressure 50 – 260 over 30 – 160 mmHg, pulse 20 – 250, temperature 90 – 110 °F, SpO₂ 50 – 100 %, breathing 5 – 70 a minute, weight 0.5 – 350 kg, height 20 – 250 cm — a newborn's to an adult's, so a slip ("1200") is caught and a real reading never refused. They protect their columns, so they stay constants (`VITAL_LIMITS`), the vitals table's CHECKs kept equal by tests/db (AGENTS.md §10). | 2026-10-15 |
+| D267 | **The front desk works the follow-ups too** (the user): anyone who sees appointments or visits (`appointments.view` or `visits.view`) lists them — the patient, what is due (a treatment's name, or "Follow-up"), its doctor and day, and the last contact; nothing more of the record — and `appointments.edit` or `visits.edit` notes a call. A doctor sees only their own patients' (D3). The plan had `visits.view` and `visits.edit` alone, so a receptionist could not make reminder calls without clinical access. | 2026-10-15 |
+| D268 | **A follow-up closes when the patient is coming back** (the user): an appointment for a later day than the one it was set on, with any doctor, still to come or kept — not one cancelled, missed, or left unmarked on a day gone by, and its cancelling reopens the follow-up; or a visit opened after it was set, with any doctor; or, for a treatment, its closing or losing its next due day. A treatment keeps when its next due day was set (`next_due_set_at`); a visit's is set with the visit. | 2026-10-15 |
+| D269 | **An on-hold treatment's next due day is a follow-up** (the user): a date on a paused treatment is a deliberate reminder ("resume in a month"); one with no date shows nothing. | 2026-10-15 |
+| D270 | **Upcoming and Completed look 30 days, fixed in code** (the user): `FOLLOW_UP_WINDOW_DAYS`, how far a list looks rather than a rule a clinic lives by; when an overdue one lapses stays the DEV's setting (`follow_up_lapsed_days`, §6). | 2026-10-15 |
+| D271 | **A follow-up snoozed with "remind me on" leaves the lists and the counts until that day** (the user), then returns to whichever tab its due day puts it in; Home's follow-ups agree. | 2026-10-15 |
 
 ## 3. Users and roles
 
@@ -665,13 +670,13 @@ and mirrored by a database `CHECK` (kept equal by a test).
 | `patients.view` | See patients and their contact details. |
 | `patients.create` | Add patients. |
 | `patients.edit` | Edit patients; archive and restore. |
-| `appointments.view` | See the calendar and today's queue. |
+| `appointments.view` | See the calendar, today's queue and the follow-ups to call (D267). |
 | `appointments.create` | Book appointments; add walk-ins. |
-| `appointments.edit` | Reschedule; confirm; mark arrived and no-show. |
+| `appointments.edit` | Reschedule; confirm; mark arrived and no-show; note a follow-up call (D267). |
 | `appointments.cancel` | Cancel appointments. |
 | `visits.view` | See clinical records: visits, vitals, alerts, prescriptions, treatments, follow-ups. |
 | `visits.create` | Start visits; record vitals. |
-| `visits.edit` | Write and correct clinical notes, alerts, treatments and follow-ups. |
+| `visits.edit` | Write and correct clinical notes, alerts and treatments; note a follow-up call. |
 | `prescriptions.write` | Type a prescription on the visit doctor's behalf (D45). A doctor writes their own without it. |
 | `payments.view` | See bills, payments and balances. |
 | `payments.create` | Create bills from the price list; record payments; mark a visit No charge. |
@@ -1281,21 +1286,26 @@ the visit, a note) so the treatment's history reads visit by visit.
 
 ### 14.2 Follow-ups
 
-A follow-up is either an **open treatment's next due date** or a **visit's
-follow-up date**. A follow-up is **done** when the patient has an appointment
-booked on or after it, or a later visit, or the treatment is completed or
-cancelled.
+A follow-up is either an **open treatment's next due date** — on hold too
+(D269) — or a **visit's follow-up date**, for a patient not archived. A
+follow-up is **done** when the patient is coming back (D268): an appointment
+for a later day than the one it was set on, with any doctor, still to come or
+kept (not one cancelled, missed, or left unmarked on a day gone by — a
+cancelling reopens it); or a visit opened after it was set; or, for a
+treatment, its closing or losing its next due day.
 
 ### 14.3 The follow-ups screen — `/follow-ups`
 
-Tabs (with counts), computed by the database from one view
-(`follow_up_items`), scoped by `can_see_patient`:
+Tabs (with counts), computed by the database in the clinic's timezone
+(`follow_up_items`, `follow_up_counts`, 0026), for whoever sees appointments or
+visits — the front desk makes the calls (D267) — a doctor only their own
+patients':
 
 | Tab | Holds |
 |---|---|
 | **Today** | Due today. |
 | **Overdue** | Due before today, up to `follow_up_lapsed_days` (§6) ago. |
-| **Upcoming** | Due in the next 30 days. |
+| **Upcoming** | Due in the next 30 days (`FOLLOW_UP_WINDOW_DAYS`, D270). |
 | **Lapsed** | Overdue by more than `follow_up_lapsed_days` — "patients who haven't returned". |
 | **Completed** | Treatments completed in the last 30 days. |
 
@@ -1303,7 +1313,8 @@ Each row: patient, treatment or "Follow-up", doctor, due label ("Due
 tomorrow", "Overdue by 4 days"), last contact. Actions: **Call** (`tel:`),
 **Remind on WhatsApp** (§22.1), **Book** (pre-filled appointment), **Mark
 contacted** — outcome (Reached, No answer, Booked, Declined, Reminder sent), a note, and an optional "remind me on"
-date that hides the row until then (`follow_up_contacts`).
+date that hides the row, and leaves it out of the counts, until then
+(`follow_up_contacts`, D271), for `appointments.edit` or `visits.edit` (D267).
 
 ## 15. Billing and payments
 
@@ -1413,7 +1424,7 @@ their permissions, so one route serves owner, doctor and reception.
 | Today tiles | `appointments.view` / `reports.view` | Appointments today (booked + walk-ins); Patients seen (visits completed); **Collected** (payments − refunds today) and **Outstanding** (total due) with `reports.view`. |
 | Today's queue | `appointments.view` | Next waiting patients per doctor; a doctor sees their own. **Open queue**. |
 | To bill | `payments.view` | How many finished visits wait for checkout, oldest first; **Open**. |
-| Follow-ups | `visits.view` | Counts for Today / Overdue / Lapsed, the first five due; **View all**. |
+| Follow-ups | `appointments.view` or `visits.view` (D267) | Counts for Today / Overdue / Lapsed, the first five due; **View all**. |
 | Upcoming | `appointments.view` | Tomorrow's appointments. |
 | Outstanding | `payments.view` | The five patients owing most. |
 | Recent payments | `payments.view` | The last five. |
@@ -1946,12 +1957,14 @@ prescription_template_items  id · clinic_id · template_id (cascade) · positio
                       · the same item columns as prescription_items
 treatments            id · clinic_id · patient_id · doctor_id · name · description · status
                       · estimated_cost_paise · started_on · completed_on · next_due_on
-                      (open only) · cancel_reason · cancelled_at · cancelled_by (D250)
+                      (open only) · next_due_set_at (D268) · cancel_reason · cancelled_at
+                      · cancelled_by (D250)
                       · started_visit_id · created_by · updated_by
 treatment_sessions    id · clinic_id · treatment_id · visit_id · note · created_by
                       · updated_by   unique (treatment_id, visit_id)
-follow_up_contacts    id · clinic_id · patient_id · treatment_id · visit_id · outcome
-                      · note · snooze_until · contacted_by · contacted_at
+follow_up_contacts    id · clinic_id · patient_id · treatment_id · visit_id (one of the
+                      two) · outcome · note · snooze_until · contacted_by · contacted_at
+                      — never changed
 ```
 
 ### 28.6 Money
@@ -1986,7 +1999,7 @@ expenses              id · clinic_id · category_id · description · amount_pa
 | `patient_stats` | next appointment, open treatments, per patient (lists). |
 | `last_visit_on(patient)` (0022) | the day of a patient's latest visit, read with the patients list for everyone who sees the patient (D228). |
 | `visit_recorded(visit)` (0022) | whether a visit holds anything: its row in the history (D226), and Back to waiting through `visit_is_empty` (D197). |
-| `follow_up_items` | the follow-ups and their tab (§14.3). |
+| `follow_up_items(tab)`, `follow_up_counts()`, `record_follow_up_contact` (0026) | the follow-ups in their tabs, a page at a time, and how many each holds, for whoever sees appointments or visits (§14.3, D267 – D271); a call noted. |
 | `subscription_state(clinic)` | §7.2. |
 | `dashboard_summary()`, `report_daily(date)` (with the day-end collection summary), `report_monthly(month)` (with by doctor) | §17, §18. |
 | `register_clinic`, `invite_member`, `accept_invite`, `update_member`, `set_member_active` | accounts and team. |
@@ -2068,7 +2081,8 @@ Planned order (one or more per tracker row):
 0025_treatment_screens          the last session completing its treatment (D257), a session
                                 removed by its treatment and visit (D254), visit_treatments
                                 for a visit's card (D256)
-0026_follow_ups                 follow_up_contacts, follow_up_items
+0026_follow_ups                 follow_up_contacts, next_due_set_at, follow_up_items,
+                                follow_up_counts, record_follow_up_contact (D267 – D271)
 0027_bills                      bills, bill_items, financial-year bill_counters, create_bill
                                 (and the fee at arrival in mark_arrived), void_bill,
                                 mark_no_charge
@@ -2147,7 +2161,7 @@ Items are filtered by permission (`NAVIGATION` in `src/constants/navigation.ts`)
 | `/appointments` | Calendar | appointments.view |
 | `/patients` · `/patients/[id]` | Patients, profile | patients.view |
 | `/visits/[id]` | Visit workspace | visits.view |
-| `/follow-ups` | Follow-ups | visits.view |
+| `/follow-ups` | Follow-ups | appointments.view or visits.view (D267) |
 | `/billing` · `/billing/new` · `/bills/[id]` | Billing, new bill, bill | payments.view / .create |
 | `/expenses` | Expenses | expenses.view |
 | `/reports` | Reports | reports.view |
@@ -2675,7 +2689,7 @@ in the row's one commit (D136).
 |---|---|---|---|---|
 | R7.1 | `0024_treatments`: treatments, sessions, transitions (D248 – D255: a session starts a planned or on-hold one, from any of the patient's visits; a cancellation may say why; refused from an older copy; its doctor changes while open; the cost for whoever sees it; a session removed only while its visit is open; no archive with one open) | §14.1 | — | DONE (2026-10-15) |
 | R7.2 | `0025_treatment_screens`; treatments in the visit workspace and on the profile (D256 – D263: rows opening a sheet, the last sitting completing it in one save, begun today with the price list's estimate, the next sitting's own chips, open then Show closed on the profile, the whole story in the sheet, Tx in the history, between the notes and the prescription) | §14.1 | — | DONE (2026-10-15) |
-| R7.3 | `0026_follow_ups`: `follow_up_items`, contacts | §14.2 | — | TODO |
+| R7.3 | `0026_follow_ups`: `follow_up_items`, contacts (D267 – D271: the front desk works them too; done once the patient is coming back; on hold with a date counts; the 30-day windows fixed; snoozed out of the counts) | §14.2 | — | DONE (2026-10-15) |
 | R7.4 | Follow-ups screen: tabs with counts, Call, WhatsApp, Book, Mark contacted | §14.3 | — | TODO |
 | R7.5 | Integration: each tab on the right day in the clinic's timezone; lapsed follows the setting | §34 | — | TODO |
 | R7.6 | Follow-up reminders on WhatsApp, recorded as a contact | §14.3, §22.1 | — | TODO |

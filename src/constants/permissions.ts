@@ -41,11 +41,14 @@ export const PERMISSION_TEXT: Record<Permission, { label: string; description: s
   "patients.view": { label: "See patients", description: "See patients and their contact details." },
   "patients.create": { label: "Add patients", description: "Add patients." },
   "patients.edit": { label: "Edit patients", description: "Edit patients; archive and restore them." },
-  "appointments.view": { label: "See appointments", description: "See the calendar and today’s queue." },
+  "appointments.view": {
+    label: "See appointments",
+    description: "See the calendar, today’s queue and the follow-ups to call.",
+  },
   "appointments.create": { label: "Book appointments", description: "Book appointments and add walk-ins." },
   "appointments.edit": {
     label: "Change appointments",
-    description: "Reschedule; confirm; mark arrived and no-show; run the queue.",
+    description: "Reschedule; confirm; mark arrived and no-show; run the queue; note follow-up calls.",
   },
   "appointments.cancel": { label: "Cancel appointments", description: "Cancel appointments." },
   "visits.view": {
@@ -55,7 +58,7 @@ export const PERMISSION_TEXT: Record<Permission, { label: string; description: s
   "visits.create": { label: "Start visits", description: "Start visits and record vitals." },
   "visits.edit": {
     label: "Write clinical notes",
-    description: "Write and correct clinical notes, alerts, treatments and follow-ups.",
+    description: "Write and correct clinical notes, alerts and treatments; note follow-up calls.",
   },
   "prescriptions.write": {
     label: "Type prescriptions",

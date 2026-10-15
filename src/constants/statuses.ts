@@ -204,6 +204,37 @@ export const TREATMENT_STATUS_TRANSITIONS: Record<TreatmentStatus, readonly Trea
   CANCELLED: [],
 };
 
+/**
+ * The follow-ups screen's tabs (plan §14.3), as 0026's `follow_up_items` and
+ * `follow_up_counts` work them out: due today; overdue, up to the lapsed days
+ * (§6); upcoming, within FOLLOW_UP_WINDOW_DAYS; lapsed, before that; and the
+ * treatments completed within the window.
+ */
+export const FOLLOW_UP_TABS = ["TODAY", "OVERDUE", "UPCOMING", "LAPSED", "COMPLETED"] as const;
+export type FollowUpTab = (typeof FOLLOW_UP_TABS)[number];
+export const FOLLOW_UP_TAB_LABELS: Record<FollowUpTab, string> = {
+  TODAY: "Today",
+  OVERDUE: "Overdue",
+  UPCOMING: "Upcoming",
+  LAPSED: "Lapsed",
+  COMPLETED: "Completed",
+};
+
+/** What a follow-up is (plan §14.2): a treatment's next sitting, or a visit's follow-up day. */
+export const FOLLOW_UP_KINDS = ["TREATMENT", "VISIT"] as const;
+export type FollowUpKind = (typeof FOLLOW_UP_KINDS)[number];
+
+/** How a follow-up call or message went (plan §14.3): 0026's CHECK. */
+export const FOLLOW_UP_OUTCOMES = ["REACHED", "NO_ANSWER", "BOOKED", "DECLINED", "REMINDER_SENT"] as const;
+export type FollowUpOutcome = (typeof FOLLOW_UP_OUTCOMES)[number];
+export const FOLLOW_UP_OUTCOME_LABELS: Record<FollowUpOutcome, string> = {
+  REACHED: "Reached",
+  NO_ANSWER: "No answer",
+  BOOKED: "Booked",
+  DECLINED: "Declined",
+  REMINDER_SENT: "Reminder sent",
+};
+
 /** The paper bills and prescriptions print on (D28). */
 export const PAPER_SIZES = ["A4", "A5"] as const;
 export type PaperSize = (typeof PAPER_SIZES)[number];

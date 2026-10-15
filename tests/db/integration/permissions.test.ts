@@ -23,7 +23,7 @@ import {
 } from "@tests/support/integration";
 
 /**
- * The permission matrix, so far (plan §34.3, R1.11, R3.8, R4.7, R5.1, R6.1, R6.3, R6.4, R6.7, R7.1, R7.2): every
+ * The permission matrix, so far (plan §34.3, R1.11, R3.8, R4.7, R5.1, R6.1, R6.3, R6.4, R6.7, R7.1, R7.2, R7.3): every
  * permission the schema enforces yet, allowed and refused — by the route
  * guard, and by RLS or a function with the member's own token. Each phase
  * adds the rows its tables bring; the patients routes themselves are asked in
@@ -802,6 +802,37 @@ describe("treatments: visits.view reads, visits.edit writes, within the doctor s
     }
     // Nor does a doctor with visits.edit start one for a patient not theirs.
     expect((await start(stranger)).error?.hint).toBe("RECORD_NOT_FOUND");
+  });
+});
+
+describe("follow-ups: appointments.view or visits.view lists them; appointments.edit or visits.edit notes a call (0026, D267)", () => {
+  it("lists them for the front desk and the clinical alike, and for no one with neither", async () => {
+    const [desk, clinical, neither] = await Promise.all([
+      addMember(clinic.clinicId, { permissions: ["patients.view", "appointments.view"] }),
+      addMember(clinic.clinicId, { permissions: ["patients.view", "visits.view"] }),
+      addMember(clinic.clinicId, { permissions: ["patients.view"] }),
+    ]);
+    for (const member of [desk, clinical]) {
+      const { error } = await member.tenant!.supabase.rpc("follow_up_counts");
+      expect(error).toBeNull();
+    }
+    const { error } = await neither.tenant!.supabase.rpc("follow_up_counts");
+    expect(error?.hint).toBe("AUTH_PERMISSION_DENIED");
+  });
+
+  it("notes a call with appointments.edit or visits.edit, and not with appointments.view alone", async () => {
+    const [viewer, editor] = await Promise.all([
+      addMember(clinic.clinicId, { permissions: ["patients.view", "appointments.view"] }),
+      addMember(clinic.clinicId, { permissions: ["patients.view", "appointments.view", "appointments.edit"] }),
+    ]);
+    const contact = { p_contact: { visit_id: randomUUID(), outcome: "REACHED" } };
+    expect((await viewer.tenant!.supabase.rpc("record_follow_up_contact", contact)).error?.hint).toBe(
+      "AUTH_PERMISSION_DENIED",
+    );
+    // Past the permission, it finds no such follow-up.
+    expect((await editor.tenant!.supabase.rpc("record_follow_up_contact", contact)).error?.hint).toBe(
+      "RECORD_NOT_FOUND",
+    );
   });
 });
 

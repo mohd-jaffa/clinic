@@ -3748,3 +3748,83 @@ history names its treatments. Asked of the user first: D256 – D263.
 
 ### Blockers
 - None.
+
+## 2026-10-15 — R7.3: follow-ups in the database
+
+Follow-ups reach the database: which are due, in which tab, what closes
+them, and the calls made about them. The screen comes with R7.4. Asked of
+the user first: D267 – D271.
+
+### Added
+- `supabase/migrations/0026_follow_ups.sql`:
+  - **What a follow-up is** (§14.2): an open treatment's next due day — on
+    hold too, when it has one (D269) — or a visit's follow-up day, for a
+    patient not archived.
+  - **What closes it** (D268): an appointment for a later day than the one
+    it was set on, with any doctor, still to come or kept (not cancelled,
+    missed, or left unmarked on a past day — a cancelling reopens it); a
+    visit opened after it was set; or, for a treatment, its closing or
+    losing its day. `treatments.next_due_set_at`, stamped whenever the day
+    is given or changed, says when a treatment's was set.
+  - `follow_up_contacts`: a call or message about one follow-up — its
+    outcome, a note, and a "remind me on" day — never changed; the latest is
+    the row's last contact.
+  - `follow_up_items(tab)` and `follow_up_counts()`: Today, Overdue (up to
+    `follow_up_lapsed_days`), Upcoming (the next 30 days), Lapsed, and
+    Completed (treatments completed in the last 30), in the clinic's
+    timezone; one snoozed till a later day is left out of both (D271). Each
+    row: the patient, what is due (a treatment's name, or a visit's
+    follow-up), its doctor and day, and the last contact — nothing more of
+    the record.
+  - `record_follow_up_contact`: by `appointments.edit` or `visits.edit`,
+    while the clinic can write, for a patient seen and not archived; a
+    reminder day after today.
+  - **Who** (D267): anyone who sees appointments or visits lists them — the
+    front desk makes the calls — a doctor only their own patients'.
+- **Constants:** `FOLLOW_UP_TABS` and `FOLLOW_UP_OUTCOMES` with their words,
+  `FOLLOW_UP_KINDS`, `FOLLOW_UP_WINDOW_DAYS` (30, D270),
+  `TEXT_LIMITS.contactNote`.
+
+### Changed
+- The permission editor's words: seeing appointments includes the
+  follow-ups to call, and changing appointments or writing clinical notes
+  includes noting a call (D267).
+- **Plan:**
+  - D267 – D271;
+  - §8.1 (the permissions' words), §14.2 (what closes one), §14.3 (who,
+    the window, the snooze), §17 (Home's follow-ups, for the same people);
+  - §28.5 (`next_due_set_at`, the contacts), §28.7 (the functions), §29
+    (0026), §31.2 (`/follow-ups` for appointments or visits seen);
+  - the tracker: R7.3 DONE.
+- The Follow-ups link in the menu still asks for `visits.view`; it follows
+  the plan with the screen, in R7.4.
+
+### Speed (plan §37)
+- **Round trips:** each function is one call; the screen's reads come with
+  R7.4.
+- **Indexes,** each led by the clinic: a treatment's next due day
+  `(clinic_id, next_due_on)` and a visit's follow-up `(clinic_id,
+  follow_up_on)`, each only where there is one; completed treatments
+  `(clinic_id, completed_on desc)`; a follow-up's last contact `(clinic_id,
+  treatment_id | visit_id, contacted_at desc)`; a patient's contacts.
+  What closes one is asked of `appointments (clinic_id, patient_id,
+  scheduled_at desc)` and `visits (clinic_id, patient_id, created_at desc)`.
+  On the local tables the planner sometimes takes another clinic-led index;
+  R13.3's load seed checks them at volume.
+
+### Validation
+- Typecheck, lint, format check passed.
+- Unit and integration tests passed (3286), coverage 100%; E2E passed
+  (phone, desktop), with axe: 132 passed, 8 skipped (run at one width only).
+- `tests/db/follow-ups-migration.test.ts` keeps the tabs, outcomes, open
+  statuses, window, note length and indexes equal to the app's.
+  `tests/db/integration/follow-ups.test.ts` (8): each tab by the clinic's
+  today and the lapsed days; on hold with a date; an archived patient's
+  gone; closed by a later appointment with any doctor and reopened by its
+  cancelling, not by one left unmarked; closed by a later visit but not the
+  one that set it; a contact noted, and a snoozed one out of the lists and
+  counts until its day; who lists them and who notes a call. Tenant
+  isolation, read-only and the permission matrix have their rows.
+
+### Blockers
+- None.

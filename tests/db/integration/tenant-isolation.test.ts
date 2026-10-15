@@ -44,6 +44,7 @@ const CLINIC_TABLES: readonly { table: string; column: string }[] = [
   { table: "prescription_template_items", column: "clinic_id" },
   { table: "treatments", column: "clinic_id" },
   { table: "treatment_sessions", column: "clinic_id" },
+  { table: "follow_up_contacts", column: "clinic_id" },
   { table: "audit_logs", column: "clinic_id" },
 ];
 
@@ -162,6 +163,15 @@ beforeAll(async () => {
     .single();
   if (unsessioned) throw unsessioned;
   sessionId = session.id as string;
+  // And a call noted about the visit's follow-up (0026) — closed by the appointment tomorrow, so on no list.
+  await admin()
+    .from("visits")
+    .update({ follow_up_on: addDaysKey(todayKey(), 7) })
+    .eq("id", visitId);
+  const { error: uncalled } = await admin()
+    .from("follow_up_contacts")
+    .insert({ clinic_id: a.clinicId, patient_id: patientId, visit_id: visitId, outcome: "REACHED" });
+  if (uncalled) throw uncalled;
   developer = await makeDeveloper();
 });
 
@@ -371,6 +381,21 @@ describe("as clinic B's owner, with a valid token", () => {
     expect(kept).toEqual({ name: "Root canal", status: "IN_PROGRESS" });
     const { data: note } = await admin().from("treatment_sessions").select("note").eq("id", sessionId).single();
     expect(note).toEqual({ note: "Access opened" });
+  });
+
+  it("lists none of A's follow-ups, and notes no call about one (0026)", async () => {
+    const { supabase } = b.owner.tenant;
+    for (const tab of ["TODAY", "OVERDUE", "UPCOMING", "LAPSED", "COMPLETED"]) {
+      const { data, error } = await supabase.rpc("follow_up_items", { p_tab: tab, p_offset: 0, p_limit: 100 });
+      expect(error, tab).toBeNull();
+      expect(data, tab).toEqual([]);
+    }
+    for (const contact of [{ visit_id: visitId }, { treatment_id: treatmentId }]) {
+      const { error } = await supabase.rpc("record_follow_up_contact", {
+        p_contact: { ...contact, outcome: "REACHED" },
+      });
+      expect(error?.hint).toBe("RECORD_NOT_FOUND");
+    }
   });
 
   it("prints none of A's prescriptions (R6.4)", async () => {

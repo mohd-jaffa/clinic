@@ -99,6 +99,18 @@ describe("a read-only clinic", () => {
     }
   });
 
+  it("refuses noting a follow-up call in the database, and still lists the follow-ups (0026)", async () => {
+    const { supabase } = clinic.owner.tenant;
+    const { error } = await supabase.rpc("record_follow_up_contact", {
+      p_contact: { visit_id: randomUUID(), outcome: "REACHED" },
+    });
+    expect(error?.hint).toBe("CLINIC_PLAN_EXPIRED");
+    const { error: unlisted } = await supabase.rpc("follow_up_items", { p_tab: "TODAY", p_offset: 0, p_limit: 20 });
+    expect(unlisted).toBeNull();
+    const { error: uncounted } = await supabase.rpc("follow_up_counts");
+    expect(uncounted).toBeNull();
+  });
+
   it("refuses every treatment write in the database, and still reads them (0024)", async () => {
     const { supabase } = clinic.owner.tenant;
     for (const [name, args] of [

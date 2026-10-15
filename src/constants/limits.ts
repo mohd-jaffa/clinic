@@ -31,6 +31,14 @@ export const TEMPLATE_MEDICINES_NAMED = 2;
 /** How many of a visit's treatments its row in the history names before "+1" (D262). */
 export const HISTORY_TREATMENTS_NAMED = 2;
 
+/**
+ * How far the follow-ups' Upcoming tab looks ahead, and Completed back, in
+ * days (plan §14.3, D270): how far a list looks, not a rule a clinic lives
+ * by. 0026's `follow_up_rows` holds the same number. When an overdue
+ * follow-up lapses is the DEV's setting (`follow_up_lapsed_days`, §6).
+ */
+export const FOLLOW_UP_WINDOW_DAYS = 30;
+
 /** What a list's search box may send. */
 export const MAX_SEARCH_LENGTH = 100;
 
@@ -95,6 +103,8 @@ export const TEXT_LIMITS = {
   treatmentDescription: 1000,
   /** What a visit did for a treatment: "Canal cleaned and dressed". */
   sessionNote: 1000,
+  /** A line on a follow-up call: "Will call back on Monday". */
+  contactNote: 200,
 } as const;
 
 /** How many medicines one prescription holds (plan §13): more than any visit writes. 0021's CHECK. */
