@@ -121,6 +121,12 @@ export const apiRoutes = {
     status: (id: string) => `/api/treatments/${id}/status`,
     session: (id: string, visitId: string) => `/api/treatments/${id}/sessions/${visitId}`,
   },
+  // The follow-ups to call (plan §14.3): a tab a page at a time, how many each holds, a contact noted.
+  followUps: {
+    list: "/api/follow-ups",
+    counts: "/api/follow-ups/counts",
+    contacts: "/api/follow-ups/contacts",
+  },
 } as const;
 
 /**

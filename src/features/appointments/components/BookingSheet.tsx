@@ -104,7 +104,8 @@ function startsAs(moving: AppointmentDetail): AppointmentForm {
  * added, and the sheet goes on with them found. Booked, it closes, and the
  * card says who, when and with whom.
  *
- * From a patient's profile it opens for them (D166). **Reschedule** opens it
+ * From a patient's profile it opens for them (D166), and from a follow-up
+ * for its patient, its doctor and its day (D276). **Reschedule** opens it
  * on an appointment where it is now, its patient staying (D161): moved, it
  * closes with a card, under the same rules.
  */
@@ -115,6 +116,7 @@ export function BookingSheet({
   patient,
   moving,
   onMoved,
+  onBooked,
 }: {
   open: boolean;
   onClose: () => void;
@@ -126,6 +128,8 @@ export function BookingSheet({
   moving?: AppointmentDetail;
   /** Moved: everything it was opened from closes too. */
   onMoved?: () => void;
+  /** Booked: everything it was opened from closes too — a follow-up's sheet (D276). */
+  onBooked?: () => void;
 }) {
   const respond = useResponse();
   const refresh = useRevalidate();
@@ -212,6 +216,9 @@ export function BookingSheet({
       apiRoutes.queue.list,
       apiRoutes.patients.search,
       apiRoutes.patients.matches,
+      // A booking for a later day closes the patient's follow-ups (D268).
+      apiRoutes.followUps.list,
+      apiRoutes.followUps.counts,
     ],
     onSuccess: (booked) => {
       const { patient: name, doctor } = sent();
@@ -220,6 +227,7 @@ export function BookingSheet({
       choice.choose(null);
       reset(startsWith());
       onClose();
+      onBooked?.();
       void refresh([apiRoutes.patients.summary(booked.patientId), apiRoutes.patients.timeline(booked.patientId)]);
       respond.success({ title: appointments.booked(name, when(booked.scheduledAt), doctor) });
     },

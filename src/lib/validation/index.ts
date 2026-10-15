@@ -15,6 +15,7 @@ export {
   optionalPhoneNumber,
   password,
   optionalLine,
+  optionalDay,
   optionalLines,
   optionalPaiseText,
   optionalWholeNumberText,
@@ -275,6 +276,15 @@ export {
   type UpdateMemberInput,
   type UpdateMemberPayload,
 } from "./schemas/team";
+
+export {
+  followUpContactFormSchema,
+  followUpContactSchema,
+  followUpListQuerySchema,
+  type FollowUpContactInput,
+  type FollowUpContactPayload,
+  type FollowUpListQuery,
+} from "./schemas/followUps";
 
 export {
   cancelTreatmentSchema,

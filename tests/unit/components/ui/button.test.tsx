@@ -210,4 +210,12 @@ describe("IconLink", () => {
     await userEvent.click(link);
     expect(onClick).toHaveBeenCalled();
   });
+
+  it("opens a call in place, without newTab", () => {
+    render(<IconLink icon={Trash2} label="Call Rohan Mehta" href="tel:+919876543210" newTab={false} />);
+    const link = screen.getByRole("link", { name: "Call Rohan Mehta" });
+    expect(link).toHaveAttribute("href", "tel:+919876543210");
+    expect(link).not.toHaveAttribute("target");
+    expect(link).not.toHaveAttribute("rel");
+  });
 });

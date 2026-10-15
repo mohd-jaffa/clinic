@@ -1,10 +1,20 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 
-import { isOpen, listPatientTreatments, toTreatment, TREATMENT_COLUMNS } from "@/features/treatments/api";
+import { PAGE_SIZE } from "@/constants/limits";
+
+import {
+  countFollowUps,
+  isOpen,
+  listFollowUps,
+  listPatientTreatments,
+  toFollowUp,
+  toTreatment,
+  TREATMENT_COLUMNS,
+} from "@/features/treatments/api";
 import type { Tenant } from "@/lib/supabase/tenant";
 import { fakeSupabase, postgrestError, type FakeSupabaseOptions } from "@tests/support/supabase";
-import { aTreatment, aTreatmentRow } from "@tests/support/treatments";
+import { aFollowUp, aFollowUpRow, aTreatment, aTreatmentRow } from "@tests/support/treatments";
 
 function tenantWith(options: FakeSupabaseOptions) {
   const fake = fakeSupabase(options);
@@ -74,5 +84,82 @@ describe("listPatientTreatments (D260)", () => {
   it("passes a failure on", async () => {
     const { tenant } = tenantWith({ answer: () => ({ error: postgrestError("XX000") }) });
     await expect(listPatientTreatments(tenant, "p-1")).rejects.toMatchObject({ code: "INTERNAL_ERROR" });
+  });
+});
+
+describe("toFollowUp (plan §14.3, D275)", () => {
+  it("reads a treatment's next sitting, not yet contacted", () => {
+    expect(toFollowUp(aFollowUpRow())).toEqual(aFollowUp());
+  });
+
+  it("reads a visit's follow-up by its visit, and its last contact with who made it", () => {
+    const read = toFollowUp(
+      aFollowUpRow({
+        kind: "VISIT",
+        treatment_id: null,
+        visit_id: "v-1",
+        title: null,
+        last_outcome: "NO_ANSWER",
+        last_contacted_at: "2026-10-14T05:00:00+00:00",
+        last_note: "Line busy",
+        last_contacted_by: "Priya Shah",
+      }),
+    );
+    expect(read).toMatchObject({ kind: "VISIT", id: "v-1", title: null });
+    expect(read.lastContact).toEqual({
+      outcome: "NO_ANSWER",
+      at: "2026-10-14T05:00:00+00:00",
+      note: "Line busy",
+      by: "Priya Shah",
+    });
+  });
+});
+
+describe("listFollowUps (plan §14.3; D267)", () => {
+  it("reads a page of a tab through follow_up_items, one more than a page to know if another follows", async () => {
+    const { tenant, rpcs } = tenantWith({ rpc: () => ({ data: [aFollowUpRow()] }) });
+    expect(await listFollowUps(tenant, { tab: "TODAY", cursor: undefined })).toEqual({
+      items: [aFollowUp()],
+      nextCursor: null,
+    });
+    expect(rpcs).toEqual([{ name: "follow_up_items", args: { p_tab: "TODAY", p_offset: 0, p_limit: PAGE_SIZE + 1 } }]);
+  });
+
+  it("starts at its cursor, and gives the next page's", async () => {
+    const rows = Array.from({ length: PAGE_SIZE + 1 }, (_, index) => aFollowUpRow({ treatment_id: `t-${index}` }));
+    const { tenant, rpcs } = tenantWith({ rpc: () => ({ data: rows }) });
+    const page = await listFollowUps(tenant, { tab: "OVERDUE", cursor: PAGE_SIZE });
+    expect(page.items).toHaveLength(PAGE_SIZE);
+    expect(page.nextCursor).toBe(String(2 * PAGE_SIZE));
+    expect(rpcs[0].args).toEqual({ p_tab: "OVERDUE", p_offset: PAGE_SIZE, p_limit: PAGE_SIZE + 1 });
+  });
+
+  it("passes a refusal on", async () => {
+    const { tenant } = tenantWith({
+      rpc: () => ({ error: { ...postgrestError("P0001"), hint: "AUTH_PERMISSION_DENIED" } }),
+    });
+    await expect(listFollowUps(tenant, { tab: "TODAY", cursor: undefined })).rejects.toMatchObject({
+      code: "AUTH_PERMISSION_DENIED",
+    });
+  });
+});
+
+describe("countFollowUps (plan §14.3, D271)", () => {
+  it("reads how many each tab holds in one call", async () => {
+    const totals = [
+      { tab: "TODAY", total: 2 },
+      { tab: "OVERDUE", total: 0 },
+      { tab: "UPCOMING", total: 5 },
+      { tab: "LAPSED", total: 1 },
+      { tab: "COMPLETED", total: 3 },
+    ];
+    const { tenant, rpcs } = tenantWith({ rpc: () => ({ data: totals }) });
+    expect(await countFollowUps(tenant)).toEqual({ TODAY: 2, OVERDUE: 0, UPCOMING: 5, LAPSED: 1, COMPLETED: 3 });
+    expect(rpcs).toEqual([{ name: "follow_up_counts", args: undefined }]);
+  });
+
+  it("passes a failure on", async () => {
+    const { tenant } = tenantWith({ rpc: () => ({ error: postgrestError("XX000") }) });
+    await expect(countFollowUps(tenant)).rejects.toMatchObject({ code: "INTERNAL_ERROR" });
   });
 });

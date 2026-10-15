@@ -3828,3 +3828,89 @@ the user first: D267 – D271.
 
 ### Blockers
 - None.
+
+## 2026-10-16 — R7.4 and R7.6: the follow-ups screen, with reminders on WhatsApp
+
+### Added
+- **`/follow-ups`** (plan §14.3; D267 – D278), for whoever sees appointments
+  or visits, a doctor their own patients only: Today, Overdue, Upcoming,
+  Lapsed and Completed, each with how many it holds, a page at a time
+  (`src/features/treatments`: `FollowUps`, `FollowUpSheet`, `FollowUpPanel`
+  and their hooks).
+  - **A row** (D272): the patient, "Root canal · Maya Rao" (or "Follow-up"
+    for a visit's), when it is due, the last contact, and a round **Call**
+    at its end. The row opens its sheet.
+  - **The sheet** (D272, D275): what it is for, its doctor and day, and the
+    last contact — how it went, when, by whom, its note. **Call**, **Remind
+    on WhatsApp**, **Book**, **Open profile**, and **Mark contacted**.
+  - **Remind on WhatsApp** (D273, R7.6): the message written — "Dr. Maya Rao
+    at Smile Care asked to see you again around 14 Oct. Reply or call 0484
+    234 5678 to book." — and noted as *Reminder sent* as it opens, by whoever
+    notes contacts; in a view-only clinic, or for one who only reads, it
+    opens unnoted.
+  - **Mark contacted** (D271, D274): how it went (required), a note, and a
+    day to be reminded on — chips for tomorrow, 3 days, 1 week, 2 weeks, or
+    any later day — that takes it off the lists and counts until then. For
+    `appointments.edit` or `visits.edit`, while the clinic can write.
+  - **Book** (D276): the booking sheet in the sheet's place, filled with the
+    patient, the follow-up's doctor and its day (today for one overdue);
+    booked, everything closes and the follow-up leaves its list.
+  - **Completed** (D277): Call and the profile only.
+  - One list on a phone and a desktop alike, no doctor filter (D278).
+- **API:** `GET /api/follow-ups?tab=`, `GET /api/follow-ups/counts` (for
+  `appointments.view` or `visits.view`), `POST /api/follow-ups/contacts`
+  (for `appointments.edit` or `visits.edit`, audited: the outcome and day by
+  value, the note by name alone).
+- **`0027_follow_up_callers`** (D275): `follow_up_rows` and
+  `follow_up_items` hand back who made the last contact
+  (`last_contacted_by`); nothing else changes.
+- `FOLLOW_UP_ACCESS` and an any-of form of `RouteAccess`, so a route, a
+  screen and a menu place can serve "appointments or visits" (D267).
+- `REMIND_ME_CHOICES`, the screen's words, `WHATSAPP_TEXT.followUpReminder`,
+  `FOLLOW_UPS_LOAD_FAILED`, `VALIDATION_MESSAGES.afterToday`; the
+  `followUps` schemas; `optionalDay`, shared with the treatment schemas.
+
+### Changed
+- The **Follow-ups** menu place opens for appointments or visits seen, not
+  `visits.view` alone (D267) — the front desk now sees it.
+- `IconLink` takes `newTab`, off for a call the phone takes in place.
+- The booking sheet takes `onBooked`, and a booking refreshes the
+  follow-ups (a later appointment closes one, D268).
+- **Plan:** D272 – D278; §14.3 (the row, the sheet, Remind, the chips, Book,
+  Completed, the round trips), §22.1 (the follow-up reminder's words),
+  §28.7 and §29 (0027; the migrations planned after it renumbered 0028 –
+  0035, in §29 and the tracker); the tracker: R7.4 and R7.6 DONE.
+- DESIGN.md: the follow-ups screen and its sheet; `IconLink`.
+
+### Speed (plan §37)
+- **The screen waits on 2 round trips:** the session, then at once the
+  first tab's page, the counts, the clinic (for the reminder's phone), the
+  doctors and the appointment types (for Book). Another tab is one read.
+- **Noting a contact, or a reminder, waits on 3:** the session, the
+  function, the audit row.
+- No new query: the lists and counts are 0026's, on its indexes; 0027 adds
+  one join to the last contact's profile, by its primary key.
+
+### Validation
+- Typecheck, lint, format check passed.
+- Unit and integration tests passed (3352), coverage 100%.
+- E2E passed (phone, desktop), with axe: 136 passed, 8 skipped (run at one
+  width only). The front-desk journey skips itself near midnight; the full
+  run crossed it, so it was run again after midnight and passed at both
+  widths.
+- `tests/e2e/follow-ups.spec.ts`: the desk reminds Anita (the message, noted
+  as Reminder sent by them), marks her No answer back in 3 days (off Today
+  and its count), books Kiran's crown from his sheet (his row gone), and
+  finds Divya's completed scaling with Call and the profile only; Dr. Ravi
+  Iyer sees only his patient's; one who only reads reminds unnoted, and
+  neither books nor notes.
+- `tests/db/follow-up-callers-migration.test.ts` keeps 0027 equal to 0026
+  but for the caller; `tests/db/integration/follow-up-screen.test.ts` (4):
+  a tab and its count through the feature's functions, a contact read back
+  with who made it and audited with the note by name alone, a reminder
+  sent, a snoozed one out of its tab and count, and what is refused.
+- Screenshots at a phone's and a desktop's width, light and dark, taken for
+  the user and kept out of the repository.
+
+### Blockers
+- None.

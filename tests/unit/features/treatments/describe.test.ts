@@ -1,7 +1,16 @@
 import { describe, expect, it } from "vitest";
 
-import { dueLabel, inShowingOrder, MOVE_STATUS, movesFrom } from "@/features/treatments/describe";
-import { aTreatment } from "@tests/support/treatments";
+import {
+  dueLabel,
+  followUpAbout,
+  followUpReminderText,
+  followUpWhen,
+  inShowingOrder,
+  lastContactLine,
+  MOVE_STATUS,
+  movesFrom,
+} from "@/features/treatments/describe";
+import { aFollowUp, aTreatment } from "@tests/support/treatments";
 
 describe("dueLabel (plan §14.3)", () => {
   it("says when it is due from today", () => {
@@ -41,5 +50,32 @@ describe("movesFrom (D250, D256)", () => {
       HOLD: "ON_HOLD",
       CANCEL: "CANCELLED",
     });
+  });
+});
+
+describe("a follow-up's words (plan §14.3, §22.1)", () => {
+  it("say what it is for and with whom — a visit's as a Follow-up, a doctor gone as no longer on the team", () => {
+    expect(followUpAbout(aFollowUp())).toBe("Root canal · Maya Rao");
+    expect(followUpAbout(aFollowUp({ title: null, doctorName: null }))).toBe("Follow-up · No longer on the team");
+  });
+
+  it("say when it is due from today, and on Completed when it was completed", () => {
+    expect(followUpWhen(aFollowUp({ dueOn: "2026-10-11" }), "OVERDUE", "2026-10-15")).toBe("Overdue by 4 days");
+    expect(followUpWhen(aFollowUp({ dueOn: "2026-10-12" }), "COMPLETED", "2026-10-15")).toBe("Completed 12 Oct");
+    expect(typeof followUpWhen(aFollowUp(), "TODAY")).toBe("string");
+  });
+
+  it("read the last contact on the clinic's day", () => {
+    expect(lastContactLine({ outcome: "NO_ANSWER", at: "2026-10-13T20:00:00+00:00" })).toBe("No answer, 14 Oct");
+  });
+
+  it("write the reminder from the doctor at the clinic, with its phone (D273)", () => {
+    const clinic = { name: "Smile Care", phone: "0484 234 5678" };
+    expect(followUpReminderText(aFollowUp(), clinic)).toBe(
+      "Dr. Maya Rao at Smile Care asked to see you again around 15 Oct. Reply or call 0484 234 5678 to book.",
+    );
+    expect(followUpReminderText(aFollowUp({ doctorName: null }), { ...clinic, phone: null })).toBe(
+      "Smile Care asked to see you again around 15 Oct. Reply to book.",
+    );
   });
 });

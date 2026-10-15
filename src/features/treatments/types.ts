@@ -1,4 +1,4 @@
-import type { TreatmentStatus } from "@/constants/statuses";
+import type { FollowUpKind, FollowUpOutcome, FollowUpTab, TreatmentStatus } from "@/constants/statuses";
 
 /** A doctor as embedded with a row: their member's profile, gone when they left. */
 export interface EmbeddedDoctorRow {
@@ -80,4 +80,61 @@ export interface TreatmentDetails {
 export interface SessionSaved {
   note: string | null;
   status: TreatmentStatus;
+}
+
+/** A follow-up as 0027's `follow_up_items` hands it back. */
+export interface FollowUpRow {
+  kind: FollowUpKind;
+  treatment_id: string | null;
+  visit_id: string | null;
+  patient_id: string;
+  patient_name: string;
+  patient_number: number;
+  patient_phone: string;
+  title: string | null;
+  doctor_id: string;
+  doctor_name: string | null;
+  due_on: string;
+  last_outcome: FollowUpOutcome | null;
+  last_contacted_at: string | null;
+  last_note: string | null;
+  last_contacted_by: string | null;
+}
+
+/** The last contact about a follow-up (D275): how it went, when, its note, and who made it. */
+export interface FollowUpContact {
+  outcome: FollowUpOutcome;
+  at: string;
+  note: string | null;
+  by: string | null;
+}
+
+/**
+ * A follow-up in its tab (plan §14.3; D267): whose, what is due — a
+ * treatment's next sitting, by its name, or a visit's follow-up — with which
+ * doctor and when, and the last contact; nothing more of the record. `id` is
+ * its treatment's or its visit's.
+ */
+export interface FollowUp {
+  kind: FollowUpKind;
+  id: string;
+  patient: { id: string; name: string; number: number; phone: string };
+  /** The treatment's name; null for a visit's follow-up. */
+  title: string | null;
+  doctorId: string;
+  doctorName: string | null;
+  /** The day it is due — on Completed, the day the treatment was completed. */
+  dueOn: string;
+  lastContact: FollowUpContact | null;
+}
+
+/** How many each tab holds (plan §14.3), snoozed ones left out (D271). */
+export type FollowUpCounts = Record<FollowUpTab, number>;
+
+/** A contact noted (D271, D273): which, about whom, how it went, and the day it is out of the lists until. */
+export interface ContactNoted {
+  id: string;
+  patientId: string;
+  outcome: FollowUpOutcome;
+  snoozeUntil: string | null;
 }

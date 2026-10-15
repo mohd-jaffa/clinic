@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   DEFAULT_PRESET,
   effectivePermissions,
+  FOLLOW_UP_ACCESS,
   hasAccess,
   isPermission,
   OWNER_ONLY_PERMISSION,
@@ -126,5 +127,15 @@ describe("hasAccess", () => {
     expect(hasAccess(owner, "OWNER")).toBe(true);
     expect(hasAccess(staff, "patients.view")).toBe(true);
     expect(hasAccess(staff, "payments.create")).toBe(false);
+  });
+
+  it("lets a holder of any one of several through (D267)", () => {
+    const desk = { role: "STAFF", permissions: ["patients.view", "appointments.view"] } as const;
+    const nurse = { role: "STAFF", permissions: ["patients.view", "visits.view"] } as const;
+    const billing = { role: "STAFF", permissions: ["patients.view", "payments.view"] } as const;
+    expect(hasAccess(desk, FOLLOW_UP_ACCESS.list)).toBe(true);
+    expect(hasAccess(nurse, FOLLOW_UP_ACCESS.list)).toBe(true);
+    expect(hasAccess(billing, FOLLOW_UP_ACCESS.list)).toBe(false);
+    expect(hasAccess(desk, FOLLOW_UP_ACCESS.note)).toBe(false);
   });
 });

@@ -4,10 +4,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Tenant } from "@/lib/supabase/tenant";
 import { fakeSupabase, postgrestError, type FakeSupabaseOptions } from "@tests/support/supabase";
 
-const { logActionsSafe } = vi.hoisted(() => ({ logActionsSafe: vi.fn() }));
-vi.mock("@/lib/audit/auditLog", () => ({ logActionsSafe }));
+const { logActionSafe, logActionsSafe } = vi.hoisted(() => ({ logActionSafe: vi.fn(), logActionsSafe: vi.fn() }));
+vi.mock("@/lib/audit/auditLog", () => ({ logActionSafe, logActionsSafe }));
 
-const { changeTreatmentStatus, createTreatment, recordSession, removeSession, updateTreatment } =
+const { changeTreatmentStatus, createTreatment, recordFollowUpContact, recordSession, removeSession, updateTreatment } =
   await import("@/features/treatments/records");
 
 function tenantWith(options: FakeSupabaseOptions) {
@@ -264,5 +264,73 @@ describe("removeSession (D254)", () => {
     ]);
     const { tenant: refusing } = tenantWith({ rpc: () => refused("TREATMENT_SESSION_KEPT") });
     await expect(removeSession(refusing, "t-1", "v-1")).rejects.toMatchObject({ code: "TREATMENT_SESSION_KEPT" });
+  });
+});
+
+describe("recordFollowUpContact (plan §14.3; D271, D273)", () => {
+  const noted = { contact_id: "c-1", patient_id: "p-1", outcome: "NO_ANSWER", snooze_until: "2026-10-18" };
+
+  it("notes a treatment's through record_follow_up_contact, audited with the note by name alone", async () => {
+    const { tenant, rpcs } = tenantWith({ rpc: () => ({ data: noted }) });
+    const contact = {
+      kind: "TREATMENT" as const,
+      id: "t-1",
+      outcome: "NO_ANSWER" as const,
+      note: "Line busy",
+      snoozeUntil: "2026-10-18",
+    };
+    expect(await recordFollowUpContact(tenant, contact, "req_c")).toEqual({
+      id: "c-1",
+      patientId: "p-1",
+      outcome: "NO_ANSWER",
+      snoozeUntil: "2026-10-18",
+    });
+    expect(rpcs).toEqual([
+      {
+        name: "record_follow_up_contact",
+        args: {
+          p_contact: { outcome: "NO_ANSWER", note: "Line busy", snooze_until: "2026-10-18", treatment_id: "t-1" },
+        },
+      },
+    ]);
+    expect(logActionSafe).toHaveBeenCalledWith(tenant, {
+      action: "CREATE",
+      entityType: "follow_up_contacts",
+      entityId: "c-1",
+      changes: {
+        outcome: { from: null, to: "NO_ANSWER" },
+        snooze_until: { from: null, to: "2026-10-18" },
+        fields: ["note"],
+      },
+      requestId: "req_c",
+    });
+  });
+
+  it("notes a visit's by its visit — a reminder sent, with nothing more", async () => {
+    const { tenant, rpcs } = tenantWith({
+      rpc: () => ({ data: { ...noted, outcome: "REMINDER_SENT", snooze_until: null } }),
+    });
+    await recordFollowUpContact(tenant, {
+      kind: "VISIT",
+      id: "v-1",
+      outcome: "REMINDER_SENT",
+      note: null,
+      snoozeUntil: null,
+    });
+    expect(rpcs[0].args).toEqual({
+      p_contact: { outcome: "REMINDER_SENT", note: null, snooze_until: null, visit_id: "v-1" },
+    });
+    expect(logActionSafe.mock.calls[0][1].changes).toEqual({
+      outcome: { from: null, to: "REMINDER_SENT" },
+      snooze_until: { from: null, to: null },
+    });
+  });
+
+  it("passes a refusal on", async () => {
+    const { tenant } = tenantWith({ rpc: () => refused("PATIENT_ARCHIVED") });
+    await expect(
+      recordFollowUpContact(tenant, { kind: "VISIT", id: "v-1", outcome: "REACHED", note: null, snoozeUntil: null }),
+    ).rejects.toMatchObject({ code: "PATIENT_ARCHIVED" });
+    expect(logActionSafe).not.toHaveBeenCalled();
   });
 });

@@ -6,7 +6,7 @@
  * happened and what to do next, never more.
  */
 
-import { MAX_PATIENT_AGE } from "./limits";
+import { FOLLOW_UP_WINDOW_DAYS, MAX_PATIENT_AGE } from "./limits";
 
 /** A count as India writes it: 1,240 · 12,000 · 1,00,000. */
 const count = (value: number) => value.toLocaleString("en-IN");
@@ -128,6 +128,7 @@ export const ERROR_MESSAGES = {
   TEMPLATE_NAME_TAKEN: "You already have a template with this name. Choose another name.",
   TEMPLATES_LOAD_FAILED: "The templates couldn't be loaded.",
   TREATMENTS_LOAD_FAILED: "The treatments couldn't be loaded.",
+  FOLLOW_UPS_LOAD_FAILED: "The follow-ups couldn't be loaded.",
 
   // Treatments (plan §14.1; D248 – D255).
   TREATMENT_CHANGED: "Someone changed this treatment meanwhile. Their version is shown; what you typed is kept.",
@@ -185,6 +186,7 @@ export const VALIDATION_MESSAGES = {
   afterVisit: (label: string) => `${label} must be after the visit.`,
   day: (label: string) => `${label} must be a date.`,
   notBeforeToday: (label: string) => `${label} can’t be before today.`,
+  afterToday: (label: string) => `${label} must be after today.`,
   endsBeforeStart: (last: string, first: string) => `${last} can’t be before the ${first.toLowerCase()}.`,
   atMostDays: (max: number) => `It can last at most ${max} days.`,
   atMostMedicines: (max: number) => `A prescription holds at most ${max} medicines.`,
@@ -975,6 +977,52 @@ export const UI_TEXT = {
     notCreated: "That treatment wasn’t added",
   },
 
+  /** The follow-ups to call (plan §14.3; D267 – D278). */
+  followUps: {
+    yours: "Your patients",
+    tabsLabel: "Follow-ups by when they’re due",
+    /** Each tab with nothing in it. */
+    empty: {
+      TODAY: "No one is due back today",
+      OVERDUE: "Nothing overdue",
+      UPCOMING: `No one is due in the next ${FOLLOW_UP_WINDOW_DAYS} days`,
+      LAPSED: "No lapsed follow-ups",
+      COMPLETED: `No treatments completed in the last ${FOLLOW_UP_WINDOW_DAYS} days`,
+    },
+    emptyHint: "A visit’s follow-up day and a treatment’s next sitting show here when they come due.",
+    emptyHintLapsed: "Patients overdue for longer than the clinic waits show here, to call back.",
+    emptyHintCompleted: "A treatment shows here for a month after it’s completed.",
+    /** A row. */
+    visitFollowUp: "Follow-up",
+    about: (what: string, doctor: string) => `${what} · ${doctor}`,
+    lastContact: (outcome: string, day: string) => `${outcome}, ${day}`,
+    /** Its sheet. */
+    forLabel: "For",
+    dueLabel: "Due",
+    lastContactLabel: "Last contact",
+    lastContactBy: (outcome: string, day: string, by: string | null) =>
+      by ? `${outcome} · ${day}, by ${by}` : `${outcome} · ${day}`,
+    notContacted: "Not contacted yet",
+    actions: "Reach them",
+    book: "Book",
+    bookFor: (name: string) => `Book an appointment for ${name}`,
+    /** Mark contacted (D271, D274). */
+    markTitle: "Mark contacted",
+    outcomeLabel: "How it went",
+    noteLabel: "Note",
+    noteHint: "For example, “Will call back after Diwali”.",
+    remindMeLabel: "Remind me on",
+    remindMeHint: "Until then it stays off the lists and their counts.",
+    remindMeChoicesLabel: "Remind me in",
+    remindMeChoices: { TOMORROW: "Tomorrow", "3_DAYS": "3 days", "1_WEEK": "1 week", "2_WEEKS": "2 weeks" },
+    save: "Save contact",
+    noted: (name: string, outcome: string) => `Noted for ${name}: ${outcome}`,
+    notedUntil: (name: string, outcome: string, day: string) =>
+      `Noted for ${name}: ${outcome}. Back on the list on ${day}.`,
+    notNoted: "That contact wasn’t noted",
+    reminderNotNoted: "The reminder wasn’t noted",
+  },
+
   /** What the PDFs say (plan §33; D218 – D224). */
   documents: {
     /** At the foot of every page (D30). */
@@ -1469,6 +1517,15 @@ export const WHATSAPP_TEXT = {
   /** A doctor as a patient is told of them: "Dr. Maya Rao" — once, if their name already says so. */
   doctor: (name: string) => (/^dr\.?\s/i.test(name) ? name : `Dr. ${name}`),
   when: (day: string, time: string) => `${day}, ${time}`,
+  /**
+   * "Dr. Maya Rao at Smile Care asked to see you again around 14 Oct. Reply or
+   * call 98765 43210 to book." (plan §22.1, D273) — without the doctor, the
+   * clinic asks; without the clinic's phone, a reply books.
+   */
+  followUpReminder: (doctor: string | null, clinic: string, day: string, phone: string | null) =>
+    `${doctor ? `${doctor} at ${clinic}` : clinic} asked to see you again around ${day}. ${
+      phone ? `Reply or call ${phone} to book.` : "Reply to book."
+    }`,
   /** "Your prescription from Dr. Maya Rao, Smile Care, 15 Oct." — with the PDF (D245). */
   prescription: (doctor: string | null, clinic: string, day: string) =>
     doctor ? `Your prescription from ${doctor}, ${clinic}, ${day}.` : `Your prescription from ${clinic}, ${day}.`,

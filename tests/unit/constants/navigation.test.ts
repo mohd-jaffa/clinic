@@ -44,7 +44,7 @@ describe("the places (plan §31.1)", () => {
       "/queue": "appointments.view",
       "/appointments": "appointments.view",
       "/patients": "patients.view",
-      "/follow-ups": "visits.view",
+      "/follow-ups": ["appointments.view", "visits.view"],
       "/billing": "payments.view",
       "/expenses": "expenses.view",
       "/reports": "reports.view",
@@ -62,7 +62,14 @@ describe("the places (plan §31.1)", () => {
 
   it("are shown only to those who may open them", () => {
     expect(placesFor(owner, ALL_NAV)).toEqual(ALL_NAV);
-    expect(ids(placesFor(receptionist, ALL_NAV))).toEqual(["home", "queue", "appointments", "patients", "settings"]);
+    expect(ids(placesFor(receptionist, ALL_NAV))).toEqual([
+      "home",
+      "queue",
+      "appointments",
+      "patients",
+      "followUps",
+      "settings",
+    ]);
     expect(ids(placesFor({ role: "STAFF", permissions: [] }, MORE_NAV))).toEqual(["settings"]);
   });
 

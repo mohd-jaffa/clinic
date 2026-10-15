@@ -222,16 +222,29 @@ export function effectivePermissions(role: ClinicRole, stored: readonly Permissi
 /**
  * Who a route serves, besides a permission: any active member of the clinic,
  * or its owner alone (the Plan screen, the activity log, import, export,
- * deletion — plan §31.2). A route always names one of these or a permission;
- * there is no default (AGENTS.md §8).
+ * deletion — plan §31.2) — or whoever holds any one of a few permissions,
+ * as the follow-ups serve the front desk and the doctors alike (D267). A
+ * route always names one of these or a permission; there is no default
+ * (AGENTS.md §8).
  */
 export const ROUTE_ACCESS = { member: "MEMBER", owner: "OWNER" } as const;
-export type RouteAccess = Permission | (typeof ROUTE_ACCESS)[keyof typeof ROUTE_ACCESS];
+export type RouteAccess = Permission | readonly Permission[] | (typeof ROUTE_ACCESS)[keyof typeof ROUTE_ACCESS];
+
+/**
+ * Who works the follow-ups (plan §14.3, D267): whoever sees appointments or
+ * visits lists them, and whoever changes either notes a call — as 0026's
+ * functions ask.
+ */
+export const FOLLOW_UP_ACCESS = {
+  list: ["appointments.view", "visits.view"],
+  note: ["appointments.edit", "visits.edit"],
+} as const satisfies Record<string, readonly Permission[]>;
 
 /**
  * Whether a member may reach what serves `access` (plan §8): any member, the
- * owner alone, or a named permission — the owner holding every one. The route
- * guard asks it of every request; the shell asks it of every place it shows.
+ * owner alone, a named permission, or any one of several — the owner holding
+ * every one. The route guard asks it of every request; the shell asks it of
+ * every place it shows.
  */
 export function hasAccess(
   membership: { role: ClinicRole; permissions: readonly Permission[] },
@@ -239,5 +252,6 @@ export function hasAccess(
 ): boolean {
   if (access === ROUTE_ACCESS.member) return true;
   if (access === ROUTE_ACCESS.owner) return membership.role === "OWNER";
+  if (typeof access !== "string") return access.some((permission) => membership.permissions.includes(permission));
   return membership.permissions.includes(access);
 }

@@ -358,6 +358,13 @@ earlier lines are never rewritten.
 | D269 | **An on-hold treatment's next due day is a follow-up** (the user): a date on a paused treatment is a deliberate reminder ("resume in a month"); one with no date shows nothing. | 2026-10-15 |
 | D270 | **Upcoming and Completed look 30 days, fixed in code** (the user): `FOLLOW_UP_WINDOW_DAYS`, how far a list looks rather than a rule a clinic lives by; when an overdue one lapses stays the DEV's setting (`follow_up_lapsed_days`, §6). | 2026-10-15 |
 | D271 | **A follow-up snoozed with "remind me on" leaves the lists and the counts until that day** (the user), then returns to whichever tab its due day puts it in; Home's follow-ups agree. | 2026-10-15 |
+| D272 | **A follow-up's row carries Call; everything else is in its sheet** (the user): the row names the patient, what is due and with whom, when, and the last contact, with a round **Call** at its end — calling is what the desk does most. Tapping the row opens its sheet: what it is for, its doctor and day, the last contact, then **Call**, **Remind on WhatsApp**, **Book**, **Open profile**, and the **Mark contacted** form in place. | 2026-10-15 |
+| D273 | **Remind on WhatsApp comes with the screen, noted as *Reminder sent*** (the user; R7.6 built with R7.4): WhatsApp opens with "Dr. Maya Rao at Smile Care asked to see you again around 14 Oct. Reply or call 0484 234 5678 to book." — the clinic's phone, when it has one — and the reminder is noted as a contact as it opens, as an appointment's is (D180), by whoever notes contacts. In a view-only clinic, or for one who only reads, it still opens, unnoted. | 2026-10-15 |
+| D274 | **"Remind me on" has chips and a date** (the user): Tomorrow, 3 days, 1 week, 2 weeks from today, or any later day; left empty, the follow-up stays in its list. | 2026-10-15 |
+| D275 | **A follow-up's sheet shows its last contact only** (the user), as the row does, with who made it — how it went, the day, by whom, and the note — read with the list, with no read of its own (`0027_follow_up_callers` hands back the caller's name). | 2026-10-15 |
+| D276 | **Book from a follow-up fills the booking, and the row leaves on its own** (the user): the patient, the follow-up's doctor and its day — today for one overdue. Booked for a later day, the follow-up is done (D268) and leaves its list; nothing more is noted. | 2026-10-15 |
+| D277 | **A treatment on Completed offers Call and the profile only** (the user): nothing is due, so there is no Remind, Book or Mark contacted; its sheet tells the treatment, the day it was completed and its doctor. | 2026-10-15 |
+| D278 | **One list for the clinic, a phone's and a desktop's alike** (the user): no doctor filter — each row names its doctor, and a doctor sees only their own patients (D3); on a desktop, the tabs and one column of rows, like Patients, with the same sheet as on a phone. | 2026-10-15 |
 
 ## 3. Users and roles
 
@@ -1310,11 +1317,22 @@ patients':
 | **Completed** | Treatments completed in the last 30 days. |
 
 Each row: patient, treatment or "Follow-up", doctor, due label ("Due
-tomorrow", "Overdue by 4 days"), last contact. Actions: **Call** (`tel:`),
-**Remind on WhatsApp** (§22.1), **Book** (pre-filled appointment), **Mark
-contacted** — outcome (Reached, No answer, Booked, Declined, Reminder sent), a note, and an optional "remind me on"
-date that hides the row, and leaves it out of the counts, until then
-(`follow_up_contacts`, D271), for `appointments.edit` or `visits.edit` (D267).
+tomorrow", "Overdue by 4 days"), last contact, and a round **Call** (`tel:`)
+at its end (D272). The row opens its sheet: what it is for, its doctor, its
+day, and the last contact — how it went, when, by whom, its note (D275) —
+then **Call**; **Remind on WhatsApp** (§22.1), noted as *Reminder sent* as
+it opens (D273); **Book**, the booking filled with the patient, the doctor
+and the day due — today for one overdue — after which the follow-up is done
+and leaves its list (D276); **Open profile**; and **Mark contacted** —
+outcome (Reached, No answer, Booked, Declined, Reminder sent), a note, and
+an optional "remind me on" day, by chips (Tomorrow, 3 days, 1 week, 2 weeks)
+or any later day (D274), that hides the row, and leaves it out of the
+counts, until then (`follow_up_contacts`, D271), for `appointments.edit` or
+`visits.edit` (D267). A treatment on **Completed** offers Call and the
+profile only (D277). No doctor filter; a desktop shows the same one list
+and sheet (D278). The screen waits on 2 round trips (the session, then the
+tab, the counts, the clinic, the doctors and the appointment types at
+once); noting a contact on 3.
 
 ## 15. Billing and payments
 
@@ -1567,7 +1585,7 @@ clinic's name, the doctor, the date and time filled in; English in V1.
 | Button | Where | Message |
 |---|---|---|
 | Remind | Appointment detail; Still-to-come in the queue; tomorrow's list | "Reminder: your appointment with Dr. Maya at Smile Dental on Tue 14 Oct, 10:30 AM." |
-| Remind | Follow-ups (§14.3) | "Dr. Maya asked to see you again around 14 Oct. Reply or call 98xxxxxxx to book." |
+| Remind | Follow-ups (§14.3) | "Dr. Maya Rao at Smile Care asked to see you again around 14 Oct. Reply or call 0484 234 5678 to book." — the clinic's phone, when it has one (D273) |
 | Send bill | Bill | "Your bill 2026-27/0042 from Smile Dental: ₹1,500." + the PDF |
 | Send prescription | Visit, prescription | "Your prescription from Dr. Maya, Smile Dental, 12 Oct." + the PDF |
 
@@ -1999,7 +2017,7 @@ expenses              id · clinic_id · category_id · description · amount_pa
 | `patient_stats` | next appointment, open treatments, per patient (lists). |
 | `last_visit_on(patient)` (0022) | the day of a patient's latest visit, read with the patients list for everyone who sees the patient (D228). |
 | `visit_recorded(visit)` (0022) | whether a visit holds anything: its row in the history (D226), and Back to waiting through `visit_is_empty` (D197). |
-| `follow_up_items(tab)`, `follow_up_counts()`, `record_follow_up_contact` (0026) | the follow-ups in their tabs, a page at a time, and how many each holds, for whoever sees appointments or visits (§14.3, D267 – D271); a call noted. |
+| `follow_up_items(tab)`, `follow_up_counts()`, `record_follow_up_contact` (0026, 0027) | the follow-ups in their tabs, a page at a time, and how many each holds, for whoever sees appointments or visits (§14.3, D267 – D271); a call noted; the last contact with who made it (D275). |
 | `subscription_state(clinic)` | §7.2. |
 | `dashboard_summary()`, `report_daily(date)` (with the day-end collection summary), `report_monthly(month)` (with by doctor) | §17, §18. |
 | `register_clinic`, `invite_member`, `accept_invite`, `update_member`, `set_member_active` | accounts and team. |
@@ -2083,19 +2101,20 @@ Planned order (one or more per tracker row):
                                 for a visit's card (D256)
 0026_follow_ups                 follow_up_contacts, next_due_set_at, follow_up_items,
                                 follow_up_counts, record_follow_up_contact (D267 – D271)
-0027_bills                      bills, bill_items, financial-year bill_counters, create_bill
+0027_follow_up_callers          who made a follow-up's last contact, with it (D275)
+0028_bills                      bills, bill_items, financial-year bill_counters, create_bill
                                 (and the fee at arrival in mark_arrived), void_bill,
                                 mark_no_charge
-0028_payments                   payments, record_payment, void_payment,
+0029_payments                   payments, record_payment, void_payment,
                                 patient_balances, bill_settlement, patient_stats
-0029_expenses                   expenses
-0030_dashboard_and_reports      dashboard_summary, report_daily, report_monthly
-0031_subscription_notices       the daily pg_cron → pg_net call (address and secret in Vault)
-0032_clinic_deletion            request_clinic_deletion, cancel_clinic_deletion,
+0030_expenses                   expenses
+0031_dashboard_and_reports      dashboard_summary, report_daily, report_monthly
+0032_subscription_notices       the daily pg_cron → pg_net call (address and secret in Vault)
+0033_clinic_deletion            request_clinic_deletion, cancel_clinic_deletion,
                                 delete_clinic (DEV)
-0033_session_profile            session_profile: the session, profile, membership and plan in
+0034_session_profile            session_profile: the session, profile, membership and plan in
                                 one read (R13.2, D134)
-0034_faster_reads               indexes and policies from the load-seeded EXPLAINs (R13.3)
+0035_faster_reads               indexes and policies from the load-seeded EXPLAINs (R13.3)
 ```
 
 ## 30. API
@@ -2690,18 +2709,18 @@ in the row's one commit (D136).
 | R7.1 | `0024_treatments`: treatments, sessions, transitions (D248 – D255: a session starts a planned or on-hold one, from any of the patient's visits; a cancellation may say why; refused from an older copy; its doctor changes while open; the cost for whoever sees it; a session removed only while its visit is open; no archive with one open) | §14.1 | — | DONE (2026-10-15) |
 | R7.2 | `0025_treatment_screens`; treatments in the visit workspace and on the profile (D256 – D263: rows opening a sheet, the last sitting completing it in one save, begun today with the price list's estimate, the next sitting's own chips, open then Show closed on the profile, the whole story in the sheet, Tx in the history, between the notes and the prescription) | §14.1 | — | DONE (2026-10-15) |
 | R7.3 | `0026_follow_ups`: `follow_up_items`, contacts (D267 – D271: the front desk works them too; done once the patient is coming back; on hold with a date counts; the 30-day windows fixed; snoozed out of the counts) | §14.2 | — | DONE (2026-10-15) |
-| R7.4 | Follow-ups screen: tabs with counts, Call, WhatsApp, Book, Mark contacted | §14.3 | — | TODO |
+| R7.4 | Follow-ups screen: tabs with counts, Call, WhatsApp, Book, Mark contacted (D272 – D278: Call on the row, the rest in its sheet; Remind noted as Reminder sent; "remind me on" chips; the last contact with who made it, `0027_follow_up_callers`; Book closes it; Completed offers Call and the profile; one list, no doctor filter) | §14.3 | — | DONE (2026-10-16) |
 | R7.5 | Integration: each tab on the right day in the clinic's timezone; lapsed follows the setting | §34 | — | TODO |
-| R7.6 | Follow-up reminders on WhatsApp, recorded as a contact | §14.3, §22.1 | — | TODO |
+| R7.6 | Follow-up reminders on WhatsApp, recorded as a contact (built with R7.4, D273) | §14.3, §22.1 | — | DONE (2026-10-16) |
 
 ### Phase 8 — Billing and payments
 
 | ID | Work | Source | Waits on | Status |
 |---|---|---|---|---|
-| R8.1 | `0027_bills`: bills, items, financial-year counters, `create_bill` (idempotent, price check without `payments.discount`), `void_bill`, `mark_no_charge`, the fee at arrival in `mark_arrived` | §15.2, §15.6, §11.3 | — | TODO |
+| R8.1 | `0028_bills`: bills, items, financial-year counters, `create_bill` (idempotent, price check without `payments.discount`), `void_bill`, `mark_no_charge`, the fee at arrival in `mark_arrived` | §15.2, §15.6, §11.3 | — | TODO |
 | R8.2 | `billing/totals.ts`, the one formula; discount by amount or % | §15.1 | — | TODO |
 | R8.3 | New bill screen: from To bill, a visit or a patient; the doctor's fee; discount and price change with `payments.discount`; collect now. Collect fee at arrival | §15.2, §11.3 | — | TODO |
-| R8.4 | `0028_payments`: record, refund, void; `patient_balances`, `bill_settlement`, `patient_stats` | §15.3, §15.4 | — | TODO |
+| R8.4 | `0029_payments`: record, refund, void; `patient_balances`, `bill_settlement`, `patient_stats` | §15.3, §15.4 | — | TODO |
 | R8.5 | Bill PDF; share, download, print | §15.5, §33 | — | TODO |
 | R8.6 | Checkout: the queue's To-bill column, Billing's tabs (To bill, bills, payments, outstanding), No charge; the profile's balance section, its bills and payments in the history, and the patients list's Owing tab and balance chip (D101) | §15.4, §15.6, §10.2, §10.3 | — | TODO |
 | R8.7 | Integration: double submit → one bill/payment; balances to the paisa; read-only refuses | §34 | — | TODO |
@@ -2711,14 +2730,14 @@ in the row's one commit (D136).
 
 | ID | Work | Source | Waits on | Status |
 |---|---|---|---|---|
-| R9.1 | `0029_expenses` and the expenses screen (the clinic's categories): add, edit, archive, month totals, by category | §16 | — | TODO |
+| R9.1 | `0030_expenses` and the expenses screen (the clinic's categories): add, edit, archive, month totals, by category | §16 | — | TODO |
 | R9.2 | Integration + E2E | §34 | — | TODO |
 
 ### Phase 10 — Home and reports
 
 | ID | Work | Source | Waits on | Status |
 |---|---|---|---|---|
-| R10.1 | `0030_dashboard_and_reports`: `dashboard_summary`, `report_daily`, `report_monthly` | §17, §18 | — | TODO |
+| R10.1 | `0031_dashboard_and_reports`: `dashboard_summary`, `report_daily`, `report_monthly` | §17, §18 | — | TODO |
 | R10.2 | Home: sections by permission; getting-started for a new clinic | §17 | — | TODO |
 | R10.3 | Reports: daily and monthly, the two charts; the kit's chart kit, bar and donut (D66) | §18 | — | TODO |
 | R10.4 | Integration: a seeded month's figures equal hand-computed ones | §34 | — | TODO |
@@ -2733,7 +2752,7 @@ in the row's one commit (D136).
 | R11.2 | Console: overview, clinics (No trial and Deletion flags), clinic detail, accounts, error log, platform audit | §20 | — | TODO |
 | R11.3 | Extend plan (Monthly, Yearly, Set date); the owner's confirmation email | §7.4 | — | TODO |
 | R11.4 | Platform settings screen | §6, §20.4 | — | TODO |
-| R11.5 | `0031_subscription_notices`: daily notices, each once per period | §22 | — | TODO |
+| R11.5 | `0032_subscription_notices`: daily notices, each once per period | §22 | — | TODO |
 | R11.6 | Owner's activity log | §19 | — | TODO |
 | R11.7 | Integration + E2E: extend, change a setting, notices once, DEV sees no clinic data | §34 | — | TODO |
 | R11.8 | Plan receipts: receipt numbers, the receipt PDF, the business details settings | §7.5, §6 | Q2 | TODO |
@@ -2746,7 +2765,7 @@ in the row's one commit (D136).
 | R12.2 | Privacy and terms | §21 | Q22 | TODO |
 | R12.3 | Manifest, icons, service worker, offline page, Install app | §21 | — | TODO |
 | R12.4 | Security headers; `noindex` on app routes; share-preview image | §21 | — | TODO |
-| R12.5 | `0032_clinic_deletion`: the owner's request and cancel (banner, emails), the admin's delete after the cooling-off | §9.1, §20 | — | TODO |
+| R12.5 | `0033_clinic_deletion`: the owner's request and cancel (banner, emails), the admin's delete after the cooling-off | §9.1, §20 | — | TODO |
 | R12.6 | CSV export, one file per area, audited | §9 | — | TODO |
 
 ### Phase 13 — Speed and the release checks (D134, D185)
@@ -2762,8 +2781,8 @@ deployment, waits on that (D185).**
 | ID | Work | Source | Waits on | Status |
 |---|---|---|---|---|
 | R13.1 | The measuring setup: a load seed (a clinic with 50 000 patients, 200 000 appointments, 100 000 bills, a year of visits); the production build timed locally with 40 ms added to each database request; every screen, read and save timed and its round trips counted; Home, Queue and Patients timed on a throttled phone (4× CPU, 4G). The baseline in the changelog | §37 | — | TODO |
-| R13.2 | `0033_session_profile`: the session in one round trip. The token's signature and expiry checked on the server against the project's published key (`getClaims`), instead of asking Supabase Auth each request. One function checks the session is still open and hands back the profile, membership, clinic, doctor, plan and the settings it needs. Today a session waits on 3: Auth, the profile, then the plan and settings | §5.5, §37 | — | TODO |
-| R13.3 | `0034_faster_reads`: EXPLAIN ANALYZE on the load seed for every list, search, count and report. Indexes added or changed (every paged list in its own order, every foreign key). No policy or list calls `can_see_patient()` per row. Supabase's performance advisor reports nothing: unindexed keys, policies re-run per row, overlapping policies, duplicate or unused indexes | §27, §28, §37 | — | TODO |
+| R13.2 | `0034_session_profile`: the session in one round trip. The token's signature and expiry checked on the server against the project's published key (`getClaims`), instead of asking Supabase Auth each request. One function checks the session is still open and hands back the profile, membership, clinic, doctor, plan and the settings it needs. Today a session waits on 3: Auth, the profile, then the plan and settings | §5.5, §37 | — | TODO |
+| R13.3 | `0035_faster_reads`: EXPLAIN ANALYZE on the load seed for every list, search, count and report. Indexes added or changed (every paged list in its own order, every foreign key). No policy or list calls `can_see_patient()` per row. Supabase's performance advisor reports nothing: unindexed keys, policies re-run per row, overlapping policies, duplicate or unused indexes | §27, §28, §37 | — | TODO |
 | R13.4 | Round trips cut to the budget. Reads that do not depend on each other go at once (`allInOrder`), records come with their children, writes answer from `returning`, and side work runs after the answer. Every screen and read within 2, every save within 4; every list and search under 300 ms at the API on the load seed | §37 | — | TODO |
 | R13.5 | Pages: the proxy starts only where it has work and loads the Supabase client only to renew. Heavy code loads when first needed; first-load JS within 200 KB gzip. Polling stops while the tab is hidden. Reusing a screen revisited within seconds (`staleTimes`) measured, kept only if it helps. LCP and INP within budget on the throttled phone | §37 | — | TODO |
 | R13.6 | Hosting: `vercel.json` with region `bom1` and fluid compute, sent by `vercel deploy --prebuilt` with every release; the release guide (R14.7) says so | §35, §37 | — | TODO |

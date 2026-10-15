@@ -1,11 +1,17 @@
-import { UI_TEXT } from "@/constants/messages";
-import { TREATMENT_STATUS_TRANSITIONS, type TreatmentStatus } from "@/constants/statuses";
-import { dayCount, todayKey } from "@/lib/dates/calendar";
+import { UI_TEXT, WHATSAPP_TEXT } from "@/constants/messages";
+import {
+  FOLLOW_UP_OUTCOME_LABELS,
+  TREATMENT_STATUS_TRANSITIONS,
+  type FollowUpTab,
+  type TreatmentStatus,
+} from "@/constants/statuses";
+import { dayCount, dayKey, todayKey } from "@/lib/dates/calendar";
+import { formatDayMonth } from "@/lib/format/date";
 
 import { isOpen } from "./api";
-import type { Treatment } from "./types";
+import type { FollowUp, FollowUpContact, Treatment } from "./types";
 
-const { treatments: words } = UI_TEXT;
+const { treatments: words, followUps, appointment } = UI_TEXT;
 
 /** When a treatment is next due, from today (plan §14.3): "Due today", "Due in 3 days", "Overdue by 4 days". */
 export function dueLabel(nextDueOn: string, today: string = todayKey()): string {
@@ -54,4 +60,37 @@ export function movesFrom(status: TreatmentStatus): StatusMove[] {
     if (move === "RESUME") return status === "ON_HOLD";
     return true;
   });
+}
+
+/** What a follow-up is for, and with whom (plan §14.3): "Root canal · Dr. Maya Rao", "Follow-up · Dr. Maya Rao". */
+export function followUpAbout(followUp: Pick<FollowUp, "title" | "doctorName">): string {
+  return followUps.about(followUp.title ?? followUps.visitFollowUp, followUp.doctorName ?? appointment.formerDoctor);
+}
+
+/** When it is due, from today — "Due tomorrow", "Overdue by 4 days" — or, on Completed, "Completed 12 Oct". */
+export function followUpWhen(followUp: Pick<FollowUp, "dueOn">, tab: FollowUpTab, today: string = todayKey()): string {
+  return tab === "COMPLETED" ? words.completedOn(formatDayMonth(followUp.dueOn)) : dueLabel(followUp.dueOn, today);
+}
+
+/** The last contact, as a row reads it: "No answer, 14 Oct". */
+export function lastContactLine(contact: Pick<FollowUpContact, "outcome" | "at">): string {
+  return followUps.lastContact(FOLLOW_UP_OUTCOME_LABELS[contact.outcome], formatDayMonth(dayKey(contact.at)));
+}
+
+/**
+ * A follow-up's reminder as the patient reads it on WhatsApp (plan §22.1,
+ * D273): "Dr. Maya Rao at Smile Care asked to see you again around 14 Oct.
+ * Reply or call 0484 234 5678 to book." — the doctor left out once they are
+ * gone from the team, the call once the clinic has no phone.
+ */
+export function followUpReminderText(
+  followUp: Pick<FollowUp, "doctorName" | "dueOn">,
+  clinic: { name: string; phone: string | null },
+): string {
+  return WHATSAPP_TEXT.followUpReminder(
+    followUp.doctorName === null ? null : WHATSAPP_TEXT.doctor(followUp.doctorName),
+    clinic.name,
+    formatDayMonth(followUp.dueOn),
+    clinic.phone,
+  );
 }

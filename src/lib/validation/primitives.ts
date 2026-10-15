@@ -315,6 +315,17 @@ export function requiredDay(label: string) {
     });
 }
 
+/** A day a date field may leave empty — a next due day, a day to be reminded on: blank is none. */
+export function optionalDay(label: string) {
+  return z.string({ error: VALIDATION_MESSAGES.invalid }).transform((typed, ctx) => {
+    const text = typed.trim();
+    if (text === "") return null;
+    if (isDayKey(text)) return text;
+    ctx.addIssue({ code: "custom", message: VALIDATION_MESSAGES.day(label) });
+    return z.NEVER;
+  });
+}
+
 /**
  * How many of a thing a bill line is for: a whole number from 1 to 999.
  * An emptied number field arrives as NaN, and says so in words.

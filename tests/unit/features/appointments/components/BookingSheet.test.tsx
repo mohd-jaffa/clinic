@@ -444,6 +444,28 @@ describe("BookingSheet for a patient, and to move an appointment (D161, D166)", 
     expect(screen.getAllByText("Booked Rohan Mehta · 11 Oct, 4:00 PM with Rahul Nair").length).toBeGreaterThan(0);
   });
 
+  it("from a follow-up, starts on its doctor and day, and closes what it was opened from once booked (D276)", async () => {
+    const onBooked = vi.fn();
+    render(
+      <Providers>
+        <BookingSheet
+          open
+          patient={{ id: ROHAN.id, name: ROHAN.name, number: ROHAN.number }}
+          prefill={{ doctorId: RAHUL.id, date: "2026-10-13", time: { hour: "", minute: "" } }}
+          onClose={onClose}
+          onBooked={onBooked}
+        />
+      </Providers>,
+    );
+    expect(within(sheet()).getByRole("combobox", { name: /^Doctor/ })).toHaveTextContent("Rahul Nair");
+    expect(within(sheet()).getByRole("button", { name: /^Date/ })).toHaveTextContent("13 Oct 2026");
+    await choose("Time, Hour", "4 PM");
+    await choose("Time, Minutes", ":00");
+    await book();
+    await waitFor(() => expect(onBooked).toHaveBeenCalled());
+    expect(onClose).toHaveBeenCalled();
+  });
+
   it("starts where the appointment is, and moves it — the patient staying — closing everything with a card", async () => {
     move();
     expect(within(moveSheet()).getByRole("list", { name: "Patient" })).toHaveTextContent("Rohan MehtaP-1012");

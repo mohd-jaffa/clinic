@@ -1,17 +1,18 @@
 import type { TreatmentStatus } from "@/constants/statuses";
 import { auditedChanges } from "@/lib/audit/changes";
-import { logActionsSafe } from "@/lib/audit/auditLog";
+import { logActionSafe, logActionsSafe } from "@/lib/audit/auditLog";
 import type { AuditEntry } from "@/lib/audit/types";
 import { fromPostgrestError } from "@/lib/errors";
 import type { Tenant } from "@/lib/supabase/tenant";
 import type {
   ChangeTreatmentPayload,
+  FollowUpContactPayload,
   NewTreatmentPayload,
   TreatmentSessionPayload,
   TreatmentStatusPayload,
 } from "@/lib/validation";
 
-import type { SessionSaved, TreatmentDetails } from "./types";
+import type { ContactNoted, SessionSaved, TreatmentDetails } from "./types";
 
 /**
  * Writing treatments (plan §14.1; D248 – D257), each through one function of
@@ -246,4 +247,38 @@ export async function removeSession(
   const { session_id: sessionId } = data as { session_id: string };
   await logActionsSafe(tenant, [{ action: "DELETE", entityType: SESSIONS, entityId: sessionId, requestId }]);
   return { treatmentId, visitId };
+}
+
+/**
+ * A contact noted about a follow-up (plan §14.3; D267, D271, D273) — a call
+ * made, or a reminder sent on WhatsApp — through 0026's
+ * `record_follow_up_contact`, which asks for `appointments.edit` or
+ * `visits.edit`, keeps to the doctor scope, refuses an archived patient and a
+ * view-only clinic, and takes a day to be reminded on only after today.
+ * Audited: how it went and that day by value, the note by name alone. Waits
+ * on two round trips after the session: the function, the audit row.
+ */
+export async function recordFollowUpContact(
+  tenant: Tenant,
+  contact: FollowUpContactPayload,
+  requestId?: string,
+): Promise<ContactNoted> {
+  const row = { outcome: contact.outcome, note: contact.note, snooze_until: contact.snoozeUntil };
+  const { data, error } = await tenant.supabase.rpc("record_follow_up_contact", {
+    p_contact: { ...row, [contact.kind === "TREATMENT" ? "treatment_id" : "visit_id"]: contact.id },
+  });
+  if (error) throw fromPostgrestError(error);
+  const made = data as Pick<ContactNoted, "outcome"> & {
+    contact_id: string;
+    patient_id: string;
+    snooze_until: string | null;
+  };
+  await logActionSafe(tenant, {
+    action: "CREATE",
+    entityType: "follow_up_contacts",
+    entityId: made.contact_id,
+    changes: auditedChanges(null, row, ["outcome", "note", "snooze_until"], ["note"]),
+    requestId,
+  });
+  return { id: made.contact_id, patientId: made.patient_id, outcome: made.outcome, snoozeUntil: made.snooze_until };
 }

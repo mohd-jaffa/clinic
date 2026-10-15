@@ -39,6 +39,20 @@ export const HISTORY_TREATMENTS_NAMED = 2;
  */
 export const FOLLOW_UP_WINDOW_DAYS = 30;
 
+/**
+ * The chips beside "Remind me on" when a follow-up's contact is noted (plan
+ * §14.3, D274): back in the lists this many days from today. Any later day
+ * is picked from the calendar.
+ */
+export const REMIND_ME_CHOICES = [
+  { key: "TOMORROW", days: 1 },
+  { key: "3_DAYS", days: 3 },
+  { key: "1_WEEK", days: 7 },
+  { key: "2_WEEKS", days: 14 },
+] as const;
+
+export type RemindMeChoice = (typeof REMIND_ME_CHOICES)[number]["key"];
+
 /** What a list's search box may send. */
 export const MAX_SEARCH_LENGTH = 100;
 

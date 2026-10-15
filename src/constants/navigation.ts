@@ -27,7 +27,7 @@ import {
 } from "lucide-react";
 
 import { UI_TEXT } from "./messages";
-import { hasAccess, ROUTE_ACCESS, type Permission, type RouteAccess } from "./permissions";
+import { FOLLOW_UP_ACCESS, hasAccess, ROUTE_ACCESS, type Permission, type RouteAccess } from "./permissions";
 import { HOME_ROUTE } from "./routes";
 
 /**
@@ -84,12 +84,14 @@ const PATIENTS: NavItem = {
   href: PATIENTS_ROUTE,
   access: "patients.view",
 };
+/** The follow-ups to call (plan §14.3): the front desk's as much as the doctors' (D267). */
+export const FOLLOW_UPS_ROUTE = "/follow-ups";
 const FOLLOW_UPS: NavItem = {
   id: "followUps",
   label: places.followUps,
   icon: CalendarClock,
-  href: "/follow-ups",
-  access: "visits.view",
+  href: FOLLOW_UPS_ROUTE,
+  access: FOLLOW_UP_ACCESS.list,
   hint: hints.followUps,
 };
 const BILLING: NavItem = {

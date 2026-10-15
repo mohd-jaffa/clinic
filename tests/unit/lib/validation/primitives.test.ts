@@ -9,6 +9,7 @@ import {
   isPhoneNumber,
   optionalEmail,
   optionalGstin,
+  optionalDay,
   optionalLine,
   optionalLines,
   optionalPaiseText,
@@ -204,6 +205,22 @@ describe("requiredDay", () => {
     expect(messageOf(day, undefined)).toBe(VALIDATION_MESSAGES.required("First day"));
     expect(messageOf(day, "2026-02-30")).toBe(VALIDATION_MESSAGES.day("First day"));
     expect(messageOf(day, "20 Oct")).toBe(VALIDATION_MESSAGES.day("First day"));
+  });
+});
+
+describe("optionalDay", () => {
+  const day = optionalDay("Next due");
+
+  it("takes a day of the calendar, or none when left empty", () => {
+    expect(day.parse("2026-10-20")).toBe("2026-10-20");
+    expect(day.parse(" 2026-10-20 ")).toBe("2026-10-20");
+    expect(day.parse("")).toBeNull();
+    expect(day.parse("   ")).toBeNull();
+  });
+
+  it("says, in words, that a day is not one", () => {
+    expect(messageOf(day, "2026-02-30")).toBe(VALIDATION_MESSAGES.day("Next due"));
+    expect(messageOf(day, 20)).toBe(VALIDATION_MESSAGES.invalid);
   });
 });
 

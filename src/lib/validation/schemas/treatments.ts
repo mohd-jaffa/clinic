@@ -3,21 +3,10 @@ import * as z from "zod";
 import { TEXT_LIMITS } from "@/constants/limits";
 import { UI_TEXT, VALIDATION_MESSAGES } from "@/constants/messages";
 import { TREATMENT_START_STATUSES, TREATMENT_STATUSES } from "@/constants/statuses";
-import { isDayKey } from "@/lib/dates/calendar";
 
-import { optionalLine, optionalLines, optionalPaiseText, requiredLine } from "../primitives";
+import { optionalDay, optionalLine, optionalLines, optionalPaiseText, requiredLine } from "../primitives";
 
 const { treatments: words, appointments } = UI_TEXT;
-
-/** A day picked, or none: blank for none. */
-const optionalDayText = (label: string) =>
-  z.string({ error: VALIDATION_MESSAGES.invalid }).transform((typed, ctx) => {
-    const text = typed.trim();
-    if (text === "") return null;
-    if (isDayKey(text)) return text;
-    ctx.addIssue({ code: "custom", message: VALIDATION_MESSAGES.day(label) });
-    return z.NEVER;
-  });
 
 /** A next due day as a form checks it: today or later, as the database holds it (0024). */
 function dueFromToday(nextDueOn: string | null, today: string, ctx: z.core.$RefinementCtx) {
@@ -54,7 +43,7 @@ export const newTreatmentSchema = treatmentDetailsSchema
     doctorId: z.union([z.uuid(), z.literal("")], { error: VALIDATION_MESSAGES.choose(appointments.doctorLabel) }),
     start: z.enum(TREATMENT_START_STATUSES, { error: VALIDATION_MESSAGES.choose(words.startLabel) }),
     note: optionalLines(words.firstNoteLabel, TEXT_LIMITS.sessionNote),
-    nextDueOn: optionalDayText(words.nextDueLabel),
+    nextDueOn: optionalDay(words.nextDueLabel),
   })
   .superRefine(({ visitId, doctorId }, ctx) => {
     if (visitId === null && doctorId === "") {
@@ -88,7 +77,7 @@ export type TreatmentEditInput = z.input<typeof treatmentEditSchema>;
 export type TreatmentEditPayload = z.output<typeof treatmentEditSchema>;
 
 /** Its next due day (D259): a day, or none. */
-export const nextDueSchema = z.object({ nextDueOn: optionalDayText(words.nextDueLabel) });
+export const nextDueSchema = z.object({ nextDueOn: optionalDay(words.nextDueLabel) });
 
 export type NextDueInput = z.input<typeof nextDueSchema>;
 export type NextDuePayload = z.output<typeof nextDueSchema>;

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { TreatmentsClient } from "@/features/treatments/api.client";
+import { FollowUpsClient, TreatmentsClient } from "@/features/treatments/api.client";
 
 const mockFetch = vi.fn();
 vi.stubGlobal("fetch", mockFetch);
@@ -48,5 +48,13 @@ describe("TreatmentsClient (plan §30)", () => {
     mockFetch.mockClear();
     await TreatmentsClient.removeSession({ id: "t-1", visitId: "v-1" });
     expect(sent().slice(0, 2)).toEqual(["/api/treatments/t-1/sessions/v-1", "DELETE"]);
+  });
+});
+
+describe("FollowUpsClient (plan §30)", () => {
+  it("notes a contact", async () => {
+    const input = { kind: "TREATMENT" as const, id: "t-1", outcome: "REACHED" as const, note: "", snoozeUntil: "" };
+    await FollowUpsClient.note(input);
+    expect(sent()).toEqual(["/api/follow-ups/contacts", "POST", JSON.stringify(input)]);
   });
 });

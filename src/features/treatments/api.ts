@@ -1,14 +1,19 @@
 import { OPEN_TREATMENT_STATUSES, type TreatmentStatus } from "@/constants/statuses";
+import { pageWindow, toPage, type Page } from "@/lib/api/pagination";
 import { dayKey } from "@/lib/dates/calendar";
 import { fromPostgrestError } from "@/lib/errors";
 import type { Tenant } from "@/lib/supabase/tenant";
+import type { FollowUpListQuery } from "@/lib/validation";
 
-import type { Treatment, TreatmentRow } from "./types";
+import type { FollowUp, FollowUpCounts, FollowUpRow, Treatment, TreatmentRow } from "./types";
 
 /**
  * Treatments (plan §14.1): read with `visits.view`, within the doctor scope
  * (D3) — the policies hold it — with the visit (0025's `visit_treatments`)
- * and the patient's summary; written through ./records.
+ * and the patient's summary; written through ./records. Their next
+ * sittings, and visits' follow-ups, are the follow-ups (§14.3): read with
+ * `appointments.view` or `visits.view` (D267) through 0026's and 0027's
+ * functions, in the clinic's timezone.
  */
 
 /** A doctor's name, as embedded with a row. */
@@ -71,4 +76,48 @@ export async function listPatientTreatments(tenant: Tenant, patientId: string): 
     .order("created_at", { ascending: true });
   if (error) throw fromPostgrestError(error);
   return (data as unknown as TreatmentRow[]).map(toTreatment);
+}
+
+/** A follow-up as the screen holds it. */
+export function toFollowUp(row: FollowUpRow): FollowUp {
+  return {
+    kind: row.kind,
+    id: (row.treatment_id ?? row.visit_id)!,
+    patient: { id: row.patient_id, name: row.patient_name, number: row.patient_number, phone: row.patient_phone },
+    title: row.title,
+    doctorId: row.doctor_id,
+    doctorName: row.doctor_name,
+    dueOn: row.due_on,
+    lastContact:
+      row.last_outcome === null
+        ? null
+        : { outcome: row.last_outcome, at: row.last_contacted_at!, note: row.last_note, by: row.last_contacted_by },
+  };
+}
+
+/**
+ * A page of one of the follow-ups' tabs (plan §14.3; D267 – D271): through
+ * 0027's `follow_up_items`, as the caller — so a doctor finds only their own —
+ * in the clinic's timezone, the earliest due first, Completed the latest
+ * completed first. One query.
+ */
+export async function listFollowUps(tenant: Tenant, { tab, cursor }: FollowUpListQuery): Promise<Page<FollowUp>> {
+  const start = cursor ?? 0;
+  const { from, to } = pageWindow(start);
+  const { data, error } = await tenant.supabase.rpc("follow_up_items", {
+    p_tab: tab,
+    p_offset: from,
+    p_limit: to - from + 1,
+  });
+  if (error) throw fromPostgrestError(error);
+  return toPage((data as FollowUpRow[]).map(toFollowUp), start);
+}
+
+/** How many each tab holds (plan §14.3), snoozed ones left out (D271): 0026's `follow_up_counts`, one query. */
+export async function countFollowUps(tenant: Tenant): Promise<FollowUpCounts> {
+  const { data, error } = await tenant.supabase.rpc("follow_up_counts");
+  if (error) throw fromPostgrestError(error);
+  return Object.fromEntries(
+    (data as { tab: string; total: number }[]).map(({ tab, total }) => [tab, Number(total)]),
+  ) as FollowUpCounts;
 }

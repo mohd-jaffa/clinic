@@ -117,4 +117,16 @@ describe("the app's words", () => {
     expect(words.vitalsFor("Asha Iyer")).toBe("Vitals for Asha Iyer");
     expect(words.vitalsSavedFor("Asha Iyer")).toBe("Vitals saved for Asha Iyer");
   });
+
+  it("tells a follow-up's last contact, by whom when it is known, and what became of a contact noted (D271, D275)", () => {
+    const words = UI_TEXT.followUps;
+    expect(words.lastContactBy("No answer", "14 Oct", "Priya Shah")).toBe("No answer · 14 Oct, by Priya Shah");
+    expect(words.lastContactBy("No answer", "14 Oct", null)).toBe("No answer · 14 Oct");
+    expect(words.noted("Anita Rao", "Reached")).toBe("Noted for Anita Rao: Reached");
+    expect(words.notedUntil("Anita Rao", "No answer", "18 Oct")).toBe(
+      "Noted for Anita Rao: No answer. Back on the list on 18 Oct.",
+    );
+    expect(words.empty.UPCOMING).toBe("No one is due in the next 30 days");
+    expect(ERROR_MESSAGES.FOLLOW_UPS_LOAD_FAILED).toMatch(/follow-ups/);
+  });
 });

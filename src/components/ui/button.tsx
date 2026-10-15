@@ -187,15 +187,17 @@ const ICON_TONES = {
 } as const;
 
 /**
- * A round, label-less link to somewhere outside the app — a chat on WhatsApp —
- * opened in a new tab, as `IconButton` looks. `onClick` runs as it is
- * followed: a reminder noted as WhatsApp opens.
+ * A round, label-less link to somewhere outside the app, as `IconButton`
+ * looks: a chat on WhatsApp, opened in a new tab, or — with `newTab` off — a
+ * call, which the phone takes in place. `onClick` runs as it is followed: a
+ * reminder noted as WhatsApp opens.
  */
 export function IconLink({
   icon: Icon,
   label,
   href,
   onClick,
+  newTab = true,
   tone = "plain",
 }: {
   icon: LucideIcon;
@@ -203,13 +205,13 @@ export function IconLink({
   label: string;
   href: string;
   onClick?: () => void;
+  newTab?: boolean;
   tone?: keyof typeof ICON_TONES;
 }) {
   return (
     <a
       href={href}
-      target="_blank"
-      rel="noopener noreferrer"
+      {...(newTab && { target: "_blank", rel: "noopener noreferrer" })}
       onClick={onClick}
       aria-label={label}
       title={label}
