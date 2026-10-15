@@ -51,6 +51,9 @@ vi.mock("@/features/visits/components/NewVisit", () => ({
 vi.mock("@/features/patients/components/PatientHistory", () => ({
   PatientHistory: () => <p>History</p>,
 }));
+vi.mock("@/features/treatments/components/PatientTreatments", () => ({
+  PatientTreatments: ({ patient }: { patient: Patient }) => <p>{`Treatments of ${patient.name}`}</p>,
+}));
 vi.mock("@/features/appointments/components/AppointmentPanel", () => ({
   AppointmentPanel: ({
     appointment,
@@ -244,18 +247,22 @@ describe("PatientProfile's appointments and history (D166, D167, D225, D231)", (
     expect(screen.getByRole("dialog", { name: "Rohan Mehta, false" })).toBeInTheDocument();
   });
 
-  it("shows neither to someone who may not see appointments or visits", () => {
+  it("shows neither to someone who may not see appointments or visits — nor the treatments", () => {
     auth.current = authStub({ role: "STAFF", permissions: ["patients.view"] });
     draw();
     expect(screen.queryByRole("button", { name: "Next appointment" })).not.toBeInTheDocument();
     expect(screen.queryByText("History")).not.toBeInTheDocument();
+    expect(screen.queryByText("Treatments of Rohan Mehta")).not.toBeInTheDocument();
   });
 
-  it("shows the history, with no next appointment, to someone who sees visits alone (D225)", () => {
+  it("shows the history and the treatments, with no next appointment, to someone who sees visits alone (D225, D260)", () => {
     auth.current = authStub({ role: "STAFF", permissions: ["patients.view", "visits.view"] });
     draw();
     expect(screen.getByText("History")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Next appointment" })).not.toBeInTheDocument();
+    // Among their state, before their details.
+    const treatments = screen.getByText("Treatments of Rohan Mehta");
+    expect(within(treatments.parentElement!).getByRole("heading", { name: "Details" })).toBeInTheDocument();
   });
 
   it("puts the history in a column of its own beside their state on a desktop (D231)", () => {

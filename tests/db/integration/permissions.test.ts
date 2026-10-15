@@ -7,6 +7,8 @@ import { GET as templatesRoute, POST as newTemplateRoute } from "@/app/api/presc
 import { GET as medicinesRoute } from "@/app/api/prescriptions/medicines/route";
 import { PUT as prescriptionRoute } from "@/app/api/visits/[id]/prescription/route";
 import { GET as prescriptionPdfRoute } from "@/app/api/visits/[id]/prescription.pdf/route";
+import { POST as treatmentStatusRoute } from "@/app/api/treatments/[id]/status/route";
+import { POST as newTreatmentRoute } from "@/app/api/treatments/route";
 import type { RouteAccess } from "@/constants/permissions";
 import { withClinicRoute } from "@/features/auth/guard";
 import { addDaysKey, dayHour, todayKey } from "@/lib/dates/calendar";
@@ -21,7 +23,7 @@ import {
 } from "@tests/support/integration";
 
 /**
- * The permission matrix, so far (plan §34.3, R1.11, R3.8, R4.7, R5.1, R6.1, R6.3, R6.4, R6.7, R7.1): every
+ * The permission matrix, so far (plan §34.3, R1.11, R3.8, R4.7, R5.1, R6.1, R6.3, R6.4, R6.7, R7.1, R7.2): every
  * permission the schema enforces yet, allowed and refused — by the route
  * guard, and by RLS or a function with the member's own token. Each phase
  * adds the rows its tables bring; the patients routes themselves are asked in
@@ -761,6 +763,34 @@ describe("treatments: visits.view reads, visits.edit writes, within the doctor s
       });
     expect((await hold(reader)).error?.hint).toBe("AUTH_PERMISSION_DENIED");
     expect((await hold(writer)).error).toBeNull();
+  });
+
+  it("is started and moved through its routes with visits.edit, and refused there to visits.view alone (R7.2)", async () => {
+    const body = {
+      patientId,
+      visitId: null,
+      doctorId,
+      start: "PLANNED",
+      name: "Crown",
+      description: "",
+      estimatedCost: "",
+      note: "",
+      nextDueOn: "",
+    };
+    const send = (member: SignedIn, url: string, payload: unknown) =>
+      new Request(`http://localhost${url}`, {
+        method: "POST",
+        headers: { authorization: `Bearer ${member.session.accessToken}`, "content-type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+    expect((await newTreatmentRoute(send(reader, "/api/treatments", body))).status).toBe(403);
+    const made = await newTreatmentRoute(send(writer, "/api/treatments", body));
+    expect(made.status).toBe(201);
+    const { id } = ((await made.json()) as { data: { id: string } }).data;
+    const status = { status: "ON_HOLD", seen: "PLANNED" };
+    const params = { params: Promise.resolve({ id }) };
+    expect((await treatmentStatusRoute(send(reader, `/api/treatments/${id}/status`, status), params)).status).toBe(403);
+    expect((await treatmentStatusRoute(send(writer, `/api/treatments/${id}/status`, status), params)).status).toBe(200);
   });
 
   it("reads them with visits.view, none without it, and a doctor only their own patients'", async () => {

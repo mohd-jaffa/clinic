@@ -76,7 +76,8 @@ export function RowToken({ value, label }: { value: string; label?: string }) {
  * `wrap` lets the line under the title run on instead of being cut short,
  * for words that must be read whole — why an import's row was left out.
  * `note` is one more line under it, cut short alike — a patient's last
- * visit, a visit's medicines — so neither crowds the other off a phone.
+ * visit, a visit's medicines — so neither crowds the other off a phone; a
+ * list of notes is a line each — a visit's medicines, then its treatments.
  */
 export function Row({
   leading,
@@ -93,7 +94,7 @@ export function Row({
   leading?: ReactNode;
   title: string;
   subtitle?: ReactNode;
-  note?: ReactNode;
+  note?: ReactNode | readonly ReactNode[];
   detail?: ReactNode;
   trailing?: ReactNode;
   href?: string;
@@ -117,6 +118,7 @@ export function Row({
     name
   );
   const goes = (href !== undefined || onClick !== undefined) && !trailing;
+  const notes = (Array.isArray(note) ? note : [note]).filter(Boolean);
 
   return (
     <li
@@ -141,7 +143,11 @@ export function Row({
             {subtitle}
           </span>
         )}
-        {note && <span className="block truncate text-small text-muted tabular-nums">{note}</span>}
+        {notes.map((line, index) => (
+          <span key={index} className="block truncate text-small text-muted tabular-nums">
+            {line}
+          </span>
+        ))}
       </span>
       {detail && <span className="shrink-0 font-bold text-ink tabular-nums">{detail}</span>}
       {trailing && <span className="relative z-[1] ml-auto flex shrink-0 items-center gap-2">{trailing}</span>}

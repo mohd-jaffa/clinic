@@ -26,6 +26,7 @@ const visit = (overrides: Partial<PatientVisit> = {}) => ({
     doctorName: "Maya Rao",
     finding: "Dental caries",
     medicines: ["Paracetamol", "Amoxicillin", "Metronidazole"],
+    treatments: [] as string[],
     recorded: true,
     ...overrides,
   },
@@ -87,6 +88,21 @@ describe("PatientHistory (plan §10.3; D167, D225 – D227)", () => {
     expect(one).toHaveTextContent("Dental cariesRx ParacetamolDone");
     expect(open).toHaveTextContent("14 Oct 2026 · VisitNo longer on the team · ToothacheOpen");
     expect(open).not.toHaveTextContent("Rx");
+  });
+
+  it("names the treatments it worked on or began on a line under the medicines, two named (D262)", () => {
+    pages.current = {
+      data: [
+        visit({ medicines: ["Paracetamol"], treatments: ["Root canal", "Crown", "Scaling"] }),
+        visit({ id: "v-2", medicines: [], treatments: ["Root canal"] }),
+      ],
+      isLoading: false,
+    };
+    draw();
+    const [both, treated] = within(section()).getAllByRole("listitem");
+    expect(both).toHaveTextContent("Dental cariesRx ParacetamolTx Root canal, Crown +1Done");
+    expect(treated).toHaveTextContent("Dental cariesTx Root canalDone");
+    expect(treated).not.toHaveTextContent("Rx");
   });
 
   it("says a visit holds nothing only when it holds nothing at all (D226)", () => {

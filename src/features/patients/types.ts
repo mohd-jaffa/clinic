@@ -1,5 +1,6 @@
 import type { AlertKind, Gender } from "@/constants/statuses";
 import type { CalendarAppointment, PatientAppointment } from "@/features/appointments/types";
+import type { Treatment } from "@/features/treatments/types";
 import type { PatientVisit } from "@/features/visits/types";
 
 /** A patient as the database reads them (0015), with their doctor's name and who archived them. */
@@ -116,6 +117,8 @@ export interface ImportResult {
  */
 export interface PatientSummary {
   nextAppointment?: CalendarAppointment | null;
+  /** Their treatments, open and closed, with `visits.view` (D260). */
+  treatments?: Treatment[];
 }
 
 /**

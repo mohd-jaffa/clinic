@@ -1,11 +1,12 @@
 import { ALERT_KINDS, type AlertKind } from "@/constants/statuses";
 import { fromEmbedded, fromPrevious } from "@/features/prescriptions/content";
 import type { EmbeddedPrescriptionRow } from "@/features/prescriptions/types";
+import { toTreatment, TREATMENT_COLUMNS } from "@/features/treatments/api";
 import { pageWindow } from "@/lib/api/pagination";
 import { fromPostgrestError, notFoundError } from "@/lib/errors";
 import type { Tenant } from "@/lib/supabase/tenant";
 
-import type { PatientVisit, PatientVisitRow, Visit, VisitRow, VitalsRow } from "./types";
+import type { PatientVisit, PatientVisitRow, Visit, VisitRow, VitalsRow, WorkedTreatmentRow } from "./types";
 import { toVitals } from "./vitals";
 
 /**
@@ -19,7 +20,9 @@ const TABLE = "visits";
  * What a visit's screen reads (D195, D202): the visit and what it records,
  * its patient with their mobile (to send the prescription to, D244) and alerts, its doctor's name and registration number
  * (D213), its token and Urgent, its vitals, its prescription with who typed
- * it (D45), and the patient's prescription before it, for Repeat (D236).
+ * it (D45), the patient's prescription before it, for Repeat (D236), and
+ * its Treatments card's treatments (`visit_treatments`, D256), each with its
+ * sessions.
  */
 const VISIT_COLUMNS =
   "id, patient_id, doctor_id, appointment_id, status, visit_date, started_at, completed_at, billing_status, " +
@@ -33,17 +36,33 @@ const VISIT_COLUMNS =
   "prescription:prescriptions!prescriptions_visit_id_clinic_id_fkey(id, advice, print_diagnosis, entered_by, " +
   "typist:profiles!prescriptions_entered_by_fkey(full_name), " +
   "items:prescription_items(position, medicine, strength, dose, frequency, timing, duration_days, instructions)), " +
-  "previous:previous_prescription";
+  "previous:previous_prescription, " +
+  `treatments:visit_treatments(${TREATMENT_COLUMNS})`;
 
 /**
- * What a patient's history reads of each visit (D225, D226): its day, where
- * it stands, its doctor, what it found, its medicines' names, and whether it
- * holds anything (`visit_recorded`).
+ * What a patient's history reads of each visit (D225, D226, D262): its day,
+ * where it stands, its doctor, what it found, its medicines' names, the
+ * treatments it worked on or began, and whether it holds anything
+ * (`visit_recorded`).
  */
 const HISTORY_COLUMNS =
   "id, status, visit_date, created_at, complaint, diagnosis, recorded:visit_recorded, " +
   "doctor:doctors!visits_doctor_id_clinic_id_fkey(member:clinic_members(profile:profiles!clinic_members_user_id_fkey(full_name))), " +
-  "prescription:prescriptions!prescriptions_visit_id_clinic_id_fkey(items:prescription_items(position, medicine))";
+  "prescription:prescriptions!prescriptions_visit_id_clinic_id_fkey(items:prescription_items(position, medicine)), " +
+  "worked:treatment_sessions!treatment_sessions_visit_id_clinic_id_fkey(" +
+  "treatment:treatments!treatment_sessions_treatment_id_clinic_id_fkey(id, name, created_at)), " +
+  "begun:treatments!treatments_started_visit_id_clinic_id_fkey(id, name, created_at)";
+
+/** The treatments a visit worked on or began, each once, as they were begun (D262). */
+function treatmentsOf(row: PatientVisitRow): string[] {
+  const named = new Map<string, WorkedTreatmentRow>();
+  for (const treatment of [...row.begun, ...row.worked.map((session) => session.treatment)]) {
+    if (treatment) named.set(treatment.id, treatment);
+  }
+  return [...named.values()]
+    .sort((a, b) => a.created_at.localeCompare(b.created_at))
+    .map((treatment) => treatment.name);
+}
 
 /** An embedded row, however PostgREST gives it: one, a list of at most one, or none. */
 const oneOf = <Row>(embedded: Row | Row[] | null): Row | null =>
@@ -71,8 +90,9 @@ const byKind = (a: { kind: AlertKind }, b: { kind: AlertKind }) =>
 /**
  * A visit (plan §12.2; D195, D202), in one query: the visit and what it
  * records, its patient and their active alerts, its doctor, its token, its
- * vitals, its prescription (plan §13) and the one before it (D236). Read as the member, so a doctor opens only their own patients'
- * (D3), and only with `visits.view`. The visit screen waits on it alone
+ * vitals, its prescription (plan §13) and the one before it (D236), and its
+ * treatments (D256). Read as the member, so a doctor opens only their own
+ * patients' (D3), and only with `visits.view`. The visit screen waits on it alone
  * after the session (plan §37).
  */
 export async function getVisit(tenant: Tenant, id: string): Promise<Visit> {
@@ -120,6 +140,7 @@ export async function getVisit(tenant: Tenant, id: string): Promise<Visit> {
     vitals: vitalsOf(row.vitals),
     prescription: prescriptionOf(row.prescription, row.doctor?.member?.user_id ?? null),
     previousPrescription: row.previous === null ? null : fromPrevious(row.previous),
+    treatments: row.treatments.map(toTreatment),
     alerts: row.patient.alerts
       .filter((alert) => alert.active)
       .sort(byKind)
@@ -154,6 +175,7 @@ export async function listPatientVisits(tenant: Tenant, patientId: string, start
     medicines: [...(oneOf(row.prescription)?.items ?? [])]
       .sort((a, b) => a.position - b.position)
       .map((item) => item.medicine),
+    treatments: treatmentsOf(row),
     recorded: row.recorded,
   }));
 }

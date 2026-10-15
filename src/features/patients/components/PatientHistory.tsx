@@ -8,7 +8,7 @@ import { ListScreen } from "@/components/ui/list-screen";
 import { Row, RowList } from "@/components/ui/row";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { StatusPill } from "@/components/ui/status-pill";
-import { HISTORY_MEDICINES_NAMED } from "@/constants/limits";
+import { HISTORY_MEDICINES_NAMED, HISTORY_TREATMENTS_NAMED } from "@/constants/limits";
 import { UI_TEXT } from "@/constants/messages";
 import { VISIT_FROM, visitRoute } from "@/constants/navigation";
 import {
@@ -74,11 +74,13 @@ export function PatientHistory({
 
 /**
  * A visit (D226): its day and doctor, the diagnosis — or the complaint — and
- * its medicines by name, or "Nothing recorded"; opening its screen, which
- * leads back here (D227, D230).
+ * its medicines by name, or "Nothing recorded"; under them, the treatments
+ * it worked on or began (D262); opening its screen, which leads back here
+ * (D227, D230).
  */
 function VisitRow({ visit }: { visit: PatientVisit }) {
   const named = visit.medicines.slice(0, HISTORY_MEDICINES_NAMED);
+  const worked = visit.treatments.slice(0, HISTORY_TREATMENTS_NAMED);
   return (
     <Row
       title={patients.visitOn(formatDate(visit.day))}
@@ -88,7 +90,10 @@ function VisitRow({ visit }: { visit: PatientVisit }) {
       ]
         .filter(Boolean)
         .join(" · ")}
-      note={named.length > 0 && patients.medicines(named, visit.medicines.length - named.length)}
+      note={[
+        named.length > 0 && patients.medicines(named, visit.medicines.length - named.length),
+        worked.length > 0 && UI_TEXT.treatments.worked(worked, visit.treatments.length - worked.length),
+      ]}
       detail={<StatusPill label={VISIT_STATUS_LABELS[visit.status]} tone={VISIT_STATUS_TONES[visit.status]} />}
       href={visitRoute(visit.id, VISIT_FROM.patient)}
     />

@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import { getVisit, listPatientVisits } from "@/features/visits/api";
 import type { Tenant } from "@/lib/supabase/tenant";
 import { fakeSupabase, postgrestError, type FakeSupabaseOptions } from "@tests/support/supabase";
+import { aTreatment, aTreatmentRow } from "@tests/support/treatments";
 
 function tenantWith(options: FakeSupabaseOptions) {
   const fake = fakeSupabase(options);
@@ -51,6 +52,7 @@ const row = {
   },
   prescription: null,
   previous: null,
+  treatments: [],
 };
 
 /** Two medicines as PostgREST embeds them, out of their places, and who typed them. */
@@ -129,6 +131,7 @@ describe("getVisit (plan §12.2, D195, D202)", () => {
       vitals: read,
       prescription: null,
       previousPrescription: null,
+      treatments: [],
     });
     expect(queries).toHaveLength(1);
     const [columns] = argsOf(queries[0], "select")[0] as [string];
@@ -281,6 +284,17 @@ describe("getVisit (plan §12.2, D195, D202)", () => {
   });
 });
 
+describe("getVisit's treatments (D256)", () => {
+  it("reads them with the visit, each with its sessions, through visit_treatments", async () => {
+    const { tenant, queries, argsOf } = tenantWith({
+      answer: () => ({ data: { ...row, treatments: [aTreatmentRow()] } }),
+    });
+    expect((await getVisit(tenant, "v-1")).treatments).toEqual([aTreatment()]);
+    const [columns] = argsOf(queries[0], "select")[0] as [string];
+    expect(columns).toContain("treatments:visit_treatments(id, patient_id, doctor_id, name, ");
+  });
+});
+
 describe("listPatientVisits (plan §10.3; D225, D226)", () => {
   const visit = {
     id: "v-1",
@@ -297,6 +311,8 @@ describe("listPatientVisits (plan §10.3; D225, D226)", () => {
         { position: 1, medicine: "Paracetamol" },
       ],
     },
+    worked: [],
+    begun: [],
   };
 
   it("reads a page and one more of a patient's visits, newest first, each with what it found and its medicines", async () => {
@@ -310,6 +326,7 @@ describe("listPatientVisits (plan §10.3; D225, D226)", () => {
         doctorName: "Maya Rao",
         finding: "Dental caries",
         medicines: ["Paracetamol", "Amoxicillin"],
+        treatments: [],
         recorded: true,
       },
     ]);
@@ -348,6 +365,20 @@ describe("listPatientVisits (plan §10.3; D225, D226)", () => {
     expect(complaint).toMatchObject({ finding: "Toothache", doctorName: null, medicines: [] });
     expect(empty).toMatchObject({ finding: null, doctorName: null, medicines: [], recorded: false });
     expect(listed.medicines).toEqual(["Ibuprofen"]);
+  });
+
+  it("names the treatments it worked on or began, each once, as they were begun (D262)", async () => {
+    const crown = { id: "t-2", name: "Crown", created_at: "2026-10-14T06:00:00+00:00" };
+    const canal = { id: "t-1", name: "Root canal", created_at: "2026-10-01T05:00:00+00:00" };
+    const { tenant, queries, argsOf } = tenantWith({
+      answer: () => ({
+        data: [{ ...visit, begun: [crown], worked: [{ treatment: crown }, { treatment: canal }, { treatment: null }] }],
+      }),
+    });
+    expect((await listPatientVisits(tenant, "p-1"))[0].treatments).toEqual(["Root canal", "Crown"]);
+    const [columns] = argsOf(queries[0], "select")[0] as [string];
+    expect(columns).toContain("worked:treatment_sessions!treatment_sessions_visit_id_clinic_id_fkey(");
+    expect(columns).toContain("begun:treatments!treatments_started_visit_id_clinic_id_fkey(id, name, created_at)");
   });
 
   it("reads on from where the page before ended, and says why it could not read", async () => {

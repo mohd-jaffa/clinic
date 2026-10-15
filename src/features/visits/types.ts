@@ -6,6 +6,7 @@ import type {
   PreviousPrescription,
   PreviousPrescriptionRow,
 } from "@/features/prescriptions/types";
+import type { Treatment, TreatmentRow } from "@/features/treatments/types";
 
 /** A visit's readings (plan §12.2), each as taken — or none. Temperature in °F (D31). */
 export interface Vitals {
@@ -83,6 +84,8 @@ export interface Visit extends VisitNotes {
   prescription: Prescription | null;
   /** What Repeat fills (D236): the patient's latest prescription before this visit — none when there is none. */
   previousPrescription: PreviousPrescription | null;
+  /** Its Treatments card (D256): the patient's open treatments, and those started or worked on in it. */
+  treatments: Treatment[];
 }
 
 /** A `visits` row as its screen reads it, with its patient and their alerts, its doctor, its appointment, vitals and prescription. */
@@ -120,6 +123,8 @@ export interface VisitRow {
   prescription: EmbeddedPrescriptionRow | EmbeddedPrescriptionRow[] | null;
   /** `previous_prescription` (0023): none when the patient has none before this visit. */
   previous: PreviousPrescriptionRow | null;
+  /** `visit_treatments` (0025). */
+  treatments: TreatmentRow[];
 }
 
 /**
@@ -139,6 +144,8 @@ export interface PatientVisit {
   finding: string | null;
   /** Its prescription's medicines by name, in their order; none without one. */
   medicines: string[];
+  /** The treatments started or worked on in it, by name, as they were begun (D262). */
+  treatments: string[];
   /** Whether it holds anything at all (D226). */
   recorded: boolean;
 }
@@ -156,6 +163,16 @@ export interface PatientVisitRow {
   /** Embedded through the prescription's foreign key: one row, a list of at most one, or none. */
   prescription:
     { items: { position: number; medicine: string }[] } | { items: { position: number; medicine: string }[] }[] | null;
+  /** The treatments it worked on, through their sessions, and those begun in it. */
+  worked: { treatment: WorkedTreatmentRow | null }[];
+  begun: WorkedTreatmentRow[];
+}
+
+/** A treatment as a history row names it. */
+export interface WorkedTreatmentRow {
+  id: string;
+  name: string;
+  created_at: string;
 }
 
 /** Vitals saved (D202, D203): the visit they are on — opened by them, for a patient still waiting — and the readings now. */

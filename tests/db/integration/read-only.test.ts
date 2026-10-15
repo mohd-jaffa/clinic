@@ -109,7 +109,7 @@ describe("a read-only clinic", () => {
         "record_treatment_session",
         { p_treatment_id: randomUUID(), p_visit_id: randomUUID(), p_note: null, p_seen: null },
       ],
-      ["remove_treatment_session", { p_session_id: randomUUID() }],
+      ["remove_treatment_session", { p_treatment_id: randomUUID(), p_visit_id: randomUUID() }],
     ] as const) {
       const { error } = await supabase.rpc(name, args);
       expect(error?.hint, name).toBe("CLINIC_PLAN_EXPIRED");

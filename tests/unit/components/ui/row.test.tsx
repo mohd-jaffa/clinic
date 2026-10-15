@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { Trash2, Wallet } from "lucide-react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
@@ -86,6 +86,23 @@ describe("Row", () => {
     expect(row).toHaveTextContent("Root canal₹4,500");
     expect(screen.getByText("₹4,500")).not.toHaveClass("relative");
     expect(row.querySelector("svg")).toBeInTheDocument();
+  });
+
+  it("carries a line for each of several notes, and none for one that is empty", () => {
+    render(
+      <RowList>
+        <Row
+          title="14 Oct · Visit"
+          subtitle="Maya Rao"
+          note={["Rx Paracetamol", false, "Tx Root canal"]}
+          href="/visits/1"
+        />
+      </RowList>,
+    );
+    const row = screen.getByRole("listitem");
+    expect(row).toHaveTextContent("14 Oct · VisitMaya RaoRx ParacetamolTx Root canal");
+    // A line each: neither runs into the other.
+    expect(within(row).getByText("Rx Paracetamol")).not.toBe(within(row).getByText("Tx Root canal"));
   });
 
   it("carries one more line under the first, each cut short alike, when there is a note", () => {

@@ -25,6 +25,7 @@ import { VisitAlerts } from "@/features/patients/components/PatientAlerts";
 import { describePatient } from "@/features/patients/describe";
 import { PrescriptionSection } from "@/features/prescriptions/components/PrescriptionSection";
 import { ReadOnlyNote } from "@/features/subscription/components/ReadOnlyNote";
+import { TreatmentsSection } from "@/features/treatments/components/TreatmentsSection";
 import { useReadOnly } from "@/features/subscription/hooks/useReadOnly";
 import { useNow } from "@/hooks/useNow";
 import { formatLongDate, formatTime } from "@/lib/format/date";
@@ -62,11 +63,12 @@ function detailsOf(visit: Visit): Detail[] {
  * one is waiting (D194).
  *
  * Under it, what the visit records, each section optional and saving alone
- * (D202): vitals, complaint, diagnosis and notes, the prescription (plan
- * §13) and the follow-up — fields for whoever may write them, read-outs for
- * whoever may only read. A phone stacks them; from a tablet the notes and
- * the prescription stand beside the vitals and the follow-up (D209). Then
- * the visit's own details.
+ * (D202): vitals, complaint, diagnosis and notes, the treatments (plan
+ * §14.1, D256), the prescription (plan §13) and the follow-up — fields for
+ * whoever may write them, read-outs for whoever may only read. A phone
+ * stacks them; from a tablet the notes, the treatments and the prescription
+ * stand beside the vitals and the follow-up (D209, D263). Then the visit's
+ * own details.
  *
  * Its back arrow leads to the queue — or, opened from the patient's profile
  * (their history, or New visit), back to the profile (D230).
@@ -124,12 +126,13 @@ export function VisitScreen({ id }: { id: string }) {
 
 /**
  * What the visit records, each section for whoever may write it (D202): the
- * vitals with `visits.create` while it is open, the rest of its own with
- * `visits.edit` — and only `visits.edit` once it is done (D208) — and the
+ * vitals with `visits.create` while it is open, the rest of its own — and
+ * its treatments — with `visits.edit`, and only `visits.edit` once it is
+ * done (D208) — and the
  * prescription for its doctor or `prescriptions.write`, open or done (D215);
  * none for an archived patient (D103) or a view-only clinic, which is said.
- * From a tablet, the notes and the prescription stand beside the vitals and
- * the follow-up (D209).
+ * From a tablet, the notes, the treatments and the prescription stand beside
+ * the vitals and the follow-up (D209, D263).
  */
 function Records({ visit }: { visit: Visit }) {
   const { membership } = useAuth();
@@ -146,6 +149,7 @@ function Records({ visit }: { visit: Visit }) {
         <VitalsSection visit={visit} writes={writable && may(vitalsBy)} className="md:col-start-1 md:row-start-1" />
         <div className="grid min-w-0 gap-6 md:col-start-2 md:row-span-3 md:row-start-1">
           <NotesSection visit={visit} writes={writable && may("visits.edit")} />
+          <TreatmentsSection visit={visit} writes={writable && may("visits.edit")} />
           <PrescriptionSection visit={visit} writes={writable && prescribes} />
         </div>
         <FollowUpSection

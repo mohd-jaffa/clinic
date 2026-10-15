@@ -17,6 +17,7 @@ import { AppointmentPanel } from "@/features/appointments/components/Appointment
 import { useOpenedAppointment } from "@/features/appointments/hooks/useOpenedAppointment";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { ReadOnlyNote } from "@/features/subscription/components/ReadOnlyNote";
+import { PatientTreatments } from "@/features/treatments/components/PatientTreatments";
 import { useReadOnly } from "@/features/subscription/hooks/useReadOnly";
 import { NewVisit } from "@/features/visits/components/NewVisit";
 import { formatDate } from "@/lib/format/date";
@@ -58,7 +59,8 @@ function detailsOf(patient: Patient): Detail[] {
  * **WhatsApp** (a chat, nothing typed); then their details, only what holds a
  * value, notes included, with **Edit** for those who may change them. For
  * those who see appointments, their next appointment — or **Book** (D166);
- * for those who see appointments or visits, their history (D167, D225). On
+ * for those who see visits, their treatments (D260); for those who see
+ * appointments or visits, their history (D167, D225). On
  * a desktop, their state on the left and the history on the right (D114,
  * D231); each later phase adds its part (D101).
  */
@@ -130,7 +132,8 @@ function Reach({ patient }: { patient: Patient }) {
 
 /**
  * The profile's parts (D114, D231): their state — the next appointment, for
- * `appointments.view`, and their details — then their history, for
+ * `appointments.view`, their treatments, for `visits.view` (D260), and
+ * their details — then their history, for
  * `appointments.view` or `visits.view`, and the detail of an appointment
  * opened from either (D160). A phone stacks them in that order; a desktop
  * puts the history in a column of its own on the right.
@@ -147,6 +150,7 @@ function Body({ patient }: { patient: Patient }) {
       <div className="grid grid-cols-1 gap-6">
         {mayEdit && <ReadOnlyNote />}
         {seesAppointments && <NextAppointment patient={patient} onOpen={opened.show} />}
+        {may("visits.view") && <PatientTreatments patient={patient} />}
         <Details patient={patient} mayEdit={mayEdit} />
       </div>
       {(seesAppointments || may("visits.view")) && <PatientHistory patient={patient} onOpen={opened.show} />}

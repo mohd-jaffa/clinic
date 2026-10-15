@@ -332,7 +332,8 @@ describe("a session (plan §14.1; D248, D249, D254)", () => {
       created: true,
       before: null,
       after: { note: "Canal cleaned" },
-      moved_from: "PLANNED",
+      status_before: "PLANNED",
+      status_after: "IN_PROGRESS",
     });
     expect(await rowOf(id)).toMatchObject({ status: "IN_PROGRESS", started_on: today, doctor_id: doctors.maya });
 
@@ -342,7 +343,8 @@ describe("a session (plan §14.1; D248, D249, D254)", () => {
       created: false,
       before: { note: "Canal cleaned" },
       after: { note: "Canal cleaned and dressed" },
-      moved_from: null,
+      status_before: "IN_PROGRESS",
+      status_after: "IN_PROGRESS",
     });
     expect((await record(maya, id, visitId, "Planted", null)).error?.hint).toBe("VISIT_CHANGED");
     expect((await record(maya, id, visitId, "Planted", { note: "Canal cleaned" })).error?.hint).toBe("VISIT_CHANGED");
@@ -360,7 +362,10 @@ describe("a session (plan §14.1; D248, D249, D254)", () => {
     await changeStatus(nurse, done, "COMPLETED", "IN_PROGRESS");
     const { visitId } = await aVisit(patientId, doctors.maya);
 
-    expect((await record(maya, held, visitId, null, null)).data).toMatchObject({ moved_from: "ON_HOLD" });
+    expect((await record(maya, held, visitId, null, null)).data).toMatchObject({
+      status_before: "ON_HOLD",
+      status_after: "IN_PROGRESS",
+    });
     expect(await rowOf(held)).toMatchObject({ status: "IN_PROGRESS", started_on: today });
     expect((await record(maya, done, visitId, null, null)).error?.hint).toBe("TREATMENT_CLOSED");
 
@@ -378,22 +383,18 @@ describe("a session (plan §14.1; D248, D249, D254)", () => {
     });
     const { visitId, appointmentId } = await aVisit(patientId, doctors.maya);
     const first = await record(maya, id, visitId, null, null);
-    const remove = (who: Member, sessionId: string) =>
-      who.tenant!.supabase.rpc("remove_treatment_session", { p_session_id: sessionId });
+    // By its treatment and its visit, as the visit's screen names it (0025).
+    const remove = (who: Member) =>
+      who.tenant!.supabase.rpc("remove_treatment_session", { p_treatment_id: id, p_visit_id: visitId });
 
-    expect((await remove(viewer, (first.data as { session_id: string }).session_id)).error?.hint).toBe(
-      "AUTH_PERMISSION_DENIED",
-    );
-    expect((await remove(maya, (first.data as { session_id: string }).session_id)).data).toEqual({
-      treatment_id: id,
-      visit_id: visitId,
-    });
+    expect((await remove(viewer)).error?.hint).toBe("AUTH_PERMISSION_DENIED");
+    expect((await remove(maya)).data).toEqual({ session_id: (first.data as { session_id: string }).session_id });
     expect(await rowOf(id)).toMatchObject({ status: "IN_PROGRESS" });
+    expect((await remove(maya)).error?.hint).toBe("RECORD_NOT_FOUND");
 
-    const again = await record(maya, id, visitId, "Tooth out", null);
+    await record(maya, id, visitId, "Tooth out", null);
     await markDone(desk.tenant!, { appointmentId });
-    const sessionId = (again.data as { session_id: string }).session_id;
-    expect((await remove(maya, sessionId)).error?.hint).toBe("TREATMENT_SESSION_KEPT");
+    expect((await remove(maya)).error?.hint).toBe("TREATMENT_SESSION_KEPT");
     // Once done, its note is still corrected (visits.edit, D208).
     expect((await record(nurse, id, visitId, "Tooth out, stitches", { note: "Tooth out" })).error).toBeNull();
   });

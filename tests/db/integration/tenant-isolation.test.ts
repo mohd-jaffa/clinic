@@ -362,7 +362,7 @@ describe("as clinic B's owner, with a valid token", () => {
         "record_treatment_session",
         { p_treatment_id: treatmentId, p_visit_id: visitId, p_note: "Planted", p_seen: { note: "Access opened" } },
       ],
-      ["remove_treatment_session", { p_session_id: sessionId }],
+      ["remove_treatment_session", { p_treatment_id: treatmentId, p_visit_id: visitId }],
     ] as const) {
       const { error } = await supabase.rpc(name, args);
       expect(error?.hint, name).toBe("RECORD_NOT_FOUND");

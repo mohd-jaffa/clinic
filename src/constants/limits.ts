@@ -28,6 +28,9 @@ export const HISTORY_MEDICINES_NAMED = 2;
 /** How many of a template's medicines its row in the Templates sheet names before "+1" (D241). */
 export const TEMPLATE_MEDICINES_NAMED = 2;
 
+/** How many of a visit's treatments its row in the history names before "+1" (D262). */
+export const HISTORY_TREATMENTS_NAMED = 2;
+
 /** What a list's search box may send. */
 export const MAX_SEARCH_LENGTH = 100;
 

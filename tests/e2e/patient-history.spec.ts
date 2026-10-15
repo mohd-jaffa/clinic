@@ -132,12 +132,18 @@ test("the list says when a patient was last seen; the profile's history opens th
   await expect(entries.nth(2)).toContainText("Patient asked");
   await expectAccessible(page);
 
-  // Beside the details on a desktop, under them on a phone (D231).
+  // Beside their state on a desktop — its column topped by the next appointment, the treatments and
+  // details under it — and under them on a phone (D231, D260).
   const details = page.getByRole("region", { name: words.details });
-  const [left, right] = [(await details.boundingBox())!, (await history.boundingBox())!];
+  const next = page.getByRole("region", { name: words.nextAppointment });
+  const [left, right, top] = [
+    (await details.boundingBox())!,
+    (await history.boundingBox())!,
+    (await next.boundingBox())!,
+  ];
   if (info.project.name === "desktop") {
     expect(right.x).toBeGreaterThan(left.x + left.width);
-    expect(Math.abs(right.y - left.y)).toBeLessThan(200);
+    expect(Math.abs(right.y - top.y)).toBeLessThan(200);
   } else {
     expect(right.y).toBeGreaterThanOrEqual(left.y + left.height);
   }

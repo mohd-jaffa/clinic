@@ -114,6 +114,13 @@ export const apiRoutes = {
     list: "/api/prescription-templates",
     one: (id: string) => `/api/prescription-templates/${id}`,
   },
+  // Treatments (plan §14.1, §30): made; changed; moved; a visit's session on one (D256).
+  treatments: {
+    list: "/api/treatments",
+    one: (id: string) => `/api/treatments/${id}`,
+    status: (id: string) => `/api/treatments/${id}/status`,
+    session: (id: string, visitId: string) => `/api/treatments/${id}/sessions/${visitId}`,
+  },
 } as const;
 
 /**

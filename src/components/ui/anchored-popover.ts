@@ -35,7 +35,9 @@ export function placeAgainst(panel: HTMLElement, control: HTMLElement, maxHeight
  * - **Where it opens:** in the top layer, so no sheet that scrolls can clip
  *   it, set against its control before it paints (`placeAgainst`).
  * - **It moves with its control** on a scroll or a resize — a phone's address
- *   bar folding away, a page still gliding — but not on a scroll inside it.
+ *   bar folding away, a page still gliding — and once a sheet around it has
+ *   finished rising, so one opened mid-rise settles under its control; but
+ *   not on a scroll inside it.
  * - **A tap anywhere else** — outside the panel and the control — calls
  *   `onDismiss`.
  *
@@ -86,11 +88,15 @@ export function useAnchoredPopover({
     };
     document.addEventListener("pointerdown", onPointerDown, true);
     document.addEventListener("scroll", follow, true);
+    document.addEventListener("animationend", follow, true);
+    document.addEventListener("transitionend", follow, true);
     window.addEventListener("resize", follow);
     return () => {
       cancelAnimationFrame(frame);
       document.removeEventListener("pointerdown", onPointerDown, true);
       document.removeEventListener("scroll", follow, true);
+      document.removeEventListener("animationend", follow, true);
+      document.removeEventListener("transitionend", follow, true);
       window.removeEventListener("resize", follow);
     };
   }, [open, panel, control, maxHeight]);

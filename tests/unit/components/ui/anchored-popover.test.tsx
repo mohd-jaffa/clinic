@@ -121,6 +121,18 @@ describe("useAnchoredPopover", () => {
     expect(where).toHaveBeenCalled();
   });
 
+  it("settles against its control once a sheet around it has finished moving", () => {
+    const frames: FrameRequestCallback[] = [];
+    vi.spyOn(window, "requestAnimationFrame").mockImplementation((callback) => frames.push(callback));
+    render(<Anchored />);
+    fireEvent.click(control());
+    fireEvent.animationEnd(document.body);
+    fireEvent.transitionEnd(document.body);
+    expect(frames).toHaveLength(2);
+    fireEvent.animationEnd(panel());
+    expect(frames).toHaveLength(2);
+  });
+
   it("stops listening once closed", () => {
     const onDismiss = vi.fn();
     render(<Anchored onDismiss={onDismiss} />);

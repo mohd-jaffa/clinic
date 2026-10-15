@@ -3579,3 +3579,118 @@ and the profile will call (R7.2). Asked of the user first: D248 – D255.
 
 ### Blockers
 - None.
+
+## 2026-10-15 — R7.2: treatments on the visit and the profile
+
+Treatments reach the screens. A visit has a Treatments card between the
+notes and the prescription; the patient's profile lists their treatments;
+each opens one sheet that tells its whole story; a visit's row in the
+history names its treatments. Asked of the user first: D256 – D263.
+
+### Added
+- `supabase/migrations/0025_treatment_screens.sql`:
+  - `record_treatment_session` takes `p_complete` (D257): the last sitting's
+    note and **This completes it** are one save — the session and the
+    completion together, or neither. It hands back the treatment's status
+    before and after.
+  - `remove_treatment_session` names the session by its treatment and visit,
+    as the screen does (D254).
+  - `visit_treatments(visit)`: the patient's open treatments and any started
+    or worked on in the visit — a computed relationship read with the visit
+    in its one query, as the member (D256).
+- **The visit's Treatments card** (`TreatmentsSection`, D256, D263): rows
+  for those treatments — name, doctor, when next due, estimate, status, and
+  what this visit did ("This visit: Canal cleaned", "Started this visit").
+  **Add treatment** for `visits.edit`.
+- **A treatment's sheet** (`TreatmentSheet`, `TreatmentPanel`, D250, D257,
+  D259, D261): its details; on a visit, **This visit** — the note, **This
+  completes it** while open, **Save session**, and **Remove from this
+  visit** while the visit is open; **Next sitting** with chips from today;
+  its sessions visit by visit, each opening its visit; **Start**,
+  **Resume**, **Complete** (asks first), **Put on hold**, **Edit** and
+  **Cancel treatment** (an optional reason, then a danger card). It opens
+  at its top, so a phone's keyboard stays down.
+- **New and edited treatments** (`NewTreatmentSheet`, `EditTreatmentSheet`,
+  `CancelTreatmentSheet`, D252, D258): the name suggests the price list's
+  active procedures and fills the estimate from one; **Start today** on a
+  visit (with what was done), **Plan it** on the profile, for the caller if
+  a doctor, else the patient's own; the next sitting's chips. Edit hands an
+  open treatment to another doctor.
+- **The profile's Treatments** (`PatientTreatments`, D260): the open ones,
+  then **Show closed (n)**, the latest closed first; **Add treatment**.
+- **The history** names a visit's treatments under the Rx line: "Tx Root
+  canal, Crown +1" (D262).
+- **Routes** (`visits.edit`): `POST /api/treatments`, `PATCH
+  /api/treatments/[id]` (details or next sitting, from the copy read),
+  `POST /api/treatments/[id]/status`, `PUT, DELETE
+  /api/treatments/[id]/sessions/[visitId]`. The reads come with the visit
+  and the patient's summary, so there is no `GET`.
+- **Code:** `features/treatments` — `api.ts` (`TREATMENT_COLUMNS`,
+  `toTreatment`, `listPatientTreatments`), `records.ts` (each write and its
+  audit rows: statuses, estimate, days and doctor by value; name,
+  description, notes and reason by name alone), `describe.ts` (due labels,
+  order, moves), `keys.ts`, `api.client.ts`, five hooks and seven
+  components; schemas in `schemas/treatments.ts`; the treatment words,
+  `TREATMENTS_LOAD_FAILED` and `HISTORY_TREATMENTS_NAMED`.
+
+### Changed
+- `Row` takes several notes, a line each — a visit's medicines, then its
+  treatments.
+- The visit's read carries its treatments; the patient's summary carries
+  theirs with `visits.view`, read beside the next appointment; the
+  history's visits name theirs.
+- **Plan:**
+  - D256 – D263;
+  - §10.3 (the profile's treatments), §12.2 (R7.2 on the visit), §14.1;
+  - §28.7 (the functions), §29 (0025 added; the later migrations move up
+    by one, 0026_follow_ups to 0034_faster_reads, in the tracker too), §30
+    (the routes, the summary);
+  - the tracker: R7.2 DONE.
+- `DESIGN.md`: the Treatments card and profile section, a treatment's
+  sheet, its new, edit and cancel sheets, the history's Tx line, the
+  profile's columns.
+
+### Speed (plan §37)
+- **The visit screen** still waits on one query after the session:
+  `visit_treatments` is embedded in it, each treatment with its doctor and
+  its sessions.
+- **The profile's treatments** come with its summary, read at once beside
+  the next appointment: still one round after the session.
+- **The history** reads a visit's treatments in its own query, through the
+  sessions' and the started visit's foreign keys.
+- **Each save** waits on two round trips after the session: the function,
+  the audit rows. A session that completes its treatment is still one call.
+- **Indexes:** 0024's serve every new read — a patient's treatments
+  `(clinic_id, patient_id, created_at desc)`, a visit's sessions `(clinic_id,
+  visit_id)`, the visit one was started in `(clinic_id, started_visit_id)`,
+  a treatment's sessions `(clinic_id, treatment_id, created_at)`.
+
+### Validation
+- Typecheck, lint, format check passed.
+- Unit and integration tests passed (3264), coverage 100%:
+  `tests/db/treatment-screens-migration.test.ts`;
+  `tests/db/integration/treatment-records.test.ts` (5) through the feature
+  functions — the visit's card, the summary in the doctor scope, the last
+  session completing in one save or neither, changes from the copy read,
+  audit rows by name for clinical text; R7.1's tests moved to 0025's
+  function signatures; route rows in the permission matrix.
+- E2E: `treatments.spec.ts` at phone and desktop width, with axe — a
+  doctor begins a root canal from the price list, sets the next sitting,
+  completes it at the next visit in one save, and finds it under Show
+  closed with both sessions and in the history; a nurse plans a crown from
+  the profile, hands it to another doctor, holds it and cancels it with a
+  reason; a reader sees it and can change nothing. The whole suite: 132
+  passed, 8 skipped (run at one width only).
+
+### Found while building
+- A suggestion list (or a select's, a date picker's) opened while its sheet
+  was still rising was placed where its field was mid-rise — once, on a
+  phone, below the screen, where it could not be tapped. The kit's
+  `useAnchoredPopover` now sets it against its field again when an
+  animation or transition around it ends.
+- `patient-history.spec.ts` measured the history against the details; with
+  the treatments above the details it now measures against the top of
+  their column, the next appointment, as D231 means.
+
+### Blockers
+- None.
