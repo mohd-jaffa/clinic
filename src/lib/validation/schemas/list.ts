@@ -26,5 +26,24 @@ export const listQuerySchema = z.object({ cursor: cursorParam, search: searchPar
 
 export type ListQuery = z.output<typeof listQuerySchema>;
 
-/** A list with no search — a patient's history (plan §10.3): where its page starts. */
-export const pageQuerySchema = z.object({ cursor: cursorParam });
+/**
+ * Where a page of a patient's history starts (plan §10.3, D225): the
+ * `nextCursor` the page before it gave — how many of their visits and of
+ * their appointments are already shown, written "12.8"; anything else is
+ * refused rather than read as the start.
+ */
+export const timelineCursorParam = z.optional(
+  z
+    .string()
+    .regex(/^\d{1,6}\.\d{1,6}$/, { error: VALIDATION_MESSAGES.invalid })
+    .transform((cursor) => {
+      const [visits, appointments] = cursor.split(".").map(Number);
+      return { visits, appointments };
+    })
+    .refine(({ visits, appointments }) => Math.max(visits, appointments) <= MAX_PAGE_START, {
+      error: VALIDATION_MESSAGES.invalid,
+    }),
+);
+
+/** A patient's history: where its page starts. */
+export const timelineQuerySchema = z.object({ cursor: timelineCursorParam });

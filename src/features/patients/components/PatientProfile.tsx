@@ -57,9 +57,10 @@ function detailsOf(patient: Patient): Detail[] {
  * doctor — whether they are archived, their alerts, and **Call** and
  * **WhatsApp** (a chat, nothing typed); then their details, only what holds a
  * value, notes included, with **Edit** for those who may change them. For
- * those who see appointments, their next appointment — or **Book** — and
- * their history of appointments, each opening its detail (D166, D167). One
- * column until visits arrive (D114); each later phase adds its part (D101).
+ * those who see appointments, their next appointment — or **Book** (D166);
+ * for those who see appointments or visits, their history (D167, D225). On
+ * a desktop, their state on the left and the history on the right (D114,
+ * D231); each later phase adds its part (D101).
  */
 export function PatientProfile({ id }: { id: string }) {
   const query = usePatient(id);
@@ -128,32 +129,35 @@ function Reach({ patient }: { patient: Patient }) {
 }
 
 /**
- * The profile's parts, in one column (D114): their next appointment, their
- * details, their history — the appointments ones for `appointments.view` —
- * and the detail of an appointment opened from either (D160).
+ * The profile's parts (D114, D231): their state — the next appointment, for
+ * `appointments.view`, and their details — then their history, for
+ * `appointments.view` or `visits.view`, and the detail of an appointment
+ * opened from either (D160). A phone stacks them in that order; a desktop
+ * puts the history in a column of its own on the right.
  */
 function Body({ patient }: { patient: Patient }) {
   const { membership } = useAuth();
   const opened = useOpenedAppointment();
-  const seesAppointments = membership !== null && hasAccess(membership, "appointments.view");
-  const mayEdit = membership !== null && hasAccess(membership, "patients.edit");
+  const may = (permission: Parameters<typeof hasAccess>[1]) => membership !== null && hasAccess(membership, permission);
+  const seesAppointments = may("appointments.view");
+  const mayEdit = may("patients.edit");
 
   return (
-    <div className="grid max-w-3xl grid-cols-1 gap-6">
-      {mayEdit && <ReadOnlyNote />}
-      {seesAppointments && <NextAppointment patient={patient} onOpen={opened.show} />}
-      <Details patient={patient} mayEdit={mayEdit} />
+    <div className="grid max-w-3xl grid-cols-1 items-start gap-6 lg:max-w-6xl lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+      <div className="grid grid-cols-1 gap-6">
+        {mayEdit && <ReadOnlyNote />}
+        {seesAppointments && <NextAppointment patient={patient} onOpen={opened.show} />}
+        <Details patient={patient} mayEdit={mayEdit} />
+      </div>
+      {(seesAppointments || may("visits.view")) && <PatientHistory patient={patient} onOpen={opened.show} />}
       {seesAppointments && (
-        <>
-          <PatientHistory patient={patient} onOpen={opened.show} />
-          <AppointmentPanel
-            key={opened.appointment?.id}
-            appointment={opened.appointment}
-            open={opened.open}
-            onClose={opened.close}
-            linkProfile={false}
-          />
-        </>
+        <AppointmentPanel
+          key={opened.appointment?.id}
+          appointment={opened.appointment}
+          open={opened.open}
+          onClose={opened.close}
+          linkProfile={false}
+        />
       )}
     </div>
   );

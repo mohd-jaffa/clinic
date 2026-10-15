@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 
-import { getVisit } from "@/features/visits/api";
+import { getVisit, listPatientVisits } from "@/features/visits/api";
 import type { Tenant } from "@/lib/supabase/tenant";
 import { fakeSupabase, postgrestError, type FakeSupabaseOptions } from "@tests/support/supabase";
 
@@ -237,5 +237,83 @@ describe("getVisit (plan §12.2, D195, D202)", () => {
     await expect(getVisit(tenantWith({}).tenant, "v-9")).rejects.toMatchObject({ code: "RECORD_NOT_FOUND" });
     const { tenant } = tenantWith({ answer: () => ({ error: postgrestError("42501") }) });
     await expect(getVisit(tenant, "v-1")).rejects.toMatchObject({ code: "AUTH_PERMISSION_DENIED" });
+  });
+});
+
+describe("listPatientVisits (plan §10.3; D225, D226)", () => {
+  const visit = {
+    id: "v-1",
+    status: "COMPLETED",
+    visit_date: "2026-10-14",
+    created_at: "2026-10-14T05:00:00.123456+00:00",
+    complaint: "Toothache",
+    diagnosis: "Dental caries",
+    recorded: true,
+    doctor: { member: { profile: { full_name: "Maya Rao" } } },
+    prescription: {
+      items: [
+        { position: 2, medicine: "Amoxicillin" },
+        { position: 1, medicine: "Paracetamol" },
+      ],
+    },
+  };
+
+  it("reads a page and one more of a patient's visits, newest first, each with what it found and its medicines", async () => {
+    const { tenant, queries, argsOf } = tenantWith({ answer: () => ({ data: [visit] }) });
+    expect(await listPatientVisits(tenant, "p-1")).toEqual([
+      {
+        id: "v-1",
+        status: "COMPLETED",
+        day: "2026-10-14",
+        openedAt: "2026-10-14T05:00:00.123456+00:00",
+        doctorName: "Maya Rao",
+        finding: "Dental caries",
+        medicines: ["Paracetamol", "Amoxicillin"],
+        recorded: true,
+      },
+    ]);
+    expect(queries[0].table).toBe("visits");
+    expect(argsOf(queries[0], "select")[0][0]).toContain("recorded:visit_recorded");
+    expect(argsOf(queries[0], "eq")).toEqual([
+      ["clinic_id", "clinic-1"],
+      ["patient_id", "p-1"],
+    ]);
+    expect(argsOf(queries[0], "order")).toEqual([
+      ["created_at", { ascending: false }],
+      ["id", { ascending: false }],
+    ]);
+    expect(argsOf(queries[0], "range")).toEqual([[0, 20]]);
+  });
+
+  it("says the complaint when there is no diagnosis; no medicines without a prescription; no doctor once gone", async () => {
+    const { tenant } = tenantWith({
+      answer: () => ({
+        data: [
+          { ...visit, diagnosis: null, doctor: null, prescription: null },
+          {
+            ...visit,
+            id: "v-2",
+            complaint: null,
+            diagnosis: null,
+            recorded: false,
+            doctor: { member: null },
+            prescription: [],
+          },
+          { ...visit, id: "v-3", prescription: [{ items: [{ position: 1, medicine: "Ibuprofen" }] }] },
+        ],
+      }),
+    });
+    const [complaint, empty, listed] = await listPatientVisits(tenant, "p-1");
+    expect(complaint).toMatchObject({ finding: "Toothache", doctorName: null, medicines: [] });
+    expect(empty).toMatchObject({ finding: null, doctorName: null, medicines: [], recorded: false });
+    expect(listed.medicines).toEqual(["Ibuprofen"]);
+  });
+
+  it("reads on from where the page before ended, and says why it could not read", async () => {
+    const page = tenantWith({ answer: () => ({ data: [] }) });
+    await listPatientVisits(page.tenant, "p-1", 20);
+    expect(page.argsOf(page.queries[0], "range")).toEqual([[20, 40]]);
+    const { tenant } = tenantWith({ answer: () => ({ error: postgrestError("42501") }) });
+    await expect(listPatientVisits(tenant, "p-1")).rejects.toMatchObject({ code: "AUTH_PERMISSION_DENIED" });
   });
 });

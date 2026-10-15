@@ -110,6 +110,42 @@ export interface VisitRow {
   prescription: EmbeddedPrescriptionRow | EmbeddedPrescriptionRow[] | null;
 }
 
+/**
+ * A visit in its patient's history (plan §10.3; D225, D226): its day and
+ * doctor, where it stands, what it found — the diagnosis, or the complaint
+ * when there is none — and its medicines, or that it holds nothing at all.
+ */
+export interface PatientVisit {
+  id: string;
+  status: VisitStatus;
+  day: string;
+  /** When it was opened: where it falls among the patient's appointments. */
+  openedAt: string;
+  /** None once the doctor's account is gone. */
+  doctorName: string | null;
+  /** The diagnosis, or the complaint when there is no diagnosis. */
+  finding: string | null;
+  /** Its prescription's medicines by name, in their order; none without one. */
+  medicines: string[];
+  /** Whether it holds anything at all (D226). */
+  recorded: boolean;
+}
+
+/** A `visits` row as a patient's history reads it. */
+export interface PatientVisitRow {
+  id: string;
+  status: VisitStatus;
+  visit_date: string;
+  created_at: string;
+  complaint: string | null;
+  diagnosis: string | null;
+  recorded: boolean;
+  doctor: { member: { profile: { full_name: string } | null } | null } | null;
+  /** Embedded through the prescription's foreign key: one row, a list of at most one, or none. */
+  prescription:
+    { items: { position: number; medicine: string }[] } | { items: { position: number; medicine: string }[] }[] | null;
+}
+
 /** Vitals saved (D202, D203): the visit they are on — opened by them, for a patient still waiting — and the readings now. */
 export interface VitalsSaved {
   visitId: string;

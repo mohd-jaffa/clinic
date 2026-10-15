@@ -16,6 +16,8 @@ import {
   SETTINGS_GROUPS,
   settingsFor,
   TEAM_ROUTE,
+  VISIT_FROM,
+  visitRoute,
 } from "@/constants/navigation";
 import { PERMISSIONS } from "@/constants/permissions";
 
@@ -139,5 +141,12 @@ describe("the Settings index (plan §31.2, D71)", () => {
     const manager = { role: "STAFF" as const, permissions: [...PERMISSIONS] };
     expect(settingsFor(manager, SETTINGS_GROUPS).map((group) => group.id)).toEqual(["clinic"]);
     expect(settingsFor(receptionist, SETTINGS_GROUPS)).toEqual([]);
+  });
+});
+
+describe("a visit's screen (D195, D230)", () => {
+  it("is the visit's own address, saying when it was opened from the patient's profile", () => {
+    expect(visitRoute("v-1")).toBe("/visits/v-1");
+    expect(visitRoute("v-1", VISIT_FROM.patient)).toBe("/visits/v-1?from=patient");
   });
 });

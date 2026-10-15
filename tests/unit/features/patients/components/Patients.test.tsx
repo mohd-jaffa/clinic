@@ -42,6 +42,7 @@ const ROHAN: PatientListItem = {
   phone: "+919876543210",
   dateOfBirth: "1990-04-12",
   gender: "MALE",
+  lastVisitOn: null,
 };
 
 const draw = () =>
@@ -75,6 +76,23 @@ describe("Patients (plan §10.2, D104, D121)", () => {
     expect(row).toHaveTextContent("36 y · Male · P-1012 · 98765 43210");
     // Call is on the profile, a tap away, not on every row.
     expect(within(row).getAllByRole("link")).toHaveLength(1);
+  });
+
+  it("says when each was last seen on a line of its own, and nothing for one never seen (D228, D229)", () => {
+    list.current = {
+      data: [
+        { ...ROHAN, lastVisitOn: "2026-09-28" },
+        { ...ROHAN, id: "p-2", name: "Priya Shah", lastVisitOn: "2026-10-03" },
+        { ...ROHAN, id: "p-3", name: "Anu Varma" },
+      ],
+      isLoading: false,
+      error: undefined,
+    };
+    draw();
+    const [rohan, priya, anu] = within(screen.getByRole("list", { name: "Patients" })).getAllByRole("listitem");
+    expect(rohan).toHaveTextContent("36 y · Male · P-1012 · 98765 43210Last visit: 28 Sep");
+    expect(priya).toHaveTextContent("Last visit: today");
+    expect(anu).not.toHaveTextContent("Last visit");
   });
 
   it("searches what is typed, trimmed", async () => {

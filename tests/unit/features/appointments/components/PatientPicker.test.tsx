@@ -21,6 +21,7 @@ const patient = (n: number, name: string): PatientListItem => ({
   phone: "+919876543210",
   dateOfBirth: "1990-04-12",
   gender: "MALE",
+  lastVisitOn: null,
 });
 const ROHAN = patient(12, "Rohan Mehta");
 

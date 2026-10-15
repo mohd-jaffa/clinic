@@ -82,6 +82,7 @@ export const ERROR_MESSAGES = {
   PATIENT_ARCHIVED: "This patient is archived. Restore them to make changes.",
   PATIENT_BIRTH_DATE_INVALID: `A date of birth can’t be in the future, or more than ${MAX_PATIENT_AGE} years ago.`,
   PATIENT_LOAD_FAILED: "This patient couldn't be loaded.",
+  HISTORY_LOAD_FAILED: "This patient's history couldn't be loaded.",
   PATIENTS_LOAD_FAILED: "The patients couldn't be loaded.",
   ALERT_ALREADY_EXISTS: "This patient already has that alert.",
   ALERTS_LOAD_FAILED: "The alerts couldn't be loaded.",
@@ -1139,8 +1140,15 @@ export const UI_TEXT = {
     noNextAppointment: "No appointment to come",
     bookFor: (name: string) => `Book an appointment for ${name}`,
     history: "History",
-    historyEmpty: "No appointments yet",
-    historyEmptyHint: "Their appointments show here, newest first — cancelled ones and no-shows too.",
+    historyEmpty: "No visits or appointments yet",
+    historyEmptyHint: "Their visits and appointments show here, newest first — cancelled ones and no-shows too.",
+    /** A visit in their history (D225, D226). */
+    visitOn: (day: string) => `${day} · Visit`,
+    nothingRecorded: "Nothing recorded",
+    medicines: (names: string[], more: number) => `Rx ${names.join(", ")}${more > 0 ? ` +${more}` : ""}`,
+    /** Their last visit, on the patients list (D228, D229). */
+    lastVisit: (day: string) => `Last visit: ${day}`,
+    lastVisitToday: "Last visit: today",
   },
 
   /** A patient's alerts (plan §10.4, D117 – D120). */

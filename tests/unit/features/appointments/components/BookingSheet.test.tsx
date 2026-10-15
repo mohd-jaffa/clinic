@@ -42,6 +42,7 @@ const ROHAN: PatientListItem = {
   phone: "+919876543210",
   dateOfBirth: "1990-04-12",
   gender: "MALE",
+  lastVisitOn: null,
 };
 const RAHUL = { id: "8c2f5b63-4d6e-4f70-9bac-1d2e3f4a5b6c", name: "Rahul Nair" };
 const MAYA = { id: "doctor-1", name: "Maya Rao" };

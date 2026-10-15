@@ -1,5 +1,6 @@
 import type { AlertKind, Gender } from "@/constants/statuses";
-import type { CalendarAppointment } from "@/features/appointments/types";
+import type { CalendarAppointment, PatientAppointment } from "@/features/appointments/types";
+import type { PatientVisit } from "@/features/visits/types";
 
 /** A patient as the database reads them (0015), with their doctor's name and who archived them. */
 export interface PatientRow {
@@ -66,6 +67,8 @@ export interface PatientListItem {
   phone: string;
   dateOfBirth: string;
   gender: Gender;
+  /** The day of their latest visit (D228), or none yet. */
+  lastVisitOn: string | null;
 }
 
 /** An alert as the database holds it (plan §10.4). */
@@ -113,4 +116,17 @@ export interface ImportResult {
  */
 export interface PatientSummary {
   nextAppointment?: CalendarAppointment | null;
+}
+
+/**
+ * One entry of a patient's history (plan §10.3, D225): a visit — standing
+ * for the appointment it was opened for — or an appointment that has no
+ * visit, still to come, cancelled or missed.
+ */
+export type TimelineEntry = { visit: PatientVisit } | { appointment: PatientAppointment };
+
+/** Where a page of the history starts: how many of the visits and of the appointments are already shown. */
+export interface TimelineCursor {
+  visits: number;
+  appointments: number;
 }

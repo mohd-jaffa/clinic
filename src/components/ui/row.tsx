@@ -75,11 +75,14 @@ export function RowToken({ value, label }: { value: string; label?: string }) {
  * `menu` row is one line of a menu's list, bare on the ground (D75).
  * `wrap` lets the line under the title run on instead of being cut short,
  * for words that must be read whole — why an import's row was left out.
+ * `note` is one more line under it, cut short alike — a patient's last
+ * visit, a visit's medicines — so neither crowds the other off a phone.
  */
 export function Row({
   leading,
   title,
   subtitle,
+  note,
   detail,
   trailing,
   href,
@@ -90,6 +93,7 @@ export function Row({
   leading?: ReactNode;
   title: string;
   subtitle?: ReactNode;
+  note?: ReactNode;
   detail?: ReactNode;
   trailing?: ReactNode;
   href?: string;
@@ -137,6 +141,7 @@ export function Row({
             {subtitle}
           </span>
         )}
+        {note && <span className="block truncate text-small text-muted tabular-nums">{note}</span>}
       </span>
       {detail && <span className="shrink-0 font-bold text-ink tabular-nums">{detail}</span>}
       {trailing && <span className="relative z-[1] ml-auto flex shrink-0 items-center gap-2">{trailing}</span>}

@@ -1,5 +1,7 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
+
 import { Button } from "@/components/ui/button";
 import { CoastHeader } from "@/components/ui/coast-header";
 import { DetailList, type Detail } from "@/components/ui/detail-list";
@@ -10,7 +12,7 @@ import { SkeletonRows } from "@/components/ui/skeleton";
 import { StatusPill } from "@/components/ui/status-pill";
 import { QUEUE_REFRESH_MS } from "@/constants/limits";
 import { UI_TEXT } from "@/constants/messages";
-import { QUEUE_ROUTE } from "@/constants/navigation";
+import { patientRoute, QUEUE_ROUTE, VISIT_FROM } from "@/constants/navigation";
 import { hasAccess } from "@/constants/permissions";
 import { BILLING_STATUS_LABELS, VISIT_STATUS_LABELS, VISIT_STATUS_TONES } from "@/constants/statuses";
 import { tokenNumeral } from "@/features/appointments/components/QueueRows";
@@ -65,10 +67,14 @@ function detailsOf(visit: Visit): Detail[] {
  * whoever may only read. A phone stacks them; from a tablet the notes and
  * the prescription stand beside the vitals and the follow-up (D209). Then
  * the visit's own details.
+ *
+ * Its back arrow leads to the queue — or, opened from the patient's profile
+ * (their history, or New visit), back to the profile (D230).
  */
 export function VisitScreen({ id }: { id: string }) {
   const query = useVisit(id);
   const visit = query.data;
+  const fromProfile = useSearchParams().get(VISIT_FROM.param) === VISIT_FROM.patient;
   return (
     <>
       <CoastHeader>
@@ -95,7 +101,7 @@ export function VisitScreen({ id }: { id: string }) {
                 </div>
               )
             }
-            back={QUEUE_ROUTE}
+            back={fromProfile && visit ? patientRoute(visit.patient.id) : QUEUE_ROUTE}
           />
           {visit?.appointment?.status === "IN_PROGRESS" && <InRoom visit={visit} appointment={visit.appointment} />}
           {visit && visit.appointment === null && visit.status === "OPEN" && <StartedHere visit={visit} />}

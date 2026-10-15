@@ -3206,3 +3206,98 @@ Sharing it to WhatsApp comes with the share helper in R6.8 (D183).
 
 ### Blockers
 - None.
+
+## 2026-10-15 — R6.5: a patient's history with visits, and their last visit
+
+### Added
+- **The history is one list** (`features/patients/timeline.ts`, D225): a
+  patient's visits and the appointments that have none — still to come,
+  cancelled, missed — newest first, 20 at a time. An appointment that became
+  a visit shows once, as the visit. Visits need `visits.view`, appointments
+  `appointments.view`; someone who sees no visits sees every appointment,
+  as before. A page reads a page of each at once (`listPatientVisits`,
+  `listPatientAppointments`) and merges them, each part's own order kept;
+  its cursor counts how many of each are shown ("12.8",
+  `timelineQuerySchema`).
+- **A visit's row** (`PatientHistory`, D226, D227): "14 Oct 2026 · Visit",
+  the doctor and the diagnosis — or the complaint — then "Rx Paracetamol,
+  Amoxicillin +1" on a line under it, and Open or Done; "Nothing recorded"
+  for a visit holding nothing at all. It opens the visit's screen.
+- **The visit's back arrow leads back to the profile** it was opened from —
+  its history or New visit — through `?from=patient` (`VISIT_FROM`, D230);
+  from the queue it still goes to the queue.
+- **The patients list's last visit** (D228, D229): "Last visit: 28 Sep" —
+  "today", or with the year when not this one (`formatNearDate`,
+  `lastVisitLine`) — on a line of its own under each row, for everyone who
+  sees the patient; nothing for one never seen.
+- **Migration `0022_patient_timeline`:** the visits' index in the history's
+  order; `visit_recorded(visit)`, a computed field read as the member,
+  which `visit_is_empty` (Back to waiting) now denies, so the two never
+  disagree; `last_visit_on(patient)`, a computed field read with the list,
+  past the visits' policy but only for a patient the caller may see.
+- **Kit:** `Row` takes a `note`, one more line under the first, cut short
+  alike.
+- **Words:** the history's visit words and the list's last visit in
+  `UI_TEXT.patients`; `ERROR_MESSAGES.HISTORY_LOAD_FAILED`;
+  `HISTORY_MEDICINES_NAMED` (2) in `limits.ts`.
+
+### Changed
+- **The profile is two columns on a desktop** (D231, D114): the next
+  appointment and the details on the left, the history on the right (from
+  1024 px); a phone stacks them.
+- **Plan:** D225 – D231; §10.2, §10.3, §12.2, §28.7, §29 and §30. The
+  later migrations move up one: `0023_prescription_templates` (R6.7)
+  through `0033_faster_reads` (R13.3), with their tracker rows.
+  `patient_stats` (R8.4) no longer carries the last visit.
+- **The last visit is worked out with the list, not stored on the
+  patient** (D228). Asked, the option said the day would be kept on the
+  patient's record. Stored there, every visit would have changed the
+  patient's "updated" stamp and who updated them, and the archived
+  patient's read-only rule would have refused the change. A computed field
+  gives the same: everyone who sees the patient sees the day, and the list
+  waits on no more round trips.
+
+### Speed (plan §37)
+- **The profile** waits on two round trips, as before: the session, then
+  its first reads at once — the history's visits and appointments among
+  them.
+- **The patients list** waits on two, as before: `last_visit_on` is one
+  index lookup a row inside the list's own query.
+- **Indexes:** the history's visits on (clinic_id, patient_id, created_at
+  desc, id desc), new; its appointments on (clinic_id, patient_id,
+  scheduled_at desc), with their visit found by the visit's unique
+  appointment; the last visit on (clinic_id, patient_id, visit_date desc).
+
+### Tests
+- **DB contract** (`patient-timeline-migration.test.ts`): the index, the
+  two computed fields — who runs them and what they read — and
+  `visit_is_empty` denying `visit_recorded`.
+- **Integration** (`patient-timeline.test.ts`, 9 cases): Rohan's history
+  in order, the walk-in standing as its visit; what each visit found, its
+  medicines in order, and "nothing recorded"; visits alone for a nurse,
+  every appointment for the desk, nothing for a reader or another doctor
+  (D3); 25 entries paged across both parts without a gap or a repeat; the
+  last visit for a reader with no `visits.view`, none for one never seen,
+  and never told for a patient the caller may not see, whatever row is
+  sent.
+- **Unit:** the merge and its cursor, the visits' and appointments' reads,
+  the cursor schema, the route, the history's rows, the profile's columns,
+  the list's last visit, the row's note, the visit's back arrow, New
+  visit's address, and the date helper.
+- **E2E** (`patient-history.spec.ts`, phone and desktop, axe): the list
+  says "Last visit: today"; the profile's history lists the booked
+  appointment, the visit with its diagnosis and medicines, and the
+  cancelled one; the history sits beside the details on a desktop and under
+  them on a phone; the visit opens from it and its back arrow returns.
+- **E2E** also: `visit-records.spec.ts` now expects New visit to open the
+  visit at `?from=patient`, its back arrow to the profile.
+
+### Validation
+- Typecheck, lint, format check passed.
+- Unit and integration tests passed (2976), coverage 100%.
+- E2E passed (phone, desktop), with axe: 124 passed, 8 skipped (run at one
+  width only). New visit's old address check failed at both widths on the
+  first run; updated, it passed at both.
+
+### Blockers
+- None.

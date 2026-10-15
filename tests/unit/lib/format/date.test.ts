@@ -1,4 +1,6 @@
 import { describe, it, expect } from "vitest";
+
+import { todayKey } from "@/lib/dates/calendar";
 import {
   formatClock,
   formatDate,
@@ -11,6 +13,7 @@ import {
   formatMonth,
   formatMonthName,
   formatMonthYear,
+  formatNearDate,
   formatRecent,
   formatShortDay,
   formatTime,
@@ -67,6 +70,18 @@ describe("formatDayMonth", () => {
 
   it("returns a dash for nothing", () => {
     expect(formatDayMonth("")).toBe("—");
+  });
+});
+
+describe("formatNearDate", () => {
+  it("drops the year when it is this one, and keeps it otherwise", () => {
+    expect(formatNearDate("2026-09-28", "2026-10-15")).toBe("28 Sep");
+    expect(formatNearDate("2025-09-28", "2026-10-15")).toBe("28 Sep 2025");
+  });
+
+  it("reads this year from today, and returns a dash for nothing", () => {
+    expect(formatNearDate(todayKey())).toMatch(/^\d{1,2} [A-Z][a-z]{2}$/);
+    expect(formatNearDate(null)).toBe("—");
   });
 });
 

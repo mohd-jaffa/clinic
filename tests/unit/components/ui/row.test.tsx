@@ -88,6 +88,19 @@ describe("Row", () => {
     expect(row.querySelector("svg")).toBeInTheDocument();
   });
 
+  it("carries one more line under the first, each cut short alike, when there is a note", () => {
+    render(
+      <ul>
+        <Row title="Rohan Mehta" subtitle="36 y · Male · P-1002" note="Last visit: 28 Sep" href="/patients/1" />
+        <Row title="Priya Shah" subtitle="29 y · Female · P-1001" note={null} href="/patients/2" />
+      </ul>,
+    );
+    const [noted, plain] = screen.getAllByRole("listitem");
+    expect(noted).toHaveTextContent("Rohan Mehta36 y · Male · P-1002Last visit: 28 Sep");
+    expect(screen.getByText("Last visit: 28 Sep")).toHaveClass("truncate");
+    expect(plain.querySelectorAll("span.truncate")).toHaveLength(2);
+  });
+
   it("is a button when it opens something in place", async () => {
     const onClick = vi.fn();
     render(

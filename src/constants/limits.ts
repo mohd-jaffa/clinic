@@ -22,6 +22,9 @@ export const PAGE_SIZE = 20;
 /** How far into a list a page may start — far past any list a clinic keeps. */
 export const MAX_PAGE_START = 100_000;
 
+/** How many of a visit's medicines its row in the history names before "+2" (D226). */
+export const HISTORY_MEDICINES_NAMED = 2;
+
 /** What a list's search box may send. */
 export const MAX_SEARCH_LENGTH = 100;
 

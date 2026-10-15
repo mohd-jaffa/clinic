@@ -7,7 +7,8 @@ import type { Visit } from "@/features/visits/types";
 import { authStub } from "@tests/support/auth";
 import { Providers } from "@tests/support/providers";
 
-const { client, visits, auth, read, alerts } = vi.hoisted(() => ({
+const { client, visits, auth, read, alerts, search } = vi.hoisted(() => ({
+  search: { current: "" },
   client: { done: vi.fn(), next: vi.fn() },
   visits: { done: vi.fn(), saveVitals: vi.fn(), change: vi.fn() },
   auth: { current: {} as ReturnType<typeof authStub> },
@@ -29,6 +30,11 @@ vi.mock("@/features/patients/components/PatientAlerts", () => ({
 vi.mock("@/features/appointments/components/BookingSheet", () => ({ BookingSheet: () => null }));
 vi.mock("@/features/auth/AuthProvider", () => ({ useAuth: () => auth.current }));
 vi.mock("@/features/visits/hooks/useVisit", () => ({ useVisit: () => read.current }));
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn(), refresh: vi.fn(), prefetch: vi.fn() }),
+  usePathname: () => "/visits/v-1",
+  useSearchParams: () => new URLSearchParams(search.current),
+}));
 
 const { VisitScreen } = await import("@/features/visits/components/VisitScreen");
 
@@ -62,6 +68,7 @@ const aVisit = (overrides: Partial<Visit> = {}): Visit => ({
 beforeEach(() => {
   vi.clearAllMocks();
   alerts.length = 0;
+  search.current = "";
   // Now, in Kochi: Tuesday 13 October 2026, 10:42 AM.
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(new Date("2026-10-13T05:12:00Z"));
@@ -93,6 +100,22 @@ describe("VisitScreen (plan §12.2; D193 – D195)", () => {
     expect(screen.getByRole("link", { name: "Go back" })).toHaveAttribute("href", "/queue");
     const facts = screen.getAllByRole("definition").map((value) => value.textContent);
     expect(facts).toEqual(["Tuesday, 13 Oct 2026", "07", "10:30 AM"]);
+  });
+
+  it("leads back to the patient's profile when it was opened from there (D230)", () => {
+    search.current = "from=patient";
+    draw();
+    expect(screen.getByRole("link", { name: "Go back" })).toHaveAttribute("href", "/patients/p-1");
+  });
+
+  it("leads back to the queue from anywhere else, and before the visit is read", () => {
+    search.current = "from=elsewhere";
+    draw();
+    expect(screen.getByRole("link", { name: "Go back" })).toHaveAttribute("href", "/queue");
+    search.current = "from=patient";
+    read.current = { data: undefined, mutate: vi.fn(), isValidating: true };
+    draw();
+    expect(screen.getAllByRole("link", { name: "Go back" }).at(-1)).toHaveAttribute("href", "/queue");
   });
 
   it("holds the patient in the lake with their token and time in, Done and Next patient beside them", async () => {

@@ -54,8 +54,11 @@ type Member = Parameters<typeof hasAccess>[0];
 const HOME: NavItem = { id: "home", label: places.home, icon: House, href: HOME_ROUTE, access: ROUTE_ACCESS.member };
 /** Today's queue (plan §11.4). */
 export const QUEUE_ROUTE = "/queue";
-/** A visit's screen (plan §12.2, D195). */
-export const visitRoute = (id: string) => `/visits/${id}`;
+/** Where a visit's screen was opened from, when not the queue: its back arrow returns there (D230). */
+export const VISIT_FROM = { param: "from", patient: "patient" } as const;
+/** A visit's screen (plan §12.2, D195) — opened from the patient's profile, it leads back there (D230). */
+export const visitRoute = (id: string, from?: typeof VISIT_FROM.patient) =>
+  from ? `/visits/${id}?${VISIT_FROM.param}=${from}` : `/visits/${id}`;
 const QUEUE: NavItem = {
   id: "queue",
   label: places.queue,

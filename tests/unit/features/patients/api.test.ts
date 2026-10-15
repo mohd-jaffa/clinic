@@ -129,6 +129,7 @@ describe("addPatient (D145)", () => {
       phone: "+919876543210",
       dateOfBirth: "1990-04-12",
       gender: "FEMALE",
+      lastVisitOn: null,
     });
     expect(logActionSafe).toHaveBeenCalledWith(
       tenant,
@@ -368,6 +369,7 @@ describe("listPatients (plan §10.2, D104)", () => {
     phone: "+919876543210",
     date_of_birth: "1990-04-12",
     gender: "MALE",
+    last_visit_on: number === 1100 ? "2026-09-28" : null,
   });
 
   it("asks search_patients as the caller for a page and one more, so it knows another follows", async () => {
@@ -380,7 +382,9 @@ describe("listPatients (plan §10.2, D104)", () => {
         args: { p_words: null, p_digits: null, p_number: null, p_archived: false, p_offset: 0, p_limit: 21 },
       },
     ]);
-    expect(rpcChains[0]).toEqual([["select", "id, patient_number, full_name, phone, date_of_birth, gender"]]);
+    expect(rpcChains[0]).toEqual([
+      ["select", "id, patient_number, full_name, phone, date_of_birth, gender, last_visit_on"],
+    ]);
     expect(page.items).toHaveLength(20);
     expect(page.items[0]).toEqual({
       id: "p-1100",
@@ -389,7 +393,9 @@ describe("listPatients (plan §10.2, D104)", () => {
       phone: "+919876543210",
       dateOfBirth: "1990-04-12",
       gender: "MALE",
+      lastVisitOn: "2026-09-28",
     });
+    expect(page.items[1].lastVisitOn).toBeNull();
     expect(page.nextCursor).toBe("20");
   });
 

@@ -49,13 +49,13 @@ beforeEach(() => {
 });
 
 describe("useStartVisit (D204)", () => {
-  it("starts the visit, says so, and opens it", async () => {
+  it("starts the visit, says so, and opens it, leading back to the profile (D230)", async () => {
     client.start.mockResolvedValue({ visitId: "v-9", created: true });
     render(<Start />, { wrapper: Providers });
     await userEvent.click(screen.getByRole("button", { name: "Start" }));
     expect(client.start).toHaveBeenCalledWith({ patientId: "p-1", doctorId: "d-1" });
     expect(await notice("Asha Iyer’s visit started")).toBeInTheDocument();
-    expect(router.push).toHaveBeenCalledWith("/visits/v-9");
+    expect(router.push).toHaveBeenCalledWith("/visits/v-9?from=patient");
     expect(outcome.current).toBe(true);
   });
 
@@ -64,7 +64,7 @@ describe("useStartVisit (D204)", () => {
     render(<Start />, { wrapper: Providers });
     await userEvent.click(screen.getByRole("button", { name: "Start" }));
     expect(await notice("Asha Iyer is already in with Doctor d-1")).toBeInTheDocument();
-    expect(router.push).toHaveBeenCalledWith("/visits/v-3");
+    expect(router.push).toHaveBeenCalledWith("/visits/v-3?from=patient");
   });
 
   it("says why it was not started, and opens nothing", async () => {

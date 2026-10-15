@@ -23,7 +23,7 @@ import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { formatPhoneDigits } from "@/lib/phone";
 import { PATIENT_TABS, type PatientTab } from "@/lib/validation";
 
-import { describePatient } from "../describe";
+import { describePatient, lastVisitLine } from "../describe";
 import { usePatients } from "../hooks/usePatients";
 import type { PatientListItem } from "../types";
 import { prefillFrom, type PatientPrefill } from "../prefill";
@@ -36,8 +36,8 @@ const TAB_OPTIONS = PATIENT_TABS.map((tab) => ({ value: tab, label: patients.tab
  * Patients (plan §10.2, D104, D111, D112, D121): searched by name, mobile or
  * number — in the body, never the address (D98) — newest first with nothing
  * typed, a page at a time. Each row gives age, gender and number — the mobile
- * too, wider than a phone — and opens the profile, where Call and WhatsApp
- * are. A doctor finds only
+ * too, wider than a phone — and the last visit, and opens the profile, where
+ * Call and WhatsApp are. A doctor finds only
  * their own patients; the archived wait on their own tab for those who may
  * restore them. **Add patient**, or the ＋'s Patient, opens the sheet; a
  * search that found no one offers it with what was typed. A clinic with no
@@ -140,6 +140,7 @@ export function Patients() {
 /**
  * One patient in the list (D121), opening their profile — where Call is. The
  * mobile joins the line from 640 px; on a phone it would only be cut short.
+ * Their last visit has a line of its own under it (D229).
  */
 function PatientListRow({ patient }: { patient: PatientListItem }) {
   return (
@@ -152,6 +153,7 @@ function PatientListRow({ patient }: { patient: PatientListItem }) {
           <span className="hidden sm:inline">{` · ${formatPhoneDigits(patient.phone)}`}</span>
         </>
       }
+      note={lastVisitLine(patient.lastVisitOn)}
       href={patientRoute(patient.id)}
     />
   );

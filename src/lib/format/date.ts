@@ -95,6 +95,12 @@ export function formatDayMonth(isoDate: string | null | undefined): string {
   return `${Number(match[3])} ${MONTHS[Number(match[2]) - 1]}`;
 }
 
+/** A day as short as it reads clearly: "28 Sep" this year, "28 Sep 2025" another. */
+export function formatNearDate(isoDate: string | null | undefined, today: string = todayKey()): string {
+  const day = formatDate(isoDate);
+  return day.endsWith(` ${today.slice(0, 4)}`) ? day.slice(0, -5) : day;
+}
+
 /**
  * A run of days, as short as it reads clearly: "20 Oct", "20 – 22 Oct",
  * "30 Oct – 2 Nov", the year added when it is not this one — "5 – 7 Jan

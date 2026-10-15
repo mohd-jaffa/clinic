@@ -1,10 +1,11 @@
 import { ALERT_KINDS, type AlertKind } from "@/constants/statuses";
 import { fromEmbedded } from "@/features/prescriptions/content";
 import type { EmbeddedPrescriptionRow } from "@/features/prescriptions/types";
+import { pageWindow } from "@/lib/api/pagination";
 import { fromPostgrestError, notFoundError } from "@/lib/errors";
 import type { Tenant } from "@/lib/supabase/tenant";
 
-import type { Visit, VisitRow, VitalsRow } from "./types";
+import type { PatientVisit, PatientVisitRow, Visit, VisitRow, VitalsRow } from "./types";
 import { toVitals } from "./vitals";
 
 /**
@@ -32,6 +33,16 @@ const VISIT_COLUMNS =
   "prescription:prescriptions!prescriptions_visit_id_clinic_id_fkey(id, advice, print_diagnosis, entered_by, " +
   "typist:profiles!prescriptions_entered_by_fkey(full_name), " +
   "items:prescription_items(position, medicine, strength, dose, frequency, timing, duration_days, instructions))";
+
+/**
+ * What a patient's history reads of each visit (D225, D226): its day, where
+ * it stands, its doctor, what it found, its medicines' names, and whether it
+ * holds anything (`visit_recorded`).
+ */
+const HISTORY_COLUMNS =
+  "id, status, visit_date, created_at, complaint, diagnosis, recorded:visit_recorded, " +
+  "doctor:doctors!visits_doctor_id_clinic_id_fkey(member:clinic_members(profile:profiles!clinic_members_user_id_fkey(full_name))), " +
+  "prescription:prescriptions!prescriptions_visit_id_clinic_id_fkey(items:prescription_items(position, medicine))";
 
 /** An embedded row, however PostgREST gives it: one, a list of at most one, or none. */
 const oneOf = <Row>(embedded: Row | Row[] | null): Row | null =>
@@ -111,4 +122,35 @@ export async function getVisit(tenant: Tenant, id: string): Promise<Visit> {
       .sort(byKind)
       .map(({ id: alertId, kind, label, note, active }) => ({ id: alertId, kind, label, note, active })),
   };
+}
+
+/**
+ * A page of a patient's visits for their history (plan §10.3, D225): newest
+ * first, as the member — `visits.view`, a doctor's own patients (D3) — one
+ * more than a page, so the history can tell whether more follow. One query,
+ * on the index on (clinic_id, patient_id, created_at desc, id desc).
+ */
+export async function listPatientVisits(tenant: Tenant, patientId: string, start = 0): Promise<PatientVisit[]> {
+  const { from, to } = pageWindow(start);
+  const { data, error } = await tenant.supabase
+    .from(TABLE)
+    .select(HISTORY_COLUMNS)
+    .eq("clinic_id", tenant.clinicId)
+    .eq("patient_id", patientId)
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: false })
+    .range(from, to);
+  if (error) throw fromPostgrestError(error);
+  return (data as unknown as PatientVisitRow[]).map((row) => ({
+    id: row.id,
+    status: row.status,
+    day: row.visit_date,
+    openedAt: row.created_at,
+    doctorName: row.doctor?.member?.profile?.full_name ?? null,
+    finding: row.diagnosis ?? row.complaint,
+    medicines: [...(oneOf(row.prescription)?.items ?? [])]
+      .sort((a, b) => a.position - b.position)
+      .map((item) => item.medicine),
+    recorded: row.recorded,
+  }));
 }

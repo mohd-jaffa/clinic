@@ -235,7 +235,7 @@ describe("PatientProfile while it loads", () => {
   });
 });
 
-describe("PatientProfile's appointments (D166, D167)", () => {
+describe("PatientProfile's appointments and history (D166, D167, D225, D231)", () => {
   it("shows the next appointment and the history to whoever sees appointments, each opening its detail here", async () => {
     draw();
     expect(screen.getByText("History")).toBeInTheDocument();
@@ -244,10 +244,27 @@ describe("PatientProfile's appointments (D166, D167)", () => {
     expect(screen.getByRole("dialog", { name: "Rohan Mehta, false" })).toBeInTheDocument();
   });
 
-  it("shows neither to someone who may not see appointments", () => {
+  it("shows neither to someone who may not see appointments or visits", () => {
     auth.current = authStub({ role: "STAFF", permissions: ["patients.view"] });
     draw();
     expect(screen.queryByRole("button", { name: "Next appointment" })).not.toBeInTheDocument();
     expect(screen.queryByText("History")).not.toBeInTheDocument();
+  });
+
+  it("shows the history, with no next appointment, to someone who sees visits alone (D225)", () => {
+    auth.current = authStub({ role: "STAFF", permissions: ["patients.view", "visits.view"] });
+    draw();
+    expect(screen.getByText("History")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Next appointment" })).not.toBeInTheDocument();
+  });
+
+  it("puts the history in a column of its own beside their state on a desktop (D231)", () => {
+    draw();
+    const state = screen.getByRole("button", { name: "Next appointment" }).parentElement!;
+    const columns = state.parentElement!;
+    expect(columns).toHaveClass("lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]");
+    expect(within(state).getByRole("heading", { name: "Details" })).toBeInTheDocument();
+    expect(within(state).queryByText("History")).not.toBeInTheDocument();
+    expect(screen.getByText("History").parentElement).toBe(columns);
   });
 });

@@ -4,7 +4,7 @@ import { hasAccess } from "@/constants/permissions";
 import type { AppointmentStatus } from "@/constants/statuses";
 import { addPatient } from "@/features/patients/api";
 import type { PatientListItem } from "@/features/patients/types";
-import { pageWindow, toPage, type Page } from "@/lib/api/pagination";
+import { pageWindow } from "@/lib/api/pagination";
 import { logActionSafe } from "@/lib/audit/auditLog";
 import { auditedChanges } from "@/lib/audit/changes";
 import { todayKey } from "@/lib/dates/calendar";
@@ -512,29 +512,29 @@ export async function nextAppointment(tenant: Tenant, patientId: string): Promis
 }
 
 /**
- * A page of a patient's appointments (plan §10.3, D167): every one, newest
- * first — those still to come, then the past, cancelled ones and no-shows
- * too, with their reason. One query, on the index on (clinic_id, patient_id,
- * scheduled_at desc).
+ * A page of a patient's appointments for their history (plan §10.3; D167,
+ * D225): newest first — those still to come, then the past, cancelled ones
+ * and no-shows too, with their reason — leaving out each that has a visit
+ * the member sees, which stands for it there. One more than a page, so the
+ * history can tell whether more follow. One query, on the index on
+ * (clinic_id, patient_id, scheduled_at desc).
  */
 export async function listPatientAppointments(
   tenant: Tenant,
   patientId: string,
   start = 0,
-): Promise<Page<PatientAppointment>> {
+): Promise<PatientAppointment[]> {
   const { from, to } = pageWindow(start);
   const { data, error } = await tenant.supabase
     .from(TABLE)
-    .select(HISTORY_COLUMNS)
+    .select(`${HISTORY_COLUMNS}, ${VISIT}`)
     .eq("clinic_id", tenant.clinicId)
     .eq("patient_id", patientId)
+    .is("visit", null)
     .order("scheduled_at", { ascending: false })
     .order("id", { ascending: false })
     .range(from, to);
   if (error) throw fromPostgrestError(error);
   const rows = data as unknown as (CalendarAppointmentRow & { cancel_reason: string | null })[];
-  return toPage(
-    rows.map((row) => ({ ...toCalendarAppointment(row), cancelReason: row.cancel_reason })),
-    start,
-  );
+  return rows.map((row) => ({ ...toCalendarAppointment(row), cancelReason: row.cancel_reason }));
 }

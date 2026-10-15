@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 
 import { useResponse } from "@/components/ui/response-card";
 import { UI_TEXT } from "@/constants/messages";
-import { visitRoute } from "@/constants/navigation";
+import { VISIT_FROM, visitRoute } from "@/constants/navigation";
 import { apiRoutes } from "@/lib/query/keys";
 import { useApiMutation } from "@/lib/query/useApiMutation";
 
@@ -14,7 +14,8 @@ const { visit: words } = UI_TEXT;
 
 /**
  * **New visit** (D204): starts the patient's visit with the doctor chosen —
- * or finds the one already open with them, and says so — then opens it.
+ * or finds the one already open with them, and says so — then opens it,
+ * its back arrow leading to the profile it was started from (D230).
  */
 export function useStartVisit(patient: { name: string }, doctorName: (doctorId: string) => string) {
   const respond = useResponse();
@@ -32,7 +33,7 @@ export function useStartVisit(patient: { name: string }, doctorName: (doctorId: 
           ? words.started(patient.name)
           : words.openedAgain(patient.name, doctorName(input.doctorId)),
       });
-      router.push(visitRoute(started.visitId));
+      router.push(visitRoute(started.visitId, VISIT_FROM.patient));
       return true;
     },
   };

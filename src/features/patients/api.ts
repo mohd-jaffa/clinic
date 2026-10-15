@@ -162,6 +162,7 @@ export async function addPatient(
     phone: row.phone,
     dateOfBirth: row.date_of_birth,
     gender: row.gender,
+    lastVisitOn: null,
   }));
   return { id: added.id, recorded };
 }
@@ -220,7 +221,9 @@ export async function findPatientMatches(tenant: Tenant, phone: string): Promise
  * A page of the patients list (plan §10.2, D104): through `search_patients`,
  * as the caller — so a doctor finds only their own — newest first, or best
  * match first for a search read as words, a mobile's digits or a number.
- * The archived wait on their own tab, for those who may restore them.
+ * The archived wait on their own tab, for those who may restore them. Each
+ * comes with the day of their last visit (D228), worked out in the same
+ * query (`last_visit_on`).
  */
 export async function listPatients(
   tenant: Tenant,
@@ -239,12 +242,12 @@ export async function listPatients(
       p_offset: from,
       p_limit: to - from + 1,
     })
-    .select("id, patient_number, full_name, phone, date_of_birth, gender");
+    .select("id, patient_number, full_name, phone, date_of_birth, gender, last_visit_on");
   if (error) throw fromPostgrestError(error);
-  const rows = (data ?? []) as Pick<
+  const rows = (data ?? []) as (Pick<
     PatientRow,
     "id" | "patient_number" | "full_name" | "phone" | "date_of_birth" | "gender"
-  >[];
+  > & { last_visit_on: string | null })[];
   return toPage(
     rows.map((row) => ({
       id: row.id,
@@ -253,6 +256,7 @@ export async function listPatients(
       phone: row.phone,
       dateOfBirth: row.date_of_birth,
       gender: row.gender,
+      lastVisitOn: row.last_visit_on,
     })),
     start,
   );

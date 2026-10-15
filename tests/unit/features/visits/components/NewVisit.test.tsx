@@ -80,7 +80,7 @@ describe("NewVisit (plan §12.1; D204)", () => {
     draw();
     await userEvent.click(newVisit()!);
     expect(client.start).toHaveBeenCalledWith({ patientId: PATIENT, doctorId: MAYA.id });
-    expect(router.push).toHaveBeenCalledWith("/visits/v-9");
+    expect(router.push).toHaveBeenCalledWith("/visits/v-9?from=patient");
     expect(screen.queryByRole("dialog", { name: "New visit" })).not.toBeInTheDocument();
   });
 
@@ -105,7 +105,7 @@ describe("NewVisit (plan §12.1; D204)", () => {
     await userEvent.click(within(sheet()).getByRole("button", { name: "Start visit" }));
     await waitFor(() => expect(client.start).toHaveBeenCalledWith({ patientId: PATIENT, doctorId: MAYA.id }));
     await waitFor(() => expect(screen.queryByRole("dialog", { name: "New visit" })).not.toBeInTheDocument());
-    expect(router.push).toHaveBeenCalledWith("/visits/v-9");
+    expect(router.push).toHaveBeenCalledWith("/visits/v-9?from=patient");
   });
 
   it("starts on the member's own doctor among several, and on none for someone who is not one", async () => {

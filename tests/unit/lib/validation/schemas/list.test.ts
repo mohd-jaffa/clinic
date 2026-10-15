@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import { MAX_SEARCH_LENGTH } from "@/constants/limits";
+import { MAX_PAGE_START, MAX_SEARCH_LENGTH } from "@/constants/limits";
 import { VALIDATION_MESSAGES } from "@/constants/messages";
-import { firstIssue, listQuerySchema, pageQuerySchema } from "@/lib/validation";
+import { firstIssue, listQuerySchema, timelineQuerySchema } from "@/lib/validation";
 
 describe("listQuerySchema", () => {
   it("starts at the beginning with no search", () => {
@@ -30,10 +30,21 @@ describe("listQuerySchema", () => {
   });
 });
 
-describe("pageQuerySchema", () => {
-  it("reads where a page with no search starts", () => {
-    expect(pageQuerySchema.parse({})).toEqual({ cursor: undefined });
-    expect(pageQuerySchema.parse({ cursor: "20" })).toEqual({ cursor: 20 });
-    expect(pageQuerySchema.safeParse({ cursor: "x" }).success).toBe(false);
+describe("timelineQuerySchema (D225)", () => {
+  it("reads where a page of the history starts: how many visits and appointments are shown", () => {
+    expect(timelineQuerySchema.parse({})).toEqual({ cursor: undefined });
+    expect(timelineQuerySchema.parse({ cursor: "12.8" })).toEqual({ cursor: { visits: 12, appointments: 8 } });
+    expect(timelineQuerySchema.parse({ cursor: `${MAX_PAGE_START}.0` }).cursor).toEqual({
+      visits: MAX_PAGE_START,
+      appointments: 0,
+    });
+  });
+
+  it("refuses anything else rather than reading it as the start", () => {
+    for (const cursor of ["x", "20", "1.2.3", "-1.2", "1.", `${MAX_PAGE_START + 1}.0`, `0.${MAX_PAGE_START + 1}`]) {
+      const parsed = timelineQuerySchema.safeParse({ cursor });
+      expect(parsed.success, cursor).toBe(false);
+      expect(firstIssue(parsed.error!)).toBe(VALIDATION_MESSAGES.invalid);
+    }
   });
 });

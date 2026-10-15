@@ -311,6 +311,13 @@ earlier lines are never rewritten.
 | D222 | **Print and Download once saved** (the user): on the Prescription card once it is saved with a medicine on it — for anyone who reads the visit, a view-only clinic included; while there are unsaved changes, Save takes their place, so a printout never misses what is on the screen. | 2026-10-14 |
 | D223 | **The file is "{patient} - {date} - Prescription.pdf"** (the user): "Rohan Mehta - 14 Oct 2026 - Prescription.pdf", easy to find in Downloads or a chat. | 2026-10-14 |
 | D224 | **The PDF prints English letters now; Indian scripts later** (the user): its font (Figtree) covers Latin, accents and ₹; a name typed in another script prints as blank boxes, so clinics type names in English. Noto fonts for the Indian scripts are in §42. | 2026-10-14 |
+| D225 | **A patient's history is one list, a visit standing for its appointment** (the user): their visits and the appointments that have none — still to come, cancelled, missed — newest first, 20 at a time; an appointment that became a visit shows once, as the visit, and a visit started from the profile shows too. Each part only with its permission: visits with `visits.view`, appointments with `appointments.view`; someone who sees no visits sees every appointment, as D167 did. `GET /api/patients/[id]/timeline` reads a page of each at once, and its cursor counts how many of each are shown. | 2026-10-15 |
+| D226 | **A visit's row says what it found and what was prescribed** (the user): its day and "Visit", its doctor, the diagnosis — or the complaint when there is none — "Rx Paracetamol, Amoxicillin +1" (two named, the rest counted) on a line under it, and where it stands (Open, Done). A visit that holds nothing at all says "Nothing recorded" (`visit_recorded`, the same test as Back to waiting's, D197). | 2026-10-15 |
+| D227 | **A visit in the history opens its screen** (the user): the whole record — vitals, notes, follow-up, the prescription with Print and Download — and editing for whoever may. | 2026-10-15 |
+| D228 | **The patients list's last visit shows to everyone who sees the patient** (the user): the day alone, not what was done — "today" for today's — and nothing for a patient never seen. Worked out in the list's own query (`last_visit_on`), past the visits' policy but only for a patient the caller may see; the list waits on no more round trips. | 2026-10-15 |
+| D229 | **The last visit is a line of its own on the row** (the user): under age · gender · number, so a phone never cuts it short; Phase 8's balance chip takes the row's end. | 2026-10-15 |
+| D230 | **A visit opened from the profile leads back to it** (the user): opened from the history or New visit, the visit's back arrow returns to the patient's profile (`?from=patient`); opened from the queue, it still goes to the queue. | 2026-10-15 |
+| D231 | **On a desktop the profile is two columns** (the user; D114): the next appointment and the details on the left — open treatments and the balance join them in their phases — and the history on the right; a phone stacks them in that order. | 2026-10-15 |
 
 ## 3. Users and roles
 
@@ -804,13 +811,14 @@ Search by name (fuzzy, trigram), mobile (on its digits however typed), or
 patient number — sent in the request's body, never its address (D98); the
 best match first, and newest first with nothing typed (D104). Each row: name,
 age and gender, mobile, patient number, last
-visit ("Last visit: 28 Sep"), and a balance chip when they owe; the mobile
+visit ("Last visit: 28 Sep", on a line of its own, D229 — for everyone who
+sees the patient, D228), and a balance chip when they owe; the mobile
 joins the line from 640 px, and Call is on the profile (D121). Rows on every
 width (D111). Paged (**Show more**, `PAGE_SIZE`). Tabs: All · Owing
 (`payments.view`) · Archived (`patients.edit`). A doctor sees only their own
 patients, without a filter to choose. A search that finds no one offers
-**Add patient** with what was typed (D112). The last visit comes with Phase
-6, the Owing tab and the balance chip with Phase 8 (D101).
+**Add patient** with what was typed (D112). The last visit came with Phase
+6 (R6.5); the Owing tab and the balance chip come with Phase 8 (D101).
 
 ### 10.3 Patient profile — `/patients/[id]`
 
@@ -828,10 +836,13 @@ One screen that tells the patient's current state without opening others:
 5. **History:** a timeline of visits (date, doctor, diagnosis, treatments
    worked on, prescription), appointments (cancelled and no-show included),
    bills and payments — each part shown only with its permission. Phase 5
-   lists the appointments, newest first, a page at a time (D167).
+   lists the appointments, newest first, a page at a time (D167); Phase 6
+   adds the visits, each standing for the appointment it was opened for
+   (D225), saying what it found and its medicines (D226), and opening its
+   screen (D227), whose back arrow returns here (D230).
 
 Desktop lays these out in two columns (state on the left, history on the
-right); a phone stacks them in that order. Phase 4 builds the header, the
+right, D231); a phone stacks them in that order. Phase 4 builds the header, the
 alerts and the details; each later phase adds its part as its records arrive
 (D101).
 
@@ -1110,7 +1121,9 @@ Saving is per section, so a long visit is never lost to one failed request
 (D202): each section is its fields on the screen with its own **Save**,
 shown once something is typed, and a save made from an older copy of the
 section is refused, showing theirs beside what is typed (D206). Whoever may
-only read sees read-outs. From a tablet, two columns (D209).
+only read sees read-outs. From a tablet, two columns (D209). Its back arrow
+leads to the queue — or, opened from the patient's profile, back to it
+(D230).
 
 **R6.2** builds the vitals, complaint/diagnosis/notes and follow-up sections,
 **Alerts** in the header, **Vitals** for a patient still waiting (D203), and
@@ -1888,7 +1901,9 @@ expenses              id · clinic_id · category_id · description · amount_pa
 |---|---|
 | `patient_balances` | billed, paid, refunded, balance per patient. |
 | `bill_settlement` | each issued bill's paid and due, oldest first. |
-| `patient_stats` | last visit, next appointment, open treatments, per patient (lists). |
+| `patient_stats` | next appointment, open treatments, per patient (lists). |
+| `last_visit_on(patient)` (0022) | the day of a patient's latest visit, read with the patients list for everyone who sees the patient (D228). |
+| `visit_recorded(visit)` (0022) | whether a visit holds anything: its row in the history (D226), and Back to waiting through `visit_is_empty` (D197). |
 | `follow_up_items` | the follow-ups and their tab (§14.3). |
 | `subscription_state(clinic)` | §7.2. |
 | `dashboard_summary()`, `report_daily(date)` (with the day-end collection summary), `report_monthly(month)` (with by doctor) | §17, §18. |
@@ -1958,23 +1973,26 @@ Planned order (one or more per tracker row):
 0021_prescriptions              prescriptions, prescription_items, save_prescription (D210 –
                                 D215), medicine_suggestions (D211); a prescription counts as
                                 something recorded (D197)
-0022_prescription_templates     prescription_templates (+ items), save_prescription_template
+0022_patient_timeline           a patient's visits in the history's order (D225);
+                                visit_recorded (D226), which visit_is_empty now denies;
+                                last_visit_on for the patients list (D228)
+0023_prescription_templates     prescription_templates (+ items), save_prescription_template
                                 (R6.7)
-0023_treatments                 treatments, treatment_sessions, transitions
-0024_follow_ups                 follow_up_contacts, follow_up_items
-0025_bills                      bills, bill_items, financial-year bill_counters, create_bill
+0024_treatments                 treatments, treatment_sessions, transitions
+0025_follow_ups                 follow_up_contacts, follow_up_items
+0026_bills                      bills, bill_items, financial-year bill_counters, create_bill
                                 (and the fee at arrival in mark_arrived), void_bill,
                                 mark_no_charge
-0026_payments                   payments, record_payment, void_payment,
+0027_payments                   payments, record_payment, void_payment,
                                 patient_balances, bill_settlement, patient_stats
-0027_expenses                   expenses
-0028_dashboard_and_reports      dashboard_summary, report_daily, report_monthly
-0029_subscription_notices       the daily pg_cron → pg_net call (address and secret in Vault)
-0030_clinic_deletion            request_clinic_deletion, cancel_clinic_deletion,
+0028_expenses                   expenses
+0029_dashboard_and_reports      dashboard_summary, report_daily, report_monthly
+0030_subscription_notices       the daily pg_cron → pg_net call (address and secret in Vault)
+0031_clinic_deletion            request_clinic_deletion, cancel_clinic_deletion,
                                 delete_clinic (DEV)
-0031_session_profile            session_profile: the session, profile, membership and plan in
+0032_session_profile            session_profile: the session, profile, membership and plan in
                                 one read (R13.2, D134)
-0032_faster_reads               indexes and policies from the load-seeded EXPLAINs (R13.3)
+0033_faster_reads               indexes and policies from the load-seeded EXPLAINs (R13.3)
 ```
 
 ## 30. API
@@ -1994,7 +2012,7 @@ take an `Idempotency-Key` header.
 | Team | `GET /api/team` · `POST /api/team/invites` · `POST /api/team/invites/[id]/resend` · `DELETE /api/team/invites/[id]` · `GET, PATCH /api/team/[id]` · `POST /api/team/[id]/active` |
 | Doctors | `GET /api/doctors` (active doctors, for pickers) |
 | Subscription | `GET /api/subscription` (state, dates, prices, contact, history — owner) · `GET /api/subscription/payments/[id]/receipt.pdf` |
-| Patients | `POST /api/patients` · `POST /api/patients/search` (the list, a page at a time: the words, the tab and the cursor in the body, D98) · `POST /api/patients/matches` (the mobile in the body, D98) · `GET, PATCH /api/patients/[id]` · `POST /api/patients/[id]/archive` · `POST /api/patients/[id]/restore` · `GET /api/patients/[id]/summary` (where they stand: the next appointment, D166; each part only with its permission) · `GET /api/patients/[id]/timeline` (their history, a page at a time: appointments, D167; each part only with its permission) · `GET /api/patients/[id]/last-prescription` · `GET, POST /api/patients/import` (the owner's: the import's limits, D128; a batch) · `POST /api/patients/import/matches` (the clinic's patients on a batch's mobiles, in the body, D98) · `GET, POST /api/patients/[id]/alerts` · `PATCH /api/patients/[id]/alerts/[alertId]` |
+| Patients | `POST /api/patients` · `POST /api/patients/search` (the list, a page at a time: the words, the tab and the cursor in the body, D98) · `POST /api/patients/matches` (the mobile in the body, D98) · `GET, PATCH /api/patients/[id]` · `POST /api/patients/[id]/archive` · `POST /api/patients/[id]/restore` · `GET /api/patients/[id]/summary` (where they stand: the next appointment, D166; each part only with its permission) · `GET /api/patients/[id]/timeline` (their history, a page at a time: visits and the appointments that have none, D167, D225; `?cursor=` counts each part shown; each part only with its permission) · `GET /api/patients/[id]/last-prescription` · `GET, POST /api/patients/import` (the owner's: the import's limits, D128; a batch) · `POST /api/patients/import/matches` (the clinic's patients on a batch's mobiles, in the body, D98) · `GET, POST /api/patients/[id]/alerts` · `PATCH /api/patients/[id]/alerts/[alertId]` |
 | Appointments | `GET, POST /api/appointments` (the calendar's days, `?from&to&doctorId`, at most a week; a booking, with a new patient in its body when one is added, D145) · `GET /api/appointments/booked` (a doctor's taken times on a day, D147) · `GET, PATCH /api/appointments/[id]` (its detail, D160; its notes, or moved, D161) · `POST /api/appointments/[id]/status` (confirmed, scheduled, a no-show — `appointments.edit` — or cancelled with its reason — `appointments.cancel`, D162) · `POST /api/appointments/[id]/arrived` (the token, D173) · `POST /api/appointments/[id]/reminded` (a reminder noted, D180) · `POST /api/appointments/walk-in` (once per key, the token, D171, D173) |
 | Queue | `GET /api/queue` (today's: still to come, arrived, with a doctor, done — and anyone still with a doctor from before; `?doctorId`, D170) · `POST /api/queue/send-in` (what becomes of those in, D192) · `POST /api/queue/done` · `POST /api/queue/next` (D193, D196) · `POST /api/queue/waiting` (back to waiting, D197) · `POST /api/queue/stepped-out` (D198) · `POST /api/queue/urgent` (D201) |
 | Visits | `POST /api/visits` (New visit, D204) · `GET, PATCH /api/visits/[id]` (a section, with the copy read, D206) · `PUT /api/visits/[id]/vitals` · `POST /api/visits/[id]/done` (a profile visit's Done) · `PUT /api/appointments/[id]/vitals` (a waiting patient's, D203) · `POST /api/visits/[id]/no-charge` |
@@ -2554,9 +2572,9 @@ in the row's one commit (D136).
 | R6.2 | `0020_visit_records`; visit workspace: alerts, vitals, complaint/diagnosis/notes, follow-up, per-section saves (D202 – D209: vitals while waiting, New visit, saves refused from an older copy) | §12.2 | — | DONE (2026-10-13) |
 | R6.3 | `0021_prescriptions`: items, advice, medicine suggestions, allergy warning; the doctor's own, or typed with `prescriptions.write` (`entered_by`) (D210 – D217: fields on the visit screen saved together, a suggestion fills the line, Save asks about an allergy, the registration number first) | §13, §8.2 | — | DONE (2026-10-14) |
 | R6.4 | `lib/pdf` letterhead (A4 and A5, footer) and the prescription PDF; download, print (D218 – D224: clinic on top and the doctor under it, a numbered list, black and grey, Print opens the PDF, once saved, the file's name, English letters now); share with R6.8 (D183) | §13, §33 | — | DONE (2026-10-14) |
-| R6.5 | Patient timeline with visits and prescriptions; the patients list's last visit (D101) | §10.3, §10.2 | — | TODO |
+| R6.5 | `0022_patient_timeline`; patient timeline with visits and prescriptions; the patients list's last visit (D101; D225 – D231: one list, a visit standing for its appointment; what it found and its medicines; opening its screen, which leads back; the last visit for everyone who sees the patient, on a line of its own; two columns on a desktop) | §10.3, §10.2 | — | DONE (2026-10-15) |
 | R6.6 | Integration + E2E: queue → visit → prescription PDF | §34 | — | TODO |
-| R6.7 | `0022_prescription_templates`; Repeat last prescription; prescription templates (save, apply, edit, archive) | §13 | — | TODO |
+| R6.7 | `0023_prescription_templates`; Repeat last prescription; prescription templates (save, apply, edit, archive) | §13 | — | TODO |
 | R6.8 | Send prescription on WhatsApp, with the share helper: the PDF through the share sheet, or downloaded on a desktop (D183) | §22.1 | — | TODO |
 | R6.9 | `0019_urgent`: Urgent, a tag on a waiting patient kept through their visit; Next patient still goes by token (D201) | §11.4 | R6.1 | DONE (2026-10-13) |
 
@@ -2564,9 +2582,9 @@ in the row's one commit (D136).
 
 | ID | Work | Source | Waits on | Status |
 |---|---|---|---|---|
-| R7.1 | `0023_treatments`: treatments, sessions, transitions | §14.1 | — | TODO |
+| R7.1 | `0024_treatments`: treatments, sessions, transitions | §14.1 | — | TODO |
 | R7.2 | Treatments in the visit workspace and on the profile | §14.1 | — | TODO |
-| R7.3 | `0024_follow_ups`: `follow_up_items`, contacts | §14.2 | — | TODO |
+| R7.3 | `0025_follow_ups`: `follow_up_items`, contacts | §14.2 | — | TODO |
 | R7.4 | Follow-ups screen: tabs with counts, Call, WhatsApp, Book, Mark contacted | §14.3 | — | TODO |
 | R7.5 | Integration: each tab on the right day in the clinic's timezone; lapsed follows the setting | §34 | — | TODO |
 | R7.6 | Follow-up reminders on WhatsApp, recorded as a contact | §14.3, §22.1 | — | TODO |
@@ -2575,10 +2593,10 @@ in the row's one commit (D136).
 
 | ID | Work | Source | Waits on | Status |
 |---|---|---|---|---|
-| R8.1 | `0025_bills`: bills, items, financial-year counters, `create_bill` (idempotent, price check without `payments.discount`), `void_bill`, `mark_no_charge`, the fee at arrival in `mark_arrived` | §15.2, §15.6, §11.3 | — | TODO |
+| R8.1 | `0026_bills`: bills, items, financial-year counters, `create_bill` (idempotent, price check without `payments.discount`), `void_bill`, `mark_no_charge`, the fee at arrival in `mark_arrived` | §15.2, §15.6, §11.3 | — | TODO |
 | R8.2 | `billing/totals.ts`, the one formula; discount by amount or % | §15.1 | — | TODO |
 | R8.3 | New bill screen: from To bill, a visit or a patient; the doctor's fee; discount and price change with `payments.discount`; collect now. Collect fee at arrival | §15.2, §11.3 | — | TODO |
-| R8.4 | `0026_payments`: record, refund, void; `patient_balances`, `bill_settlement`, `patient_stats` | §15.3, §15.4 | — | TODO |
+| R8.4 | `0027_payments`: record, refund, void; `patient_balances`, `bill_settlement`, `patient_stats` | §15.3, §15.4 | — | TODO |
 | R8.5 | Bill PDF; share, download, print | §15.5, §33 | — | TODO |
 | R8.6 | Checkout: the queue's To-bill column, Billing's tabs (To bill, bills, payments, outstanding), No charge; the profile's balance section, its bills and payments in the history, and the patients list's Owing tab and balance chip (D101) | §15.4, §15.6, §10.2, §10.3 | — | TODO |
 | R8.7 | Integration: double submit → one bill/payment; balances to the paisa; read-only refuses | §34 | — | TODO |
@@ -2588,14 +2606,14 @@ in the row's one commit (D136).
 
 | ID | Work | Source | Waits on | Status |
 |---|---|---|---|---|
-| R9.1 | `0027_expenses` and the expenses screen (the clinic's categories): add, edit, archive, month totals, by category | §16 | — | TODO |
+| R9.1 | `0028_expenses` and the expenses screen (the clinic's categories): add, edit, archive, month totals, by category | §16 | — | TODO |
 | R9.2 | Integration + E2E | §34 | — | TODO |
 
 ### Phase 10 — Home and reports
 
 | ID | Work | Source | Waits on | Status |
 |---|---|---|---|---|
-| R10.1 | `0028_dashboard_and_reports`: `dashboard_summary`, `report_daily`, `report_monthly` | §17, §18 | — | TODO |
+| R10.1 | `0029_dashboard_and_reports`: `dashboard_summary`, `report_daily`, `report_monthly` | §17, §18 | — | TODO |
 | R10.2 | Home: sections by permission; getting-started for a new clinic | §17 | — | TODO |
 | R10.3 | Reports: daily and monthly, the two charts; the kit's chart kit, bar and donut (D66) | §18 | — | TODO |
 | R10.4 | Integration: a seeded month's figures equal hand-computed ones | §34 | — | TODO |
@@ -2610,7 +2628,7 @@ in the row's one commit (D136).
 | R11.2 | Console: overview, clinics (No trial and Deletion flags), clinic detail, accounts, error log, platform audit | §20 | — | TODO |
 | R11.3 | Extend plan (Monthly, Yearly, Set date); the owner's confirmation email | §7.4 | — | TODO |
 | R11.4 | Platform settings screen | §6, §20.4 | — | TODO |
-| R11.5 | `0029_subscription_notices`: daily notices, each once per period | §22 | — | TODO |
+| R11.5 | `0030_subscription_notices`: daily notices, each once per period | §22 | — | TODO |
 | R11.6 | Owner's activity log | §19 | — | TODO |
 | R11.7 | Integration + E2E: extend, change a setting, notices once, DEV sees no clinic data | §34 | — | TODO |
 | R11.8 | Plan receipts: receipt numbers, the receipt PDF, the business details settings | §7.5, §6 | Q2 | TODO |
@@ -2623,7 +2641,7 @@ in the row's one commit (D136).
 | R12.2 | Privacy and terms | §21 | Q22 | TODO |
 | R12.3 | Manifest, icons, service worker, offline page, Install app | §21 | — | TODO |
 | R12.4 | Security headers; `noindex` on app routes; share-preview image | §21 | — | TODO |
-| R12.5 | `0030_clinic_deletion`: the owner's request and cancel (banner, emails), the admin's delete after the cooling-off | §9.1, §20 | — | TODO |
+| R12.5 | `0031_clinic_deletion`: the owner's request and cancel (banner, emails), the admin's delete after the cooling-off | §9.1, §20 | — | TODO |
 | R12.6 | CSV export, one file per area, audited | §9 | — | TODO |
 
 ### Phase 13 — Speed and the release checks (D134, D185)
@@ -2639,8 +2657,8 @@ deployment, waits on that (D185).**
 | ID | Work | Source | Waits on | Status |
 |---|---|---|---|---|
 | R13.1 | The measuring setup: a load seed (a clinic with 50 000 patients, 200 000 appointments, 100 000 bills, a year of visits); the production build timed locally with 40 ms added to each database request; every screen, read and save timed and its round trips counted; Home, Queue and Patients timed on a throttled phone (4× CPU, 4G). The baseline in the changelog | §37 | — | TODO |
-| R13.2 | `0031_session_profile`: the session in one round trip. The token's signature and expiry checked on the server against the project's published key (`getClaims`), instead of asking Supabase Auth each request. One function checks the session is still open and hands back the profile, membership, clinic, doctor, plan and the settings it needs. Today a session waits on 3: Auth, the profile, then the plan and settings | §5.5, §37 | — | TODO |
-| R13.3 | `0032_faster_reads`: EXPLAIN ANALYZE on the load seed for every list, search, count and report. Indexes added or changed (every paged list in its own order, every foreign key). No policy or list calls `can_see_patient()` per row. Supabase's performance advisor reports nothing: unindexed keys, policies re-run per row, overlapping policies, duplicate or unused indexes | §27, §28, §37 | — | TODO |
+| R13.2 | `0032_session_profile`: the session in one round trip. The token's signature and expiry checked on the server against the project's published key (`getClaims`), instead of asking Supabase Auth each request. One function checks the session is still open and hands back the profile, membership, clinic, doctor, plan and the settings it needs. Today a session waits on 3: Auth, the profile, then the plan and settings | §5.5, §37 | — | TODO |
+| R13.3 | `0033_faster_reads`: EXPLAIN ANALYZE on the load seed for every list, search, count and report. Indexes added or changed (every paged list in its own order, every foreign key). No policy or list calls `can_see_patient()` per row. Supabase's performance advisor reports nothing: unindexed keys, policies re-run per row, overlapping policies, duplicate or unused indexes | §27, §28, §37 | — | TODO |
 | R13.4 | Round trips cut to the budget. Reads that do not depend on each other go at once (`allInOrder`), records come with their children, writes answer from `returning`, and side work runs after the answer. Every screen and read within 2, every save within 4; every list and search under 300 ms at the API on the load seed | §37 | — | TODO |
 | R13.5 | Pages: the proxy starts only where it has work and loads the Supabase client only to renew. Heavy code loads when first needed; first-load JS within 200 KB gzip. Polling stops while the tab is hidden. Reusing a screen revisited within seconds (`staleTimes`) measured, kept only if it helps. LCP and INP within budget on the throttled phone | §37 | — | TODO |
 | R13.6 | Hosting: `vercel.json` with region `bom1` and fluid compute, sent by `vercel deploy --prebuilt` with every release; the release guide (R14.7) says so | §35, §37 | — | TODO |

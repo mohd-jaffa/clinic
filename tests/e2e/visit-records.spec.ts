@@ -193,8 +193,10 @@ test("an assistant takes the vitals, the doctor writes the visit, and a visit is
   await expectAccessible(page);
   await starting.getByRole("button", { name: words.startVisit }).click();
   await expect(notice(page, words.started("Sunil Nair"))).toBeVisible();
-  await expect(page).toHaveURL(/\/visits\/[0-9a-f-]{36}$/);
+  // Started from the profile, its back arrow leads there (D230).
+  await expect(page).toHaveURL(/\/visits\/[0-9a-f-]{36}\?from=patient$/);
   await expect(page.getByRole("heading", { level: 1, name: "Sunil Nair" })).toBeVisible();
+  await expect(page.getByRole("link", { name: UI_TEXT.actions.back })).toHaveAttribute("href", `/patients/${sunil}`);
   await expectAccessible(page);
   await fitsTheScreen(page);
   await page.getByRole("button", { name: queue.doneOf("Sunil Nair") }).click();

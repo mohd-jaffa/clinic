@@ -572,15 +572,16 @@ describe("nextAppointment (D166)", () => {
   });
 });
 
-describe("listPatientAppointments (D167)", () => {
-  it("reads a page of a patient's appointments, newest first, each with why it was cancelled", async () => {
+describe("listPatientAppointments (D167, D225)", () => {
+  it("reads a page and one more of a patient's appointments with no visit seen, newest first, each with why it was cancelled", async () => {
     const { tenant, queries, argsOf } = tenantWith({
-      answer: () => ({ data: [{ ...calendarRow, status: "CANCELLED", cancel_reason: "Patient asked" }] }),
+      answer: () => ({ data: [{ ...calendarRow, status: "CANCELLED", cancel_reason: "Patient asked", visit: null }] }),
     });
-    expect(await listPatientAppointments(tenant, "p-1")).toEqual({
-      items: [{ ...asRead, status: "CANCELLED", cancelReason: "Patient asked" }],
-      nextCursor: null,
-    });
+    expect(await listPatientAppointments(tenant, "p-1")).toEqual([
+      { ...asRead, status: "CANCELLED", cancelReason: "Patient asked" },
+    ]);
+    expect(argsOf(queries[0], "select")[0][0]).toContain("visit:visits!visits_appointment_id_clinic_id_fkey(id)");
+    expect(argsOf(queries[0], "is")).toEqual([["visit", null]]);
     expect(argsOf(queries[0], "order")).toEqual([
       ["scheduled_at", { ascending: false }],
       ["id", { ascending: false }],
