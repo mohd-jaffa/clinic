@@ -1,29 +1,44 @@
 import { randomUUID } from "node:crypto";
+import { readFile } from "node:fs/promises";
 
 import { expect, test, type Page } from "@playwright/test";
 
+import { QUEUE_REFRESH_MS } from "@/constants/limits";
 import { ERROR_MESSAGES, UI_TEXT } from "@/constants/messages";
 import { createPatient } from "@/features/patients/api";
 import { addDaysKey, dayHour, minutesOfDay, todayKey } from "@/lib/dates/calendar";
-import { formatHour } from "@/lib/format/date";
+import { formatDate, formatHour, formatLongDate } from "@/lib/format/date";
 import { patientSchema } from "@/lib/validation";
 import { expectAccessible, inviteMember, joinByInvite } from "@tests/support/e2e";
 import { aMobileNumber, admin, anEmail, registerClinic, removeAll } from "@tests/support/integration";
 
 /**
- * Phase 5's journey (plan §34.4's front desk; R5.6, D177, D178): the owner
- * invites a receptionist and a doctor, and each joins by their link. The
- * receptionist adds a patient — told who else is on the mobile — books them
- * with the doctor for later today, and a second booking into that time is
- * refused, naming it. She adds a walk-in, given #1, and marks the booked
- * patient Arrived, given #2 — while the doctor's own queue, open on their
- * device, shows the walk-in within its refresh. The doctor cannot open a
- * patient booked only with another doctor, and a second clinic reaches none
- * of it. At a phone's width and a desktop's, each screen checked by axe.
+ * The clinic's day so far (plan §34.4's front desk and doctor's room).
+ *
+ * Phase 5 (R5.6, D177, D178): the owner invites a receptionist, a doctor and
+ * an assistant, and each joins by their link. The receptionist adds a
+ * patient — told who else is on the mobile — books them with the doctor for
+ * later today, and a second booking into that time is refused, naming it.
+ * She adds a walk-in, given #1, and marks the booked patient Arrived, given
+ * #2 — while the doctor's own queue, open on their device, shows the walk-in
+ * within its refresh.
+ *
+ * Phase 6 (R6.6, D233 – D235): she sends the walk-in in and marks him done
+ * with nothing recorded — To bill. The doctor presses Next patient and the
+ * booked patient goes in. The assistant takes her vitals and adds her
+ * allergy, and the doctor's open visit shows both within its refresh; the
+ * doctor writes the diagnosis; the assistant types the prescription, warned
+ * of the allergy at its line and again at Save. The doctor prints it — the
+ * clinic's A5, its name and title hers — sets a review in a week, and Next
+ * patient, with no one waiting, closes the visit.
+ *
+ * The doctor cannot open a patient booked only with another doctor, and a
+ * second clinic reaches none of it. At a phone's width and a desktop's, each
+ * screen checked by axe.
  */
 test.afterAll(removeAll);
 
-const { patients, appointments, queue } = UI_TEXT;
+const { patients, appointments, queue, visit, vitals, prescription, alerts } = UI_TEXT;
 
 /** Later today on the clinic's 5-minute steps, ten minutes on — or none so late in the day. */
 function laterToday(): { hour: string; minute: string } | null {
@@ -40,11 +55,14 @@ async function pickTime(page: Page, sheet: ReturnType<Page["getByRole"]>, at: { 
 }
 
 const notice = (page: Page, title: string) => page.getByRole("status").filter({ hasText: title });
+/** Long enough for a screen kept open to read again on its own: two of its refreshes. */
+const REFRESHED = { timeout: QUEUE_REFRESH_MS * 2 };
 
-test("the front desk adds, books, adds a walk-in and arrives a patient; the doctor and a second clinic see only theirs", async ({
+test("the front desk books and arrives patients, the doctor sees them with an assistant and prints the prescription; others see only theirs", async ({
   page,
   browser,
-}) => {
+}, info) => {
+  const phone = info.project.name === "phone";
   const at = laterToday();
   test.skip(at === null, "the journey books for later today, and the day is nearly over");
 
@@ -79,13 +97,20 @@ test("the front desk adds, books, adds a walk-in and arrives a patient; the doct
       })
     ).ok(),
   ).toBe(true);
+  // Prescriptions print on A5 here.
+  await page.goto("/settings/clinic");
+  await page.getByRole("radiogroup", { name: UI_TEXT.clinic.paperSize }).getByRole("radio", { name: "A5" }).click();
+  await expect(notice(page, UI_TEXT.clinic.paperSizeSaved("A5"))).toBeVisible();
   await page.goto("/team");
   const receptionist = { name: "Meera Pillai", email: anEmail() };
-  const doctor = { name: "Rahul Nair", email: anEmail(), doctor: true };
+  const doctor = { name: "Rahul Nair", email: anEmail(), doctor: true, registration: "KMC 12345" };
+  const assistant = { name: "Divya Menon", email: anEmail(), preset: "Assistant / Nurse" };
   await inviteMember(page, receptionist);
   await inviteMember(page, doctor);
+  await inviteMember(page, assistant);
   const desk = await joinByInvite(browser, page, receptionist.email);
   const rahul = await joinByInvite(browser, page, doctor.email);
+  const nurse = await joinByInvite(browser, page, assistant.email);
 
   // The doctor keeps their own queue open.
   await rahul.goto("/queue");
@@ -135,7 +160,7 @@ test("the front desk adds, books, adds a walk-in and arrives a patient; the doct
   await desk.getByRole("option", { name: "Rahul Nair" }).click();
   await walking.getByRole("button", { name: queue.addWalkIn }).click();
   await expect(notice(desk, queue.tokenGiven("Kiran Das", 1, "Rahul Nair"))).toBeVisible();
-  await expect(rahul.getByRole("list", { name: queue.waiting })).toContainText("Kiran Das", { timeout: 20_000 });
+  await expect(rahul.getByRole("list", { name: queue.waiting })).toContainText("Kiran Das", REFRESHED);
 
   // Anita arrives: #2.
   await desk.getByRole("button", { name: queue.markArrived("Anita Rao") }).click();
@@ -144,6 +169,146 @@ test("the front desk adds, books, adds a walk-in and arrives a patient; the doct
   await expect(waiting.getByRole("listitem")).toHaveCount(2);
   await expect(waiting.getByRole("listitem").first()).toContainText("Kiran Das");
   await expectAccessible(desk);
+
+  // She sends Kiran in and marks him done with nothing recorded: To bill (D43, D46).
+  await waiting
+    .getByRole("listitem")
+    .filter({ hasText: "Kiran Das" })
+    .getByRole("button", { name: queue.sendInOf("Kiran Das") })
+    .click();
+  await expect(notice(desk, queue.sentIn("Kiran Das", "Rahul Nair"))).toBeVisible();
+  await (
+    phone
+      ? desk.getByRole("region", { name: `${queue.withDoctor}: Kiran Das` })
+      : desk.getByRole("list", { name: queue.withDoctor })
+  )
+    .getByRole("button", { name: queue.doneOf("Kiran Das") })
+    .click();
+  await expect(notice(desk, queue.markedDone("Kiran Das"))).toBeVisible();
+  await expectAccessible(desk);
+  const { data: kiransVisit } = await admin()
+    .from("visits")
+    .select(
+      "status, billing_status, recorded:visit_recorded, patient:patients!visits_patient_id_clinic_id_fkey!inner(full_name)",
+    )
+    .eq("clinic_id", clinic.clinicId)
+    .eq("patient.full_name", "Kiran Das")
+    .single();
+  expect(kiransVisit).toMatchObject({ status: "COMPLETED", billing_status: "TO_BILL", recorded: false });
+
+  // The doctor presses Next patient: Anita, #2, goes in, and the doctor opens her visit.
+  await rahul.goto("/queue");
+  await rahul.getByRole("button", { name: queue.nextPatientFor("Rahul Nair") }).click();
+  await expect(notice(rahul, queue.sentIn("Anita Rao", "Rahul Nair"))).toBeVisible();
+  await (
+    phone
+      ? rahul.getByRole("link", { name: queue.openVisitOf("Anita Rao") })
+      : rahul.getByRole("list", { name: queue.withDoctor }).getByRole("link", { name: "Anita Rao", exact: true })
+  ).click();
+  await expect(rahul.getByRole("heading", { level: 1, name: "Anita Rao" })).toBeVisible();
+  const anitasVisit = new URL(rahul.url()).pathname.split("/").at(-1)!;
+  await expectAccessible(rahul);
+
+  // The assistant, on her own device, takes Anita's vitals and adds her allergy.
+  await nurse.goto(`/visits/${anitasVisit}`);
+  const readings = nurse.getByRole("region", { name: visit.vitalsTitle });
+  await readings.getByLabel(`${vitals.systolic} (mmHg)`).fill("120");
+  await readings.getByLabel(`${vitals.diastolic} (mmHg)`).fill("80");
+  await readings.getByLabel(`${vitals.pulse} (/min)`).fill("72");
+  await readings.getByRole("button", { name: visit.saveVitals }).click();
+  await expect(notice(nurse, visit.vitalsSaved)).toBeVisible();
+  await nurse.getByRole("button", { name: alerts.open, exact: true }).click();
+  const alertsSheet = nurse.getByRole("dialog", { name: alerts.title });
+  await alertsSheet.getByRole("button", { name: alerts.add }).click();
+  const allergy = nurse.getByRole("dialog", { name: alerts.addTitle });
+  await allergy.getByRole("radio", { name: "Allergy" }).click();
+  await allergy.getByRole("textbox", { name: /^Name/ }).fill("Penicillin");
+  await allergy.getByRole("button", { name: alerts.add }).click();
+  await expect(notice(nurse, alerts.added("Penicillin"))).toBeVisible();
+  await alertsSheet.getByRole("button", { name: UI_TEXT.actions.close, exact: true }).click();
+  await expectAccessible(nurse);
+
+  // The doctor's open visit shows both within its refresh, without a reload (D234).
+  const seen = rahul.getByRole("region", { name: visit.vitalsTitle });
+  await expect(seen.getByLabel(`${vitals.systolic} (mmHg)`)).toHaveValue("120", REFRESHED);
+  await expect(seen.getByLabel(`${vitals.pulse} (/min)`)).toHaveValue("72");
+  await expect(rahul.getByRole("list", { name: alerts.title }).first()).toContainText("Penicillin");
+
+  // The doctor writes the diagnosis.
+  const notes = rahul.getByRole("region", { name: visit.notesTitle });
+  await notes.getByLabel(visit.diagnosisLabel, { exact: true }).fill("Dental caries");
+  await notes.getByRole("button", { name: visit.saveNotes }).click();
+  await expect(notice(rahul, visit.notesSaved)).toBeVisible();
+
+  // The assistant types the prescription; the medicine naming her allergy is warned, at its line and at Save (D212).
+  const card = nurse.getByRole("region", { name: prescription.title });
+  await expect(card.getByRole("list", { name: alerts.title })).toContainText("Penicillin");
+  await card.getByRole("button", { name: prescription.addMedicine }).click();
+  const paracetamol = card.getByRole("group", { name: prescription.medicineN(1) });
+  await paracetamol.getByRole("combobox", { name: prescription.medicineLabel }).fill("Paracetamol");
+  await paracetamol.getByLabel(prescription.strengthLabel).fill("500 mg");
+  await paracetamol.getByLabel(prescription.doseLabel).fill("1 tab");
+  await paracetamol.getByRole("radio", { name: "1-0-1" }).click();
+  await paracetamol.getByLabel(prescription.daysLabel).fill("5");
+  await card.getByRole("button", { name: prescription.addMedicine }).click();
+  const penicillin = card.getByRole("group", { name: prescription.medicineN(2) });
+  await penicillin.getByRole("combobox", { name: prescription.medicineLabel }).fill("Penicillin V");
+  await expect(penicillin).toContainText(prescription.allergy("Penicillin"));
+  await card.getByRole("button", { name: prescription.save }).click();
+  const asked = nurse.getByRole("alertdialog", { name: prescription.allergyConfirmTitle });
+  await expect(asked).toContainText(prescription.allergyLine("Penicillin V", "Penicillin"));
+  await expectAccessible(nurse);
+  // She goes back, takes it off, and saves the rest.
+  await asked.getByRole("button", { name: UI_TEXT.actions.cancel }).click();
+  await penicillin.getByRole("button", { name: prescription.remove(2) }).click();
+  await card.getByRole("button", { name: prescription.save }).click();
+  await expect(notice(nurse, prescription.saved)).toBeVisible();
+  await expect(card).toContainText(prescription.typedBy("Divya Menon"));
+
+  // The doctor prints it: the clinic's A5, named and titled for Anita (D235).
+  const today = formatDate(todayKey());
+  const rx = rahul.getByRole("region", { name: prescription.title });
+  const print = rx.getByRole("link", { name: prescription.printOf("Anita Rao") });
+  await expect(print).toBeVisible(REFRESHED);
+  const opened = await rahul.request.get((await print.getAttribute("href"))!);
+  expect(opened.headers()["content-type"]).toBe("application/pdf");
+  expect(opened.headers()["content-disposition"]).toContain(`filename="Anita Rao - ${today} - Prescription.pdf"`);
+  const pdf = (await opened.body()).toString("latin1");
+  expect(pdf).toContain("/MediaBox [0 0 419.53 595.28]");
+  expect(pdf).toContain(`(${UI_TEXT.documents.prescriptionTitle("Anita Rao", today)})`);
+  const [tab] = await Promise.all([rahul.waitForEvent("popup"), print.click()]);
+  await tab.close();
+  const [download] = await Promise.all([
+    rahul.waitForEvent("download"),
+    rx.getByRole("button", { name: prescription.downloadOf("Anita Rao") }).click(),
+  ]);
+  expect(download.suggestedFilename()).toBe(`Anita Rao - ${today} - Prescription.pdf`);
+  expect((await readFile((await download.path())!)).toString("latin1")).toContain("/MediaBox [0 0 419.53 595.28]");
+  await expectAccessible(rahul);
+
+  // A review in a week, then Next patient: no one is waiting, so the visit closes and the queue opens (D194).
+  const followUp = rahul.getByRole("region", { name: visit.followUpTitle });
+  await followUp.getByRole("radio", { name: visit.followUpChoices["1_WEEK"] }).click();
+  await followUp.getByRole("button", { name: visit.saveFollowUp }).click();
+  await expect(notice(rahul, visit.followUpSaved(formatLongDate(addDaysKey(todayKey(), 7))))).toBeVisible();
+  await rahul
+    .getByRole("button", { name: queue.nextPatientAfter("Anita Rao") })
+    .first()
+    .click();
+  await expect(notice(rahul, queue.noOneWaiting)).toBeVisible();
+  await expect(rahul).toHaveURL(/\/queue$/);
+  const { data: closed } = await admin()
+    .from("visits")
+    .select("status, billing_status, diagnosis, follow_up_on")
+    .eq("id", anitasVisit)
+    .single();
+  expect(closed).toEqual({
+    status: "COMPLETED",
+    billing_status: "TO_BILL",
+    diagnosis: "Dental caries",
+    follow_up_on: addDaysKey(todayKey(), 7),
+  });
+  await expectAccessible(rahul);
 
   // The doctor cannot open a patient booked only with another doctor.
   await rahul.goto("/patients");
@@ -165,11 +330,13 @@ test("the front desk adds, books, adds a walk-in and arrives a patient; the doct
     .select("id")
     .eq("clinic_id", clinic.clinicId)
     .eq("source", "BOOKED")
-    .eq("status", "ARRIVED")
+    .eq("status", "COMPLETED")
     .single();
   const origin = new URL(page.url()).origin;
   expect((await elsewhere.request.get(`${origin}/api/appointments/${anita!.id}`)).status()).toBe(404);
   expect(await (await elsewhere.request.get(`${origin}/api/queue`)).json()).toMatchObject({ success: true, data: [] });
   expect((await elsewhere.request.post(`${origin}/api/appointments/${anita!.id}/arrived`)).status()).toBe(404);
+  expect((await elsewhere.request.get(`${origin}/api/visits/${anitasVisit}`)).status()).toBe(404);
+  expect((await elsewhere.request.get(`${origin}/api/visits/${anitasVisit}/prescription.pdf`)).status()).toBe(404);
   await elsewhere.close();
 });

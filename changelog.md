@@ -3301,3 +3301,55 @@ Sharing it to WhatsApp comes with the share helper in R6.8 (D183).
 
 ### Blockers
 - None.
+
+## 2026-10-15 — R6.6: the visit under races, and the journey to the prescription
+
+### Added
+- **Races** (`tests/db/integration/visit-races.test.ts`, 10 cases, D232),
+  each request its own transaction through PostgREST, sent at once:
+  - the desk and the doctor press Next patient together — with the room
+    free, and after the patient in: one patient goes in, the lowest token,
+    both told who; the one after still waits; the patient in closed once;
+  - Send in, Done and New visit pressed twice at once: one visit, closed
+    once as To bill, one move audited;
+  - the doctor and the assistant save from the same copy at once — the
+    vitals, a waiting patient's vitals (one visit opened), the notes, the
+    prescription: one kept whole, the other `VISIT_CHANGED`;
+  - the prescription saved as the desk marks the patient done: both stand.
+- **The journey continues** (`front-desk-journey.spec.ts`, D233 – D235):
+  the owner sets A5 and invites an assistant too, and the doctor with a
+  registration number; the desk sends the walk-in in and marks him done
+  with nothing recorded (To bill); the doctor's Next patient sends the
+  booked patient in; the assistant, on her own device, takes vitals and adds
+  a penicillin allergy, and both show on the doctor's open visit within its
+  refresh; the doctor writes the diagnosis; the assistant types the
+  prescription, warned at the "Penicillin V" line and again at Save, takes
+  it off and saves; the doctor prints it — A5, "Anita Rao - {day} -
+  Prescription.pdf", its title naming her, a tab of its own, and a
+  download — sets a review in a week, and Next patient, with no one
+  waiting, closes the visit and opens the queue. The second clinic is
+  refused her visit and its PDF.
+- **`inviteMember`** (`tests/support/e2e.ts`) takes a preset to start from
+  and a doctor's registration number.
+
+### Changed
+- **Plan:** D232 – D235; R6.6 done.
+
+### Found while building
+- Nothing in the app. Two of the race test's own mistakes were fixed: the
+  doctor pressing New visit for a patient who was not theirs (refused, as
+  D3 says), and a prescription read as one row where PostgREST gives a list.
+
+### Validation
+- Typecheck, lint, format check passed.
+- Unit and integration tests passed (2986), coverage 100%. The race test
+  passed four runs in a row.
+- E2E passed (phone, desktop), with axe: 124 passed, 8 skipped (run at one
+  width only). A first full run went four times slower than usual, the
+  machine under load: the journey missed the doctor's refresh, and three
+  older specs timed out. The journey now waits two refreshes for what
+  another device saved (`QUEUE_REFRESH_MS` × 2); the four reran green at
+  both widths, and a second full run passed in 7 minutes.
+
+### Blockers
+- None.

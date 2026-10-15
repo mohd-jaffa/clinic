@@ -59,17 +59,27 @@ export async function authLinkTo(type: "magiclink" | "recovery", email: string, 
 }
 
 /**
- * The owner invites someone from Team (plan §8.5): a receptionist, or a
- * doctor with their own fee. The journeys send no mail, so the invite is kept
- * and the card says so.
+ * The owner invites someone from Team (plan §8.5): a receptionist, a member
+ * starting from another preset — an assistant — or a doctor with their own
+ * fee and, when given, their registration number. The journeys send no
+ * mail, so the invite is kept and the card says so.
  */
-export async function inviteMember(page: Page, who: { name: string; email: string; doctor?: boolean }): Promise<void> {
+export async function inviteMember(
+  page: Page,
+  who: { name: string; email: string; doctor?: boolean; preset?: string; registration?: string },
+): Promise<void> {
   const { team, actions } = UI_TEXT;
   await page.getByRole("button", { name: team.invite, exact: true }).click();
   const sheet = page.getByRole("dialog", { name: team.inviteTitle });
   if (who.doctor) {
     await page.getByRole("radiogroup", { name: team.roleLabel }).getByRole("radio", { name: "Doctor" }).click();
     await sheet.getByRole("textbox", { name: /^Consultation fee/ }).fill("700");
+    if (who.registration) {
+      await sheet.getByRole("textbox", { name: /^Registration number/ }).fill(who.registration);
+    }
+  }
+  if (who.preset) {
+    await sheet.getByRole("radiogroup", { name: team.presetLabel }).getByRole("radio", { name: who.preset }).click();
   }
   await sheet.getByRole("textbox", { name: /^Name/ }).fill(who.name);
   await sheet.getByRole("textbox", { name: /^Email/ }).fill(who.email);
