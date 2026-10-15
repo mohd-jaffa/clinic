@@ -1,5 +1,5 @@
 import { ALERT_KINDS, type AlertKind } from "@/constants/statuses";
-import { fromEmbedded } from "@/features/prescriptions/content";
+import { fromEmbedded, fromPrevious } from "@/features/prescriptions/content";
 import type { EmbeddedPrescriptionRow } from "@/features/prescriptions/types";
 import { pageWindow } from "@/lib/api/pagination";
 import { fromPostgrestError, notFoundError } from "@/lib/errors";
@@ -18,8 +18,8 @@ const TABLE = "visits";
 /**
  * What a visit's screen reads (D195, D202): the visit and what it records,
  * its patient with their alerts, its doctor's name and registration number
- * (D213), its token and Urgent, its vitals, and its prescription with who
- * typed it (D45).
+ * (D213), its token and Urgent, its vitals, its prescription with who typed
+ * it (D45), and the patient's prescription before it, for Repeat (D236).
  */
 const VISIT_COLUMNS =
   "id, patient_id, doctor_id, appointment_id, status, visit_date, started_at, completed_at, billing_status, " +
@@ -32,7 +32,8 @@ const VISIT_COLUMNS =
   "vitals:vitals!vitals_visit_id_clinic_id_fkey(systolic, diastolic, pulse, temperature_f, spo2, respiratory_rate, weight_kg, height_cm), " +
   "prescription:prescriptions!prescriptions_visit_id_clinic_id_fkey(id, advice, print_diagnosis, entered_by, " +
   "typist:profiles!prescriptions_entered_by_fkey(full_name), " +
-  "items:prescription_items(position, medicine, strength, dose, frequency, timing, duration_days, instructions))";
+  "items:prescription_items(position, medicine, strength, dose, frequency, timing, duration_days, instructions)), " +
+  "previous:previous_prescription";
 
 /**
  * What a patient's history reads of each visit (D225, D226): its day, where
@@ -70,7 +71,7 @@ const byKind = (a: { kind: AlertKind }, b: { kind: AlertKind }) =>
 /**
  * A visit (plan §12.2; D195, D202), in one query: the visit and what it
  * records, its patient and their active alerts, its doctor, its token, its
- * vitals and its prescription (plan §13). Read as the member, so a doctor opens only their own patients'
+ * vitals, its prescription (plan §13) and the one before it (D236). Read as the member, so a doctor opens only their own patients'
  * (D3), and only with `visits.view`. The visit screen waits on it alone
  * after the session (plan §37).
  */
@@ -117,6 +118,7 @@ export async function getVisit(tenant: Tenant, id: string): Promise<Visit> {
     followUpOn: row.follow_up_on,
     vitals: vitalsOf(row.vitals),
     prescription: prescriptionOf(row.prescription, row.doctor?.member?.user_id ?? null),
+    previousPrescription: row.previous === null ? null : fromPrevious(row.previous),
     alerts: row.patient.alerts
       .filter((alert) => alert.active)
       .sort(byKind)

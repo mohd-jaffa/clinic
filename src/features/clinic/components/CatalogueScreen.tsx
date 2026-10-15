@@ -17,13 +17,15 @@ export const activeCount = (entries: readonly { active: boolean }[]) => entries.
  * many it holds and the way back to Settings; on the ground, its entries once
  * they are here, rows standing in while they load, or why they could not and
  * **Try again**. The price list, appointment types, expense categories and
- * holidays and leave share it.
+ * holidays and leave share it, and a doctor's prescription templates, which
+ * lead back to My account (D242).
  */
 export function CatalogueScreen<Entry>({
   title,
   subtitle,
   query,
   loadFailed,
+  back = SETTINGS_ROUTE,
   children,
 }: {
   title: string;
@@ -31,6 +33,8 @@ export function CatalogueScreen<Entry>({
   subtitle?: string;
   query: ListQuery & { data?: readonly Entry[] };
   loadFailed: ErrorMessageCode;
+  /** Where its back arrow leads: Settings, unless said. */
+  back?: string;
   children: (entries: readonly Entry[]) => ReactNode;
 }) {
   const entries = query.data;
@@ -38,7 +42,7 @@ export function CatalogueScreen<Entry>({
     <>
       <CoastHeader>
         <div className="pb-6">
-          <PageHeader title={title} subtitle={subtitle} back={SETTINGS_ROUTE} />
+          <PageHeader title={title} subtitle={subtitle} back={back} />
         </div>
       </CoastHeader>
       <div className="px-4 pt-4 md:px-8">

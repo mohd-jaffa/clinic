@@ -50,6 +50,7 @@ const aVisit = (followUpOn: string | null = null): Visit => ({
   doctorName: "Maya Rao",
   doctorRegistration: "KMC 12345",
   prescription: null,
+  previousPrescription: null,
   appointment: { id: "a-1", status: "IN_PROGRESS", token: 7, urgentAt: null },
   alerts: [],
   complaint: null,

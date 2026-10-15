@@ -88,3 +88,60 @@ export const medicineSearchSchema = z.object({
 
 export type MedicineSearchInput = z.input<typeof medicineSearchSchema>;
 export type MedicineSearchPayload = z.output<typeof medicineSearchSchema>;
+
+/** A template's name (D242): a row's title, "Viral fever". */
+const templateName = requiredLine(words.templateNameLabel, { max: TEXT_LIMITS.templateName });
+
+/**
+ * A prescription template as typed (plan §13; D242): its name, its medicines
+ * in order and its advice — a medicine or advice, or both.
+ */
+export const templateSchema = z
+  .object({
+    name: templateName,
+    items: z
+      .array(prescriptionItemSchema, { error: VALIDATION_MESSAGES.invalid })
+      .max(PRESCRIPTION_MAX_ITEMS, { error: VALIDATION_MESSAGES.atMostTemplateMedicines(PRESCRIPTION_MAX_ITEMS) }),
+    advice: optionalLines(words.adviceLabel, TEXT_LIMITS.advice),
+  })
+  .refine((template) => template.items.length > 0 || template.advice !== null, {
+    error: VALIDATION_MESSAGES.templateEmpty,
+    path: ["items"],
+  });
+
+export type TemplateInput = z.input<typeof templateSchema>;
+export type TemplatePayload = z.output<typeof templateSchema>;
+
+/** Saving what a visit's prescription holds as a template (D243): only its name is typed. */
+export const templateNameSchema = z.object({ name: templateName });
+
+export type TemplateNameInput = z.input<typeof templateNameSchema>;
+
+/** A new template (D243): it, and whether replacing the doctor's own of the same name was asked. */
+export const saveTemplateSchema = z.object(
+  {
+    template: templateSchema,
+    replace: z.boolean({ error: VALIDATION_MESSAGES.invalid }).default(false),
+  },
+  { error: VALIDATION_MESSAGES.invalid },
+);
+
+export type SaveTemplateInput = z.input<typeof saveTemplateSchema>;
+export type SaveTemplatePayload = z.output<typeof saveTemplateSchema>;
+
+/** A change to a template (D242): its name, medicines and advice — or archiving (`false`) or restoring it. */
+export const changeTemplateSchema = z.union(
+  [
+    z.strictObject({ template: templateSchema }),
+    z.strictObject({ active: z.boolean({ error: VALIDATION_MESSAGES.invalid }) }),
+  ],
+  { error: VALIDATION_MESSAGES.invalid },
+);
+
+export type ChangeTemplateInput = z.input<typeof changeTemplateSchema>;
+export type ChangeTemplatePayload = z.output<typeof changeTemplateSchema>;
+
+/** Whose templates are read (D241): the visit's doctor's, or one's own. */
+export const templatesQuerySchema = z.object({ doctorId: z.uuid({ error: VALIDATION_MESSAGES.invalid }) });
+
+export type TemplatesQuery = z.output<typeof templatesQuerySchema>;

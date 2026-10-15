@@ -29,6 +29,7 @@ const aVisit = (notes: Partial<VisitNotes> = {}): Visit => ({
   doctorName: "Maya Rao",
   doctorRegistration: "KMC 12345",
   prescription: null,
+  previousPrescription: null,
   appointment: { id: "a-1", status: "IN_PROGRESS", token: 7, urgentAt: null },
   alerts: [],
   ...EMPTY,

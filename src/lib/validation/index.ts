@@ -213,10 +213,17 @@ export {
 export { documentQuerySchema, type DocumentQuery } from "./schemas/documents";
 
 export {
+  changeTemplateSchema,
   medicineSearchSchema,
   prescriptionItemSchema,
   prescriptionSchema,
   savePrescriptionSchema,
+  saveTemplateSchema,
+  templateNameSchema,
+  templateSchema,
+  templatesQuerySchema,
+  type ChangeTemplateInput,
+  type ChangeTemplatePayload,
   type MedicineSearchInput,
   type MedicineSearchPayload,
   type PrescriptionInput,
@@ -224,6 +231,12 @@ export {
   type PrescriptionPayload,
   type SavePrescriptionInput,
   type SavePrescriptionPayload,
+  type SaveTemplateInput,
+  type SaveTemplatePayload,
+  type TemplateInput,
+  type TemplateNameInput,
+  type TemplatePayload,
+  type TemplatesQuery,
 } from "./schemas/prescriptions";
 
 export {

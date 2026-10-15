@@ -109,6 +109,11 @@ export const apiRoutes = {
   prescriptions: {
     medicines: "/api/prescriptions/medicines",
   },
+  // A doctor's prescription templates (D240 – D243): theirs, archived too (`?doctorId=`); made; changed.
+  prescriptionTemplates: {
+    list: "/api/prescription-templates",
+    one: (id: string) => `/api/prescription-templates/${id}`,
+  },
 } as const;
 
 /**

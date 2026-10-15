@@ -7,7 +7,7 @@ import { QUEUE_REFRESH_MS } from "@/constants/limits";
 import { ERROR_MESSAGES, UI_TEXT } from "@/constants/messages";
 import { createPatient } from "@/features/patients/api";
 import { addDaysKey, dayHour, minutesOfDay, todayKey } from "@/lib/dates/calendar";
-import { formatDate, formatHour, formatLongDate } from "@/lib/format/date";
+import { formatDate, formatHour, formatLongDate, formatNearDate } from "@/lib/format/date";
 import { patientSchema } from "@/lib/validation";
 import { expectAccessible, inviteMember, joinByInvite } from "@tests/support/e2e";
 import { aMobileNumber, admin, anEmail, registerClinic, removeAll } from "@tests/support/integration";
@@ -29,8 +29,10 @@ import { aMobileNumber, admin, anEmail, registerClinic, removeAll } from "@tests
  * allergy, and the doctor's open visit shows both within its refresh; the
  * doctor writes the diagnosis; the assistant types the prescription, warned
  * of the allergy at its line and again at Save. The doctor prints it — the
- * clinic's A5, its name and title hers — sets a review in a week, and Next
- * patient, with no one waiting, closes the visit.
+ * clinic's A5, its name and title hers — saves it as a template of their
+ * own, sets a review in a week, and Next patient, with no one waiting,
+ * closes the visit. At her follow-up, Repeat fills the prescription in
+ * (R6.7, D236, D240).
  *
  * The doctor cannot open a patient booked only with another doctor, and a
  * second clinic reaches none of it. At a phone's width and a desktop's, each
@@ -286,6 +288,14 @@ test("the front desk books and arrives patients, the doctor sees them with an as
   expect((await readFile((await download.path())!)).toString("latin1")).toContain("/MediaBox [0 0 419.53 595.28]");
   await expectAccessible(rahul);
 
+  // The doctor saves it as a template of their own (D240).
+  await rx.getByRole("button", { name: prescription.saveAsTemplate }).click();
+  const naming = rahul.getByRole("dialog", { name: prescription.saveAsTemplate });
+  await naming.getByRole("textbox", { name: new RegExp(`^${prescription.templateNameLabel}`) }).fill("Dental pain");
+  await expectAccessible(rahul);
+  await naming.getByRole("button", { name: prescription.saveAsTemplate }).click();
+  await expect(notice(rahul, prescription.templateSaved("Dental pain"))).toBeVisible();
+
   // A review in a week, then Next patient: no one is waiting, so the visit closes and the queue opens (D194).
   const followUp = rahul.getByRole("region", { name: visit.followUpTitle });
   await followUp.getByRole("radio", { name: visit.followUpChoices["1_WEEK"] }).click();
@@ -316,6 +326,25 @@ test("the front desk books and arrives patients, the doctor sees them with an as
   await expect(rahul.getByText(patients.noMatches("Sunil"))).toBeVisible();
   await rahul.goto(`/patients/${sunil.id}`);
   await expect(rahul.getByText(ERROR_MESSAGES.RECORD_NOT_FOUND)).toBeVisible();
+  await expectAccessible(rahul);
+
+  // At her follow-up, Repeat fills in the prescription before (D236): its day and doctor named.
+  const { data: her } = await admin().from("visits").select("patient_id").eq("id", anitasVisit).single();
+  await rahul.goto(`/patients/${her!.patient_id}`);
+  await rahul.getByRole("button", { name: visit.newVisit }).click();
+  await expect(rahul).toHaveURL(/\/visits\/[0-9a-f-]{36}\?from=patient$/);
+  const followUpRx = rahul.getByRole("region", { name: prescription.title });
+  await followUpRx
+    .getByRole("button", {
+      name: prescription.repeat(formatNearDate(todayKey()), UI_TEXT.documents.doctor("Rahul Nair")),
+    })
+    .click();
+  const repeated = followUpRx.getByRole("group", { name: prescription.medicineN(1) });
+  await expect(repeated.getByRole("combobox", { name: prescription.medicineLabel })).toHaveValue("Paracetamol");
+  await expect(repeated.getByLabel(prescription.daysLabel)).toHaveValue("5");
+  await expect(followUpRx.getByRole("group", { name: prescription.medicineN(2) })).toHaveCount(0);
+  await followUpRx.getByRole("button", { name: prescription.save }).click();
+  await expect(notice(rahul, prescription.saved)).toBeVisible();
   await expectAccessible(rahul);
 
   // A second clinic reaches none of it.

@@ -4,18 +4,26 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Permission } from "@/constants/permissions";
 import type { PatientAlert } from "@/features/patients/types";
-import type { Prescription, PrescriptionItem } from "@/features/prescriptions/types";
+import type { Prescription, PrescriptionItem, PrescriptionTemplate } from "@/features/prescriptions/types";
 import type { Visit } from "@/features/visits/types";
 import { ApiError } from "@/lib/api/client";
 import { authStub } from "@tests/support/auth";
 import { Providers } from "@tests/support/providers";
 
-const { client, refresh, auth } = vi.hoisted(() => ({
+const { client, templatesClient, templates, refresh, auth } = vi.hoisted(() => ({
   client: { save: vi.fn() },
+  templatesClient: { add: vi.fn(), change: vi.fn() },
+  templates: { current: [] as PrescriptionTemplate[] },
   refresh: vi.fn(),
   auth: { current: {} as ReturnType<typeof authStub> },
 }));
-vi.mock("@/features/prescriptions/api.client", () => ({ PrescriptionsClient: client }));
+vi.mock("@/features/prescriptions/api.client", () => ({
+  PrescriptionsClient: client,
+  TemplatesClient: templatesClient,
+}));
+vi.mock("@/features/prescriptions/hooks/useTemplates", () => ({
+  useTemplates: () => ({ data: templates.current }),
+}));
 vi.mock("@/lib/query/useRevalidate", () => ({ useRevalidate: () => refresh }));
 vi.mock("@/features/auth/AuthProvider", () => ({ useAuth: () => auth.current }));
 // The suggestions are the line's to test: here, none are ever found.
@@ -60,6 +68,7 @@ const aVisit = (overrides: Partial<Visit> = {}): Visit => ({
   doctorName: "Maya Rao",
   doctorRegistration: "KMC 12345",
   prescription: null,
+  previousPrescription: null,
   appointment: { id: "a-1", status: "IN_PROGRESS", token: 7, urgentAt: null },
   alerts: [PENICILLIN, DIABETES],
   complaint: null,
@@ -93,6 +102,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   auth.current = authStub({ role: "STAFF", permissions: NURSE });
   refresh.mockResolvedValue(undefined);
+  templates.current = [];
 });
 
 describe("PrescriptionSection for whoever may only read (plan §13)", () => {
@@ -353,5 +363,106 @@ describe("PrescriptionSection's printout (D221, D222)", () => {
     expect(save()).toBeInTheDocument();
     expect(print()).not.toBeInTheDocument();
     expect(download()).not.toBeInTheDocument();
+  });
+});
+
+describe("PrescriptionSection's Repeat and templates (D236 – D241)", () => {
+  const advice = () => within(section()).getByRole("textbox", { name: "Advice" });
+  const before = {
+    day: "2026-10-06",
+    doctorName: "Ravi Kumar",
+    advice: "Rest",
+    items: [{ ...PARACETAMOL, medicine: "Cetirizine", strength: "10 mg" }],
+  };
+
+  it("adds the prescription before after what is typed, its advice on a new line, and says so", async () => {
+    draw({ prescription: aPrescription(), previousPrescription: before });
+    await userEvent.click(within(section()).getByRole("button", { name: "Repeat 6 Oct · Dr. Ravi Kumar" }));
+    expect(medicine(1)).toHaveValue("Paracetamol");
+    expect(medicine(2)).toHaveValue("Cetirizine");
+    expect(within(line(2)).getByRole("textbox", { name: "Strength" })).toHaveValue("10 mg");
+    expect(advice()).toHaveValue("Plenty of fluids\nRest");
+    expect(save()).toBeInTheDocument();
+    expect((await screen.findAllByText("Added from 6 Oct · Dr. Ravi Kumar"))[0]).toBeInTheDocument();
+  });
+
+  it("adds a template picked from the sheet, its advice filling an empty box", async () => {
+    templates.current = [{ id: "t-1", name: "Viral fever", advice: "Fluids", active: true, items: [PARACETAMOL] }];
+    draw();
+    await userEvent.click(within(section()).getByRole("button", { name: "Templates" }));
+    await userEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: /^Viral fever/ }));
+    expect(medicine(1)).toHaveValue("Paracetamol");
+    expect(advice()).toHaveValue("Fluids");
+    expect((await screen.findAllByText("Added from “Viral fever”"))[0]).toBeInTheDocument();
+  });
+
+  it("leaves the advice as it is when theirs is already there", async () => {
+    draw({ prescription: aPrescription(), previousPrescription: { ...before, advice: "Plenty of fluids" } });
+    await userEvent.click(within(section()).getByRole("button", { name: /^Repeat/ }));
+    expect(medicine(2)).toHaveValue("Cetirizine");
+    expect(advice()).toHaveValue("Plenty of fluids");
+  });
+
+  it("adds nothing past the most a prescription holds, and says why", async () => {
+    draw({
+      prescription: aPrescription({ items: Array.from({ length: 30 }, () => PARACETAMOL) }),
+      previousPrescription: before,
+    });
+    await userEvent.click(within(section()).getByRole("button", { name: /^Repeat/ }));
+    expect(await screen.findByRole("alertdialog", { name: "Too many medicines" })).toHaveTextContent(
+      "A prescription holds at most 30 medicines, and this adds 1. Remove some first.",
+    );
+    expect(within(section()).queryByRole("group", { name: "Medicine 31" })).not.toBeInTheDocument();
+    expect(save()).not.toBeInTheDocument();
+  });
+});
+
+describe("PrescriptionSection's Save as template (D239, D240, D243)", () => {
+  const saveAs = () => within(section()).queryByRole("button", { name: "Save as template" });
+  const asDoctor = () => {
+    const stub = authStub({ role: "DOCTOR", permissions: NURSE });
+    auth.current = { ...stub, membership: { ...stub.membership!, doctorId: "d-1" } };
+  };
+
+  it("is the visit's doctor's, once there is a medicine", async () => {
+    const { unmount } = draw({ prescription: aPrescription() });
+    expect(saveAs()).not.toBeInTheDocument();
+    unmount();
+
+    asDoctor();
+    draw();
+    expect(saveAs()).not.toBeInTheDocument();
+    await userEvent.click(add()!);
+    expect(saveAs()).toBeInTheDocument();
+  });
+
+  it("checks the medicines first, then names what is on the screen as a template of the doctor's own", async () => {
+    asDoctor();
+    templatesClient.add.mockResolvedValue({ id: "t-1", name: "Fever", advice: null, active: true, items: [] });
+    draw();
+    await userEvent.click(add()!);
+    await userEvent.click(saveAs()!);
+    expect(await within(line(1)).findByText("Medicine needs a value.")).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+    await userEvent.type(medicine(1), "Paracetamol");
+    await userEvent.type(within(section()).getByRole("textbox", { name: "Advice" }), "Rest");
+    await userEvent.click(saveAs()!);
+    const sheet = await screen.findByRole("dialog", { name: "Save as template" });
+    await userEvent.type(within(sheet).getByRole("textbox", { name: /Template name/ }), "Fever");
+    await userEvent.click(within(sheet).getByRole("button", { name: "Save as template" }));
+    await waitFor(() =>
+      expect(templatesClient.add).toHaveBeenCalledWith({
+        template: {
+          name: "Fever",
+          items: [expect.objectContaining({ medicine: "Paracetamol" })],
+          advice: "Rest",
+        },
+      }),
+    );
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    // The prescription itself is not saved by it.
+    expect(client.save).not.toHaveBeenCalled();
+    expect(save()).toBeInTheDocument();
   });
 });

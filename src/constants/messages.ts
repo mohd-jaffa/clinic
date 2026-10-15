@@ -121,6 +121,9 @@ export const ERROR_MESSAGES = {
     "The doctor’s registration number isn’t on their details yet. Add it in Team, then write the prescription.",
   PRESCRIPTION_EMPTY: "This prescription has no medicines yet, so there’s nothing to print.",
   PRESCRIPTION_PDF_FAILED: "The prescription’s PDF couldn’t be made.",
+  // A doctor's prescription templates (plan §13; D240 – D243): a name is theirs once while in use.
+  TEMPLATE_NAME_TAKEN: "You already have a template with this name. Choose another name.",
+  TEMPLATES_LOAD_FAILED: "The templates couldn't be loaded.",
 
   // The browser could not reach the server (plan §21, D55): said by the client, never sent by the server.
   NETWORK_OFFLINE: "You're offline. Try again once the connection is back — what you typed is still here.",
@@ -175,6 +178,8 @@ export const VALIDATION_MESSAGES = {
   endsBeforeStart: (last: string, first: string) => `${last} can’t be before the ${first.toLowerCase()}.`,
   atMostDays: (max: number) => `It can last at most ${max} days.`,
   atMostMedicines: (max: number) => `A prescription holds at most ${max} medicines.`,
+  atMostTemplateMedicines: (max: number) => `A template holds at most ${max} medicines.`,
+  templateEmpty: "Add a medicine or advice to it first.",
   permissionsNeedOthers: "Some of these need others ticked too.",
   birthDate: `A date of birth can’t be in the future, or more than ${MAX_PATIENT_AGE} years ago.`,
   invalid: "That value is not valid.",
@@ -810,6 +815,50 @@ export const UI_TEXT = {
     downloaded: "Prescription downloaded",
     savedAs: (name: string) => `Saved as “${name}”.`,
     notDownloaded: "The prescription wasn’t downloaded",
+    /** Repeat (D236): the patient's latest prescription before this visit, by its day and doctor. */
+    repeat: (day: string, doctor: string) => `Repeat ${day} · ${doctor}`,
+    repeatedFrom: (day: string, doctor: string) => `${day} · ${doctor}`,
+    /** Nothing is added past the most a prescription holds (D237). */
+    /** What Repeat or a template added, closing itself (D237): "Added from “Viral fever”". */
+    added: (from: string) => `Added from ${from}`,
+    tooManyTitle: "Too many medicines",
+    tooManyBody: (max: number, adding: number) =>
+      `A prescription holds at most ${max} medicines, and this adds ${adding}. Remove some first.`,
+    /** The doctor's templates, picked from a sheet (D241). */
+    templates: "Templates",
+    templatesOf: (doctor: string) => `${doctor}’s templates`,
+    noTemplates: "No templates yet",
+    noTemplatesHint: "Save a prescription as a template, or start one in My account.",
+    noTemplatesFor: (doctor: string) => `${doctor} hasn’t saved any yet.`,
+    /** A template's medicines under its name: "Paracetamol, Amoxicillin +1". */
+    templateMedicines: (names: string[], more: number) => `${names.join(", ")}${more > 0 ? ` +${more}` : ""}`,
+    quoted: (name: string) => `“${name}”`,
+    adviceOnly: "Advice only",
+    /** Saving what is typed as a template, the doctor's alone (D240, D243). */
+    saveAsTemplate: "Save as template",
+    templateNameLabel: "Template name",
+    templateNameHint: "Like “Viral fever” or “Post-extraction”. It saves the medicines and advice on the screen.",
+    templateSaved: (name: string) => `Saved as the template “${name}”`,
+    templateNotSaved: "The template wasn’t saved",
+    replaceTitle: (name: string) => `Replace your template “${name}”?`,
+    replaceBody: "Its medicines and advice become these.",
+    replace: "Replace",
+  },
+
+  /** A doctor's prescription templates in My account (plan §13, D242). */
+  templates: {
+    title: "Prescription templates",
+    hint: "Saved prescriptions, added in a tap",
+    section: "Prescriptions",
+    count: (count: number) => (count === 1 ? "1 template" : `${count} templates`),
+    add: "New template",
+    newTitle: "New template",
+    emptyTitle: "No templates yet",
+    emptyHint: "Start one here, or save a prescription as a template on a visit.",
+    archived: "Archived",
+    archiveTitle: (name: string) => `Archive “${name}”?`,
+    archiveBody: "It’s no longer offered on prescriptions. Show archived brings it back.",
+    notChanged: "The template wasn’t changed",
   },
 
   /** What the PDFs say (plan §33; D218 – D224). */

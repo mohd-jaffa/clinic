@@ -55,6 +55,7 @@ const aVisit = (overrides: Partial<Visit> = {}): Visit => ({
   doctorName: "Maya Rao",
   doctorRegistration: "KMC 12345",
   prescription: null,
+  previousPrescription: null,
   appointment: { id: "a-1", status: "IN_PROGRESS", token: 7, urgentAt: null },
   alerts: [{ id: "al-1", kind: "ALLERGY", label: "Penicillin", note: null, active: true }],
   complaint: null,

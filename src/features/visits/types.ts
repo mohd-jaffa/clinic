@@ -1,6 +1,11 @@
 import type { AlertKind, AppointmentStatus, BillingStatus, Gender, VisitStatus } from "@/constants/statuses";
 import type { PatientAlert } from "@/features/patients/types";
-import type { EmbeddedPrescriptionRow, Prescription } from "@/features/prescriptions/types";
+import type {
+  EmbeddedPrescriptionRow,
+  Prescription,
+  PreviousPrescription,
+  PreviousPrescriptionRow,
+} from "@/features/prescriptions/types";
 
 /** A visit's readings (plan §12.2), each as taken — or none. Temperature in °F (D31). */
 export interface Vitals {
@@ -74,6 +79,8 @@ export interface Visit extends VisitNotes {
   followUpOn: string | null;
   /** None until one is saved (plan §13). */
   prescription: Prescription | null;
+  /** What Repeat fills (D236): the patient's latest prescription before this visit — none when there is none. */
+  previousPrescription: PreviousPrescription | null;
 }
 
 /** A `visits` row as its screen reads it, with its patient and their alerts, its doctor, its appointment, vitals and prescription. */
@@ -108,6 +115,8 @@ export interface VisitRow {
   vitals: VitalsRow | VitalsRow[] | null;
   /** Embedded through the prescription's foreign key, as the vitals are. */
   prescription: EmbeddedPrescriptionRow | EmbeddedPrescriptionRow[] | null;
+  /** `previous_prescription` (0023): none when the patient has none before this visit. */
+  previous: PreviousPrescriptionRow | null;
 }
 
 /**

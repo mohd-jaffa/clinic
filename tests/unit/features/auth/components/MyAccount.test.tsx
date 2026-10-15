@@ -30,6 +30,30 @@ function myAccount() {
 
 const details = () => screen.getByRole("region", { name: "Your details" });
 
+describe("MyAccount's prescription templates (D242)", () => {
+  it("leads a doctor to their templates, and shows nothing of them to anyone else", () => {
+    const { unmount } = render(
+      <ThemeProvider>
+        <Providers>
+          <MyAccount />
+        </Providers>
+      </ThemeProvider>,
+    );
+    const region = screen.getByRole("region", { name: "Prescriptions" });
+    expect(within(region).getByRole("link", { name: /Prescription templates/ })).toHaveAttribute(
+      "href",
+      "/settings/account/templates",
+    );
+    expect(region).toHaveTextContent("Saved prescriptions, added in a tap");
+    unmount();
+
+    const stub = authStub({ role: "STAFF" });
+    auth.current = { ...stub, membership: { ...stub.membership!, doctorId: null } };
+    myAccount();
+    expect(screen.queryByRole("region", { name: "Prescriptions" })).not.toBeInTheDocument();
+  });
+});
+
 describe("MyAccount", () => {
   it("names the screen on the land, with the way back to Settings and who they are", () => {
     myAccount();

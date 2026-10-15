@@ -3,10 +3,15 @@ import { describe, expect, it } from "vitest";
 import { PRESCRIPTION_MAX_ITEMS, TEXT_LIMITS } from "@/constants/limits";
 import { UI_TEXT, VALIDATION_MESSAGES } from "@/constants/messages";
 import {
+  changeTemplateSchema,
   medicineSearchSchema,
   prescriptionItemSchema,
   prescriptionSchema,
   savePrescriptionSchema,
+  saveTemplateSchema,
+  templateNameSchema,
+  templateSchema,
+  templatesQuerySchema,
   type PrescriptionItemInput,
 } from "@/lib/validation";
 
@@ -181,6 +186,83 @@ describe("medicineSearchSchema (D211)", () => {
       { message: VALIDATION_MESSAGES.tooLong(words.medicineLabel, TEXT_LIMITS.medicine), path: "q" },
     ]);
     expect(issues(medicineSearchSchema.safeParse({ q: "para", doctorId: "nope" }))).toEqual([
+      { message: VALIDATION_MESSAGES.invalid, path: "doctorId" },
+    ]);
+  });
+});
+
+describe("templateSchema (D242)", () => {
+  it("keeps its name, medicines and advice, tidied", () => {
+    expect(templateSchema.parse({ name: "  Viral   fever ", items: [LINE], advice: " Rest " })).toEqual({
+      name: "Viral fever",
+      items: [READ],
+      advice: "Rest",
+    });
+    expect(templateSchema.parse({ name: "Post-extraction", items: [], advice: "Cold food" })).toMatchObject({
+      items: [],
+    });
+  });
+
+  it("refuses no name, too long a name, nothing in it, and too many medicines", () => {
+    expect(issues(templateSchema.safeParse({ name: " ", items: [LINE], advice: "" }))).toEqual([
+      { message: VALIDATION_MESSAGES.required(words.templateNameLabel), path: "name" },
+    ]);
+    expect(
+      issues(templateSchema.safeParse({ name: "x".repeat(TEXT_LIMITS.templateName + 1), items: [LINE], advice: "" })),
+    ).toEqual([
+      { message: VALIDATION_MESSAGES.tooLong(words.templateNameLabel, TEXT_LIMITS.templateName), path: "name" },
+    ]);
+    expect(issues(templateSchema.safeParse({ name: "Empty", items: [], advice: "  " }))).toEqual([
+      { message: VALIDATION_MESSAGES.templateEmpty, path: "items" },
+    ]);
+    expect(
+      issues(
+        templateSchema.safeParse({
+          name: "Many",
+          items: Array.from({ length: PRESCRIPTION_MAX_ITEMS + 1 }, () => LINE),
+          advice: "",
+        }),
+      ),
+    ).toEqual([{ message: VALIDATION_MESSAGES.atMostTemplateMedicines(PRESCRIPTION_MAX_ITEMS), path: "items" }]);
+    expect(templateSchema.safeParse({ name: "Odd", items: "none", advice: "" })).toMatchObject({
+      error: { issues: [{ message: VALIDATION_MESSAGES.invalid }] },
+    });
+  });
+});
+
+describe("saving and changing a template (D242, D243)", () => {
+  const template = { name: "Viral fever", items: [LINE], advice: "" };
+
+  it("takes the name alone from a visit", () => {
+    expect(templateNameSchema.parse({ name: " Cough " })).toEqual({ name: "Cough" });
+  });
+
+  it("makes a new one, replacing another only when asked", () => {
+    expect(saveTemplateSchema.parse({ template })).toMatchObject({ replace: false });
+    expect(saveTemplateSchema.parse({ template, replace: true })).toMatchObject({ replace: true });
+    expect(saveTemplateSchema.safeParse("nothing")).toMatchObject({
+      error: { issues: [{ message: VALIDATION_MESSAGES.invalid }] },
+    });
+    expect(issues(saveTemplateSchema.safeParse({ template, replace: "yes" }))).toEqual([
+      { message: VALIDATION_MESSAGES.invalid, path: "replace" },
+    ]);
+  });
+
+  it("changes its contents, or archives or restores it — never both, nor anything else", () => {
+    expect(changeTemplateSchema.parse({ template })).toEqual({
+      template: { ...template, items: [READ], advice: null },
+    });
+    expect(changeTemplateSchema.parse({ active: false })).toEqual({ active: false });
+    for (const change of [{ template, active: true }, { active: "no" }, {}]) {
+      expect(changeTemplateSchema.safeParse(change)).toMatchObject({
+        error: { issues: [{ message: VALIDATION_MESSAGES.invalid }] },
+      });
+    }
+  });
+
+  it("reads whose templates by a doctor it can read", () => {
+    expect(templatesQuerySchema.parse({ doctorId: D })).toEqual({ doctorId: D });
+    expect(issues(templatesQuerySchema.safeParse({ doctorId: "nope" }))).toEqual([
       { message: VALIDATION_MESSAGES.invalid, path: "doctorId" },
     ]);
   });

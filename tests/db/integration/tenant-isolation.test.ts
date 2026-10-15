@@ -40,6 +40,8 @@ const CLINIC_TABLES: readonly { table: string; column: string }[] = [
   { table: "vitals", column: "clinic_id" },
   { table: "prescriptions", column: "clinic_id" },
   { table: "prescription_items", column: "clinic_id" },
+  { table: "prescription_templates", column: "clinic_id" },
+  { table: "prescription_template_items", column: "clinic_id" },
   { table: "audit_logs", column: "clinic_id" },
 ];
 
@@ -60,6 +62,8 @@ let patientId: string;
 let appointmentId: string;
 let visitId: string;
 let doctorId: string;
+/** A's doctor's prescription template (0023). */
+let templateId: string;
 
 beforeAll(async () => {
   [a, b] = await Promise.all([registerClinic({ clinicName: "Clinic A" }), registerClinic({ clinicName: "Clinic B" })]);
@@ -119,6 +123,18 @@ beforeAll(async () => {
     .from("prescription_items")
     .insert({ clinic_id: a.clinicId, prescription_id: prescription.id, position: 1, medicine: "Amoxicillin" });
   if (unlisted) throw unlisted;
+  // And a template of A's doctor, with a medicine (0023).
+  const { data: template, error: untemplated } = await admin()
+    .from("prescription_templates")
+    .insert({ clinic_id: a.clinicId, doctor_id: doctorId, name: "Viral fever" })
+    .select("id")
+    .single();
+  if (untemplated) throw untemplated;
+  templateId = template.id as string;
+  const { error: unlined } = await admin()
+    .from("prescription_template_items")
+    .insert({ clinic_id: a.clinicId, template_id: templateId, position: 1, medicine: "Paracetamol" });
+  if (unlined) throw unlined;
   developer = await makeDeveloper();
 });
 
@@ -262,6 +278,41 @@ describe("as clinic B's owner, with a valid token", () => {
       p_doctor_id: doctorId,
     });
     expect(own).toMatchObject([{ medicine: "Amoxicillin" }]);
+  });
+
+  it("changes none of A's prescription templates, and makes none in A's doctor's name (0023)", async () => {
+    const { supabase } = b.owner.tenant;
+    const { error } = await supabase.rpc("save_prescription_template", {
+      p_template_id: templateId,
+      p_template: { name: "Planted", items: [{ medicine: "Planted" }], advice: null },
+      p_replace: false,
+    });
+    expect(error?.hint).toBe("RECORD_NOT_FOUND");
+    const { data: archived } = await supabase
+      .from("prescription_templates")
+      .update({ active: false })
+      .eq("id", templateId)
+      .select("id");
+    expect(archived ?? []).toEqual([]);
+    // B's owner's own template is B's, whatever A's doctor is called.
+    const { data: own, error: unowned } = await supabase.rpc("save_prescription_template", {
+      p_template_id: null,
+      p_template: { name: "Viral fever", items: [{ medicine: "Dolo" }], advice: null },
+      p_replace: false,
+    });
+    expect(unowned).toBeNull();
+    const { data: row } = await admin()
+      .from("prescription_templates")
+      .select("clinic_id")
+      .eq("id", (own as { template_id: string }).template_id)
+      .single();
+    expect(row).toEqual({ clinic_id: b.clinicId });
+    const { data: theirs } = await admin()
+      .from("prescription_templates")
+      .select("name, active")
+      .eq("id", templateId)
+      .single();
+    expect(theirs).toEqual({ name: "Viral fever", active: true });
   });
 
   it("prints none of A's prescriptions (R6.4)", async () => {

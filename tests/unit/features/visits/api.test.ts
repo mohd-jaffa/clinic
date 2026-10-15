@@ -49,6 +49,7 @@ const row = {
     height_cm: null,
   },
   prescription: null,
+  previous: null,
 };
 
 /** Two medicines as PostgREST embeds them, out of their places, and who typed them. */
@@ -125,6 +126,7 @@ describe("getVisit (plan §12.2, D195, D202)", () => {
       followUpOn: "2026-10-20",
       vitals: read,
       prescription: null,
+      previousPrescription: null,
     });
     expect(queries).toHaveLength(1);
     const [columns] = argsOf(queries[0], "select")[0] as [string];
@@ -140,10 +142,47 @@ describe("getVisit (plan §12.2, D195, D202)", () => {
     expect(columns).toContain(
       "items:prescription_items(position, medicine, strength, dose, frequency, timing, duration_days, instructions)",
     );
+    expect(columns).toContain("previous:previous_prescription");
     expect(argsOf(queries[0], "eq")).toEqual([
       ["clinic_id", "clinic-1"],
       ["id", "v-1"],
     ]);
+  });
+
+  it("reads the patient's prescription before it, for Repeat (D236)", async () => {
+    const previous = {
+      day: "2026-10-06",
+      doctor_name: "Ravi Kumar",
+      advice: "Rest",
+      items: [
+        {
+          medicine: "Paracetamol",
+          strength: "500 mg",
+          dose: null,
+          frequency: null,
+          timing: null,
+          duration_days: 3,
+          instructions: null,
+        },
+      ],
+    };
+    const { tenant } = tenantWith({ answer: () => ({ data: { ...row, previous } }) });
+    expect((await getVisit(tenant, "v-1")).previousPrescription).toEqual({
+      day: "2026-10-06",
+      doctorName: "Ravi Kumar",
+      advice: "Rest",
+      items: [
+        {
+          medicine: "Paracetamol",
+          strength: "500 mg",
+          dose: null,
+          frequency: null,
+          timing: null,
+          durationDays: 3,
+          instructions: null,
+        },
+      ],
+    });
   });
 
   it("reads one with no appointment, an archived patient and a doctor gone", async () => {

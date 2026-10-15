@@ -140,6 +140,11 @@ const SETTINGS: NavItem = {
 /** Where who is signed in leads: their own name, mobile and password (plan §31.2). */
 export const MY_ACCOUNT_ROUTE = "/settings/account";
 
+/** A doctor's prescription templates, from My account (plan §13, D242): the list, a new one, and one of them. */
+export const TEMPLATES_ROUTE = `${MY_ACCOUNT_ROUTE}/templates`;
+export const NEW_TEMPLATE_ROUTE = `${TEMPLATES_ROUTE}/new`;
+export const templateRoute = (id: string) => `${TEMPLATES_ROUTE}/${id}`;
+
 /** The owner's Plan screen (plan §7.5): where the plan banner's How to renew leads (D74). */
 export const PLAN_ROUTE = `${SETTINGS_ROUTE}/plan`;
 

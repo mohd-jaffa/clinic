@@ -1,3 +1,4 @@
+import { TEMPLATE_MEDICINES_NAMED } from "@/constants/limits";
 import { UI_TEXT } from "@/constants/messages";
 import { PRESCRIPTION_TIMING_LABELS } from "@/constants/statuses";
 
@@ -8,6 +9,8 @@ import type {
   PrescriptionItem,
   PrescriptionItemRow,
   PrescriptionRow,
+  PreviousPrescription,
+  PreviousPrescriptionRow,
 } from "./types";
 
 const { prescription: words } = UI_TEXT;
@@ -64,6 +67,14 @@ export function fromEmbedded(row: EmbeddedPrescriptionRow, doctorUserId: string 
   };
 }
 
+/** The patient's prescription before this visit (D236), under the screen's names. */
+export const fromPrevious = (row: PreviousPrescriptionRow): PreviousPrescription => ({
+  day: row.day,
+  doctorName: row.doctor_name,
+  advice: row.advice,
+  items: row.items.map(toItem),
+});
+
 /** A medicine as its line's title: "Paracetamol 500 mg". */
 export const medicineTitle = (item: Pick<PrescriptionItem, "medicine" | "strength">) =>
   item.strength ? `${item.medicine} ${item.strength}` : item.medicine;
@@ -78,4 +89,22 @@ export function howTaken(item: PrescriptionItem): string {
   ]
     .filter(Boolean)
     .join(" · ");
+}
+
+/** A template's medicines under its name (D241): "Paracetamol, Amoxicillin +1" — or that it is advice alone. */
+export function templateLine(items: readonly PrescriptionItem[]): string {
+  if (items.length === 0) return words.adviceOnly;
+  const named = items.slice(0, TEMPLATE_MEDICINES_NAMED).map((item) => item.medicine);
+  return words.templateMedicines(named, items.length - named.length);
+}
+
+/**
+ * The advice once theirs is added (D238): theirs fills an empty box, joins
+ * what is typed on a new line, and is left out when its words are already
+ * there.
+ */
+export function withAdvice(typed: string | null | undefined, theirs: string | null): string {
+  const current = typed ?? "";
+  if (!theirs || current.includes(theirs.trim())) return current;
+  return current.trim() === "" ? theirs : `${current.trim()}\n${theirs}`;
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { KeyRound, Mail, Smartphone, UserRound } from "lucide-react";
+import { ClipboardList, KeyRound, Mail, Smartphone, UserRound } from "lucide-react";
 import { useState } from "react";
 
 import { Avatar } from "@/components/ui/avatar";
@@ -10,7 +10,7 @@ import { Row, RowIcon, RowList } from "@/components/ui/row";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { UI_TEXT } from "@/constants/messages";
-import { SETTINGS_ROUTE } from "@/constants/navigation";
+import { SETTINGS_ROUTE, TEMPLATES_ROUTE } from "@/constants/navigation";
 import { CLINIC_ROLE_LABELS } from "@/constants/roles";
 import { ReadOnlyNote } from "@/features/subscription/components/ReadOnlyNote";
 import { useReadOnly } from "@/features/subscription/hooks/useReadOnly";
@@ -38,7 +38,7 @@ const THEME_OPTIONS = THEME_PREFERENCES.map((value) => ({ value, label: THEME_PR
  * which asks first. From 1024 px the details and the password stand beside
  * the theme and Sign out. In a view-only clinic the name and mobile cannot be
  * changed, and say why; the password, the theme and Sign out still work
- * (plan §7.2).
+ * (plan §7.2). A doctor finds their prescription templates here (D242).
  */
 export function MyAccount() {
   const { profile, membership } = useAuth();
@@ -106,6 +106,21 @@ export function MyAccount() {
               />
             </RowList>
           </section>
+
+          {membership?.doctorId && (
+            <section aria-labelledby="account-prescriptions">
+              <SectionHeading id="account-prescriptions" title={UI_TEXT.templates.section} />
+              <RowList look="menu">
+                <Row
+                  look="menu"
+                  leading={<RowIcon icon={ClipboardList} />}
+                  title={UI_TEXT.templates.title}
+                  subtitle={UI_TEXT.templates.hint}
+                  href={TEMPLATES_ROUTE}
+                />
+              </RowList>
+            </section>
+          )}
         </div>
 
         <div className="grid grid-cols-1 gap-8">

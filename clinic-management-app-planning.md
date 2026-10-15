@@ -322,6 +322,14 @@ earlier lines are never rewritten.
 | D233 | **Phase 6's journey continues Phase 5's** (the user): the same clinic, its members joined by invite, an assistant among them; the desk sends the walk-in in and marks him done with nothing recorded (To bill); the doctor's Next patient sends the booked patient in; the assistant takes vitals and adds an allergy; the doctor writes the diagnosis; the assistant types the prescription, warned of the allergy at its line and at Save; it prints on the clinic's A5; a review in a week; Next patient with no one waiting closes the visit (`front-desk-journey.spec.ts`). Templates (R6.7) and billing (Phase 8) join it in their rows. | 2026-10-15 |
 | D234 | **The journey proves the doctor's open visit follows the assistant's** (the user): the vitals and the allergy the assistant saves show on the doctor's visit, open on their own device, within its 15-second refresh, without a reload. | 2026-10-15 |
 | D235 | **The journey checks the prescription PDF's paper, name and title** (the user): A5 from the clinic's paper size, "Anita Rao - {day} - Prescription.pdf", its title naming her, opened in a tab of its own and downloaded; what it prints line by line stays with the unit tests. | 2026-10-15 |
+| D236 | **Repeat last shows its date and doctor** (the user): the button reads "Repeat 12 Oct · Dr. Maya Rao" — the patient's latest prescription with a medicine on it, from their visits before this one, by any doctor — and is hidden when there is none. It is read with the visit (`previous_prescription`, 0023), so the tap fills the form with no wait; the planned `GET /api/patients/[id]/last-prescription` is not needed. | 2026-10-15 |
+| D237 | **Repeat last and a template add after what is typed** (the user): their medicines join the end of the list, as a template's do (§13), so nothing typed is lost; a duplicate line is removed by hand. Past 30 medicines nothing is added, and the card says why. | 2026-10-15 |
+| D238 | **Their advice fills the box if it is empty, else joins it on a new line** (the user) — unless the same words are already there. | 2026-10-15 |
+| D239 | **The buttons are in view** (the user): **Repeat** and **Templates** above the medicines; **Save as template** beside Add medicine once there is a medicine, for the doctor (D240). | 2026-10-15 |
+| D240 | **Only the doctor saves, edits and archives a template** (the user): templates are theirs; whoever types for them (`prescriptions.write`) applies them and changes none. | 2026-10-15 |
+| D241 | **A template is picked from a sheet** (the user): **Templates** opens the visit doctor's templates by name, each with its medicines under it ("Paracetamol, Amoxicillin +1"); one tap applies it and closes the sheet. | 2026-10-15 |
+| D242 | **My account holds the doctor's templates** (the user): a **Prescription templates** row, for a member who is a doctor, opens their screen: **New template** starts one from scratch; each opens a screen of its own to change its name, medicines and advice; **Archive** asks first, and **Show archived** brings one back with **Restore**, as the price list does (D80). A template holds a medicine or advice, or both. | 2026-10-15 |
+| D243 | **A template saved under a name in use asks to replace it** (the user): from a visit or as a new template, "Replace your template 'Viral fever'?" — yes takes its medicines and advice. Renaming one to a name in use, or restoring one whose name is taken, is refused (`TEMPLATE_NAME_TAKEN`). | 2026-10-15 |
 
 ## 3. Users and roles
 
@@ -469,8 +477,9 @@ uses a link — Q18.)
 ### 5.4 My account — `/settings/account`
 
 Full name, mobile, theme (System, Light, Dark — D36; kept per device), change
-password (current + new), sign out (asks first). Changing the sign-in email is
-**later**. Name, mobile and the password each open a sheet of their own; the
+password (current + new), sign out (asks first), and for a doctor their
+**prescription templates** (`/settings/account/templates`, D242). Changing the
+sign-in email is **later**. Name, mobile and the password each open a sheet of their own; the
 theme switches on the screen (D72). The Settings index (`/settings`) leads to
 it, then to the clinic's setup and the owner's screens, each shown to those
 who may open it (D71).
@@ -1163,12 +1172,21 @@ recorded as `entered_by` (§8.2 rule 4, D45):
   where it is added (D213).
 - **Repeat last prescription (D54):** one tap copies this patient's most
   recent prescription — from any doctor the current doctor may see — into
-  this visit, to edit before saving.
+  this visit, to edit before saving. The button names its day and doctor
+  ("Repeat 12 Oct · Dr. Maya Rao") and is hidden when there is none; it is
+  the latest with a medicine on it, from the visits before this one, read
+  with the visit (D236).
 - **Templates (D54):** a doctor saves the current items and advice as a named
   template ("Post-extraction", "Viral fever") and applies one in a tap; a
   template adds its items to what is already there. Templates belong to the
   doctor (`prescription_templates`), are edited or archived in My account,
-  and are offered to whoever types for that doctor.
+  and are offered to whoever types for that doctor. Only the doctor saves,
+  edits or archives one (D240); **Templates** opens a sheet of them, each
+  with its medicines (D241); a name in use asks to replace it (D243).
+- **Adding to what is typed (D237, D238):** Repeat and a template add their
+  medicines after those typed, up to 30, and their advice fills an empty box
+  or joins it on a new line. **Repeat** and **Templates** stand above the
+  medicines, **Save as template** beside Add medicine (D239).
 - **Allergy check:** if a medicine's name contains an active allergy's label,
   the line shows a warning before saving (a text match, not a clinical
   database), and **Save** asks once, naming each match (D212).
@@ -1863,8 +1881,9 @@ prescription_items    id · clinic_id · prescription_id (cascade) · position (
                       · strength · dose · frequency · timing (PRESCRIPTION_TIMINGS)
                       · duration_days (1 – 365) · instructions · created_at (when the
                       line was written as it is: what a suggestion fills, D211)
-prescription_templates id · clinic_id · doctor_id · name · advice · active   (R6.7)
-                      unique (doctor_id, lower(name)) where active
+prescription_templates id · clinic_id · doctor_id · name · advice · active · created_by
+                      · updated_by   unique (clinic_id, doctor_id, lower(name)) where active
+                      (D243)
 prescription_template_items  id · clinic_id · template_id (cascade) · position
                       · the same item columns as prescription_items
 treatments            id · clinic_id · patient_id · doctor_id · name · description · status
@@ -1914,7 +1933,7 @@ expenses              id · clinic_id · category_id · description · amount_pa
 | `register_clinic`, `invite_member`, `accept_invite`, `update_member`, `set_member_active` | accounts and team. |
 | `create_appointment`, `update_appointment`, `change_appointment_status`, `add_walk_in`, `mark_arrived` (token, optional fee bill) | appointments. |
 | `send_in`, `mark_done`, `next_patient`, `back_to_waiting` (each opens, closes or removes the visit with the appointment), `mark_stepped_out`, `mark_urgent` (0019) | the queue (§11.4; D192 – D198, D201). |
-| `start_visit` (from a profile) and `finish_visit` (its Done), `save_vitals` (a visit's, or a waiting patient's, opening their visit), `update_visit` (notes or follow-up) — each section's save refused from an older copy (0020; D202 – D208); `save_prescription` (the whole, by the doctor or `prescriptions.write`, D210 – D215) and `medicine_suggestions` (D211) (0021); `save_prescription_template` (R6.7) | visits. |
+| `start_visit` (from a profile) and `finish_visit` (its Done), `save_vitals` (a visit's, or a waiting patient's, opening their visit), `update_visit` (notes or follow-up) — each section's save refused from an older copy (0020; D202 – D208); `save_prescription` (the whole, by the doctor or `prescriptions.write`, D210 – D215) and `medicine_suggestions` (D211) (0021); `save_prescription_template` (a doctor's own, new or changed, asking before it replaces one of the same name, D240 – D243) and `previous_prescription(visit)` (Repeat's, D236) (0023) | visits. |
 | `import_patients(rows)` | one import batch (§10.5): validated, numbered, audited. |
 | `create_bill`, `void_bill`, `mark_no_charge`, `record_payment`, `void_payment` | money. |
 | `request_clinic_deletion`, `cancel_clinic_deletion` | owner (§9.1). |
@@ -1981,7 +2000,7 @@ Planned order (one or more per tracker row):
                                 visit_recorded (D226), which visit_is_empty now denies;
                                 last_visit_on for the patients list (D228)
 0023_prescription_templates     prescription_templates (+ items), save_prescription_template
-                                (R6.7)
+                                (D240 – D243); previous_prescription for Repeat (D236)
 0024_treatments                 treatments, treatment_sessions, transitions
 0025_follow_ups                 follow_up_contacts, follow_up_items
 0026_bills                      bills, bill_items, financial-year bill_counters, create_bill
@@ -2016,11 +2035,11 @@ take an `Idempotency-Key` header.
 | Team | `GET /api/team` · `POST /api/team/invites` · `POST /api/team/invites/[id]/resend` · `DELETE /api/team/invites/[id]` · `GET, PATCH /api/team/[id]` · `POST /api/team/[id]/active` |
 | Doctors | `GET /api/doctors` (active doctors, for pickers) |
 | Subscription | `GET /api/subscription` (state, dates, prices, contact, history — owner) · `GET /api/subscription/payments/[id]/receipt.pdf` |
-| Patients | `POST /api/patients` · `POST /api/patients/search` (the list, a page at a time: the words, the tab and the cursor in the body, D98) · `POST /api/patients/matches` (the mobile in the body, D98) · `GET, PATCH /api/patients/[id]` · `POST /api/patients/[id]/archive` · `POST /api/patients/[id]/restore` · `GET /api/patients/[id]/summary` (where they stand: the next appointment, D166; each part only with its permission) · `GET /api/patients/[id]/timeline` (their history, a page at a time: visits and the appointments that have none, D167, D225; `?cursor=` counts each part shown; each part only with its permission) · `GET /api/patients/[id]/last-prescription` · `GET, POST /api/patients/import` (the owner's: the import's limits, D128; a batch) · `POST /api/patients/import/matches` (the clinic's patients on a batch's mobiles, in the body, D98) · `GET, POST /api/patients/[id]/alerts` · `PATCH /api/patients/[id]/alerts/[alertId]` |
+| Patients | `POST /api/patients` · `POST /api/patients/search` (the list, a page at a time: the words, the tab and the cursor in the body, D98) · `POST /api/patients/matches` (the mobile in the body, D98) · `GET, PATCH /api/patients/[id]` · `POST /api/patients/[id]/archive` · `POST /api/patients/[id]/restore` · `GET /api/patients/[id]/summary` (where they stand: the next appointment, D166; each part only with its permission) · `GET /api/patients/[id]/timeline` (their history, a page at a time: visits and the appointments that have none, D167, D225; `?cursor=` counts each part shown; each part only with its permission) · `GET, POST /api/patients/import` (the owner's: the import's limits, D128; a batch) · `POST /api/patients/import/matches` (the clinic's patients on a batch's mobiles, in the body, D98) · `GET, POST /api/patients/[id]/alerts` · `PATCH /api/patients/[id]/alerts/[alertId]` |
 | Appointments | `GET, POST /api/appointments` (the calendar's days, `?from&to&doctorId`, at most a week; a booking, with a new patient in its body when one is added, D145) · `GET /api/appointments/booked` (a doctor's taken times on a day, D147) · `GET, PATCH /api/appointments/[id]` (its detail, D160; its notes, or moved, D161) · `POST /api/appointments/[id]/status` (confirmed, scheduled, a no-show — `appointments.edit` — or cancelled with its reason — `appointments.cancel`, D162) · `POST /api/appointments/[id]/arrived` (the token, D173) · `POST /api/appointments/[id]/reminded` (a reminder noted, D180) · `POST /api/appointments/walk-in` (once per key, the token, D171, D173) |
 | Queue | `GET /api/queue` (today's: still to come, arrived, with a doctor, done — and anyone still with a doctor from before; `?doctorId`, D170) · `POST /api/queue/send-in` (what becomes of those in, D192) · `POST /api/queue/done` · `POST /api/queue/next` (D193, D196) · `POST /api/queue/waiting` (back to waiting, D197) · `POST /api/queue/stepped-out` (D198) · `POST /api/queue/urgent` (D201) |
 | Visits | `POST /api/visits` (New visit, D204) · `GET, PATCH /api/visits/[id]` (a section, with the copy read, D206) · `PUT /api/visits/[id]/vitals` · `POST /api/visits/[id]/done` (a profile visit's Done) · `PUT /api/appointments/[id]/vitals` (a waiting patient's, D203) · `POST /api/visits/[id]/no-charge` |
-| Prescriptions | `PUT /api/visits/[id]/prescription` (whole, with the copy read, D210; the visit's own read carries it) · `GET /api/visits/[id]/prescription.pdf` (to open and print; `?download=1` to save, D221) · `GET /api/prescriptions/medicines?q=&doctorId=` (D211) · `GET, POST /api/prescription-templates` · `PATCH /api/prescription-templates/[id]` |
+| Prescriptions | `PUT /api/visits/[id]/prescription` (whole, with the copy read, D210; the visit's own read carries it) · `GET /api/visits/[id]/prescription.pdf` (to open and print; `?download=1` to save, D221) · `GET /api/prescriptions/medicines?q=&doctorId=` (D211) · `GET /api/prescription-templates?doctorId=` (a doctor's, archived too, with their medicines; for the doctor and `prescriptions.write`, D241) · `POST /api/prescription-templates` (the doctor's own; `replace` once asked, D243) · `PATCH /api/prescription-templates/[id]` (its name, medicines and advice, or archived or restored, D242) |
 | Treatments | `GET, POST /api/treatments` · `PATCH /api/treatments/[id]` · `POST /api/treatments/[id]/status` |
 | Follow-ups | `GET /api/follow-ups` · `GET /api/follow-ups/counts` · `POST /api/follow-ups/contacts` |
 | Billing | `GET /api/to-bill` · `GET, POST /api/bills` · `GET /api/bills/[id]` · `POST /api/bills/[id]/void` · `GET /api/bills/[id]/bill.pdf` · `GET, POST /api/payments` · `POST /api/payments/[id]/void` · `GET /api/outstanding` |
@@ -2069,13 +2088,15 @@ Items are filtered by permission (`NAVIGATION` in `src/constants/navigation.ts`)
 | `/team` · `/team/[id]` | Team, member | team.manage |
 | `/settings` | Settings index | signed in |
 | `/settings/account` | My account | signed in |
+| `/settings/account/templates` · `/settings/account/templates/new` · `/settings/account/templates/[id]` | A doctor's prescription templates (D242) | a doctor |
 | `/settings/clinic` · `/settings/price-list` · `/settings/appointment-types` · `/settings/expense-categories` · `/settings/closures` | Clinic setup | settings.manage |
 | `/settings/plan` · `/settings/activity` · `/settings/import` · `/settings/export` · `/settings/delete-clinic` | Plan and receipts, activity, import, export, deletion request | owner |
 | `/admin/*` | Developer console | DEV |
 | `/offline` · not-found · error | System screens | — |
 
 Create and edit forms are **sheets** (bottom sheet on a phone, side panel on a
-desktop), except the visit workspace and the new bill, which are screens.
+desktop), except the visit workspace, a prescription template (D242) and the
+new bill, which are screens.
 
 ## 32. Design system and UI rules
 
@@ -2578,7 +2599,7 @@ in the row's one commit (D136).
 | R6.4 | `lib/pdf` letterhead (A4 and A5, footer) and the prescription PDF; download, print (D218 – D224: clinic on top and the doctor under it, a numbered list, black and grey, Print opens the PDF, once saved, the file's name, English letters now); share with R6.8 (D183) | §13, §33 | — | DONE (2026-10-14) |
 | R6.5 | `0022_patient_timeline`; patient timeline with visits and prescriptions; the patients list's last visit (D101; D225 – D231: one list, a visit standing for its appointment; what it found and its medicines; opening its screen, which leads back; the last visit for everyone who sees the patient, on a line of its own; two columns on a desktop) | §10.3, §10.2 | — | DONE (2026-10-15) |
 | R6.6 | Integration + E2E: queue → visit → prescription PDF (D232 – D235: the visit's moves and saves at once; the journey continued, an assistant in it; the doctor's visit follows the assistant's; the PDF's paper, name and title) | §34 | — | DONE (2026-10-15) |
-| R6.7 | `0023_prescription_templates`; Repeat last prescription; prescription templates (save, apply, edit, archive) | §13 | — | TODO |
+| R6.7 | `0023_prescription_templates`; Repeat last prescription; prescription templates (save, apply, edit, archive) (D236 – D243: Repeat names its day and doctor, both add after what is typed, advice on a new line, the buttons in view, only the doctor saves, a sheet to pick, My account's screens, a name in use asks to replace) | §13 | — | DONE (2026-10-15) |
 | R6.8 | Send prescription on WhatsApp, with the share helper: the PDF through the share sheet, or downloaded on a desktop (D183) | §22.1 | — | TODO |
 | R6.9 | `0019_urgent`: Urgent, a tag on a waiting patient kept through their visit; Next patient still goes by token (D201) | §11.4 | R6.1 | DONE (2026-10-13) |
 
@@ -2765,7 +2786,7 @@ with its own section here first.
 - **GST billing**; **pre-printed-pad printing** and **80 mm thermal
   receipts** (D28); **Google / phone-OTP sign-in**; **changing the sign-in
   email**; **realtime queue**; **OpenAPI**; **Sentry/BugSnag**; **multiple
-  languages**; **prescription templates**; **a per-clinic temperature unit**;
+  languages**; **a per-clinic temperature unit**;
   **Indian scripts in the PDFs** (Noto Sans for Hindi, Malayalam, Tamil,
   Telugu, Kannada, Bengali, Gujarati, Punjabi and Odia, D224).
 

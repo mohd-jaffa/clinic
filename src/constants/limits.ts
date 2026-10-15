@@ -25,6 +25,9 @@ export const MAX_PAGE_START = 100_000;
 /** How many of a visit's medicines its row in the history names before "+2" (D226). */
 export const HISTORY_MEDICINES_NAMED = 2;
 
+/** How many of a template's medicines its row in the Templates sheet names before "+1" (D241). */
+export const TEMPLATE_MEDICINES_NAMED = 2;
+
 /** What a list's search box may send. */
 export const MAX_SEARCH_LENGTH = 100;
 
@@ -81,6 +84,8 @@ export const TEXT_LIMITS = {
   instructions: 200,
   /** The prescription's advice: diet, rest, what to watch for. */
   advice: 2000,
+  /** A prescription template's name (D242): "Viral fever" — a row's title. */
+  templateName: 60,
 } as const;
 
 /** How many medicines one prescription holds (plan §13): more than any visit writes. 0021's CHECK. */

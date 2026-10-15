@@ -2,12 +2,15 @@ import { describe, expect, it } from "vitest";
 
 import {
   fromEmbedded,
+  fromPrevious,
   howTaken,
   medicineTitle,
+  templateLine,
   toContent,
   toItem,
   toItemRow,
   toRow,
+  withAdvice,
 } from "@/features/prescriptions/content";
 import type { PrescriptionItem, PrescriptionItemRow } from "@/features/prescriptions/types";
 
@@ -104,5 +107,37 @@ describe("a medicine read out", () => {
     expect(howTaken(ITEM)).toBe("1 tab · 1-0-1 · After food · 5 days");
     expect(howTaken({ ...BARE, durationDays: 1, timing: "BEDTIME" })).toBe("Bedtime · 1 day");
     expect(howTaken(BARE)).toBe("");
+  });
+});
+
+describe("the prescription before this visit (D236)", () => {
+  it("is named the screen's way", () => {
+    expect(fromPrevious({ day: "2026-10-12", doctor_name: "Maya Rao", advice: "Rest", items: [ROW] })).toEqual({
+      day: "2026-10-12",
+      doctorName: "Maya Rao",
+      advice: "Rest",
+      items: [ITEM],
+    });
+  });
+});
+
+describe("a template's line (D241)", () => {
+  it("names two medicines and counts the rest, or says it is advice alone", () => {
+    expect(templateLine([ITEM])).toBe("Paracetamol");
+    expect(templateLine([ITEM, BARE])).toBe("Paracetamol, Cetirizine");
+    expect(templateLine([ITEM, BARE, ITEM])).toBe("Paracetamol, Cetirizine +1");
+    expect(templateLine([])).toBe("Advice only");
+  });
+});
+
+describe("advice added to what is typed (D238)", () => {
+  it("fills an empty box, joins what is typed on a new line, and leaves out words already there", () => {
+    expect(withAdvice("", "Rest")).toBe("Rest");
+    expect(withAdvice("  ", "Rest")).toBe("Rest");
+    expect(withAdvice("Fluids ", "Rest")).toBe("Fluids\nRest");
+    expect(withAdvice("Fluids\nRest well", "Rest well ")).toBe("Fluids\nRest well");
+    expect(withAdvice("Fluids", null)).toBe("Fluids");
+    expect(withAdvice(undefined, "Rest")).toBe("Rest");
+    expect(withAdvice(null, null)).toBe("");
   });
 });

@@ -118,6 +118,39 @@ describe("a read-only clinic", () => {
     expect(unsuggested).toBeNull();
   });
 
+  it("refuses a template in the database, and still reads them (0023)", async () => {
+    const { supabase } = clinic.owner.tenant;
+    const { error } = await supabase.rpc("save_prescription_template", {
+      p_template_id: null,
+      p_template: { name: "Viral fever", items: [{ medicine: "Paracetamol" }], advice: null },
+      p_replace: false,
+    });
+    expect(error?.hint).toBe("CLINIC_PLAN_EXPIRED");
+    for (const table of ["prescription_templates", "prescription_template_items"]) {
+      const { error: unread } = await supabase.from(table).select("id");
+      expect(unread, table).toBeNull();
+    }
+    // The owner's template, made before the plan ran out, is neither archived nor read as gone.
+    const { data: doctor } = await admin()
+      .from("doctors")
+      .select("id")
+      .eq("member_id", clinic.owner.session.membership!.id)
+      .single();
+    const { data: made } = await admin()
+      .from("prescription_templates")
+      .insert({ clinic_id: clinic.clinicId, doctor_id: doctor!.id, name: "Kept" })
+      .select("id")
+      .single();
+    const { data: archived } = await supabase
+      .from("prescription_templates")
+      .update({ active: false })
+      .eq("id", made!.id)
+      .select("id");
+    expect(archived).toEqual([]);
+    const { data: kept } = await supabase.from("prescription_templates").select("active").eq("id", made!.id).single();
+    expect(kept).toEqual({ active: true });
+  });
+
   it("refuses a write through a route with CLINIC_PLAN_EXPIRED, and still reads", async () => {
     const write = await withClinicRoute(request("POST"), { access: "settings.manage" }, async () => ({}));
     expect(write.status).toBe(422);

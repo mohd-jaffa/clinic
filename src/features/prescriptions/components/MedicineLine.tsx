@@ -13,7 +13,7 @@ import { TEXT_LIMITS } from "@/constants/limits";
 import { UI_TEXT } from "@/constants/messages";
 import { PRESCRIPTION_TIMING_LABELS, PRESCRIPTION_TIMINGS } from "@/constants/statuses";
 import type { PatientAlert } from "@/features/patients/types";
-import type { PrescriptionInput, PrescriptionItemInput } from "@/lib/validation";
+import type { PrescriptionItemInput } from "@/lib/validation";
 
 import { allergiesIn } from "../allergies";
 import { howTaken, medicineTitle } from "../content";
@@ -21,6 +21,11 @@ import { useMedicineSuggestions } from "../hooks/useMedicineSuggestions";
 import type { PrescriptionItem } from "../types";
 
 const { prescription: words } = UI_TEXT;
+
+/** A form of medicines, one line each: a prescription's, or a template's (D242). */
+export interface MedicinesInput {
+  items: PrescriptionItemInput[];
+}
 
 /** A medicine not yet written: every field blank. */
 export const EMPTY_LINE: PrescriptionItemInput = {
@@ -65,7 +70,7 @@ const TIMING_OPTIONS = PRESCRIPTION_TIMINGS.map((timing) => ({
  * tapped again is none), the days (D217) and instructions. Moved up or down,
  * or removed, from its head.
  */
-export function MedicineLine({
+export function MedicineLine<Input extends MedicinesInput>({
   form,
   index,
   count,
@@ -74,10 +79,11 @@ export function MedicineLine({
   onMove,
   onRemove,
 }: {
-  form: UseFormReturn<PrescriptionInput>;
+  /** The form the line is in: a prescription's, or a template's. */
+  form: UseFormReturn<Input>;
   index: number;
   count: number;
-  /** The visit's doctor: their own lines come first among the suggestions. */
+  /** Whose lines come first among the suggestions: the visit's doctor, or the template's. */
   doctorId: string;
   allergies: readonly PatientAlert[];
   onMove: (to: number) => void;
@@ -88,7 +94,8 @@ export function MedicineLine({
     register,
     setValue,
     formState: { errors, isSubmitted },
-  } = form;
+    // Only its own line is reached, under `items`, whatever else the form holds.
+  } = form as unknown as UseFormReturn<MedicinesInput>;
   const n = index + 1;
   const headId = useId();
   const warningId = useId();

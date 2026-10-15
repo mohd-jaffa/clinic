@@ -3353,3 +3353,89 @@ Sharing it to WhatsApp comes with the share helper in R6.8 (D183).
 
 ### Blockers
 - None.
+
+## 2026-10-15 — R6.7: Repeat last prescription, and prescription templates
+
+### Added
+- **Migration `0023_prescription_templates.sql`** (plan §13; D54, D236 –
+  D243):
+  - `prescription_templates` (a doctor's own: name, advice, active, who made
+    and changed it) and `prescription_template_items` (the same columns as a
+    prescription's medicines, in order), each hanging from the clinic, with
+    RLS: read by the doctor and by `prescriptions.write`; archived and
+    restored by the doctor alone (`active` only), while the clinic can
+    write. One active name for each doctor (a partial unique index).
+  - `save_prescription_template(id, template, replace)`: the caller's own,
+    as a doctor, new or changed, whole; it holds a medicine or advice; a new
+    one under a name in use replaces that one only when `replace` says it
+    was asked; a rename into a name in use is refused
+    (`TEMPLATE_NAME_TAKEN`), and so is the same name made twice at once.
+  - `previous_prescription(visit)`: a computed field, run as the member —
+    the patient's latest prescription with a medicine, from the visits
+    before this one, by any doctor, with its day and doctor's name — on
+    0022's index of a patient's visits, in its order.
+- **Repeat** (D236 – D239): the visit's read carries the prescription
+  before; the Prescription card's **Repeat 12 Oct · Dr. Maya Rao** adds its
+  medicines after those typed and its advice on a new line (or fills an
+  empty box), and says so; not past 30 medicines. Hidden when there is none.
+- **Templates** on the visit (D240, D241): **Templates** opens a sheet of
+  the visit doctor's templates in use, each with its medicines, one tap
+  adding it the same way; whoever types for the doctor sees "Maya Rao’s
+  templates". **Save as template** beside Add medicine, for the visit's
+  doctor once there is a medicine, checks the lines, then names what is on
+  the screen; a name in use asks "Replace your template …?" (D243).
+- **My account → Prescription templates** (D242), for a doctor:
+  `/settings/account/templates` lists them, **New template**, archived ones
+  with **Restore**; each opens `/settings/account/templates/[id]` (or
+  `/new`) to change its name, medicines (the prescription's own lines, with
+  the doctor's suggestions) and advice, and **Archive**, asked first.
+- **API:** `GET /api/prescription-templates?doctorId=`, `POST
+  /api/prescription-templates`, `PATCH /api/prescription-templates/[id]`
+  (`features/prescriptions/templates.ts`, audited: the name by value, the
+  medicines and advice by name).
+- **Words:** `TEMPLATE_NAME_TAKEN`, `TEMPLATES_LOAD_FAILED`, the template
+  validation messages, `UI_TEXT.prescription`'s Repeat and template words,
+  and `UI_TEXT.templates`.
+
+### Changed
+- `MedicineLine` serves any form of medicines — a prescription's or a
+  template's.
+- `CatalogueScreen` takes where its back arrow leads (Settings unless said).
+- **Plan:** D236 – D243; §5.4, §13, §28.5, §28.7, §29, §30, §31.2 (the screens, and
+  a template as a screen); `GET /api/patients/[id]/last-prescription` is no
+  longer planned, the visit's read carrying it; "prescription templates"
+  taken off §42's Later list, now built; R6.7 done.
+- `DESIGN.md`: Repeat and templates on the prescription, the Save as
+  template sheet, My account's Prescriptions row, the templates list and a
+  template's screen.
+
+### Speed (plan §37)
+- The visit screen still waits on one query after the session: Repeat's
+  prescription is a computed field of it.
+- The Templates sheet waits on one read, made once it is opened; the
+  templates list and a template's screen on the session and one read.
+- Saving a template: the function and the audit row (a name in use, asked
+  and replaced: the refusal, then those two). Archiving or restoring: the
+  template, the change, the audit row.
+- Every new read is on an index led by the clinic: a doctor's templates
+  `(clinic_id, doctor_id)`; the name `(clinic_id, doctor_id, lower(name))
+  where active`; the template lines' clinic `(clinic_id, template_id)`;
+  Repeat on `visits (clinic_id, patient_id, created_at desc, id desc)`
+  (checked with EXPLAIN).
+
+### Validation
+- Typecheck, lint, format check passed.
+- Unit and integration tests passed (3083), coverage 100%. One run failed
+  `appointment-detail.test.ts`'s check that the booked time is not after the
+  test's own clock: the database's clock, in Docker, ran 46 ms ahead. It
+  passed three runs alone and the next full run; not this change's.
+- E2E passed (phone, desktop), with axe: 126 passed, 8 skipped (run at one
+  width only). The journey now saves the prescription as a template and, at
+  the follow-up, Repeats it; `prescription-templates.spec.ts` is new.
+
+### Found while building
+- The template screen's medicine blocks, on the page's own ground, showed
+  no edges; they now sit in a Prescription card, as on a visit.
+
+### Blockers
+- None.

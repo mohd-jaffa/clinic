@@ -2,6 +2,8 @@ import { randomUUID } from "node:crypto";
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import { PATCH as templateRoute } from "@/app/api/prescription-templates/[id]/route";
+import { GET as templatesRoute, POST as newTemplateRoute } from "@/app/api/prescription-templates/route";
 import { GET as medicinesRoute } from "@/app/api/prescriptions/medicines/route";
 import { PUT as prescriptionRoute } from "@/app/api/visits/[id]/prescription/route";
 import { GET as prescriptionPdfRoute } from "@/app/api/visits/[id]/prescription.pdf/route";
@@ -19,7 +21,7 @@ import {
 } from "@tests/support/integration";
 
 /**
- * The permission matrix, so far (plan §34.3, R1.11, R3.8, R4.7, R5.1, R6.1, R6.3, R6.4): every
+ * The permission matrix, so far (plan §34.3, R1.11, R3.8, R4.7, R5.1, R6.1, R6.3, R6.4, R6.7): every
  * permission the schema enforces yet, allowed and refused — by the route
  * guard, and by RLS or a function with the member's own token. Each phase
  * adds the rows its tables bring; the patients routes themselves are asked in
@@ -614,6 +616,100 @@ describe("a prescription: the visit's doctor or prescriptions.write, by the rout
       .delete()
       .eq("clinic_id", clinic.clinicId);
     expect(deleted?.code).toBe("42501");
+  });
+});
+
+describe("a doctor's prescription templates: theirs alone, read by whoever types for them (0023, D240, D241)", () => {
+  type Member = SignedIn & { memberId: string };
+  let doctor: Member;
+  let typist: Member;
+  let reader: Member;
+  let otherDoctor: Member;
+  let doctorId: string;
+
+  const template = (name: string) => ({
+    template: {
+      name,
+      items: [
+        {
+          medicine: "Paracetamol",
+          strength: "",
+          dose: "",
+          frequency: "",
+          timing: "",
+          durationDays: "",
+          instructions: "",
+        },
+      ],
+      advice: "",
+    },
+  });
+
+  /** One of the templates routes, asked by one member as their browser asks it. */
+  async function ask(member: SignedIn, method: "GET" | "POST" | "PATCH", body?: unknown, id = "") {
+    const url = `http://localhost/api/prescription-templates${id && `/${id}`}${method === "GET" ? `?doctorId=${doctorId}` : ""}`;
+    const request = new Request(url, {
+      method,
+      headers: { authorization: `Bearer ${member.session.accessToken}`, "content-type": "application/json" },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+    const response =
+      method === "GET"
+        ? await templatesRoute(request)
+        : method === "POST"
+          ? await newTemplateRoute(request)
+          : await templateRoute(request, { params: Promise.resolve({ id }) });
+    return { status: response.status, body: await response.json() };
+  }
+
+  beforeAll(async () => {
+    [doctor, typist, reader, otherDoctor] = await Promise.all([
+      addMember(clinic.clinicId, { role: "DOCTOR", permissions: ["patients.view", "visits.view"] }),
+      addMember(clinic.clinicId, { permissions: ["patients.view", "visits.view", "prescriptions.write"] }),
+      addMember(clinic.clinicId, { permissions: ["patients.view", "visits.view"] }),
+      addMember(clinic.clinicId, { role: "DOCTOR", permissions: ["patients.view", "visits.view"] }),
+    ]);
+    const { data: row } = await admin().from("doctors").select("id").eq("member_id", doctor.memberId).single();
+    doctorId = row!.id as string;
+  });
+
+  it("are made and changed through their routes by their doctor, and by no one else", async () => {
+    const made = await ask(doctor, "POST", template("Viral fever"));
+    expect(made).toMatchObject({ status: 200, body: { data: { name: "Viral fever", active: true } } });
+    const id = (made.body as { data: { id: string } }).data.id;
+    await expect(ask(typist, "POST", template("Typed"))).resolves.toMatchObject({
+      status: 403,
+      body: { error: { code: "AUTH_PERMISSION_DENIED" } },
+    });
+    await expect(ask(receptionist, "POST", template("Desk"))).resolves.toMatchObject({ status: 403 });
+    await expect(ask(otherDoctor, "PATCH", { active: false }, id)).resolves.toMatchObject({
+      status: 404,
+      body: { error: { code: "RECORD_NOT_FOUND" } },
+    });
+    await expect(ask(typist, "PATCH", template("Planted"), id)).resolves.toMatchObject({ status: 403 });
+    await expect(ask(doctor, "PATCH", template("Fever"), id)).resolves.toMatchObject({
+      status: 200,
+      body: { data: { id, name: "Fever" } },
+    });
+    await expect(ask(doctor, "POST", template("fever"))).resolves.toMatchObject({
+      status: 409,
+      body: { error: { code: "TEMPLATE_NAME_TAKEN" } },
+    });
+    await expect(ask(doctor, "PATCH", { active: false }, id)).resolves.toMatchObject({
+      status: 200,
+      body: { data: { id, active: false } },
+    });
+  });
+
+  it("are read by their doctor and prescriptions.write, and by no one else", async () => {
+    for (const member of [doctor, typist]) {
+      const { status, body } = await ask(member, "GET");
+      expect(status).toBe(200);
+      expect((body as { data: unknown[] }).data).toHaveLength(1);
+    }
+    for (const member of [reader, otherDoctor, receptionist]) {
+      await expect(ask(member, "GET")).resolves.toEqual({ status: 200, body: { success: true, data: [] } });
+    }
   });
 });
 
