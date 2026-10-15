@@ -3483,3 +3483,99 @@ Sharing it to WhatsApp comes with the share helper in R6.8 (D183).
 
 ### Blockers
 - None.
+
+## 2026-10-15 — R7.1: treatments in the database
+
+Phase 7 starts with treatments in the database. `0024_treatments` adds the
+treatment, its sessions, the status moves and the functions the visit screen
+and the profile will call (R7.2). Asked of the user first: D248 – D255.
+
+### Added
+- `supabase/migrations/0024_treatments.sql`:
+  - `treatments`: a course of care across visits — the patient, the doctor,
+    a name, a description, an estimated cost (information only, D253), the
+    days it started, was completed and is next due, and, when cancelled, when,
+    by whom and why (D250). Never deleted: completed or cancelled.
+    - It starts planned, or in progress at once. Started in a visit, it is
+      that visit's doctor's and names the visit; begun at once, that visit is
+      its first session. From the profile, a doctor is picked (D252).
+    - `check_treatment`: whose it is and where it began never change; it is
+      started on the day it goes in progress; completing and cancelling are
+      stamped; a next due day is today or later; its doctor is active.
+      Closed, it has no next due day and keeps its doctor (D252).
+  - **Statuses:** `treatment_status_next()`, kept equal to
+    `TREATMENT_STATUS_TRANSITIONS` by tests/db.
+  - `treatment_sessions`: one per treatment and visit, with a note.
+  - **Functions,** each checking `visits.edit`, the doctor scope, an archived
+    patient and that the clinic can write, and handing back what it changed
+    for the audit row:
+    - `create_treatment`;
+    - `update_treatment`: name, description, cost, next due day and doctor,
+      from the copy read (`TREATMENT_CHANGED`, D251);
+    - `change_treatment_status`: as the table allows, from the status read;
+      a reason only with a cancellation (D250); a double tap changes nothing
+      more;
+    - `record_treatment_session`: from any of the patient's visits (D249);
+      the first on a planned or on-hold treatment puts it in progress on the
+      visit's day (D248); none on a closed one (`TREATMENT_CLOSED`); its note
+      changed from the copy read (`VISIT_CHANGED`);
+    - `remove_treatment_session`: only while its visit is open
+      (`TREATMENT_SESSION_KEPT`, D254).
+  - **The doctor scope grows** (plan §27.3): a treatment's doctor sees its
+    patient, and handing it to another adds them.
+  - **Read** with `visits.view` within the doctor scope, the cost included
+    (D253); sessions where their treatment is read. Neither table is written
+    but through the functions.
+  - **What a visit holds** (`visit_recorded`): a treatment started in it, or
+    a session, counts; Back to waiting keeps such a visit (D197), and its row
+    in the history no longer says "Nothing recorded" (D226).
+  - **Archiving:** a patient with an open treatment is refused
+    (`PATIENT_HAS_TREATMENTS`, D255).
+- **Constants:** `TREATMENT_STATUSES` with labels and tones,
+  `OPEN_TREATMENT_STATUSES`, `TREATMENT_START_STATUSES`,
+  `TREATMENT_STATUS_TRANSITIONS`; `TEXT_LIMITS` for a treatment's name and
+  description and a session's note; the treatment error codes, mapped as
+  business rules (`TREATMENT_CHANGED` as a conflict).
+
+### Changed
+- **Archiving a patient** refused for an open treatment titles its card with
+  it: "Rohan Mehta has an open treatment: Root canal" — for whoever reads
+  treatments; anyone else reads "Rohan Mehta has an open treatment" (D255,
+  `usePatientArchive`).
+- **Plan:**
+  - D248 – D255 in the decision log;
+  - §10.1 (archive), §14.1 (starting, sessions, changing, who);
+  - §28.5 (the cancellation's columns, a session's `updated_by`), §28.7 (the
+    functions), §29 (0024);
+  - the tracker: R7.1 DONE.
+
+### Speed (§37.1)
+- **Round trips:** each function is one call; the screens and their
+  read-backs come with R7.2. The archive check runs inside the archive's own
+  update, so it adds no round trip.
+- **Indexes,** each leading with `clinic_id` in the read's own order, checked
+  with EXPLAIN:
+  - a patient's treatments, newest first, and the archive check
+    `(clinic_id, patient_id, created_at desc)`; a doctor's
+    `(clinic_id, doctor_id)`;
+  - the visit one was started in `(clinic_id, started_visit_id)` (partial),
+    and a visit's sessions `(clinic_id, visit_id)`, which `visit_recorded`
+    asks;
+  - a treatment's sessions in order `(clinic_id, treatment_id, created_at)`;
+  - `created_by`, `updated_by` and `cancelled_by`.
+
+### Validation
+- Typecheck, lint, format check passed.
+- `tests/db/treatments-migration.test.ts` keeps the statuses, bounds,
+  transitions, open statuses, indexes, functions and policies equal to the
+  app's. `tests/db/integration/treatments.test.ts` (13) proves each rule
+  against the local database; tenant isolation, the permission matrix and
+  read-only have their treatment rows.
+- Unit and integration tests passed (3145), coverage 100%.
+- E2E passed (phone, desktop), with axe: 128 passed, 8 skipped (run at one
+  width only). `patients.spec.ts`'s archive now meets an open treatment
+  first: the receptionist is told there is one, unnamed, and archives once
+  it is cancelled.
+
+### Blockers
+- None.

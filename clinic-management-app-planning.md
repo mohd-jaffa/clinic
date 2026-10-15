@@ -334,6 +334,14 @@ earlier lines are never rewritten.
 | D245 | **On a phone, the share sheet takes the PDF and the message** (the user): "Your prescription from Dr. Maya Rao, Smile Care, 15 Oct." with the file; the person picks WhatsApp and the chat. Some apps drop the message when a file goes with it; the PDF always goes. Should the phone ask for a fresh tap once the PDF is fetched, a card offers **Send**. | 2026-10-15 |
 | D246 | **On a desktop, WhatsApp Web with the message, and the PDF downloaded** (the user): a device without a share sheet for files — any but a touch-first one — opens the patient's chat in a new tab with the message typed, and downloads the PDF; the card says to attach it (§22.1). | 2026-10-15 |
 | D247 | **A prescription sent is not recorded** (the user): as Print and Download, sending writes nothing — the app cannot see whether Send was pressed in WhatsApp. | 2026-10-15 |
+| D248 | **A session starts a planned or on-hold treatment** (the user): the first session recorded on a planned treatment puts it in progress, started on that visit's day; one on an on-hold treatment resumes it. Nobody sets the status by hand for it. | 2026-10-15 |
+| D249 | **Any of the patient's visits may record a session** (the user): a root canal Dr. Rao started can be continued in Dr. Iyer's visit; the session carries its visit's doctor, and the treatment stays Dr. Rao's. | 2026-10-15 |
+| D250 | **A cancellation may say why** (the user): the confirm card has a short reason box ("Patient declined") that may be left empty; the reason shows on the treatment (`cancel_reason`, with `cancelled_at` and `cancelled_by`). | 2026-10-15 |
+| D251 | **A treatment changed from an older copy is refused** (the user), as a visit's sections are (D206): its details and its status are saved from what the screen last read, and a change made meanwhile refuses the save (`TREATMENT_CHANGED`), showing theirs beside what was typed. A session's note is part of its visit (`VISIT_CHANGED`). | 2026-10-15 |
+| D252 | **A treatment's doctor may change while it is open** (the user): started in a visit, it is that visit's doctor's; started from the profile, a doctor is picked. While it is open it can be handed to another doctor, who then sees the patient (§27.3). Once completed or cancelled it keeps its doctor and has no next due day. | 2026-10-15 |
+| D253 | **The estimated cost shows to whoever sees the treatment** (the user): `visits.view`, as the rest of it — information for the talk with the patient, not a bill. | 2026-10-15 |
+| D254 | **A session recorded by mistake is removed while its visit is open** (the user), by `visits.edit`; once the visit is done it stays and only its note is corrected (`TREATMENT_SESSION_KEPT`). A treatment the session started stays started. | 2026-10-15 |
+| D255 | **A patient with an open treatment is not archived until it is completed or cancelled** (the user), as one with an appointment to come (D140): a planned, in-progress or on-hold treatment refuses the archive (`PATIENT_HAS_TREATMENTS`), and the card names the first of them to whoever reads treatments ("Rohan Mehta has an open treatment: Root canal") — to anyone else, only that there is one — so archived patients never fill the follow-ups. | 2026-10-15 |
 
 ## 3. Users and roles
 
@@ -820,7 +828,9 @@ Patient number (`P-1001`, a per-clinic counter, never reused), and:
   says when and by whom, with **Restore** (D123, D124), which asks nothing
   (D125). Both need `patients.edit` and are audited (ARCHIVE, RESTORE). A
   patient with an appointment still to come is not archived until it is
-  cancelled or moved; the card names its day (D140).
+  cancelled or moved; the card names its day (D140). Nor is one with an open
+  treatment, until it is completed or cancelled; the card names it to whoever
+  reads treatments (D255).
 
 ### 10.2 Patients list — `/patients`
 
@@ -1228,6 +1238,23 @@ Statuses `PLANNED`, `IN_PROGRESS`, `ON_HOLD`, `COMPLETED`, `CANCELLED`
 
 A visit that works on a treatment records a **session** (`treatment_sessions`:
 the visit, a note) so the treatment's history reads visit by visit.
+
+- **Starting one:** planned, or in progress at once. Started in a visit, it
+  is that visit's doctor's, and begun at once that visit is its first
+  session; from the profile a doctor is picked (D252). It is started on the
+  day it goes in progress; completing it stamps the day.
+- **Sessions:** one per treatment and visit, from any of the patient's
+  visits (D249). The first on a planned or on-hold treatment puts it in
+  progress, started on the visit's day (D248); a completed or cancelled one
+  takes none (`TREATMENT_CLOSED`). One recorded by mistake is removed while
+  its visit is open; after that only its note is corrected (D254).
+- **Changing one:** its name, description and estimated cost, from the copy
+  the screen read (D251). While it is open, its next due day (today or
+  later) and its doctor too (D252); once completed or cancelled it keeps its
+  doctor and has no next due day. A cancellation may carry a reason (D250).
+- **Who:** read with `visits.view`, within the doctor scope, the estimated
+  cost included (D253); written with `visits.edit`, through 0024's
+  functions only. A patient with an open treatment is not archived (D255).
 
 ### 14.2 Follow-ups
 
@@ -1896,9 +1923,10 @@ prescription_template_items  id · clinic_id · template_id (cascade) · positio
                       · the same item columns as prescription_items
 treatments            id · clinic_id · patient_id · doctor_id · name · description · status
                       · estimated_cost_paise · started_on · completed_on · next_due_on
+                      (open only) · cancel_reason · cancelled_at · cancelled_by (D250)
                       · started_visit_id · created_by · updated_by
 treatment_sessions    id · clinic_id · treatment_id · visit_id · note · created_by
-                      unique (treatment_id, visit_id)
+                      · updated_by   unique (treatment_id, visit_id)
 follow_up_contacts    id · clinic_id · patient_id · treatment_id · visit_id · outcome
                       · note · snooze_until · contacted_by · contacted_at
 ```
@@ -1942,6 +1970,7 @@ expenses              id · clinic_id · category_id · description · amount_pa
 | `create_appointment`, `update_appointment`, `change_appointment_status`, `add_walk_in`, `mark_arrived` (token, optional fee bill) | appointments. |
 | `send_in`, `mark_done`, `next_patient`, `back_to_waiting` (each opens, closes or removes the visit with the appointment), `mark_stepped_out`, `mark_urgent` (0019) | the queue (§11.4; D192 – D198, D201). |
 | `start_visit` (from a profile) and `finish_visit` (its Done), `save_vitals` (a visit's, or a waiting patient's, opening their visit), `update_visit` (notes or follow-up) — each section's save refused from an older copy (0020; D202 – D208); `save_prescription` (the whole, by the doctor or `prescriptions.write`, D210 – D215) and `medicine_suggestions` (D211) (0021); `save_prescription_template` (a doctor's own, new or changed, asking before it replaces one of the same name, D240 – D243) and `previous_prescription(visit)` (Repeat's, D236) (0023) | visits. |
+| `create_treatment` (in a visit, the visit's doctor's and, begun at once, its first session; or from the profile), `update_treatment` (its details, from the copy read, D251), `change_treatment_status` (as `treatment_status_next()` allows, a reason with a cancellation, D250), `record_treatment_session` (from any of the patient's visits, starting a planned or on-hold one, D248, D249), `remove_treatment_session` (while its visit is open, D254) (0024) | treatments (§14.1). |
 | `import_patients(rows)` | one import batch (§10.5): validated, numbered, audited. |
 | `create_bill`, `void_bill`, `mark_no_charge`, `record_payment`, `void_payment` | money. |
 | `request_clinic_deletion`, `cancel_clinic_deletion` | owner (§9.1). |
@@ -2009,7 +2038,10 @@ Planned order (one or more per tracker row):
                                 last_visit_on for the patients list (D228)
 0023_prescription_templates     prescription_templates (+ items), save_prescription_template
                                 (D240 – D243); previous_prescription for Repeat (D236)
-0024_treatments                 treatments, treatment_sessions, transitions
+0024_treatments                 treatments, treatment_sessions, transitions, their
+                                functions (D248 – D254); a visit with a treatment started or
+                                worked on in it holds something (D197); a patient with an open
+                                treatment is not archived (D255)
 0025_follow_ups                 follow_up_contacts, follow_up_items
 0026_bills                      bills, bill_items, financial-year bill_counters, create_bill
                                 (and the fee at arrival in mark_arrived), void_bill,
@@ -2615,7 +2647,7 @@ in the row's one commit (D136).
 
 | ID | Work | Source | Waits on | Status |
 |---|---|---|---|---|
-| R7.1 | `0024_treatments`: treatments, sessions, transitions | §14.1 | — | TODO |
+| R7.1 | `0024_treatments`: treatments, sessions, transitions (D248 – D255: a session starts a planned or on-hold one, from any of the patient's visits; a cancellation may say why; refused from an older copy; its doctor changes while open; the cost for whoever sees it; a session removed only while its visit is open; no archive with one open) | §14.1 | — | DONE (2026-10-15) |
 | R7.2 | Treatments in the visit workspace and on the profile | §14.1 | — | TODO |
 | R7.3 | `0025_follow_ups`: `follow_up_items`, contacts | §14.2 | — | TODO |
 | R7.4 | Follow-ups screen: tabs with counts, Call, WhatsApp, Book, Mark contacted | §14.3 | — | TODO |

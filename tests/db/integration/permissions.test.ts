@@ -21,7 +21,7 @@ import {
 } from "@tests/support/integration";
 
 /**
- * The permission matrix, so far (plan §34.3, R1.11, R3.8, R4.7, R5.1, R6.1, R6.3, R6.4, R6.7): every
+ * The permission matrix, so far (plan §34.3, R1.11, R3.8, R4.7, R5.1, R6.1, R6.3, R6.4, R6.7, R7.1): every
  * permission the schema enforces yet, allowed and refused — by the route
  * guard, and by RLS or a function with the member's own token. Each phase
  * adds the rows its tables bring; the patients routes themselves are asked in
@@ -710,6 +710,68 @@ describe("a doctor's prescription templates: theirs alone, read by whoever types
     for (const member of [reader, otherDoctor, receptionist]) {
       await expect(ask(member, "GET")).resolves.toEqual({ status: 200, body: { success: true, data: [] } });
     }
+  });
+});
+
+describe("treatments: visits.view reads, visits.edit writes, within the doctor scope (0024)", () => {
+  type Member = SignedIn & { memberId: string };
+  let reader: Member;
+  let writer: Member;
+  let stranger: Member;
+  let patientId: string;
+  let doctorId: string;
+
+  beforeAll(async () => {
+    [reader, writer, stranger] = await Promise.all([
+      addMember(clinic.clinicId, { permissions: ["patients.view", "visits.view"] }),
+      addMember(clinic.clinicId, { permissions: ["patients.view", "visits.view", "visits.edit"] }),
+      addMember(clinic.clinicId, { role: "DOCTOR", permissions: ["patients.view", "visits.view", "visits.edit"] }),
+    ]);
+    const { supabase } = clinic.owner.tenant;
+    const [{ data: patient }, { data: doctor }] = await Promise.all([
+      supabase
+        .rpc("create_patient", {
+          p_patient: { full_name: "Treat Matrix", phone: "+919876543215", date_of_birth: "1990-04-12", gender: "MALE" },
+          p_idempotency_key: randomUUID(),
+        })
+        .single<{ patient_id: string }>(),
+      supabase.from("doctors").select("id").eq("member_id", clinic.owner.session.membership!.id).single(),
+    ]);
+    patientId = patient!.patient_id;
+    doctorId = doctor!.id as string;
+  });
+
+  const start = (member: SignedIn) =>
+    member.tenant!.supabase.rpc("create_treatment", {
+      p_treatment: { patient_id: patientId, doctor_id: doctorId, name: "Scaling", status: "PLANNED" },
+      p_visit_id: null,
+    });
+
+  it("starts and changes one with visits.edit, and refuses visits.view alone", async () => {
+    expect((await start(reader)).error?.hint).toBe("AUTH_PERMISSION_DENIED");
+    expect((await start(receptionist)).error?.hint).toBe("AUTH_PERMISSION_DENIED");
+    const { data, error } = await start(writer);
+    expect(error).toBeNull();
+    const id = (data as { treatment_id: string }).treatment_id;
+    const hold = (member: SignedIn) =>
+      member.tenant!.supabase.rpc("change_treatment_status", {
+        p_treatment_id: id,
+        p_status: "ON_HOLD",
+        p_seen: "PLANNED",
+      });
+    expect((await hold(reader)).error?.hint).toBe("AUTH_PERMISSION_DENIED");
+    expect((await hold(writer)).error).toBeNull();
+  });
+
+  it("reads them with visits.view, none without it, and a doctor only their own patients'", async () => {
+    const { data: read } = await reader.tenant!.supabase.from("treatments").select("id").eq("patient_id", patientId);
+    expect(read!.length).toBeGreaterThan(0);
+    for (const member of [receptionist, stranger]) {
+      const { data } = await member.tenant!.supabase.from("treatments").select("id").eq("patient_id", patientId);
+      expect(data).toEqual([]);
+    }
+    // Nor does a doctor with visits.edit start one for a patient not theirs.
+    expect((await start(stranger)).error?.hint).toBe("RECORD_NOT_FOUND");
   });
 });
 

@@ -99,6 +99,27 @@ describe("a read-only clinic", () => {
     }
   });
 
+  it("refuses every treatment write in the database, and still reads them (0024)", async () => {
+    const { supabase } = clinic.owner.tenant;
+    for (const [name, args] of [
+      ["create_treatment", { p_treatment: { name: "Crown", status: "PLANNED" }, p_visit_id: randomUUID() }],
+      ["update_treatment", { p_treatment_id: randomUUID(), p_changes: { name: "Crown" }, p_seen: { name: null } }],
+      ["change_treatment_status", { p_treatment_id: randomUUID(), p_status: "ON_HOLD", p_seen: "PLANNED" }],
+      [
+        "record_treatment_session",
+        { p_treatment_id: randomUUID(), p_visit_id: randomUUID(), p_note: null, p_seen: null },
+      ],
+      ["remove_treatment_session", { p_session_id: randomUUID() }],
+    ] as const) {
+      const { error } = await supabase.rpc(name, args);
+      expect(error?.hint, name).toBe("CLINIC_PLAN_EXPIRED");
+    }
+    for (const table of ["treatments", "treatment_sessions"]) {
+      const { error: unread } = await supabase.from(table).select("id");
+      expect(unread, table).toBeNull();
+    }
+  });
+
   it("refuses a prescription in the database, and still reads and suggests (0021)", async () => {
     const { supabase } = clinic.owner.tenant;
     const { error } = await supabase.rpc("save_prescription", {

@@ -86,6 +86,12 @@ export const TEXT_LIMITS = {
   advice: 2000,
   /** A prescription template's name (D242): "Viral fever" — a row's title. */
   templateName: 60,
+  /** A treatment's name (plan §14.1): "Root canal" — as long as the price list's, which suggests it. */
+  treatmentName: 100,
+  /** What a treatment is: "Upper left molar, three sittings". */
+  treatmentDescription: 1000,
+  /** What a visit did for a treatment: "Canal cleaned and dressed". */
+  sessionNote: 1000,
 } as const;
 
 /** How many medicines one prescription holds (plan §13): more than any visit writes. 0021's CHECK. */

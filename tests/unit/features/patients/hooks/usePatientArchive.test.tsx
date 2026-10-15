@@ -89,6 +89,27 @@ describe("usePatientArchive (D122 – D125)", () => {
     expect(await screen.findByRole("alertdialog", { name: "That patient wasn’t archived" })).toBeInTheDocument();
   });
 
+  it("names the open treatment when that is why, to whoever may read it (D255)", async () => {
+    const message = "Complete or cancel their open treatments before archiving them.";
+    client.archive.mockRejectedValue(
+      new ApiError(422, "PATIENT_HAS_TREATMENTS", message, "req_4", { name: "Root canal" }),
+    );
+    act(() => void hook.current.archive());
+    await userEvent.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "Archive" }));
+    expect(
+      await screen.findByRole("alertdialog", { name: "Rohan Mehta has an open treatment: Root canal" }),
+    ).toHaveTextContent(message);
+  });
+
+  it("says only that there is one when the treatment is not named", async () => {
+    client.archive.mockRejectedValue(
+      new ApiError(422, "PATIENT_HAS_TREATMENTS", "Close it first.", "req_5", { name: null }),
+    );
+    act(() => void hook.current.archive());
+    await userEvent.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "Archive" }));
+    expect(await screen.findByRole("alertdialog", { name: "Rohan Mehta has an open treatment" })).toBeInTheDocument();
+  });
+
   it("restores without asking, busy meanwhile, and says so", async () => {
     let finish: (value: Patient) => void = () => {};
     client.restore.mockImplementation(() => new Promise((resolve) => (finish = resolve)));

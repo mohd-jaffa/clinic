@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { expect, test, type Page } from "@playwright/test";
 
-import { UI_TEXT } from "@/constants/messages";
+import { ERROR_MESSAGES, UI_TEXT } from "@/constants/messages";
 import { PERMISSION_PRESET_SETS } from "@/constants/permissions";
 import { createPatient } from "@/features/patients/api";
 import { todayKey } from "@/lib/dates/calendar";
@@ -38,8 +38,10 @@ import { addMember, admin, aMobileNumber, registerClinic, removeAll } from "@tes
  * Archive and restore (plan §10.1; R4.6, D122 – D125): a receptionist
  * archives a patient from the foot of their edit sheet after confirming,
  * stays on the profile, which says when and by whom; finds them under
- * Archived, not on the list; and restores them at once. At a phone's width
- * and a desktop's, each checked by axe.
+ * Archived, not on the list; and restores them at once. While she has an
+ * open treatment the archive is refused, the card saying so without naming
+ * it to someone who reads no treatments (R7.1, D255). At a phone's width and
+ * a desktop's, each checked by axe.
  */
 test.afterAll(removeAll);
 
@@ -431,11 +433,33 @@ test("a receptionist archives a patient, finds them under Archived and restores 
   const meena = await createPatient(clinic.owner.tenant, patientSchema.parse(typed), randomUUID());
   await signIn(page, receptionist.email, receptionist.password);
 
+  // An open treatment holds her back (D255).
+  const { data: doctor } = await admin()
+    .from("doctors")
+    .select("id")
+    .eq("member_id", clinic.owner.session.membership!.id)
+    .single();
+  const { data: treatment } = await admin()
+    .from("treatments")
+    .insert({ clinic_id: clinic.clinicId, patient_id: meena.id, doctor_id: doctor!.id, name: "Root canal" })
+    .select("id")
+    .single();
+
   await page.goto(`/patients/${meena.id}`);
   await page.getByRole("button", { name: patients.editName("Meena Iyer") }).click();
   const sheet = page.getByRole("dialog", { name: patients.editTitle });
-  await sheet.getByRole("button", { name: UI_TEXT.actions.archive }).click();
   const ask = page.getByRole("alertdialog", { name: patients.archiveTitle("Meena Iyer") });
+  await sheet.getByRole("button", { name: UI_TEXT.actions.archive }).click();
+  await ask.getByRole("button", { name: UI_TEXT.actions.archive }).click();
+  // The receptionist reads no treatments: told only that there is one.
+  const refused = page.getByRole("alertdialog", { name: patients.hasOpenTreatment("Meena Iyer", null) });
+  await expect(refused).toContainText(ERROR_MESSAGES.PATIENT_HAS_TREATMENTS);
+  await expectAccessible(page);
+  await refused.getByRole("button", { name: UI_TEXT.actions.close }).click();
+  await admin().from("treatments").update({ status: "CANCELLED" }).eq("id", treatment!.id);
+
+  // Cancelled, it no longer does.
+  await sheet.getByRole("button", { name: UI_TEXT.actions.archive }).click();
   await expect(ask).toContainText(patients.archiveBody);
   await expectAccessible(page);
   await ask.getByRole("button", { name: UI_TEXT.actions.archive }).click();

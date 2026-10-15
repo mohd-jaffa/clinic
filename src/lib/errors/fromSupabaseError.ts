@@ -103,6 +103,11 @@ const BUSINESS_RULES: ReadonlySet<ErrorMessageCode> = new Set<ErrorMessageCode>(
   "APPOINTMENT_HAS_VISIT",
   // Prescriptions (0021): only once the doctor has a registration number (D213).
   "PRESCRIPTION_NEEDS_REGISTRATION",
+  // Treatments (0024): where a status may go, a closed one, a done visit's sessions; archiving one with some open (D255).
+  "TREATMENT_STATUS_NOT_ALLOWED",
+  "TREATMENT_CLOSED",
+  "TREATMENT_SESSION_KEPT",
+  "PATIENT_HAS_TREATMENTS",
 ]);
 
 /**

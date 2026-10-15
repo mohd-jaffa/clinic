@@ -69,3 +69,33 @@ describe("an appointment's status moves (plan §11.2)", () => {
     expect(into("COMPLETED")).toEqual(["IN_PROGRESS"]);
   });
 });
+
+describe("a treatment's status moves (plan §14.1)", () => {
+  const { TREATMENT_STATUSES, TREATMENT_STATUS_TRANSITIONS, OPEN_TREATMENT_STATUSES, TREATMENT_START_STATUSES } =
+    statuses;
+
+  it("names, for every status, only statuses it may go to — never itself", () => {
+    expect(Object.keys(TREATMENT_STATUS_TRANSITIONS)).toEqual([...TREATMENT_STATUSES]);
+    for (const [from, to] of Object.entries(TREATMENT_STATUS_TRANSITIONS)) {
+      for (const next of to) expect(TREATMENT_STATUSES, `${from} → ${next}`).toContain(next);
+      expect(to, from).not.toContain(from);
+    }
+  });
+
+  it("ends at completed and at cancelled, completing only what is in progress", () => {
+    expect(TREATMENT_STATUS_TRANSITIONS.COMPLETED).toEqual([]);
+    expect(TREATMENT_STATUS_TRANSITIONS.CANCELLED).toEqual([]);
+    const into = (status: string) =>
+      Object.entries(TREATMENT_STATUS_TRANSITIONS)
+        .filter(([, to]) => (to as readonly string[]).includes(status))
+        .map(([from]) => from);
+    expect(into("COMPLETED")).toEqual(["IN_PROGRESS"]);
+  });
+
+  it("is open until it may go nowhere, and starts planned or in progress", () => {
+    expect(OPEN_TREATMENT_STATUSES).toEqual(
+      TREATMENT_STATUSES.filter((status) => TREATMENT_STATUS_TRANSITIONS[status].length > 0),
+    );
+    expect(TREATMENT_START_STATUSES).toEqual(["PLANNED", "IN_PROGRESS"]);
+  });
+});

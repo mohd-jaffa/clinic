@@ -42,6 +42,8 @@ const CLINIC_TABLES: readonly { table: string; column: string }[] = [
   { table: "prescription_items", column: "clinic_id" },
   { table: "prescription_templates", column: "clinic_id" },
   { table: "prescription_template_items", column: "clinic_id" },
+  { table: "treatments", column: "clinic_id" },
+  { table: "treatment_sessions", column: "clinic_id" },
   { table: "audit_logs", column: "clinic_id" },
 ];
 
@@ -64,6 +66,9 @@ let visitId: string;
 let doctorId: string;
 /** A's doctor's prescription template (0023). */
 let templateId: string;
+/** A's patient's treatment and its session in A's visit (0024). */
+let treatmentId: string;
+let sessionId: string;
 
 beforeAll(async () => {
   [a, b] = await Promise.all([registerClinic({ clinicName: "Clinic A" }), registerClinic({ clinicName: "Clinic B" })]);
@@ -135,6 +140,28 @@ beforeAll(async () => {
     .from("prescription_template_items")
     .insert({ clinic_id: a.clinicId, template_id: templateId, position: 1, medicine: "Paracetamol" });
   if (unlined) throw unlined;
+  // And a treatment begun in that visit, which is its first session (0024).
+  const { data: treatment, error: untreated } = await admin()
+    .from("treatments")
+    .insert({
+      clinic_id: a.clinicId,
+      patient_id: patientId,
+      doctor_id: doctorId,
+      name: "Root canal",
+      status: "IN_PROGRESS",
+      started_visit_id: visitId,
+    })
+    .select("id")
+    .single();
+  if (untreated) throw untreated;
+  treatmentId = treatment.id as string;
+  const { data: session, error: unsessioned } = await admin()
+    .from("treatment_sessions")
+    .insert({ clinic_id: a.clinicId, treatment_id: treatmentId, visit_id: visitId, note: "Access opened" })
+    .select("id")
+    .single();
+  if (unsessioned) throw unsessioned;
+  sessionId = session.id as string;
   developer = await makeDeveloper();
 });
 
@@ -313,6 +340,37 @@ describe("as clinic B's owner, with a valid token", () => {
       .eq("id", templateId)
       .single();
     expect(theirs).toEqual({ name: "Viral fever", active: true });
+  });
+
+  it("finds none of A's treatments or sessions to change, and starts none on A's patient or visit (0024)", async () => {
+    const { supabase } = b.owner.tenant;
+    for (const [name, args] of [
+      ["create_treatment", { p_treatment: { name: "Planted", status: "PLANNED" }, p_visit_id: visitId }],
+      [
+        "create_treatment",
+        {
+          p_treatment: { patient_id: patientId, doctor_id: doctorId, name: "Planted", status: "PLANNED" },
+          p_visit_id: null,
+        },
+      ],
+      [
+        "update_treatment",
+        { p_treatment_id: treatmentId, p_changes: { name: "Planted" }, p_seen: { name: "Root canal" } },
+      ],
+      ["change_treatment_status", { p_treatment_id: treatmentId, p_status: "CANCELLED", p_seen: "IN_PROGRESS" }],
+      [
+        "record_treatment_session",
+        { p_treatment_id: treatmentId, p_visit_id: visitId, p_note: "Planted", p_seen: { note: "Access opened" } },
+      ],
+      ["remove_treatment_session", { p_session_id: sessionId }],
+    ] as const) {
+      const { error } = await supabase.rpc(name, args);
+      expect(error?.hint, name).toBe("RECORD_NOT_FOUND");
+    }
+    const { data: kept } = await admin().from("treatments").select("name, status").eq("id", treatmentId).single();
+    expect(kept).toEqual({ name: "Root canal", status: "IN_PROGRESS" });
+    const { data: note } = await admin().from("treatment_sessions").select("note").eq("id", sessionId).single();
+    expect(note).toEqual({ note: "Access opened" });
   });
 
   it("prints none of A's prescriptions (R6.4)", async () => {

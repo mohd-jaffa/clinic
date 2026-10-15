@@ -23,12 +23,26 @@ function upcomingDay(failure: unknown): string | null {
 }
 
 /**
+ * The card's title for an archive refused (D140, D255): the appointment's
+ * day, or the open treatment — named to whoever reads treatments.
+ */
+function refusedTitle(failure: unknown, name: string): string {
+  const day = upcomingDay(failure);
+  if (day) return patients.hasAppointmentOn(name, day);
+  if (failure instanceof ApiError && failure.code === "PATIENT_HAS_TREATMENTS") {
+    const treatment = (failure.details as { name?: unknown } | undefined)?.name;
+    return patients.hasOpenTreatment(name, typeof treatment === "string" ? treatment : null);
+  }
+  return patients.notArchived;
+}
+
+/**
  * Archiving and restoring a patient (plan §10.1, D103, D122 – D125). Archive
  * asks first (AGENTS.md §23) and answers whether it was archived, so the
  * sheet it was asked from can close; the profile stays, saying they are
  * archived (D124). One with an appointment still to come is refused, the
- * card naming its day (D140). Restore needs no asking (D125): it only brings
- * them back.
+ * card naming its day (D140); one with an open treatment too, the card naming
+ * it (D255). Restore needs no asking (D125): it only brings them back.
  * Either way the lists, "Already here?" and the profile are read again.
  */
 export function usePatientArchive(patient: Patient) {
@@ -38,10 +52,7 @@ export function usePatientArchive(patient: Patient) {
   const archiving = useApiMutation(PatientsClient.archive, {
     revalidate,
     onSuccess: (saved) => respond.success({ title: patients.archivedNote(saved.name) }),
-    onError: (failure) => {
-      const day = upcomingDay(failure);
-      respond.failure(failure, { title: day ? patients.hasAppointmentOn(patient.name, day) : patients.notArchived });
-    },
+    onError: (failure) => respond.failure(failure, { title: refusedTitle(failure, patient.name) }),
   });
   const restoring = useApiMutation(PatientsClient.restore, {
     revalidate,

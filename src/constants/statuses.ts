@@ -159,6 +159,51 @@ export const PRESCRIPTION_TIMING_LABELS: Record<PrescriptionTiming, string> = {
   BEDTIME: "Bedtime",
 };
 
+/**
+ * A treatment's status (plan §14.1): 0024's CHECK. A treatment is open —
+ * on the profile, due again, keeping its patient from being archived (D255)
+ * — until it is completed or cancelled.
+ */
+export const TREATMENT_STATUSES = ["PLANNED", "IN_PROGRESS", "ON_HOLD", "COMPLETED", "CANCELLED"] as const;
+export type TreatmentStatus = (typeof TREATMENT_STATUSES)[number];
+export const TREATMENT_STATUS_LABELS: Record<TreatmentStatus, string> = {
+  PLANNED: "Planned",
+  IN_PROGRESS: "In progress",
+  ON_HOLD: "On hold",
+  COMPLETED: "Completed",
+  CANCELLED: "Cancelled",
+};
+export const TREATMENT_STATUS_TONES: Record<TreatmentStatus, StatusTone> = {
+  PLANNED: "neutral",
+  IN_PROGRESS: "live",
+  ON_HOLD: "neutral",
+  COMPLETED: "neutral",
+  CANCELLED: "neutral",
+};
+
+/** The statuses a treatment is open in: not yet completed or cancelled. */
+export const OPEN_TREATMENT_STATUSES = [
+  "PLANNED",
+  "IN_PROGRESS",
+  "ON_HOLD",
+] as const satisfies readonly TreatmentStatus[];
+
+/** The statuses a treatment starts in (0024's check_treatment): planned, or begun at once. */
+export const TREATMENT_START_STATUSES = ["PLANNED", "IN_PROGRESS"] as const satisfies readonly TreatmentStatus[];
+
+/**
+ * Where a treatment's status may go next (plan §14.1), mirrored by
+ * `treatment_status_next()` in 0024 and kept equal by tests/db. The first
+ * session on a planned or on-hold treatment puts it in progress (D248).
+ */
+export const TREATMENT_STATUS_TRANSITIONS: Record<TreatmentStatus, readonly TreatmentStatus[]> = {
+  PLANNED: ["IN_PROGRESS", "ON_HOLD", "CANCELLED"],
+  IN_PROGRESS: ["ON_HOLD", "COMPLETED", "CANCELLED"],
+  ON_HOLD: ["IN_PROGRESS", "CANCELLED"],
+  COMPLETED: [],
+  CANCELLED: [],
+};
+
 /** The paper bills and prescriptions print on (D28). */
 export const PAPER_SIZES = ["A4", "A5"] as const;
 export type PaperSize = (typeof PAPER_SIZES)[number];
