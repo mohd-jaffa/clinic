@@ -84,13 +84,23 @@ export function PrescriptionSection({
 }
 
 /**
- * Print and Download, for a prescription saved with a medicine on it, its
- * doctor with a registration number (D222) — for anyone who reads it, in a
- * view-only clinic too — or nothing.
+ * Print, Download and WhatsApp, for a prescription saved with a medicine on
+ * it, its doctor with a registration number (D222, D244) — for anyone who
+ * reads it, in a view-only clinic too — or nothing.
  */
 function printout(visit: Visit) {
   const printable = (visit.prescription?.items.length ?? 0) > 0 && visit.doctorRegistration !== null;
-  return printable && <PrescriptionPdf visitId={visit.id} patient={visit.patient.name} day={visit.day} />;
+  return (
+    printable && (
+      <PrescriptionPdf
+        visitId={visit.id}
+        patient={visit.patient.name}
+        phone={visit.patient.phone}
+        day={visit.day}
+        doctor={visit.doctorName}
+      />
+    )
+  );
 }
 
 /** Who typed it for the doctor, when that was not the doctor (D45). */

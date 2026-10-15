@@ -58,6 +58,8 @@ export interface Visit extends VisitNotes {
     id: string;
     name: string;
     number: number;
+    /** Their mobile, +91 E.164: where the prescription is sent (D246). */
+    phone: string;
     dateOfBirth: string;
     gender: Gender;
     archived: boolean;
@@ -101,6 +103,7 @@ export interface VisitRow {
   patient: {
     full_name: string;
     patient_number: number;
+    phone: string;
     date_of_birth: string;
     gender: Gender;
     archived_at: string | null;

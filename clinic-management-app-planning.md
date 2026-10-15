@@ -330,6 +330,10 @@ earlier lines are never rewritten.
 | D241 | **A template is picked from a sheet** (the user): **Templates** opens the visit doctor's templates by name, each with its medicines under it ("Paracetamol, Amoxicillin +1"); one tap applies it and closes the sheet. | 2026-10-15 |
 | D242 | **My account holds the doctor's templates** (the user): a **Prescription templates** row, for a member who is a doctor, opens their screen: **New template** starts one from scratch; each opens a screen of its own to change its name, medicines and advice; **Archive** asks first, and **Show archived** brings one back with **Restore**, as the price list does (D80). A template holds a medicine or advice, or both. | 2026-10-15 |
 | D243 | **A template saved under a name in use asks to replace it** (the user): from a visit or as a new template, "Replace your template 'Viral fever'?" — yes takes its medicines and advice. Renaming one to a name in use, or restoring one whose name is taken, is refused (`TEMPLATE_NAME_TAKEN`). | 2026-10-15 |
+| D244 | **Send on WhatsApp sits beside Print and Download** (the user): **WhatsApp** on the Prescription card's foot once it is saved with a medicine, for anyone who reads the visit — a view-only clinic too, sharing what is there (§7.2) — and, as Print, not while there are unsaved changes (D222). | 2026-10-15 |
+| D245 | **On a phone, the share sheet takes the PDF and the message** (the user): "Your prescription from Dr. Maya Rao, Smile Care, 15 Oct." with the file; the person picks WhatsApp and the chat. Some apps drop the message when a file goes with it; the PDF always goes. Should the phone ask for a fresh tap once the PDF is fetched, a card offers **Send**. | 2026-10-15 |
+| D246 | **On a desktop, WhatsApp Web with the message, and the PDF downloaded** (the user): a device without a share sheet for files — any but a touch-first one — opens the patient's chat in a new tab with the message typed, and downloads the PDF; the card says to attach it (§22.1). | 2026-10-15 |
+| D247 | **A prescription sent is not recorded** (the user): as Print and Download, sending writes nothing — the app cannot see whether Send was pressed in WhatsApp. | 2026-10-15 |
 
 ## 3. Users and roles
 
@@ -1197,8 +1201,10 @@ recorded as `entered_by` (§8.2 rule 4, D45):
   doctor chooses to print it), the items, the advice and the follow-up date,
   and a signature line. **Generated on demand, never stored.** Laid out as
   D218 – D220 say; **Print** opens it in the viewer and **Download** saves it
-  (D221 – D223), on the Prescription card once saved. Sharing it to WhatsApp
-  through the share sheet comes with the share helper in R6.8 (D183).
+  (D221 – D223), on the Prescription card once saved. **WhatsApp** beside them
+  sends it (D244 – D247): the share sheet with the PDF and the message on a
+  phone, WhatsApp Web and the PDF downloaded on a desktop (§22.1; the share
+  helper, D183); nothing is recorded.
 
 ## 14. Treatments and follow-ups
 
@@ -1506,7 +1512,9 @@ clinic's name, the doctor, the date and time filled in; English in V1.
 
 - **The PDF:** on a phone, the share sheet (Web Share API with the file) hands
   it to WhatsApp with the text; on a desktop, WhatsApp Web opens with the text
-  and the PDF is downloaded to attach.
+  and the PDF is downloaded to attach (`src/lib/share.ts`, R6.8, D245, D246).
+  A touch-first device that can share files takes the share sheet; any other
+  is a desktop.
 - Every reminder sent is recorded where it was sent from (an appointment's
   "Reminded at", a follow-up contact with outcome *Reminder sent*), so the
   desk knows who has been told. An appointment's is noted when Remind is
@@ -2600,7 +2608,7 @@ in the row's one commit (D136).
 | R6.5 | `0022_patient_timeline`; patient timeline with visits and prescriptions; the patients list's last visit (D101; D225 – D231: one list, a visit standing for its appointment; what it found and its medicines; opening its screen, which leads back; the last visit for everyone who sees the patient, on a line of its own; two columns on a desktop) | §10.3, §10.2 | — | DONE (2026-10-15) |
 | R6.6 | Integration + E2E: queue → visit → prescription PDF (D232 – D235: the visit's moves and saves at once; the journey continued, an assistant in it; the doctor's visit follows the assistant's; the PDF's paper, name and title) | §34 | — | DONE (2026-10-15) |
 | R6.7 | `0023_prescription_templates`; Repeat last prescription; prescription templates (save, apply, edit, archive) (D236 – D243: Repeat names its day and doctor, both add after what is typed, advice on a new line, the buttons in view, only the doctor saves, a sheet to pick, My account's screens, a name in use asks to replace) | §13 | — | DONE (2026-10-15) |
-| R6.8 | Send prescription on WhatsApp, with the share helper: the PDF through the share sheet, or downloaded on a desktop (D183) | §22.1 | — | TODO |
+| R6.8 | Send prescription on WhatsApp, with the share helper: the PDF through the share sheet, or downloaded on a desktop (D183; D244 – D247: beside Print and Download for whoever reads the visit, the share sheet on a phone, WhatsApp Web and the download on a desktop, nothing recorded) | §22.1 | — | DONE (2026-10-15) |
 | R6.9 | `0019_urgent`: Urgent, a tag on a waiting patient kept through their visit; Next patient still goes by token (D201) | §11.4 | R6.1 | DONE (2026-10-13) |
 
 ### Phase 7 — Treatments and follow-ups

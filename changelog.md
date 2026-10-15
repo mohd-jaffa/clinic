@@ -3439,3 +3439,47 @@ Sharing it to WhatsApp comes with the share helper in R6.8 (D183).
 
 ### Blockers
 - None.
+
+## 2026-10-15 — R6.8: send the prescription on WhatsApp
+
+### Added
+- **The share helper** (`src/lib/share.ts`, plan §22.1, D183): whether this
+  device hands a file over through its share sheet (touch-first, sharing
+  files), the share sheet with a file and a message, whether a refusal only
+  wants a fresh tap, and the patient's chat opened on WhatsApp Web with the
+  message. The prescription is the first sent; a bill follows in Phase 8.
+- **WhatsApp** on the Prescription card's foot, beside Print and Download
+  (D244): for whoever reads the visit, a view-only clinic too, and not while
+  there are unsaved changes. "Your prescription from Dr. Maya Rao, Smile
+  Care, 15 Oct." (`WHATSAPP_TEXT.prescription`), with the PDF:
+  - on a phone, the share sheet takes both and the person picks WhatsApp and
+    the chat; "Prescription shared" follows. Should the phone want a fresh
+    tap once the PDF is fetched, a card offers **Send** (D245);
+  - on a desktop, the patient's chat opens in a new tab with the message
+    typed, as the tap lands (so no browser takes it for a pop-up), and the
+    PDF downloads; a card names the file to attach (D246).
+  - Nothing is recorded (D247).
+- `SHARE_FAILED`, for a share sheet that refuses the file.
+
+### Changed
+- The visit's read carries the patient's mobile, where the prescription is
+  sent.
+- **Plan:** D244 – D247; §13 and §22.1 say how it is sent; R6.8 done.
+- `DESIGN.md`: WhatsApp on the Prescription card and its cards.
+
+### Speed (plan §37)
+- The visit screen still waits on one query after the session (the mobile is
+  a column of the patient it already reads). Sending waits on the PDF alone,
+  as Download does; nothing is written.
+
+### Validation
+- Typecheck, lint, format check passed.
+- Unit and integration tests passed (3096), coverage 100%.
+- E2E passed (phone, desktop), with axe: 128 passed, 8 skipped (run at one
+  width only). `prescription-pdf.spec.ts` sends it both ways: a touch-first
+  phone (the share sheet recorded on the page, as a test cannot pick
+  WhatsApp) is handed the PDF under its name and the message; a desktop
+  opens the patient's chat with the message and downloads the A5 PDF.
+
+### Blockers
+- None.

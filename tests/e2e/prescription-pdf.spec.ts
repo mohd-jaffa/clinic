@@ -3,12 +3,12 @@ import { readFile } from "node:fs/promises";
 
 import { expect, test, type Page } from "@playwright/test";
 
-import { UI_TEXT } from "@/constants/messages";
+import { UI_TEXT, WHATSAPP_TEXT } from "@/constants/messages";
 import { addWalkIn } from "@/features/appointments/api";
 import { sendIn } from "@/features/appointments/moves";
 import { savePrescription } from "@/features/prescriptions/records";
 import { todayKey } from "@/lib/dates/calendar";
-import { formatDate } from "@/lib/format/date";
+import { formatDate, formatNearDate } from "@/lib/format/date";
 import { savePrescriptionSchema, walkInSchema } from "@/lib/validation";
 import { expectAccessible } from "@tests/support/e2e";
 import { addMember, admin, registerClinic, removeAll } from "@tests/support/integration";
@@ -19,8 +19,10 @@ import { addMember, admin, registerClinic, removeAll } from "@tests/support/inte
  * visit finds **Print**, which opens the PDF itself beside the app (D221),
  * and **Download**, which saves it as "Rohan Mehta - {day} -
  * Prescription.pdf" (D223) — on the clinic's A5 paper. The doctor typing a
- * change sees Save in their place until it is saved (D222). Each screen
- * checked by axe.
+ * change sees Save in their place until it is saved (D222). **WhatsApp**
+ * sends it (D244 – D246): on a touch-first phone the share sheet takes the
+ * PDF and the message; on a desktop his chat opens on WhatsApp Web with the
+ * message and the PDF downloads. Each screen checked by axe.
  */
 test.afterAll(removeAll);
 
@@ -149,5 +151,77 @@ test("whoever reads the visit prints and downloads the saved prescription; the d
   await card.getByRole("button", { name: words.save }).click();
   await expect(page.getByRole("status").filter({ hasText: words.saved })).toBeVisible();
   await expect(card.getByRole("link", { name: words.printOf("Rohan Mehta") })).toBeVisible();
+  await expectAccessible(page);
+});
+
+/** What a phone's share sheet was handed, kept on the page: the test cannot pick WhatsApp. */
+interface Shared {
+  name: string;
+  type: string;
+  head: string;
+  text?: string;
+}
+
+test("WhatsApp sends it: the share sheet on a phone, the chat and the PDF on a desktop (D244 – D246)", async ({
+  browser,
+  page,
+}, info) => {
+  const { reader, visitId } = await aClinic();
+  const name = `Rohan Mehta - ${formatDate(todayKey())} - Prescription.pdf`;
+  const text = WHATSAPP_TEXT.prescription("Dr. Maya Rao", "Smile Care", formatNearDate(todayKey()));
+  const sendOf = words.whatsAppOf("Rohan Mehta");
+
+  if (info.project.name === "phone") {
+    // A phone touched first, whose share sheet takes files.
+    const phone = await browser.newContext({
+      baseURL: info.project.use.baseURL,
+      viewport: { width: 390, height: 844 },
+      hasTouch: true,
+      isMobile: true,
+    });
+    await phone.addInitScript(() => {
+      const shared: Shared[] = [];
+      Object.assign(window, { shared });
+      Object.defineProperty(navigator, "canShare", {
+        configurable: true,
+        value: (data: ShareData) => Boolean(data.files?.length),
+      });
+      Object.defineProperty(navigator, "share", {
+        configurable: true,
+        value: async ({ files, text: message }: ShareData) => {
+          const [file] = files!;
+          shared.push({ name: file.name, type: file.type, head: await file.slice(0, 4).text(), text: message });
+        },
+      });
+    });
+    const tapped = await phone.newPage();
+    await signIn(tapped, reader.email, reader.password);
+    await tapped.goto(`/visits/${visitId}`);
+    await tapped.getByRole("region", { name: words.title }).getByRole("button", { name: sendOf }).tap();
+    await expect(tapped.getByRole("status").filter({ hasText: words.shared })).toBeVisible();
+    expect(await tapped.evaluate(() => (window as unknown as { shared: Shared[] }).shared)).toEqual([
+      { name, type: "application/pdf", head: "%PDF", text },
+    ]);
+    await expectAccessible(tapped);
+    await phone.close();
+    return;
+  }
+
+  // A desktop: his chat opens on WhatsApp Web with the message, and the PDF downloads to attach.
+  await page
+    .context()
+    .route("https://wa.me/**", (route) => route.fulfill({ contentType: "text/html", body: "<title>WhatsApp</title>" }));
+  await signIn(page, reader.email, reader.password);
+  await page.goto(`/visits/${visitId}`);
+  const [chat, download] = await Promise.all([
+    page.context().waitForEvent("page"),
+    page.waitForEvent("download"),
+    page.getByRole("region", { name: words.title }).getByRole("button", { name: sendOf }).click(),
+  ]);
+  expect(chat.url()).toBe(`https://wa.me/919876543210?text=${encodeURIComponent(text)}`);
+  await chat.close();
+  expect(download.suggestedFilename()).toBe(name);
+  expect((await readFile((await download.path())!)).toString("latin1")).toContain(A5);
+  await expect(page.getByRole("dialog", { name: words.attachTitle })).toContainText(words.attachBody(name));
   await expectAccessible(page);
 });

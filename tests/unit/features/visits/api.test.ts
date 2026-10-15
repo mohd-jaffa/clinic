@@ -27,6 +27,7 @@ const row = {
   patient: {
     full_name: "Asha Iyer",
     patient_number: 1012,
+    phone: "+919876543210",
     date_of_birth: "1990-04-12",
     gender: "FEMALE",
     archived_at: null,
@@ -108,6 +109,7 @@ describe("getVisit (plan §12.2, D195, D202)", () => {
         id: "p-1",
         name: "Asha Iyer",
         number: 1012,
+        phone: "+919876543210",
         dateOfBirth: "1990-04-12",
         gender: "FEMALE",
         archived: false,

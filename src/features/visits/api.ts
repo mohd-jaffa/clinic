@@ -17,14 +17,14 @@ const TABLE = "visits";
 
 /**
  * What a visit's screen reads (D195, D202): the visit and what it records,
- * its patient with their alerts, its doctor's name and registration number
+ * its patient with their mobile (to send the prescription to, D244) and alerts, its doctor's name and registration number
  * (D213), its token and Urgent, its vitals, its prescription with who typed
  * it (D45), and the patient's prescription before it, for Repeat (D236).
  */
 const VISIT_COLUMNS =
   "id, patient_id, doctor_id, appointment_id, status, visit_date, started_at, completed_at, billing_status, " +
   "complaint, diagnosis, notes, follow_up_on, " +
-  "patient:patients!visits_patient_id_clinic_id_fkey(full_name, patient_number, date_of_birth, gender, archived_at, " +
+  "patient:patients!visits_patient_id_clinic_id_fkey(full_name, patient_number, phone, date_of_birth, gender, archived_at, " +
   "alerts:patient_alerts(id, kind, label, note, active)), " +
   "doctor:doctors!visits_doctor_id_clinic_id_fkey(registration_number, " +
   "member:clinic_members(user_id, profile:profiles!clinic_members_user_id_fkey(full_name))), " +
@@ -96,6 +96,7 @@ export async function getVisit(tenant: Tenant, id: string): Promise<Visit> {
       id: row.patient_id,
       name: row.patient.full_name,
       number: row.patient.patient_number,
+      phone: row.patient.phone,
       dateOfBirth: row.patient.date_of_birth,
       gender: row.patient.gender,
       archived: row.patient.archived_at !== null,

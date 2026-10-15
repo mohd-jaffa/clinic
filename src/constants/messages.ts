@@ -121,6 +121,8 @@ export const ERROR_MESSAGES = {
     "The doctor’s registration number isn’t on their details yet. Add it in Team, then write the prescription.",
   PRESCRIPTION_EMPTY: "This prescription has no medicines yet, so there’s nothing to print.",
   PRESCRIPTION_PDF_FAILED: "The prescription’s PDF couldn’t be made.",
+  // The device's share sheet would not take it (D245): said by the client, never sent by the server.
+  SHARE_FAILED: "It couldn’t be handed to WhatsApp. Try again, or download it and attach it in the chat.",
   // A doctor's prescription templates (plan §13; D240 – D243): a name is theirs once while in use.
   TEMPLATE_NAME_TAKEN: "You already have a template with this name. Choose another name.",
   TEMPLATES_LOAD_FAILED: "The templates couldn't be loaded.",
@@ -815,6 +817,17 @@ export const UI_TEXT = {
     downloaded: "Prescription downloaded",
     savedAs: (name: string) => `Saved as “${name}”.`,
     notDownloaded: "The prescription wasn’t downloaded",
+    /** Sending it on WhatsApp (D244 – D246). */
+    whatsApp: "WhatsApp",
+    whatsAppOf: (patient: string) => `Send ${patient}’s prescription on WhatsApp`,
+    shared: "Prescription shared",
+    attachTitle: "Attach it in WhatsApp",
+    attachBody: (name: string) =>
+      `WhatsApp opened in a new tab with the message, and “${name}” was downloaded. Attach it in the chat.`,
+    readyTitle: "The prescription is ready",
+    readyBody: "Tap Send, then choose WhatsApp.",
+    send: "Send",
+    notSent: "The prescription wasn’t sent",
     /** Repeat (D236): the patient's latest prescription before this visit, by its day and doctor. */
     repeat: (day: string, doctor: string) => `Repeat ${day} · ${doctor}`,
     repeatedFrom: (day: string, doctor: string) => `${day} · ${doctor}`,
@@ -1352,6 +1365,9 @@ export const WHATSAPP_TEXT = {
   /** A doctor as a patient is told of them: "Dr. Maya Rao" — once, if their name already says so. */
   doctor: (name: string) => (/^dr\.?\s/i.test(name) ? name : `Dr. ${name}`),
   when: (day: string, time: string) => `${day}, ${time}`,
+  /** "Your prescription from Dr. Maya Rao, Smile Care, 15 Oct." — with the PDF (D245). */
+  prescription: (doctor: string | null, clinic: string, day: string) =>
+    doctor ? `Your prescription from ${doctor}, ${clinic}, ${day}.` : `Your prescription from ${clinic}, ${day}.`,
 } as const;
 
 export const MAIL_TEXT = {
