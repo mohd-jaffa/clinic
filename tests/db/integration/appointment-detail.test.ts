@@ -24,6 +24,9 @@ import {
   type TestClinic,
 } from "@tests/support/integration";
 
+/** How far apart the database's clock and this one may run (D265). */
+const CLOCK_DRIFT_MS = 2_000;
+
 /**
  * An appointment's detail and what it allows (plan §11.2; R5.4, D160 – D167):
  * read whole, with who booked and cancelled it; its notes changed, or moved —
@@ -160,7 +163,8 @@ describe("getAppointment (D160)", () => {
       cancelledBy: null,
       cancelReason: null,
     });
-    expect(new Date(detail.bookedAt).getTime()).toBeLessThanOrEqual(Date.now());
+    // Booked just now: not later than this clock, give or take the database's own — Docker's runs a little apart (D265).
+    expect(new Date(detail.bookedAt).getTime()).toBeLessThanOrEqual(Date.now() + CLOCK_DRIFT_MS);
   });
 
   it("opens only a doctor's own patients' (D3), and finds none it does not know", async () => {

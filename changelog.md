@@ -3721,3 +3721,19 @@ history names its treatments. Asked of the user first: D256 – D263.
   the app, and npm's only fix is downgrading `eslint-config-next` to 14.
   R13.8's audit (`npm audit --omit=dev`) leaves development tools out; it is
   updated once `eslint-config-next` ships a fix.
+
+## 2026-10-15 — A database time checked with room for clock drift
+
+### Changed
+- `tests/db/integration/appointment-detail.test.ts`: the booked time is
+  checked against the test's clock with 2 seconds' room (D265). The database
+  runs in Docker, whose clock once ran 46 ms ahead of the Mac's and failed
+  the check; it still proves the booking was made just now.
+- **Plan:** D265.
+
+### Validation
+- Typecheck, lint, format check passed.
+- Unit and integration tests passed (3264), coverage 100%.
+
+### Blockers
+- None.
