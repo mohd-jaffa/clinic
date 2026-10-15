@@ -3737,3 +3737,14 @@ history names its treatments. Asked of the user first: D256 – D263.
 
 ### Blockers
 - None.
+
+## 2026-10-15 — The vital-sign limits kept
+
+### Changed
+- **Plan:** D266 — the vital-sign limits set in R6.1 stay as they are: a
+  newborn's readings to an adult's, catching a slip without refusing a real
+  reading. They remain constants, as limits that protect their columns do.
+  No code changed.
+
+### Blockers
+- None.
