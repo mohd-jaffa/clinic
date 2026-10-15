@@ -3694,3 +3694,30 @@ history names its treatments. Asked of the user first: D256 – D263.
 
 ### Blockers
 - None.
+
+## 2026-10-15 — Next.js 16.3.8
+
+### Changed
+- `next` and `eslint-config-next` from 16.3.5 to 16.3.8 (D264), which fixes
+  the four critical advisories against 16.3.5: remote code execution in
+  `next/og`'s ImageResponse (the app does not use it), cache poisoning of
+  self-hosted pages (the app is on Vercel), a draft-mode leak, and the dev
+  server's MCP endpoint. Same minor line; no code changed.
+- `source-map-js` (high; used at build time only) to 1.2.2, by
+  `npm audit fix`.
+- **Plan:** D264.
+
+### Validation
+- Typecheck, lint, format check passed; the build passed on 16.3.8.
+- Unit and integration tests passed (3264), coverage 100%.
+- E2E passed (phone, desktop), with axe: 132 passed, 8 skipped (run at one
+  width only).
+
+### Blockers
+- None. `npm audit` still reports one chain of five "high" findings inside
+  the lint tooling (`eslint-config-next` → `@next/eslint-plugin-next` →
+  `fast-glob` → `micromatch` → `braces`: deeply nested patterns can exhaust
+  the stack). It runs only on the developer's machine and in CI, never in
+  the app, and npm's only fix is downgrading `eslint-config-next` to 14.
+  R13.8's audit (`npm audit --omit=dev`) leaves development tools out; it is
+  updated once `eslint-config-next` ships a fix.

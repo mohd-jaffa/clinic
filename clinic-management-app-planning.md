@@ -350,6 +350,7 @@ earlier lines are never rewritten.
 | D261 | **A treatment's whole story is in its sheet** (the user), from the visit or the profile: its details, its status actions, **Edit** (name, description, estimate, and its doctor while open), its next sitting, and its sessions visit by visit, each opening its visit. No screen of its own. | 2026-10-15 |
 | D262 | **A visit's row in the history names its treatments** (the user): under the Rx line, "Tx Root canal, Crown +1" — those worked on or started in it, two named and the rest counted. | 2026-10-15 |
 | D263 | **On a desktop the Treatments card stands between the notes and the prescription** (the user), in the right column, the plan's order (§12.2); a phone stacks the sections in that order. | 2026-10-15 |
+| D264 | **Next.js 16.3.8** (the user): from 16.3.5, whose four critical advisories it fixes (remote code execution in `next/og`'s ImageResponse, which the app does not use; cache poisoning of self-hosted pages; a draft-mode leak; the dev server's MCP endpoint) — the same minor line, its own commit; `eslint-config-next` with it, and `source-map-js` (high, build-time only) to 1.2.2. One finding stays: a chain inside the lint tooling (`eslint-config-next` → `fast-glob` → `micromatch` → `braces`), never shipped, whose only fix npm offers is going back to `eslint-config-next` 14; R13.8's audit (`--omit=dev`) leaves development tools out, and the chain is updated once `eslint-config-next` ships a fix. | 2026-10-15 |
 
 ## 3. Users and roles
 
