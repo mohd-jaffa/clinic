@@ -143,6 +143,11 @@ export const ERROR_MESSAGES = {
   SERVICE_INACTIVE: "A line’s service has been archived from the price list. Remove that line, or choose another.",
   VISIT_NOT_TO_BILL: "This visit isn’t waiting to be billed any more. Refresh to see where it stands.",
 
+  // Payments (plan §15.3; D297, D301).
+  PAYMENT_REFUND_TOO_LARGE: "A refund can’t be more than the patient has paid in advance.",
+  PAYMENT_HAS_REFUNDS:
+    "Money was handed back from what this payment paid in. Void that refund first, then this payment.",
+
   // The browser could not reach the server (plan §21, D55): said by the client, never sent by the server.
   NETWORK_OFFLINE: "You're offline. Try again once the connection is back — what you typed is still here.",
   NETWORK_UNREACHABLE: "ClinicDesk couldn't be reached. Check the connection and try again.",

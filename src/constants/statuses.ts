@@ -160,6 +160,28 @@ export const BILL_STATUSES = ["ISSUED", "VOID"] as const;
 export type BillStatus = (typeof BILL_STATUSES)[number];
 export const BILL_STATUS_LABELS: Record<BillStatus, string> = { ISSUED: "Issued", VOID: "Void" };
 
+/**
+ * Where an issued bill stands with payment (plan §15.2, D298): the patient's
+ * net payments settle their bills oldest first. 0029's bill_settlement.
+ */
+export const BILL_PAYMENT_STATES = ["PAID", "PART_PAID", "UNPAID"] as const;
+export type BillPaymentState = (typeof BILL_PAYMENT_STATES)[number];
+export const BILL_PAYMENT_STATE_LABELS: Record<BillPaymentState, string> = {
+  PAID: "Paid",
+  PART_PAID: "Part paid",
+  UNPAID: "Unpaid",
+};
+
+/** Money taken from a patient, or handed back (plan §15.3). 0029's CHECK. */
+export const PAYMENT_KINDS = ["PAYMENT", "REFUND"] as const;
+export type PaymentKind = (typeof PAYMENT_KINDS)[number];
+export const PAYMENT_KIND_LABELS: Record<PaymentKind, string> = { PAYMENT: "Payment", REFUND: "Refund" };
+
+/** A payment's status (plan §15.3): recorded; a mistake voided, never edited. 0029's CHECK. */
+export const PAYMENT_STATUSES = ["RECORDED", "VOID"] as const;
+export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
+export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = { RECORDED: "Recorded", VOID: "Void" };
+
 /** When a medicine is taken (plan §13): around food, or at bedtime. 0021's CHECK. */
 export const PRESCRIPTION_TIMINGS = ["BEFORE_FOOD", "AFTER_FOOD", "WITH_FOOD", "EMPTY_STOMACH", "BEDTIME"] as const;
 export type PrescriptionTiming = (typeof PRESCRIPTION_TIMINGS)[number];

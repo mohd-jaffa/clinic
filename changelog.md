@@ -4090,3 +4090,76 @@ the user first: D267 – D271.
 
 ### Blockers
 - None.
+
+## 2026-10-16 — R8.4: payments and balances in the database
+
+### Added
+- **`0029_payments`** (plan §15.3, §15.4; D282, D294 – D301), built before
+  R8.3 so the new bill screen comes whole (D294). No screen yet.
+  - **`payments`**: money taken from a patient, or handed back — against the
+    patient, never a bill (D4); kind, amount (₹0.01 – `MAX_AMOUNT_PAISE`),
+    method, reference, a note, when it was paid — any time up to now, never
+    later — and that day in the clinic's timezone (`paid_on`, D299), who
+    received it. Never edited: voided once, with a reason (`check_payment`).
+  - **`patient_balances`** (D295): a row per patient — billed, paid,
+    refunded and the balance (generated: billed − paid + refunded) — kept by
+    the money functions in each one's transaction (`add_to_balance`, which
+    makes the row at nothing first, as a CHECK reads the row an insert
+    proposes); never more refunded than paid. Filled from the bills 0028
+    issued.
+  - **`bill_settlement`**, a view read as the caller: each issued bill's
+    paid, due and state — Paid, Part paid, Unpaid — the patient's net
+    payments settling their bills oldest first (D298); worked out a patient
+    at a time.
+  - **`record_payment`**: a payment (`payments.create`) or a refund
+    (`payments.edit`) of no more than the advance held, with the balance held
+    (`PAYMENT_REFUND_TOO_LARGE`, D297); once per key; for a patient seen and
+    not archived; hands back the balance after.
+  - **`void_payment`** (`payments.edit`, a reason): once; a payment with a
+    refund standing on it only after the refund (`PAYMENT_HAS_REFUNDS`, D301).
+  - **`create_bill`** takes what is collected with the bill — Collect now,
+    Issue and collect — in its transaction, paid now under the bill's key
+    (D282); it and **`void_bill`** keep the balance, and hand it back.
+- `PAYMENT_KINDS`, `PAYMENT_STATUSES`, `BILL_PAYMENT_STATES` and their labels;
+  `TEXT_LIMITS.paymentNote`; the two refusals' words.
+
+### Changed
+- No `patient_stats` (D296): the profile's summary already serves the next
+  appointment and open treatments, and the list will read the balances.
+- A patient who owes, or holds an advance, may be archived; the balance stays
+  and counts (D300).
+- R8.1's void test expects the balance back too.
+- **Plan:** D294 – D301; §15.3 (when paid, refunds, voids), §15.4 (the
+  balances kept, archiving), §28.6 (payments, patient_balances), §28.7, §29;
+  the tracker: R8.4 DONE.
+
+### Speed (plan §37)
+- **Round trips:** each function is one call; the screens come with R8.3 and
+  R8.6. A money write holds the patient's balance row, so two at once for
+  one patient wait in turn, and never anyone else's.
+- **Indexes,** each led by the clinic: the payments newest first
+  `(clinic_id, paid_at desc)`; a patient's `(clinic_id, patient_id, paid_at
+  desc)`; who received and voided; those who owe, most first `(clinic_id,
+  balance_paise desc) where balance_paise > 0`, for the Owing tab and
+  Outstanding; a balance by its patient (the key).
+
+### Validation
+- Typecheck, lint, format check passed.
+- Unit and integration tests passed (3464), coverage 100%.
+- E2E not run: no screen or route changed (R8.1's run: 136 passed).
+- `tests/db/payments-migration.test.ts` keeps the kinds, methods, statuses,
+  states, bounds, lengths, checks, indexes, policies and grants equal to the
+  app's, and 0029's `create_bill` to 0028's rules.
+  `tests/db/integration/payments.test.ts` (11): a payment once per key,
+  received by whoever took it; an advance used by a later bill; paid earlier
+  on the clinic's day (1:30 AM in India), never later; bad amounts and
+  methods; a refund only from the advance, with payments.edit; the D301
+  order of voids; a void once, never an edit; collecting with a bill once
+  per key, an advance from it, a refused payment issuing no bill; bills
+  settled oldest first through a void and a refund; every balance equal to
+  its bills and payments; a patient who owes archived, the balance kept and
+  nothing more taken. The permission matrix, read-only and tenant isolation
+  have their rows.
+
+### Blockers
+- None.

@@ -47,6 +47,8 @@ const CLINIC_TABLES: readonly { table: string; column: string }[] = [
   { table: "follow_up_contacts", column: "clinic_id" },
   { table: "bills", column: "clinic_id" },
   { table: "bill_items", column: "clinic_id" },
+  { table: "payments", column: "clinic_id" },
+  { table: "patient_balances", column: "clinic_id" },
   { table: "audit_logs", column: "clinic_id" },
 ];
 
@@ -72,8 +74,9 @@ let templateId: string;
 /** A's patient's treatment and its session in A's visit (0024). */
 let treatmentId: string;
 let sessionId: string;
-/** A's bill for that visit, issued in the room (0028). */
+/** A's bill for that visit, issued in the room (0028), and a payment on A's patient (0029). */
 let billId: string;
+let paymentId: string;
 
 beforeAll(async () => {
   [a, b] = await Promise.all([registerClinic({ clinicName: "Clinic A" }), registerClinic({ clinicName: "Clinic B" })]);
@@ -195,6 +198,12 @@ beforeAll(async () => {
   });
   if (unbilled) throw unbilled;
   billId = (bill as { bill_id: string }).bill_id;
+  const { data: payment, error: unpaid } = await a.owner.tenant.supabase.rpc("record_payment", {
+    p_payment: { patient_id: patientId, amount_paise: 50_000, method: "UPI" },
+    p_idempotency_key: randomUUID(),
+  });
+  if (unpaid) throw unpaid;
+  paymentId = (payment as { payment_id: string }).payment_id;
   developer = await makeDeveloper();
 });
 
@@ -446,6 +455,34 @@ describe("as clinic B's owner, with a valid token", () => {
     }
     const { data: kept } = await admin().from("bills").select("status").eq("id", billId).single();
     expect(kept).toEqual({ status: "ISSUED" });
+  });
+
+  it("takes no payment from A's patient, voids none of A's, and settles none of A's bills (0029)", async () => {
+    const { supabase } = b.owner.tenant;
+    for (const [name, args] of [
+      [
+        "record_payment",
+        {
+          p_payment: { patient_id: patientId, amount_paise: 1_000, method: "CASH" },
+          p_idempotency_key: randomUUID(),
+        },
+      ],
+      [
+        "record_payment",
+        {
+          p_payment: { patient_id: patientId, kind: "REFUND", amount_paise: 1_000, method: "CASH" },
+          p_idempotency_key: randomUUID(),
+        },
+      ],
+      ["void_payment", { p_payment_id: paymentId, p_reason: "Planted" }],
+    ] as const) {
+      const { error } = await supabase.rpc(name, args);
+      expect(error?.hint, name).toBe("RECORD_NOT_FOUND");
+    }
+    const { data: settled } = await supabase.from("bill_settlement").select("bill_id").eq("patient_id", patientId);
+    expect(settled).toEqual([]);
+    const { data: kept } = await admin().from("payments").select("status").eq("id", paymentId).single();
+    expect(kept).toEqual({ status: "RECORDED" });
   });
 
   it("prints none of A's prescriptions (R6.4)", async () => {

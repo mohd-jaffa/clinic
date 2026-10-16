@@ -407,14 +407,23 @@ describe("a visit's billing state (plan §15.6, D286)", () => {
     expect(second.visit).toBeNull();
 
     const once = await voidBill(clinic.owner, first.bill_id);
-    expect(once.data).toEqual({ previously: "ISSUED", visit: null });
+    // The balance no longer counts it (0029).
+    expect(once.data).toEqual({ previously: "ISSUED", visit: null, balance_paise: PRICES.rootCanal });
     expect((await billingOf(visitId)).billing_status).toBe("BILLED");
     const last = await voidBill(clinic.owner, second.bill_id, "Billed twice");
-    expect(last.data).toEqual({ previously: "ISSUED", visit: { id: visitId, from: "BILLED", to: "TO_BILL" } });
+    expect(last.data).toEqual({
+      previously: "ISSUED",
+      visit: { id: visitId, from: "BILLED", to: "TO_BILL" },
+      balance_paise: 0,
+    });
     expect((await billingOf(visitId)).billing_status).toBe("TO_BILL");
 
     // Voided again, nothing more changes.
-    expect((await voidBill(clinic.owner, second.bill_id, "Again")).data).toEqual({ previously: "VOID", visit: null });
+    expect((await voidBill(clinic.owner, second.bill_id, "Again")).data).toEqual({
+      previously: "VOID",
+      visit: null,
+      balance_paise: 0,
+    });
     expect(await billOf(second.bill_id)).toMatchObject({
       status: "VOID",
       void_reason: "Billed twice",

@@ -113,6 +113,9 @@ const BUSINESS_RULES: ReadonlySet<ErrorMessageCode> = new Set<ErrorMessageCode>(
   "SERVICE_INACTIVE",
   "VISIT_NOT_TO_BILL",
   "PATIENT_HAS_VISITS_TO_BILL",
+  // Payments (0029): a refund past the advance (D297), a payment with a refund standing on it (D301).
+  "PAYMENT_REFUND_TOO_LARGE",
+  "PAYMENT_HAS_REFUNDS",
 ]);
 
 /**

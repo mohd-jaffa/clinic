@@ -125,6 +125,8 @@ export const TEXT_LIMITS = {
   sessionNote: 1000,
   /** A line on a follow-up call: "Will call back on Monday". */
   contactNote: 200,
+  /** A line on a payment: "Paid by her son". */
+  paymentNote: 200,
 } as const;
 
 /** How many medicines one prescription holds (plan §13): more than any visit writes. 0021's CHECK. */

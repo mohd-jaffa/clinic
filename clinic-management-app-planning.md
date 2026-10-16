@@ -380,6 +380,14 @@ earlier lines are never rewritten.
 | D291 | **A percentage is a whole number, 1 to 100** (the user): 100% makes a bill that comes to nothing, still issued and numbered (`DISCOUNT_PERCENT`). | 2026-10-16 |
 | D292 | **A bill shows its discount as the amount only** (the user): "Discount −₹50"; the percentage only works the amount out, and nothing more is stored. | 2026-10-16 |
 | D293 | **A discount larger than the bill is refused at its field** (the user): "A discount can't be more than the bill", under the field, and nothing is issued until it is fixed — never capped. The database refuses it too. | 2026-10-16 |
+| D294 | **Payments before the new bill screen** (the user): R8.4 (payments and balances in the database) is built before R8.3, so the new bill screen comes whole — Collect now, Issue and collect at arrival, the balance after — with no second pass. | 2026-10-16 |
+| D295 | **Each patient's balance is kept up to date by the money functions** (the user): `patient_balances` is a row per patient — billed, paid, refunded and the balance — changed in the same transaction as each bill, void, payment and refund, so the Owing tab and Outstanding read it from an index; a test proves it always equals the sums. | 2026-10-16 |
+| D296 | **No `patient_stats`** (the user): nothing would read it — the profile's summary serves the next appointment and open treatments (D166, D260), and the list reads the balances. | 2026-10-16 |
+| D297 | **A refund is no more than the advance held** (the user): only money paid beyond what is owed (after a void, or an overpayment) is handed back, so a refund never makes a patient owe; a discount after the fact is a void and a new bill. | 2026-10-16 |
+| D298 | **Payments settle bills oldest first, as planned** (the user): one rule for every payment, Collect now included — a payment is never tied to a bill (D4); a bill shows the patient's overall balance. | 2026-10-16 |
+| D299 | **A payment is paid any time up to now** (the user): "when paid" defaults to now and may be set earlier, never later; it counts on that day in the clinic's timezone. | 2026-10-16 |
+| D300 | **A patient who owes, or holds an advance, may be archived** (the user): the balance stays and counts; to take a payment or a refund, they are restored first (D103). | 2026-10-16 |
+| D301 | **A payment with a refund standing on it is voided after the refund** (the user): a void that would leave more refunded than paid is refused (`PAYMENT_HAS_REFUNDS`), the card saying to void the refund first. | 2026-10-16 |
 
 ## 3. Users and roles
 
@@ -1401,17 +1409,22 @@ is refused, never capped (D293).
 
 - **Record payment** (`payments.create`): patient, amount, method (Cash, UPI,
   Card, Bank transfer, Other), reference (UPI ref, cheque no.), when paid
-  (defaults to now), note. Recorded against the patient; an amount beyond what
-  is owed becomes an **advance** (negative balance), used by later bills.
-- **Refund** (`payments.edit`): money returned — up to what was paid in.
+  (defaults to now; any time up to now, never later, D299), note. Recorded
+  against the patient; an amount beyond what is owed becomes an **advance**
+  (negative balance), used by later bills.
+- **Refund** (`payments.edit`): money returned — no more than the advance
+  held, so a refund never makes a patient owe (D297).
 - **Void** (`payments.edit`, asks first, a reason): a payment entered by
-  mistake. Voided payments stay visible and leave the balance.
+  mistake. Voided payments stay visible and leave the balance. A payment with
+  a refund standing on it is voided after the refund (D301).
 - Every payment records who received it (`received_by`) and is idempotent.
 
 ### 15.4 Balance and outstanding
 
-`patient_balances` view: billed (issued bills) − paid + refunded. Positive is
-**due**, negative is **advance**.
+`patient_balances`: billed (issued bills) − paid + refunded, a row per
+patient kept up to date by the money functions in each one's transaction
+(D295). Positive is **due**, negative is **advance**. A patient who owes, or
+holds an advance, may be archived; the balance stays and counts (D300).
 
 **Billing — `/billing`** (`payments.view`) has tabs: **To bill** (§15.6),
 **Bills** (number, patient, date, total, state; filters by date and state),
@@ -2036,9 +2049,14 @@ bill_items            id · clinic_id · bill_id (cascade) · position (1 – BI
                       · description · quantity (1–999) · unit_price_paise · amount_paise
                       check (amount = quantity × unit_price)
 payments              id · clinic_id · patient_id · kind (PAYMENT|REFUND) · amount_paise > 0
-                      · method · reference · paid_at · note · status (RECORDED|VOID)
-                      · void_reason · voided_by · voided_at · received_by
-                      · idempotency_key (unique per clinic)
+                      · method · reference · paid_at (never later than recorded, D299)
+                      · paid_on (its day in the clinic's timezone) · note
+                      · status (RECORDED|VOID) · void_reason · voided_by · voided_at
+                      · received_by · idempotency_key (unique per clinic); only ever voided,
+                      once (check_payment)
+patient_balances      patient_id (PK) · clinic_id · billed_paise · paid_paise · refunded_paise
+                      · balance_paise (billed − paid + refunded, generated)   kept by the
+                      money functions (D295); refunded ≤ paid
 expenses              id · clinic_id · category_id · description · amount_paise · expense_date
                       · payment_method · archived_at · archived_by · created_by · updated_by
 ```
@@ -2047,9 +2065,8 @@ expenses              id · clinic_id · category_id · description · amount_pa
 
 | Name | Purpose |
 |---|---|
-| `patient_balances` | billed, paid, refunded, balance per patient. |
-| `bill_settlement` | each issued bill's paid and due, oldest first. |
-| `patient_stats` | next appointment, open treatments, per patient (lists). |
+| `patient_balances` (a table, D295) | billed, paid, refunded, balance per patient, kept by the money functions (`add_to_balance`). |
+| `bill_settlement` (a view, as the caller) | each issued bill's paid, due and state (Paid, Part paid, Unpaid), the patient's net payments settling their bills oldest first (D298); read for a patient. |
 | `last_visit_on(patient)` (0022) | the day of a patient's latest visit, read with the patients list for everyone who sees the patient (D228). |
 | `visit_recorded(visit)` (0022) | whether a visit holds anything: its row in the history (D226), and Back to waiting through `visit_is_empty` (D197). |
 | `follow_up_items(tab)`, `follow_up_counts()`, `record_follow_up_contact` (0026, 0027) | the follow-ups in their tabs, a page at a time, and how many each holds, for whoever sees appointments or visits (§14.3, D267 – D271); a call noted; the last contact with who made it (D275). |
@@ -2061,7 +2078,7 @@ expenses              id · clinic_id · category_id · description · amount_pa
 | `start_visit` (from a profile) and `finish_visit` (its Done), `save_vitals` (a visit's, or a waiting patient's, opening their visit), `update_visit` (notes or follow-up) — each section's save refused from an older copy (0020; D202 – D208); `save_prescription` (the whole, by the doctor or `prescriptions.write`, D210 – D215) and `medicine_suggestions` (D211) (0021); `save_prescription_template` (a doctor's own, new or changed, asking before it replaces one of the same name, D240 – D243) and `previous_prescription(visit)` (Repeat's, D236) (0023) | visits. |
 | `create_treatment` (in a visit, the visit's doctor's and, begun at once, its first session; or from the profile), `update_treatment` (its details, from the copy read, D251), `change_treatment_status` (as `treatment_status_next()` allows, a reason with a cancellation, D250), `record_treatment_session` (from any of the patient's visits, starting a planned or on-hold one, D248, D249 — and completing it in the same save, D257, 0025), `remove_treatment_session` (by its treatment and visit, while the visit is open, D254, 0025) (0024); `visit_treatments(visit)` (a visit's card: the open ones and those touched in it, D256) (0025) | treatments (§14.1). |
 | `import_patients(rows)` | one import batch (§10.5): validated, numbered, audited. |
-| `create_bill` (for a visit, an arrival or a patient; prices held without `payments.discount`, D284, D289), `void_bill`, `mark_no_charge`, `visit_billed(visit)` (whether its bills settle it, as a visit closes and a bill is voided, §15.6) (0028); `record_payment`, `void_payment` (0029) | money. |
+| `create_bill` (for a visit, an arrival or a patient; prices held without `payments.discount`, D284, D289), `void_bill`, `mark_no_charge`, `visit_billed(visit)` (whether its bills settle it, as a visit closes and a bill is voided, §15.6) (0028); `record_payment` (a payment, or a refund of no more than the advance, D297), `void_payment` (a payment after its refund, D301), and `create_bill` with what is collected with it (D282) (0029) | money. |
 | `request_clinic_deletion`, `cancel_clinic_deletion` | owner (§9.1). |
 | `extend_clinic_subscription`, `update_platform_settings`, `delete_clinic` | DEV. |
 | `clean_up_logs()` | hourly (pg_cron): audit older than `audit_keep_days`, errors older than `error_log_keep_days`. |
@@ -2143,8 +2160,9 @@ Planned order (one or more per tracker row):
                                 bill or its arrival's (§15.6); no archive with a visit to bill
                                 (D288)
 0029_payments                   payments, record_payment, void_payment, the payment with a
-                                bill in create_bill (D282), patient_balances,
-                                bill_settlement, patient_stats
+                                bill in create_bill (D282), patient_balances kept by the
+                                money functions (D295), bill_settlement (D298); no
+                                patient_stats (D296)
 0030_expenses                   expenses
 0031_dashboard_and_reports      dashboard_summary, report_daily, report_monthly
 0032_subscription_notices       the daily pg_cron → pg_net call (address and secret in Vault)
@@ -2758,7 +2776,7 @@ in the row's one commit (D136).
 | R8.1 | `0028_bills`: bills, items, financial-year counters, `create_bill` (idempotent, price check without `payments.discount`), `void_bill`, `mark_no_charge`, the fee at arrival as a bill for the arrived appointment (D282 – D289: payments with R8.4; the token, then the fee bill; typed lines need `payments.discount`; a treatment through a price-list line; more than one bill a visit; No charge billed after all; no archive with a visit to bill; a Consultation at its price or the doctor's fee) | §15.2, §15.6, §11.3 | — | DONE (2026-10-16) |
 | R8.2 | `billing/totals.ts`, the one formula; discount by amount or % (D290 – D293: a percentage to the nearest rupee; whole percentages, 1 – 100; the amount only on the bill; a discount past the bill refused at its field) | §15.1 | — | DONE (2026-10-16) |
 | R8.3 | New bill screen: from To bill, a visit or a patient; the doctor's fee; discount and price change with `payments.discount`; collect now. Collect fee at arrival | §15.2, §11.3 | — | TODO |
-| R8.4 | `0029_payments`: record, refund, void; the payment with a bill in `create_bill` — Collect now, Issue and collect (D282); `patient_balances`, `bill_settlement`, `patient_stats` | §15.3, §15.4 | — | TODO |
+| R8.4 | `0029_payments`: record, refund, void; the payment with a bill in `create_bill` — Collect now, Issue and collect (D282); `patient_balances`, `bill_settlement` (D294 – D301: built before R8.3; balances kept by the money functions; no `patient_stats`; refunds from the advance; oldest first; paid up to now; archived with a balance; a refund voided first) | §15.3, §15.4 | — | DONE (2026-10-16) |
 | R8.5 | Bill PDF; share, download, print | §15.5, §33 | — | TODO |
 | R8.6 | Checkout: the queue's To-bill column, Billing's tabs (To bill, bills, payments, outstanding), No charge; the profile's balance section, its bills and payments in the history, and the patients list's Owing tab and balance chip (D101) | §15.4, §15.6, §10.2, §10.3 | — | TODO |
 | R8.7 | Integration: double submit → one bill/payment; balances to the paisa; read-only refuses | §34 | — | TODO |

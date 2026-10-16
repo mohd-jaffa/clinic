@@ -23,7 +23,7 @@ import {
 } from "@tests/support/integration";
 
 /**
- * The permission matrix, so far (plan §34.3, R1.11, R3.8, R4.7, R5.1, R6.1, R6.3, R6.4, R6.7, R7.1, R7.2, R7.3, R8.1): every
+ * The permission matrix, so far (plan §34.3, R1.11, R3.8, R4.7, R5.1, R6.1, R6.3, R6.4, R6.7, R7.1, R7.2, R7.3, R8.1, R8.4): every
  * permission the schema enforces yet, allowed and refused — by the route
  * guard, and by RLS or a function with the member's own token. Each phase
  * adds the rows its tables bring; the patients routes themselves are asked in
@@ -956,6 +956,75 @@ describe("bills: payments.view reads, .create issues and settles free, .discount
     }
     // Nor does a doctor who bills issue one for a patient not theirs.
     expect((await bill(stranger)).error?.hint).toBe("RECORD_NOT_FOUND");
+  });
+});
+
+describe("payments: .create records, .edit refunds and voids, .view reads with the balances (0029)", () => {
+  type Member = SignedIn & { memberId: string };
+  let viewer: Member;
+  let taker: Member;
+  let voider: Member;
+  let stranger: Member;
+  let patientId: string;
+
+  beforeAll(async () => {
+    [viewer, taker, voider, stranger] = await Promise.all([
+      addMember(clinic.clinicId, { permissions: ["patients.view", "payments.view"] }),
+      addMember(clinic.clinicId, { permissions: ["patients.view", "payments.view", "payments.create"] }),
+      addMember(clinic.clinicId, { permissions: ["patients.view", "payments.view", "payments.edit"] }),
+      addMember(clinic.clinicId, {
+        role: "DOCTOR",
+        permissions: ["patients.view", "payments.view", "payments.create"],
+      }),
+    ]);
+    const { data } = await clinic.owner.tenant.supabase
+      .rpc("create_patient", {
+        p_patient: { full_name: "Pay Matrix", phone: "+919876543217", date_of_birth: "1990-04-12", gender: "MALE" },
+        p_idempotency_key: randomUUID(),
+      })
+      .single<{ patient_id: string }>();
+    patientId = data!.patient_id;
+  });
+
+  const pay = (member: SignedIn, kind = "PAYMENT", amount = 10_000) =>
+    member.tenant!.supabase.rpc("record_payment", {
+      p_payment: { patient_id: patientId, kind, amount_paise: amount, method: "CASH" },
+      p_idempotency_key: randomUUID(),
+    });
+
+  it("records a payment with payments.create, and refuses payments.view or .edit alone", async () => {
+    for (const member of [viewer, voider, receptionist]) {
+      expect((await pay(member)).error?.hint).toBe("AUTH_PERMISSION_DENIED");
+    }
+    expect((await pay(taker)).error).toBeNull();
+  });
+
+  it("refunds and voids with payments.edit only", async () => {
+    expect((await pay(taker, "REFUND", 1_000)).error?.hint).toBe("AUTH_PERMISSION_DENIED");
+    expect((await pay(voider, "REFUND", 1_000)).error).toBeNull();
+    const { data } = await pay(taker);
+    const id = (data as { payment_id: string }).payment_id;
+    const voiding = (member: SignedIn) =>
+      member.tenant!.supabase.rpc("void_payment", { p_payment_id: id, p_reason: "Entered twice" });
+    for (const member of [viewer, taker]) {
+      expect((await voiding(member)).error?.hint).toBe("AUTH_PERMISSION_DENIED");
+    }
+    expect((await voiding(voider)).error).toBeNull();
+  });
+
+  it("reads payments, balances and bills' settlement with payments.view, none without, a doctor only their own patients'", async () => {
+    for (const table of ["payments", "patient_balances"]) {
+      const { data: read } = await viewer.tenant!.supabase.from(table).select("patient_id").eq("patient_id", patientId);
+      expect(read!.length, table).toBeGreaterThan(0);
+      for (const member of [receptionist, stranger]) {
+        const { data } = await member.tenant!.supabase.from(table).select("patient_id").eq("patient_id", patientId);
+        expect(data, table).toEqual([]);
+      }
+    }
+    const { error } = await receptionist.tenant!.supabase.from("bill_settlement").select("bill_id").limit(1);
+    expect(error).toBeNull();
+    // Nor does a doctor who takes payments take one from a patient not theirs.
+    expect((await pay(stranger)).error?.hint).toBe("RECORD_NOT_FOUND");
   });
 });
 
