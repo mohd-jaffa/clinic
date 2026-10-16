@@ -148,6 +148,13 @@ export const NO_CHARGE_REASON_LABELS: Record<NoChargeReason, string> = {
   OTHER: "Other",
 };
 
+/**
+ * How a bill's discount is given (plan §15.2, D29): as an amount, or as a
+ * percentage of the subtotal — either way stored as paise (D292).
+ */
+export const DISCOUNT_KINDS = ["AMOUNT", "PERCENT"] as const;
+export type DiscountKind = (typeof DISCOUNT_KINDS)[number];
+
 /** A bill's status (plan §15.2): issued final; a mistake voided, never edited. 0028's CHECK. */
 export const BILL_STATUSES = ["ISSUED", "VOID"] as const;
 export type BillStatus = (typeof BILL_STATUSES)[number];

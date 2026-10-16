@@ -376,6 +376,10 @@ earlier lines are never rewritten.
 | D287 | **A visit marked No charge by mistake is simply billed** (the user): a bill issued for it makes it Billed and drops the reason; there is no separate undo. | 2026-10-16 |
 | D288 | **A patient with a visit in To bill is not archived until it is billed or marked No charge** (the user), as one with an appointment to come (D140) or an open treatment (D255): the archive is refused (`PATIENT_HAS_VISITS_TO_BILL`), and the card names the first one's day ("Rohan Mehta has a visit to bill from 12 Oct"). | 2026-10-16 |
 | D289 | **A Consultation line may be at its own price or the doctor's fee** (the user): without `payments.discount`, a price-list line in the Consultation category is accepted at its price-list price or at the bill's doctor's own fee (D26), so a clinic keeps a cheaper Review beside its Consultation. | 2026-10-16 |
+| D290 | **A percentage discount is rounded to the nearest rupee** (the user): half a rupee rounds up — 15% off ₹333 is ₹50 off — so whole-rupee prices keep whole-rupee totals; worked out in integers, and never past the subtotal, so 100% is the whole of it. | 2026-10-16 |
+| D291 | **A percentage is a whole number, 1 to 100** (the user): 100% makes a bill that comes to nothing, still issued and numbered (`DISCOUNT_PERCENT`). | 2026-10-16 |
+| D292 | **A bill shows its discount as the amount only** (the user): "Discount −₹50"; the percentage only works the amount out, and nothing more is stored. | 2026-10-16 |
+| D293 | **A discount larger than the bill is refused at its field** (the user): "A discount can't be more than the bill", under the field, and nothing is issued until it is fixed — never capped. The database refuses it too. | 2026-10-16 |
 
 ## 3. Users and roles
 
@@ -1355,7 +1359,11 @@ once); noting a contact on 3.
 Integer paise everywhere; `src/lib/money.ts` is the only place that converts;
 screens show money through `formatPaise`; a bill's totals come from one formula
 (`src/features/billing/totals.ts`) used by the screen's preview and by the
-server, and the database recomputes and checks them (AGENTS.md §16).
+server, and the database recomputes and checks them (AGENTS.md §16): the
+lines' quantity times price added up, less the discount — an amount as
+typed, or a whole percentage of the subtotal rounded to the nearest rupee,
+half up, never past the subtotal (D290, D291). A discount past the subtotal
+is refused, never capped (D293).
 
 ### 15.2 Bills
 
@@ -1367,7 +1375,8 @@ server, and the database recomputes and checks them (AGENTS.md §16).
   line may also name the patient's treatment it is for (D285) — or, with
   `payments.discount`, are typed as a custom line (description + price,
   D284); quantity; notes. **With `payments.discount`** (D29): a changed unit
-  price, and a discount as an amount or a percentage (stored as paise);
+  price, and a discount as an amount or a whole percentage, 1 – 100 (stored
+  as paise, and shown on the bill as the amount only — D290 – D292);
   without it, prices are the price list's — a Consultation line's may be the
   bill's doctor's fee instead (D289) — and there is no discount. A live
   preview shows subtotal, discount, total and the patient's balance after.
@@ -2747,7 +2756,7 @@ in the row's one commit (D136).
 | ID | Work | Source | Waits on | Status |
 |---|---|---|---|---|
 | R8.1 | `0028_bills`: bills, items, financial-year counters, `create_bill` (idempotent, price check without `payments.discount`), `void_bill`, `mark_no_charge`, the fee at arrival as a bill for the arrived appointment (D282 – D289: payments with R8.4; the token, then the fee bill; typed lines need `payments.discount`; a treatment through a price-list line; more than one bill a visit; No charge billed after all; no archive with a visit to bill; a Consultation at its price or the doctor's fee) | §15.2, §15.6, §11.3 | — | DONE (2026-10-16) |
-| R8.2 | `billing/totals.ts`, the one formula; discount by amount or % | §15.1 | — | TODO |
+| R8.2 | `billing/totals.ts`, the one formula; discount by amount or % (D290 – D293: a percentage to the nearest rupee; whole percentages, 1 – 100; the amount only on the bill; a discount past the bill refused at its field) | §15.1 | — | DONE (2026-10-16) |
 | R8.3 | New bill screen: from To bill, a visit or a patient; the doctor's fee; discount and price change with `payments.discount`; collect now. Collect fee at arrival | §15.2, §11.3 | — | TODO |
 | R8.4 | `0029_payments`: record, refund, void; the payment with a bill in `create_bill` — Collect now, Issue and collect (D282); `patient_balances`, `bill_settlement`, `patient_stats` | §15.3, §15.4 | — | TODO |
 | R8.5 | Bill PDF; share, download, print | §15.5, §33 | — | TODO |

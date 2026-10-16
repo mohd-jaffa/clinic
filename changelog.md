@@ -4049,3 +4049,44 @@ the user first: D267 – D271.
 
 ### Blockers
 - None.
+
+## 2026-10-16 — R8.2: what a bill comes to
+
+### Added
+- **`src/features/billing/totals.ts`** (plan §15.1; D290 – D293), the one
+  formula the new bill's preview and the server will use (R8.3), and that
+  0028's `create_bill` works out again: `lineAmount`, `discountPaise` and
+  `billTotals`, in whole paise, never a float.
+  - A discount is an amount, as typed, or a whole percentage of the
+    subtotal (`DISCOUNT_PERCENT`, 1 – 100, D291), rounded to the nearest
+    rupee, half up — 15% off ₹333 is ₹50 off — in integers, and never past
+    the subtotal, so 100% is the whole of it even when that ends in paise
+    (D290).
+  - An amount past the subtotal is left as typed, its total below nothing,
+    for the form to refuse at the field (D293); the database refuses it too.
+  - Stored as paise only; the bill will show the amount (D292).
+- `DISCOUNT_KINDS` (amount or percentage) and `DISCOUNT_PERCENT`.
+
+### Changed
+- **Plan:** D290 – D293; §15.1 (the formula and its rounding), §15.2 (whole
+  percentages, the amount on the bill); the tracker: R8.2 DONE.
+
+### Speed (plan §37)
+- No query or round trip: a pure function, worked out where it is called.
+
+### Validation
+- Typecheck, lint, format check passed.
+- Unit and integration tests passed (3426), coverage 100%. A first run broke
+  while the computer slept (the database clock paused, workers timed out);
+  run again, all passed.
+- E2E not run: no screen or route changed (R8.1's run: 136 passed).
+- `tests/unit/features/billing/totals.test.ts`: line amounts; amounts off,
+  past the subtotal too; percentages to the rupee, half up and down; 100%
+  of a subtotal in paise; the largest bill without drift; no lines.
+  `tests/db/integration/bill-totals.test.ts` (8): seven bills issued at
+  exactly the totals the formula works out — the rounding cases among them
+  — and a total a paisa off, a subtotal a paisa off and a discount past the
+  subtotal refused.
+
+### Blockers
+- None.

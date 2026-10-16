@@ -16,6 +16,9 @@ export const MAX_QUANTITY = 999;
 /** How many lines one bill holds (plan §28.6): more than any visit bills. 0028's CHECK. */
 export const BILL_MAX_ITEMS = 50;
 
+/** A percentage discount (plan §15.2, D291): a whole number, 1 – 100; 100 makes a bill that comes to nothing. */
+export const DISCOUNT_PERCENT = { min: 1, max: 100 } as const;
+
 /**
  * How many rows a list asks for at a time (plan §10.2): enough to fill a phone
  * twice over; **Show more** brings the next as many.
