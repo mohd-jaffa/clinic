@@ -22,14 +22,15 @@ const opened = { entity: "VISIT", id: "v-1", from: null, to: "OPEN" } as const;
 beforeEach(() => vi.clearAllMocks());
 
 describe("movesAudited (plan §27.6)", () => {
-  it("audits each appointment's status, and each visit opened, closed as To bill, or removed", () => {
+  it("audits each appointment's status, and each visit opened, closed with its billing state, or removed", () => {
     expect(
       movesAudited(
         [
           sentIn,
           opened,
-          { entity: "VISIT", id: "v-2", from: "OPEN", to: "COMPLETED" },
+          { entity: "VISIT", id: "v-2", from: "OPEN", to: "COMPLETED", billing: "TO_BILL" },
           { entity: "VISIT", id: "v-3", from: "OPEN", to: null },
+          { entity: "VISIT", id: "v-4", from: null, to: "COMPLETED", billing: "BILLED" },
         ],
         "req_1",
       ),
@@ -60,6 +61,13 @@ describe("movesAudited (plan §27.6)", () => {
         entityType: "visits",
         entityId: "v-3",
         changes: { status: { from: "OPEN", to: null } },
+        requestId: "req_1",
+      },
+      {
+        action: "CREATE",
+        entityType: "visits",
+        entityId: "v-4",
+        changes: { status: { from: null, to: "COMPLETED" }, billing_status: { from: null, to: "BILLED" } },
         requestId: "req_1",
       },
     ]);

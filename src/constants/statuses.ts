@@ -148,6 +148,11 @@ export const NO_CHARGE_REASON_LABELS: Record<NoChargeReason, string> = {
   OTHER: "Other",
 };
 
+/** A bill's status (plan §15.2): issued final; a mistake voided, never edited. 0028's CHECK. */
+export const BILL_STATUSES = ["ISSUED", "VOID"] as const;
+export type BillStatus = (typeof BILL_STATUSES)[number];
+export const BILL_STATUS_LABELS: Record<BillStatus, string> = { ISSUED: "Issued", VOID: "Void" };
+
 /** When a medicine is taken (plan §13): around food, or at bedtime. 0021's CHECK. */
 export const PRESCRIPTION_TIMINGS = ["BEFORE_FOOD", "AFTER_FOOD", "WITH_FOOD", "EMPTY_STOMACH", "BEDTIME"] as const;
 export type PrescriptionTiming = (typeof PRESCRIPTION_TIMINGS)[number];

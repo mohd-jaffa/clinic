@@ -6,7 +6,7 @@ import { ERROR_MESSAGES, UI_TEXT } from "@/constants/messages";
 import { PERMISSION_PRESET_SETS } from "@/constants/permissions";
 import { createPatient } from "@/features/patients/api";
 import { todayKey } from "@/lib/dates/calendar";
-import { formatDate, formatLongDate } from "@/lib/format/date";
+import { formatDate, formatDayMonth, formatLongDate } from "@/lib/format/date";
 import type { Tenant } from "@/lib/supabase/tenant";
 import { patientSchema } from "@/lib/validation";
 import { expectAccessible } from "@tests/support/e2e";
@@ -40,8 +40,9 @@ import { addMember, admin, aMobileNumber, registerClinic, removeAll } from "@tes
  * stays on the profile, which says when and by whom; finds them under
  * Archived, not on the list; and restores them at once. While she has an
  * open treatment the archive is refused, the card saying so without naming
- * it to someone who reads no treatments (R7.1, D255). At a phone's width and
- * a desktop's, each checked by axe.
+ * it to someone who reads no treatments (R7.1, D255); while a visit of hers
+ * waits in To bill, too, the card naming its day (R8.1, D288). At a phone's
+ * width and a desktop's, each checked by axe.
  */
 test.afterAll(removeAll);
 
@@ -433,7 +434,7 @@ test("a receptionist archives a patient, finds them under Archived and restores 
   const meena = await createPatient(clinic.owner.tenant, patientSchema.parse(typed), randomUUID());
   await signIn(page, receptionist.email, receptionist.password);
 
-  // An open treatment holds her back (D255).
+  // An open treatment holds her back (D255), and a visit waiting in To bill (D288).
   const { data: doctor } = await admin()
     .from("doctors")
     .select("id")
@@ -442,6 +443,18 @@ test("a receptionist archives a patient, finds them under Archived and restores 
   const { data: treatment } = await admin()
     .from("treatments")
     .insert({ clinic_id: clinic.clinicId, patient_id: meena.id, doctor_id: doctor!.id, name: "Root canal" })
+    .select("id")
+    .single();
+  const { data: visit } = await admin()
+    .from("visits")
+    .insert({
+      clinic_id: clinic.clinicId,
+      patient_id: meena.id,
+      doctor_id: doctor!.id,
+      status: "COMPLETED",
+      completed_at: new Date().toISOString(),
+      billing_status: "TO_BILL",
+    })
     .select("id")
     .single();
 
@@ -458,7 +471,18 @@ test("a receptionist archives a patient, finds them under Archived and restores 
   await refused.getByRole("button", { name: UI_TEXT.actions.close }).click();
   await admin().from("treatments").update({ status: "CANCELLED" }).eq("id", treatment!.id);
 
-  // Cancelled, it no longer does.
+  // Cancelled, the visit to bill still does, the card naming its day.
+  await sheet.getByRole("button", { name: UI_TEXT.actions.archive }).click();
+  await ask.getByRole("button", { name: UI_TEXT.actions.archive }).click();
+  const toBill = page.getByRole("alertdialog", {
+    name: patients.hasVisitToBill("Meena Iyer", formatDayMonth(todayKey())),
+  });
+  await expect(toBill).toContainText(ERROR_MESSAGES.PATIENT_HAS_VISITS_TO_BILL);
+  await expectAccessible(page);
+  await toBill.getByRole("button", { name: UI_TEXT.actions.close }).click();
+  await admin().from("visits").update({ billing_status: "NO_CHARGE", no_charge_reason: "REVIEW" }).eq("id", visit!.id);
+
+  // Settled No charge, nothing holds her back.
   await sheet.getByRole("button", { name: UI_TEXT.actions.archive }).click();
   await expect(ask).toContainText(patients.archiveBody);
   await expectAccessible(page);

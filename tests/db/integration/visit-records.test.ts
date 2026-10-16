@@ -21,6 +21,7 @@ import {
   admin,
   registerClinic,
   removeAll,
+  settleVisits,
   type SignedIn,
   type TestClinic,
 } from "@tests/support/integration";
@@ -236,6 +237,7 @@ describe("saveVitals on a visit (D202, D206)", () => {
     );
     expect(corrected.vitals?.pulse).toBe(71);
 
+    await settleVisits(patient.patientId);
     await admin().from("patients").update({ archived_at: new Date().toISOString() }).eq("id", patient.patientId);
     await expect(
       saveVitals(nurse.tenant!, { visitId: patient.visitId }, vitals({ pulse: "72" }, corrected.vitals)),

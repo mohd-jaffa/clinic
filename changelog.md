@@ -3950,3 +3950,102 @@ the user first: D267 – D271.
 
 ### Blockers
 - None.
+
+## 2026-10-16 — R8.1: bills in the database
+
+### Added
+- **`0028_bills`** (plan §15.2, §15.6, §11.3, §28.6; D27, D29, D282 –
+  D289), the first billing row: no screen yet — the new bill comes with
+  R8.3, checkout with R8.6.
+  - **`bills`**, issued final: for a patient, and one of their visits, or the
+    appointment whose fee is taken at arrival (D283), or neither; the
+    visit's or appointment's doctor, or one picked; its day in the clinic's
+    timezone (`issued_on`) and its financial year. Never edited: only voided,
+    once, with a reason, stamped with who and when (`check_bill`).
+  - **`bill_items`**: up to `BILL_MAX_ITEMS` (50) lines, each a price-list
+    entry with its name copied — naming the patient's treatment it is for
+    when it is (D285) — or a line typed with its price (D284); each its
+    quantity times its price, within `MAX_AMOUNT_PAISE`.
+  - **`bill_counters`**: each clinic's last number of a financial year,
+    taken under the counter's row lock (`next_bill_number`) — `2026-27/0001`,
+    every digit kept past 9999, never `max() + 1`, and a bill that fails
+    takes its number back. The year is 0005's `financial_year()`.
+  - **`create_bill`** (`payments.create`), once per idempotency key: the
+    subtotal and total the screen worked out are worked out again and must
+    agree; without `payments.discount`, every price is the price list's — a
+    Consultation line's may be the bill's doctor's fee instead (D289) — with
+    no typed line and no discount (`BILL_PRICE_NOT_ALLOWED`); an archived
+    entry is refused (`SERVICE_INACTIVE`). The visit it bills is Billed,
+    from To bill or No charge (D287); a Billed visit may take another bill
+    (D286). The fee at arrival is a bill for the appointment while the
+    patient is arrived or in: Arrived gives the token first, and a bill that
+    fails never takes it back (D283).
+  - **`void_bill`** (`payments.edit`, a reason): the bill stays, Void; its
+    visit goes back to To bill once nothing billed remains for it.
+  - **`mark_no_charge`** (`payments.create`): a visit waiting in To bill,
+    with its reason — and a note for Other; twice changes nothing; one open
+    or Billed is refused (`VISIT_NOT_TO_BILL`).
+  - **A visit closes Billed** (`visit_billed`, §15.6) when a bill of its own
+    was issued while it was open (Bill now), or its fee was billed at
+    arrival and no treatment was worked on in it; otherwise To bill. Done,
+    Next patient and a profile visit's Done hand the billing state to the
+    audit row. Back to waiting keeps a visit a bill names (D197).
+  - **A patient with a visit in To bill is not archived** (D288,
+    `PATIENT_HAS_VISITS_TO_BILL`); the card names its day: "Meena Iyer has
+    a visit to bill from 16 Oct".
+  - Bills are read with `payments.view`, within the doctor scope; written
+    only through the functions. Payments join `create_bill` with 0029
+    (R8.4, D282).
+- `BILL_STATUSES` and labels, `BILL_MAX_ITEMS`; the four refusals' words;
+  `UI_TEXT.patients.hasVisitToBill`.
+
+### Changed
+- `finish_appointment` and `finish_visit` close a visit Billed when its
+  bills settle it; `finish_visit` now hands back the billing state too
+  (dropped and made again, its grant restored). `movesAudited` records a
+  closed visit's billing state as the database gives it, on a visit created
+  closed as well.
+- `check_patient` refuses the archive after 0017's and 0024's refusals;
+  `usePatientArchive` names the visit's day (D288).
+- Four integration tests that archived a patient with a visit in To bill
+  now settle it first (`settleVisits`), as checkout would; the
+  migrations' index check accepts a primary key led by `clinic_id`.
+- **Plan:** D282 – D289; §10.1 (the archive), §11.3 (the fee at arrival in
+  two steps), §15.2 (typed lines, treatment lines, a Consultation's price,
+  a second bill), §15.6 (when a visit closes Billed; a void), §28.6, §28.7,
+  §29 (0028, and the payment with a bill in 0029); the tracker: R8.1 DONE,
+  R8.4 names the payment with a bill.
+
+### Speed (plan §37)
+- **Round trips:** each function is one call; the screens come with R8.3
+  and R8.6. Issuing a bill locks only what it bills (the visit, or the
+  arrival's appointment) and the year's counter row.
+- **Indexes,** each led by the clinic: the bills newest first `(clinic_id,
+  issued_at desc)`; a patient's `(clinic_id, patient_id, issued_at)`; a
+  visit's and an arrival's, only where there is one; a doctor's
+  `(clinic_id, doctor_id, issued_at)`; who issued and voided; a line's
+  entry and treatment, only where there is one; a bill's lines by its own
+  `(bill_id, position)`; the counter by its key `(clinic_id,
+  financial_year)`.
+
+### Validation
+- Typecheck, lint, format check passed.
+- Unit and integration tests passed (3409), coverage 100%.
+- E2E passed (phone, desktop), with axe: 136 passed, 8 skipped (run at one
+  width only).
+- `tests/db/bills-migration.test.ts` keeps the statuses, bounds, lengths,
+  checks, indexes, policies and grants equal to the app's.
+  `tests/db/integration/bills.test.ts` (13): numbered per financial year,
+  once per key, past 9999, five at once each their own and one key twice at
+  once one bill; names copied, amounts in order; the price-list hold, the
+  doctor's fee and the owner's discounts; a treatment's line; every refusal;
+  a visit Billed, Billed again, back to To bill; the fee at arrival with
+  and without a treatment worked on, and its void; Bill now from the queue —
+  kept through Back to waiting — and from a profile; No charge, billed
+  after all; the archive refused and then allowed; an issued bill never
+  edited, voided once. The permission matrix, read-only and tenant
+  isolation have their rows; `patients.spec.ts` sees the archive card.
+- 0028 applied to the local database twice from 0027, each time cleanly.
+
+### Blockers
+- None.

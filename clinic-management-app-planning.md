@@ -368,6 +368,14 @@ earlier lines are never rewritten.
 | D279 | **The tabs are proven on the clinic's day at every edge, with no test clock in the app** (the user): the database's clock cannot be moved, so each edge is tested from the clinic's today — Today against yesterday, the last day of Overdue against the first of Lapsed, the 30th day ahead against the 31st, completed 30 days ago against 31, a snooze's own day — and the clinic's midnight where it can be fixed in time: a follow-up set at 1:30 AM in India, still the day before in UTC, is set on India's day, so an appointment kept that same India day does not close it and one the next day does. | 2026-10-16 |
 | D280 | **That Lapsed follows the DEV's setting is tested by changing it and putting it back** (the user): as the DEV, 7 days, then 60, each moving a follow-up between Overdue and Lapsed with the counts, then the old value restored — integration files run one at a time, so no other test sees it. | 2026-10-16 |
 | D281 | **R7.5 is database tests only** (the user): the tabs are worked out only in the database; the screen's words and counts were tested in R7.4's journeys. | 2026-10-16 |
+| D282 | **Bills first, payments with R8.4** (the user): R8.1 issues bills only; the optional payment — **Collect now**, **Issue and collect** at arrival — joins `create_bill`'s transaction with the payments table in 0029, so the rows keep their order. | 2026-10-16 |
+| D283 | **The fee at arrival is two steps: the token, then the fee bill** (the user): **Arrived** and **Add walk-in** give the token at once, as before; **Collect fee** follows, issuing a consultation bill for that appointment (`create_bill` with its `appointment_id`, while the patient is arrived or in) — **Skip** leaves it for checkout. A bill that fails never takes back the token; `mark_arrived` and `add_walk_in` are unchanged. | 2026-10-16 |
+| D284 | **A typed line needs `payments.discount`** (the user): a line typed with its own price is a price change, so whoever bills without it bills from the price list and the doctor's fee only (D29, D88). | 2026-10-16 |
+| D285 | **A treatment is billed through a price-list line naming it** (the user): the line is a price-list entry (Root canal ₹6,000), held to its price like any other, that also names the patient's treatment it is for; the new bill suggests the procedure of the treatment's name. A typed line names none. | 2026-10-16 |
+| D286 | **A visit may take more than one bill** (the user): the arrival's fee and checkout's, or a line forgotten — the visit stays Billed; voiding one returns it to To bill only once nothing billed remains for it. | 2026-10-16 |
+| D287 | **A visit marked No charge by mistake is simply billed** (the user): a bill issued for it makes it Billed and drops the reason; there is no separate undo. | 2026-10-16 |
+| D288 | **A patient with a visit in To bill is not archived until it is billed or marked No charge** (the user), as one with an appointment to come (D140) or an open treatment (D255): the archive is refused (`PATIENT_HAS_VISITS_TO_BILL`), and the card names the first one's day ("Rohan Mehta has a visit to bill from 12 Oct"). | 2026-10-16 |
+| D289 | **A Consultation line may be at its own price or the doctor's fee** (the user): without `payments.discount`, a price-list line in the Consultation category is accepted at its price-list price or at the bill's doctor's own fee (D26), so a clinic keeps a cheaper Review beside its Consultation. | 2026-10-16 |
 
 ## 3. Users and roles
 
@@ -856,7 +864,8 @@ Patient number (`P-1001`, a per-clinic counter, never reused), and:
   patient with an appointment still to come is not archived until it is
   cancelled or moved; the card names its day (D140). Nor is one with an open
   treatment, until it is completed or cancelled; the card names it to whoever
-  reads treatments (D255).
+  reads treatments (D255). Nor is one with a visit waiting in To bill, until
+  it is billed or marked No charge; the card names its day (D288).
 
 ### 10.2 Patients list — `/patients`
 
@@ -1035,12 +1044,14 @@ the queue (R5.5, D164).
   or doctor gives it back (D141). **Arrived** only on the appointment's own
   day (D143). Marked arrived twice — a double tap, two desks at once — the
   second changes nothing and gives the same token (R5.6).
-- **Fee at arrival (D44):** in a clinic that collects the consultation fee at
-  arrival, arriving (or adding a walk-in) continues to **Collect fee**: the
-  doctor's consultation fee (D26) pre-filled, the method, **Issue and
-  collect** — one transaction that issues the consultation bill (linked to the
-  appointment) and records its payment. **Skip** leaves it for checkout. The
-  step is offered only with `payments.create`.
+- **Fee at arrival (D44, D283):** in a clinic that collects the consultation
+  fee at arrival, arriving (or adding a walk-in) gives the token, then
+  continues to **Collect fee**: the doctor's consultation fee (D26)
+  pre-filled, the method, **Issue and collect** — one transaction that issues
+  the consultation bill (linked to the appointment, while the patient is
+  arrived or in) and records its payment (the payment joins with 0029, D282).
+  **Skip** leaves it for checkout. The step is offered only with
+  `payments.create`; a bill that fails never takes back the token.
 
 ### 11.4 Today's queue — `/queue`
 
@@ -1350,13 +1361,16 @@ server, and the database recomputes and checks them (AGENTS.md §16).
 
 - **New bill — `/billing/new`** (`payments.create`): from the **To bill** list
   or a visit (pre-filled: the consultation at the visit doctor's fee — D26 —
-  unless it was already billed at arrival, and the treatments worked on), from
-  **Collect fee** at arrival (§11.3), or from a patient. Lines come from the
-  price list or are typed as a custom line (description + price); quantity;
-  notes. **With `payments.discount`** (D29): a changed unit price, and a
-  discount as an amount or a percentage (stored as paise); without it, prices
-  are the price list's and there is no discount. A live preview shows
-  subtotal, discount, total and the patient's balance after.
+  unless it was already billed at arrival, and the treatments worked on, each
+  as the price-list procedure of its name, D285), from **Collect fee** at
+  arrival (§11.3), or from a patient. Lines come from the price list — a
+  line may also name the patient's treatment it is for (D285) — or, with
+  `payments.discount`, are typed as a custom line (description + price,
+  D284); quantity; notes. **With `payments.discount`** (D29): a changed unit
+  price, and a discount as an amount or a percentage (stored as paise);
+  without it, prices are the price list's — a Consultation line's may be the
+  bill's doctor's fee instead (D289) — and there is no discount. A live
+  preview shows subtotal, discount, total and the patient's balance after.
 - **Collect now:** an optional payment (amount, method, reference) recorded in
   the same transaction.
 - **Issue:** `create_bill` — one transaction, an idempotency key (a double tap
@@ -1364,7 +1378,8 @@ server, and the database recomputes and checks them (AGENTS.md §16).
   (`2026-27/0001`, April – March in the clinic's timezone — D27) from its
   counter, the totals recomputed, the prices checked against the price list
   and the doctor's fee unless the issuer holds `payments.discount`, and the
-  visit marked Billed. A bill is issued final.
+  visit marked Billed — from No charge too (D287); a Billed visit may take
+  another bill (D286). A bill is issued final.
 - **Issued bills are never edited.** A mistake is **voided** (`payments.edit`,
   asks first, a reason) and a new bill issued. A void bill stays visible,
   marked Void, and leaves the balance.
@@ -1413,17 +1428,20 @@ leaves unbilled by accident:
 | `BILLED` | A bill was issued for it. | `create_bill` linked to the visit or its appointment. |
 | `NO_CHARGE` | Deliberately free — a review, a courtesy visit. | **No charge** (`payments.create`), with a reason from `NO_CHARGE_REASONS` (Review, Courtesy, Other + note). |
 
-When a visit closes it is `BILLED` at once if its consultation was billed at
-arrival (§11.3) **and** no treatment was worked on during it; otherwise
-`TO_BILL`. A procedure done after an arrival-paid consultation therefore still
-reaches checkout.
+When a visit closes it is `BILLED` at once if a bill of its own was issued
+while it was open (**Bill now**, §12.2), or if its consultation was billed at
+arrival (§11.3) **and** no treatment was worked on during it (no session
+recorded in it); otherwise `TO_BILL`. A procedure done after an arrival-paid
+consultation therefore still reaches checkout.
 
 The **To bill** column of the queue (and a tab of Billing) lists `TO_BILL`
 visits, oldest first, from any day: patient, doctor, token, what was done.
 **Bill** opens the new bill pre-filled (§15.2): the consultation (if not paid
 at arrival) and the treatments; staff add anything else, collect and issue —
-one tap when nothing changes. **No charge** settles it without a bill. Voiding
-a visit's only bill returns the visit to `TO_BILL`.
+one tap when nothing changes. **No charge** settles it without a bill; a bill
+issued for it afterwards makes it `BILLED` (D287). Voiding a bill returns its
+visit to `TO_BILL` once nothing billed remains for it, by the rule above
+(D286).
 
 ## 16. Expenses
 
@@ -1991,16 +2009,21 @@ follow_up_contacts    id · clinic_id · patient_id · treatment_id · visit_id 
 ### 28.6 Money
 
 ```text
-bills                 id · clinic_id · patient_id · visit_id · appointment_id (fee at arrival)
-                      · doctor_id (the visit's, or picked; null = "No doctor" — §18)
+bills                 id · clinic_id · patient_id · visit_id · appointment_id (fee at arrival;
+                        one or the other, D283)
+                      · doctor_id (the visit's or the appointment's, or picked; null = "No
+                        doctor" — §18)
+                      · issued_at · issued_on (its day in the clinic's timezone)
                       · financial_year ('2026-27') · bill_number ('2026-27/0001')
                       unique (clinic_id, bill_number)
-                      · issued_at · subtotal_paise · discount_paise · total_paise
+                      · subtotal_paise · discount_paise · total_paise (each ≤ MAX_AMOUNT_PAISE)
                       · status (ISSUED|VOID) · notes · void_reason · voided_by · voided_at
                       · idempotency_key (unique per clinic) · created_by
-                      check (discount ≤ subtotal, total = subtotal − discount)
+                      check (discount ≤ subtotal, total = subtotal − discount); only ever
+                      voided, once (check_bill)
 bill_counters         clinic_id · financial_year · last_number   PK (clinic_id, financial_year)
-bill_items            id · clinic_id · bill_id (cascade) · position · service_id · treatment_id
+bill_items            id · clinic_id · bill_id (cascade) · position (1 – BILL_MAX_ITEMS)
+                      · service_id (its name copied) · treatment_id (only with a service, D285)
                       · description · quantity (1–999) · unit_price_paise · amount_paise
                       check (amount = quantity × unit_price)
 payments              id · clinic_id · patient_id · kind (PAYMENT|REFUND) · amount_paise > 0
@@ -2024,12 +2047,12 @@ expenses              id · clinic_id · category_id · description · amount_pa
 | `subscription_state(clinic)` | §7.2. |
 | `dashboard_summary()`, `report_daily(date)` (with the day-end collection summary), `report_monthly(month)` (with by doctor) | §17, §18. |
 | `register_clinic`, `invite_member`, `accept_invite`, `update_member`, `set_member_active` | accounts and team. |
-| `create_appointment`, `update_appointment`, `change_appointment_status`, `add_walk_in`, `mark_arrived` (token, optional fee bill) | appointments. |
+| `create_appointment`, `update_appointment`, `change_appointment_status`, `add_walk_in`, `mark_arrived` (token; the fee bill follows through `create_bill`, D283) | appointments. |
 | `send_in`, `mark_done`, `next_patient`, `back_to_waiting` (each opens, closes or removes the visit with the appointment), `mark_stepped_out`, `mark_urgent` (0019) | the queue (§11.4; D192 – D198, D201). |
 | `start_visit` (from a profile) and `finish_visit` (its Done), `save_vitals` (a visit's, or a waiting patient's, opening their visit), `update_visit` (notes or follow-up) — each section's save refused from an older copy (0020; D202 – D208); `save_prescription` (the whole, by the doctor or `prescriptions.write`, D210 – D215) and `medicine_suggestions` (D211) (0021); `save_prescription_template` (a doctor's own, new or changed, asking before it replaces one of the same name, D240 – D243) and `previous_prescription(visit)` (Repeat's, D236) (0023) | visits. |
 | `create_treatment` (in a visit, the visit's doctor's and, begun at once, its first session; or from the profile), `update_treatment` (its details, from the copy read, D251), `change_treatment_status` (as `treatment_status_next()` allows, a reason with a cancellation, D250), `record_treatment_session` (from any of the patient's visits, starting a planned or on-hold one, D248, D249 — and completing it in the same save, D257, 0025), `remove_treatment_session` (by its treatment and visit, while the visit is open, D254, 0025) (0024); `visit_treatments(visit)` (a visit's card: the open ones and those touched in it, D256) (0025) | treatments (§14.1). |
 | `import_patients(rows)` | one import batch (§10.5): validated, numbered, audited. |
-| `create_bill`, `void_bill`, `mark_no_charge`, `record_payment`, `void_payment` | money. |
+| `create_bill` (for a visit, an arrival or a patient; prices held without `payments.discount`, D284, D289), `void_bill`, `mark_no_charge`, `visit_billed(visit)` (whether its bills settle it, as a visit closes and a bill is voided, §15.6) (0028); `record_payment`, `void_payment` (0029) | money. |
 | `request_clinic_deletion`, `cancel_clinic_deletion` | owner (§9.1). |
 | `extend_clinic_subscription`, `update_platform_settings`, `delete_clinic` | DEV. |
 | `clean_up_logs()` | hourly (pg_cron): audit older than `audit_keep_days`, errors older than `error_log_keep_days`. |
@@ -2106,10 +2129,13 @@ Planned order (one or more per tracker row):
                                 follow_up_counts, record_follow_up_contact (D267 – D271)
 0027_follow_up_callers          who made a follow-up's last contact, with it (D275)
 0028_bills                      bills, bill_items, financial-year bill_counters, create_bill
-                                (and the fee at arrival in mark_arrived), void_bill,
-                                mark_no_charge
-0029_payments                   payments, record_payment, void_payment,
-                                patient_balances, bill_settlement, patient_stats
+                                (the fee at arrival a bill for the arrived appointment, D283),
+                                void_bill, mark_no_charge; a visit closing Billed by its own
+                                bill or its arrival's (§15.6); no archive with a visit to bill
+                                (D288)
+0029_payments                   payments, record_payment, void_payment, the payment with a
+                                bill in create_bill (D282), patient_balances,
+                                bill_settlement, patient_stats
 0030_expenses                   expenses
 0031_dashboard_and_reports      dashboard_summary, report_daily, report_monthly
 0032_subscription_notices       the daily pg_cron → pg_net call (address and secret in Vault)
@@ -2720,10 +2746,10 @@ in the row's one commit (D136).
 
 | ID | Work | Source | Waits on | Status |
 |---|---|---|---|---|
-| R8.1 | `0028_bills`: bills, items, financial-year counters, `create_bill` (idempotent, price check without `payments.discount`), `void_bill`, `mark_no_charge`, the fee at arrival in `mark_arrived` | §15.2, §15.6, §11.3 | — | TODO |
+| R8.1 | `0028_bills`: bills, items, financial-year counters, `create_bill` (idempotent, price check without `payments.discount`), `void_bill`, `mark_no_charge`, the fee at arrival as a bill for the arrived appointment (D282 – D289: payments with R8.4; the token, then the fee bill; typed lines need `payments.discount`; a treatment through a price-list line; more than one bill a visit; No charge billed after all; no archive with a visit to bill; a Consultation at its price or the doctor's fee) | §15.2, §15.6, §11.3 | — | DONE (2026-10-16) |
 | R8.2 | `billing/totals.ts`, the one formula; discount by amount or % | §15.1 | — | TODO |
 | R8.3 | New bill screen: from To bill, a visit or a patient; the doctor's fee; discount and price change with `payments.discount`; collect now. Collect fee at arrival | §15.2, §11.3 | — | TODO |
-| R8.4 | `0029_payments`: record, refund, void; `patient_balances`, `bill_settlement`, `patient_stats` | §15.3, §15.4 | — | TODO |
+| R8.4 | `0029_payments`: record, refund, void; the payment with a bill in `create_bill` — Collect now, Issue and collect (D282); `patient_balances`, `bill_settlement`, `patient_stats` | §15.3, §15.4 | — | TODO |
 | R8.5 | Bill PDF; share, download, print | §15.5, §33 | — | TODO |
 | R8.6 | Checkout: the queue's To-bill column, Billing's tabs (To bill, bills, payments, outstanding), No charge; the profile's balance section, its bills and payments in the history, and the patients list's Owing tab and balance chip (D101) | §15.4, §15.6, §10.2, §10.3 | — | TODO |
 | R8.7 | Integration: double submit → one bill/payment; balances to the paisa; read-only refuses | §34 | — | TODO |

@@ -108,6 +108,11 @@ const BUSINESS_RULES: ReadonlySet<ErrorMessageCode> = new Set<ErrorMessageCode>(
   "TREATMENT_CLOSED",
   "TREATMENT_SESSION_KEPT",
   "PATIENT_HAS_TREATMENTS",
+  // Bills (0028): prices without payments.discount (D29), an archived service, a visit not waiting; archiving one with a visit to bill (D288).
+  "BILL_PRICE_NOT_ALLOWED",
+  "SERVICE_INACTIVE",
+  "VISIT_NOT_TO_BILL",
+  "PATIENT_HAS_VISITS_TO_BILL",
 ]);
 
 /**

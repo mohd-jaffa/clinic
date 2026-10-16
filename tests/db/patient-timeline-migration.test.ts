@@ -36,12 +36,13 @@ describe("0022 visit_recorded (D197, D226)", () => {
   });
 
   it("is what visit_is_empty denies, so Back to waiting and the history never disagree", () => {
-    const empty = latestFunctionBody("visit_is_empty");
-    expect(empty).toBe(functionBody(sql, "visit_is_empty"));
+    const empty = functionBody(sql, "visit_is_empty");
     expect(empty).toContain("security definer");
     expect(empty).toContain(
       "coalesce((select not public.visit_recorded(visit) from public.visits as visit where visit.id = p_visit_id), true)",
     );
+    // 0028 keeps it so, a bill naming the visit keeping it too (D197).
+    expect(latestFunctionBody("visit_is_empty")).toContain("select not public.visit_recorded(visit)");
   });
 });
 

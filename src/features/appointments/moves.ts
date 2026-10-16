@@ -1,3 +1,4 @@
+import type { BillingStatus } from "@/constants/statuses";
 import { logActionsSafe } from "@/lib/audit/auditLog";
 import type { AuditEntry } from "@/lib/audit/types";
 import { fromPostgrestError } from "@/lib/errors";
@@ -22,33 +23,35 @@ import type { NextPatient, SentIn, SteppedOut, Urgent } from "./types";
  * trips after the session: the move, the audit rows (plan §37).
  */
 
-/** One record a move changed, as its function hands it back: a visit's `from` is none when opened, its `to` when removed. */
+/**
+ * One record a move changed, as its function hands it back: a visit's `from`
+ * is none when opened, its `to` when removed; a visit closed carries the
+ * billing state it closed with (§15.6).
+ */
 interface MoveRow {
   entity: "APPOINTMENT" | "VISIT";
   id: string;
   from: string | null;
   to: string | null;
+  billing?: BillingStatus;
 }
 
-/** The audit trail of a move: each appointment's status change, each visit opened, closed or removed (plan §27.6). */
+/**
+ * The audit trail of a move: each appointment's status change, each visit
+ * opened, closed — with its billing state — or removed (plan §27.6).
+ */
 export function movesAudited(moves: readonly MoveRow[], requestId?: string): AuditEntry[] {
   return moves.map((move) => {
     const status = { status: { from: move.from, to: move.to } };
     if (move.entity === "APPOINTMENT") {
       return { action: "STATUS_CHANGE", entityType: "appointments", entityId: move.id, changes: status, requestId };
     }
-    if (move.from === null)
-      return { action: "CREATE", entityType: "visits", entityId: move.id, changes: status, requestId };
     if (move.to === null)
       return { action: "DELETE", entityType: "visits", entityId: move.id, changes: status, requestId };
-    // Closed, so To bill (D46).
-    return {
-      action: "STATUS_CHANGE",
-      entityType: "visits",
-      entityId: move.id,
-      changes: { ...status, billing_status: { from: null, to: "TO_BILL" } },
-      requestId,
-    };
+    // Closed: To bill (D46), or Billed when its bills already settle it (§15.6).
+    const changes = move.billing ? { ...status, billing_status: { from: null, to: move.billing } } : status;
+    const action = move.from === null ? "CREATE" : "STATUS_CHANGE";
+    return { action, entityType: "visits", entityId: move.id, changes, requestId };
   });
 }
 
@@ -86,7 +89,11 @@ export async function sendIn(
   return { visitId: answer.visit_id };
 }
 
-/** Done (plan §11.4, D43): the patient in is done, and their visit closes as To bill, whatever was recorded. */
+/**
+ * Done (plan §11.4, D43): the patient in is done, and their visit closes,
+ * whatever was recorded — To bill, or Billed when its bills already settle it
+ * (§15.6).
+ */
 export async function markDone(
   tenant: Tenant,
   { appointmentId }: QueueMovePayload,

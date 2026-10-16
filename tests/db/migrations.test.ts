@@ -75,7 +75,8 @@ describe("the migrations", () => {
       const table = /create table public\.(\w+)/.exec(statement)![1];
       expect(statement, table).toMatch(/clinic_id uuid [^\n]*references public\.clinics \(id\) on delete cascade/);
       const leadsAnIndex =
-        /clinic_id uuid primary key/.test(statement) || new RegExp(`on public\\.${table} \\(clinic_id\\b`).test(sql);
+        /clinic_id uuid primary key|primary key \(clinic_id\b/.test(statement) ||
+        new RegExp(`on public\\.${table} \\(clinic_id\\b`).test(sql);
       expect(leadsAnIndex, table).toBe(true);
     }
   });

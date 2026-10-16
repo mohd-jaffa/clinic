@@ -88,6 +88,7 @@ export const ERROR_MESSAGES = {
   ALERTS_LOAD_FAILED: "The alerts couldn't be loaded.",
   PATIENT_HAS_APPOINTMENTS: "Cancel or move their appointments to come before archiving them.",
   PATIENT_HAS_TREATMENTS: "Complete or cancel their open treatments before archiving them.",
+  PATIENT_HAS_VISITS_TO_BILL: "Bill their visits, or mark them No charge, before archiving them.",
   // A patient import's file (plan §10.5, D127): said in the browser, which reads it.
   IMPORT_FILE_TYPE: "That isn't a CSV or Excel (.xlsx) file.",
   IMPORT_FILE_XLS: "That's an older Excel file (.xls). Save it as .xlsx or CSV, then choose it again.",
@@ -135,6 +136,12 @@ export const ERROR_MESSAGES = {
   TREATMENT_STATUS_NOT_ALLOWED: "This treatment can’t go to that status from where it is. Refresh and try again.",
   TREATMENT_CLOSED: "This treatment is completed or cancelled, so it can’t be worked on or handed to another doctor.",
   TREATMENT_SESSION_KEPT: "This visit is done, so its sessions stay. Correct the note instead.",
+
+  // Bills (plan §15.2, §15.6; D29, D284, D289).
+  BILL_PRICE_NOT_ALLOWED:
+    "A price here isn’t the price list’s, or there’s a discount — that needs permission to give discounts. If the price list just changed, check the lines and issue it again.",
+  SERVICE_INACTIVE: "A line’s service has been archived from the price list. Remove that line, or choose another.",
+  VISIT_NOT_TO_BILL: "This visit isn’t waiting to be billed any more. Refresh to see where it stands.",
 
   // The browser could not reach the server (plan §21, D55): said by the client, never sent by the server.
   NETWORK_OFFLINE: "You're offline. Try again once the connection is back — what you typed is still here.",
@@ -1344,6 +1351,8 @@ export const UI_TEXT = {
     /** An archive refused for an open treatment (D255): named to whoever reads treatments. */
     hasOpenTreatment: (name: string, treatment: string | null) =>
       treatment ? `${name} has an open treatment: ${treatment}` : `${name} has an open treatment`,
+    /** An archive refused for a visit still waiting in To bill (D288). */
+    hasVisitToBill: (name: string, day: string) => `${name} has a visit to bill from ${day}`,
     archivedOn: (date: string, by: string | null) => (by ? `Archived on ${date} by ${by}` : `Archived on ${date}`),
     archivedHint: "Their profile is read-only until they are restored.",
     restoreName: (name: string) => `Restore ${name}`,

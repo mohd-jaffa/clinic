@@ -238,6 +238,19 @@ export async function makeDeveloper(): Promise<SignedIn> {
 }
 
 /** Sets a clinic's last day of access, as the admin's Set date would. */
+/**
+ * A patient's visits waiting in To bill, settled No charge as checkout would,
+ * so the patient can be archived (D288).
+ */
+export async function settleVisits(patientId: string): Promise<void> {
+  const { error } = await admin()
+    .from("visits")
+    .update({ billing_status: "NO_CHARGE", no_charge_reason: "REVIEW" })
+    .eq("patient_id", patientId)
+    .eq("billing_status", "TO_BILL");
+  if (error) throw error;
+}
+
 export async function setValidUntil(clinicId: string, validUntil: string): Promise<void> {
   const { error } = await admin()
     .from("clinic_subscriptions")

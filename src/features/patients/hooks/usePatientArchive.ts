@@ -22,9 +22,17 @@ function upcomingDay(failure: unknown): string | null {
   return typeof at === "string" ? formatDayMonth(dayKey(at)) : null;
 }
 
+/** The day of the first visit still waiting in To bill, from an archive refused for it (D288). */
+function toBillDay(failure: unknown): string | null {
+  if (!(failure instanceof ApiError) || failure.code !== "PATIENT_HAS_VISITS_TO_BILL") return null;
+  const day = (failure.details as { visitDate?: unknown } | undefined)?.visitDate;
+  return typeof day === "string" ? formatDayMonth(day) : null;
+}
+
 /**
- * The card's title for an archive refused (D140, D255): the appointment's
- * day, or the open treatment — named to whoever reads treatments.
+ * The card's title for an archive refused (D140, D255, D288): the
+ * appointment's day, the open treatment — named to whoever reads treatments
+ * — or the day of the visit waiting to be billed.
  */
 function refusedTitle(failure: unknown, name: string): string {
   const day = upcomingDay(failure);
@@ -33,6 +41,8 @@ function refusedTitle(failure: unknown, name: string): string {
     const treatment = (failure.details as { name?: unknown } | undefined)?.name;
     return patients.hasOpenTreatment(name, typeof treatment === "string" ? treatment : null);
   }
+  const visitDay = toBillDay(failure);
+  if (visitDay) return patients.hasVisitToBill(name, visitDay);
   return patients.notArchived;
 }
 
@@ -42,7 +52,8 @@ function refusedTitle(failure: unknown, name: string): string {
  * sheet it was asked from can close; the profile stays, saying they are
  * archived (D124). One with an appointment still to come is refused, the
  * card naming its day (D140); one with an open treatment too, the card naming
- * it (D255). Restore needs no asking (D125): it only brings them back.
+ * it (D255); and one with a visit waiting in To bill, the card naming its
+ * day (D288). Restore needs no asking (D125): it only brings them back.
  * Either way the lists, "Already here?" and the profile are read again.
  */
 export function usePatientArchive(patient: Patient) {

@@ -272,8 +272,8 @@ describe("startVisit (D204)", () => {
 });
 
 describe("finishVisit (D204)", () => {
-  it("closes an open one through finish_visit, audited as To bill", async () => {
-    const { tenant, rpcs } = tenantWith({ rpc: () => ({ data: { previously: "OPEN" } }) });
+  it("closes an open one through finish_visit, audited with the billing state it closed with", async () => {
+    const { tenant, rpcs } = tenantWith({ rpc: () => ({ data: { previously: "OPEN", billing: "TO_BILL" } }) });
     expect(await finishVisit(tenant, "v-3", "req_f")).toEqual({ visitId: "v-3" });
     expect(rpcs).toEqual([{ name: "finish_visit", args: { p_visit_id: "v-3" } }]);
     expect(logActionsSafe).toHaveBeenCalledWith(tenant, [

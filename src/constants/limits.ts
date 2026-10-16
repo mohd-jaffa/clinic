@@ -13,6 +13,9 @@ export const MAX_AMOUNT_PAISE = 100_000_000;
 /** One bill line's quantity: 1 – 999 (plan §28.6). */
 export const MAX_QUANTITY = 999;
 
+/** How many lines one bill holds (plan §28.6): more than any visit bills. 0028's CHECK. */
+export const BILL_MAX_ITEMS = 50;
+
 /**
  * How many rows a list asks for at a time (plan §10.2): enough to fill a phone
  * twice over; **Show more** brings the next as many.

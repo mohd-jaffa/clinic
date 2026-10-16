@@ -23,7 +23,7 @@ import {
 } from "@tests/support/integration";
 
 /**
- * The permission matrix, so far (plan §34.3, R1.11, R3.8, R4.7, R5.1, R6.1, R6.3, R6.4, R6.7, R7.1, R7.2, R7.3): every
+ * The permission matrix, so far (plan §34.3, R1.11, R3.8, R4.7, R5.1, R6.1, R6.3, R6.4, R6.7, R7.1, R7.2, R7.3, R8.1): every
  * permission the schema enforces yet, allowed and refused — by the route
  * guard, and by RLS or a function with the member's own token. Each phase
  * adds the rows its tables bring; the patients routes themselves are asked in
@@ -833,6 +833,129 @@ describe("follow-ups: appointments.view or visits.view lists them; appointments.
     expect((await editor.tenant!.supabase.rpc("record_follow_up_contact", contact)).error?.hint).toBe(
       "RECORD_NOT_FOUND",
     );
+  });
+});
+
+describe("bills: payments.view reads, .create issues and settles free, .discount prices, .edit voids (0028)", () => {
+  type Member = SignedIn & { memberId: string };
+  let viewer: Member;
+  let biller: Member;
+  let discounter: Member;
+  let voider: Member;
+  let stranger: Member;
+  let patientId: string;
+  let serviceId: string;
+
+  beforeAll(async () => {
+    [viewer, biller, discounter, voider, stranger] = await Promise.all([
+      addMember(clinic.clinicId, { permissions: ["patients.view", "payments.view"] }),
+      addMember(clinic.clinicId, { permissions: ["patients.view", "payments.view", "payments.create"] }),
+      addMember(clinic.clinicId, {
+        permissions: ["patients.view", "payments.view", "payments.create", "payments.discount"],
+      }),
+      addMember(clinic.clinicId, { permissions: ["patients.view", "payments.view", "payments.edit"] }),
+      addMember(clinic.clinicId, {
+        role: "DOCTOR",
+        permissions: ["patients.view", "payments.view", "payments.create"],
+      }),
+    ]);
+    const { supabase } = clinic.owner.tenant;
+    const [{ data: patient }, { data: service }] = await Promise.all([
+      supabase
+        .rpc("create_patient", {
+          p_patient: { full_name: "Bill Matrix", phone: "+919876543216", date_of_birth: "1990-04-12", gender: "MALE" },
+          p_idempotency_key: randomUUID(),
+        })
+        .single<{ patient_id: string }>(),
+      admin()
+        .from("services")
+        .update({ price_paise: 50_000 })
+        .eq("clinic_id", clinic.clinicId)
+        .eq("name", "Consultation")
+        .select("id")
+        .single(),
+    ]);
+    patientId = patient!.patient_id;
+    serviceId = service!.id as string;
+  });
+
+  const bill = (member: SignedIn, price = 50_000) =>
+    member.tenant!.supabase.rpc("create_bill", {
+      p_bill: {
+        patient_id: patientId,
+        items: [{ service_id: serviceId, quantity: 1, unit_price_paise: price }],
+        subtotal_paise: price,
+        total_paise: price,
+      },
+      p_idempotency_key: randomUUID(),
+    });
+
+  /** A done visit of the patient's, waiting in To bill, as the queue leaves it. */
+  async function visitToBill() {
+    const { data: doctor } = await admin()
+      .from("doctors")
+      .select("id")
+      .eq("member_id", clinic.owner.session.membership!.id)
+      .single();
+    const { data } = await admin()
+      .from("visits")
+      .insert({
+        clinic_id: clinic.clinicId,
+        patient_id: patientId,
+        doctor_id: doctor!.id,
+        status: "COMPLETED",
+        completed_at: new Date().toISOString(),
+        billing_status: "TO_BILL",
+      })
+      .select("id")
+      .single();
+    return data!.id as string;
+  }
+
+  it("issues a bill with payments.create, and refuses payments.view alone", async () => {
+    for (const member of [viewer, receptionist, voider]) {
+      expect((await bill(member)).error?.hint).toBe("AUTH_PERMISSION_DENIED");
+    }
+    expect((await bill(biller)).error).toBeNull();
+  });
+
+  it("changes a price from the price list only with payments.discount (D29)", async () => {
+    expect((await bill(biller, 40_000)).error?.hint).toBe("BILL_PRICE_NOT_ALLOWED");
+    expect((await bill(discounter, 40_000)).error).toBeNull();
+  });
+
+  it("voids a bill with payments.edit only", async () => {
+    const { data } = await bill(biller);
+    const id = (data as { bill_id: string }).bill_id;
+    const voiding = (member: SignedIn) =>
+      member.tenant!.supabase.rpc("void_bill", { p_bill_id: id, p_reason: "Wrong patient" });
+    for (const member of [viewer, biller]) {
+      expect((await voiding(member)).error?.hint).toBe("AUTH_PERMISSION_DENIED");
+    }
+    expect((await voiding(voider)).error).toBeNull();
+  });
+
+  it("marks a visit No charge with payments.create only", async () => {
+    const visitId = await visitToBill();
+    const free = (member: SignedIn) =>
+      member.tenant!.supabase.rpc("mark_no_charge", { p_visit_id: visitId, p_reason: "REVIEW", p_note: null });
+    for (const member of [viewer, voider]) {
+      expect((await free(member)).error?.hint).toBe("AUTH_PERMISSION_DENIED");
+    }
+    expect((await free(biller)).error).toBeNull();
+  });
+
+  it("reads bills and their lines with payments.view, none without it, and a doctor only their own patients'", async () => {
+    for (const table of ["bills", "bill_items"]) {
+      const { data: read } = await viewer.tenant!.supabase.from(table).select("id");
+      expect(read!.length, table).toBeGreaterThan(0);
+      for (const member of [receptionist, stranger]) {
+        const { data } = await member.tenant!.supabase.from(table).select("id");
+        expect(data, table).toEqual([]);
+      }
+    }
+    // Nor does a doctor who bills issue one for a patient not theirs.
+    expect((await bill(stranger)).error?.hint).toBe("RECORD_NOT_FOUND");
   });
 });
 

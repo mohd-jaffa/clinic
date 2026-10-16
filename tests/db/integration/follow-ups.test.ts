@@ -13,6 +13,7 @@ import {
   admin,
   registerClinic,
   removeAll,
+  settleVisits,
   type SignedIn,
   type TestClinic,
 } from "@tests/support/integration";
@@ -236,6 +237,7 @@ describe("the tabs (plan §14.3; D269, D270)", () => {
     expect((await itemsFor(nurse, "UPCOMING", held)).map(({ title }) => title)).toEqual(["Braces"]);
     await aPastVisit(gone, 10, addDaysKey(today, -3));
     expect(await itemsFor(nurse, "OVERDUE", gone)).toHaveLength(1);
+    await settleVisits(gone);
     await archivePatient(desk.tenant!, gone);
     expect(await itemsFor(nurse, "OVERDUE", gone)).toEqual([]);
   });
@@ -339,6 +341,7 @@ describe("a contact (D267, D271)", () => {
     expect((await note(desk, { visit_id: visitId, treatment_id: treatment })).error?.hint).toBe("VALIDATION_ERROR");
     expect((await note(desk, { treatment_id: randomUUID() })).error?.hint).toBe("RECORD_NOT_FOUND");
     expect((await note(desk, { visit_id: visitId, outcome: "LOST" })).error?.code).toBe("23514");
+    await settleVisits(patient);
     await archivePatient(desk.tenant!, patient);
     expect((await note(desk, { visit_id: visitId })).error?.hint).toBe("PATIENT_ARCHIVED");
   });

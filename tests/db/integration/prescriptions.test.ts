@@ -20,6 +20,7 @@ import {
   admin,
   registerClinic,
   removeAll,
+  settleVisits,
   type SignedIn,
   type TestClinic,
 } from "@tests/support/integration";
@@ -261,6 +262,7 @@ describe("savePrescription (D210, D206)", () => {
 
     const patient = await inRoom("Anil Kumar");
     await markDone(desk.tenant!, { appointmentId: patient.appointmentId });
+    await settleVisits(patient.patientId);
     const { error } = await admin()
       .from("patients")
       .update({ archived_at: new Date().toISOString() })

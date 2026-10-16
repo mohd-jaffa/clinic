@@ -45,14 +45,16 @@ const CLINIC_TABLES: readonly { table: string; column: string }[] = [
   { table: "treatments", column: "clinic_id" },
   { table: "treatment_sessions", column: "clinic_id" },
   { table: "follow_up_contacts", column: "clinic_id" },
+  { table: "bills", column: "clinic_id" },
+  { table: "bill_items", column: "clinic_id" },
   { table: "audit_logs", column: "clinic_id" },
 ];
 
 /**
  * A clinic's tables only the database itself reads and writes: the patient
- * counter, the doctor scope (0015), the tokens (0017).
+ * counter, the doctor scope (0015), the tokens (0017), the bill numbers (0028).
  */
-const DATABASE_TABLES = ["patient_counters", "patient_doctors", "daily_tokens"];
+const DATABASE_TABLES = ["patient_counters", "patient_doctors", "daily_tokens", "bill_counters"];
 
 /** The platform's own tables: no signed-in member, nor the DEV's own token, reads them. */
 const PLATFORM_TABLES = ["platform_settings", "trial_claims", "receipt_counters", "error_logs"];
@@ -70,6 +72,8 @@ let templateId: string;
 /** A's patient's treatment and its session in A's visit (0024). */
 let treatmentId: string;
 let sessionId: string;
+/** A's bill for that visit, issued in the room (0028). */
+let billId: string;
 
 beforeAll(async () => {
   [a, b] = await Promise.all([registerClinic({ clinicName: "Clinic A" }), registerClinic({ clinicName: "Clinic B" })]);
@@ -172,6 +176,25 @@ beforeAll(async () => {
     .from("follow_up_contacts")
     .insert({ clinic_id: a.clinicId, patient_id: patientId, visit_id: visitId, outcome: "REACHED" });
   if (uncalled) throw uncalled;
+  // And a bill for that visit, issued while it is open (0028), with its line and its number.
+  const { data: consultation } = await admin()
+    .from("services")
+    .select("id")
+    .eq("clinic_id", a.clinicId)
+    .eq("name", "Consultation")
+    .single();
+  const { data: bill, error: unbilled } = await a.owner.tenant.supabase.rpc("create_bill", {
+    p_bill: {
+      patient_id: patientId,
+      visit_id: visitId,
+      items: [{ service_id: consultation!.id, quantity: 1, unit_price_paise: 0 }],
+      subtotal_paise: 0,
+      total_paise: 0,
+    },
+    p_idempotency_key: randomUUID(),
+  });
+  if (unbilled) throw unbilled;
+  billId = (bill as { bill_id: string }).bill_id;
   developer = await makeDeveloper();
 });
 
@@ -396,6 +419,33 @@ describe("as clinic B's owner, with a valid token", () => {
       });
       expect(error?.hint).toBe("RECORD_NOT_FOUND");
     }
+  });
+
+  it("bills none of A's patients or visits, voids none of A's bills, and marks none of A's visits No charge (0028)", async () => {
+    const { supabase } = b.owner.tenant;
+    const { data: theirs } = await admin()
+      .from("services")
+      .select("id")
+      .eq("clinic_id", b.clinicId)
+      .eq("name", "Consultation")
+      .single();
+    const line = { service_id: theirs!.id, quantity: 1, unit_price_paise: 0 };
+    for (const [name, args] of [
+      [
+        "create_bill",
+        {
+          p_bill: { patient_id: patientId, items: [line], subtotal_paise: 0, total_paise: 0 },
+          p_idempotency_key: randomUUID(),
+        },
+      ],
+      ["void_bill", { p_bill_id: billId, p_reason: "Planted" }],
+      ["mark_no_charge", { p_visit_id: visitId, p_reason: "COURTESY", p_note: null }],
+    ] as const) {
+      const { error } = await supabase.rpc(name, args);
+      expect(error?.hint, name).toBe("RECORD_NOT_FOUND");
+    }
+    const { data: kept } = await admin().from("bills").select("status").eq("id", billId).single();
+    expect(kept).toEqual({ status: "ISSUED" });
   });
 
   it("prints none of A's prescriptions (R6.4)", async () => {

@@ -111,6 +111,28 @@ describe("a read-only clinic", () => {
     expect(uncounted).toBeNull();
   });
 
+  it("refuses every bill write in the database, and still reads them (0028)", async () => {
+    const { supabase } = clinic.owner.tenant;
+    for (const [name, args] of [
+      [
+        "create_bill",
+        {
+          p_bill: { patient_id: randomUUID(), items: [], subtotal_paise: 0, total_paise: 0 },
+          p_idempotency_key: randomUUID(),
+        },
+      ],
+      ["void_bill", { p_bill_id: randomUUID(), p_reason: "Wrong patient" }],
+      ["mark_no_charge", { p_visit_id: randomUUID(), p_reason: "REVIEW", p_note: null }],
+    ] as const) {
+      const { error } = await supabase.rpc(name, args);
+      expect(error?.hint, name).toBe("CLINIC_PLAN_EXPIRED");
+    }
+    for (const table of ["bills", "bill_items"]) {
+      const { error: unread } = await supabase.from(table).select("id");
+      expect(unread, table).toBeNull();
+    }
+  });
+
   it("refuses every treatment write in the database, and still reads them (0024)", async () => {
     const { supabase } = clinic.owner.tenant;
     for (const [name, args] of [

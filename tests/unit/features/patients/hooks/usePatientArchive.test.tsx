@@ -110,6 +110,25 @@ describe("usePatientArchive (D122 – D125)", () => {
     expect(await screen.findByRole("alertdialog", { name: "Rohan Mehta has an open treatment" })).toBeInTheDocument();
   });
 
+  it("names the day of a visit waiting to be billed when that is why (D288)", async () => {
+    const message = "Bill their visits, or mark them No charge, before archiving them.";
+    client.archive.mockRejectedValue(
+      new ApiError(422, "PATIENT_HAS_VISITS_TO_BILL", message, "req_6", { visitDate: "2026-10-12" }),
+    );
+    act(() => void hook.current.archive());
+    await userEvent.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "Archive" }));
+    expect(
+      await screen.findByRole("alertdialog", { name: "Rohan Mehta has a visit to bill from 12 Oct" }),
+    ).toHaveTextContent(message);
+  });
+
+  it("says it plainly when the visit's day is not named", async () => {
+    client.archive.mockRejectedValue(new ApiError(422, "PATIENT_HAS_VISITS_TO_BILL", "Bill it first.", "req_7"));
+    act(() => void hook.current.archive());
+    await userEvent.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "Archive" }));
+    expect(await screen.findByRole("alertdialog", { name: "That patient wasn’t archived" })).toBeInTheDocument();
+  });
+
   it("restores without asking, busy meanwhile, and says so", async () => {
     let finish: (value: Patient) => void = () => {};
     client.restore.mockImplementation(() => new Promise((resolve) => (finish = resolve)));

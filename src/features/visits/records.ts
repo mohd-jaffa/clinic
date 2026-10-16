@@ -1,3 +1,4 @@
+import type { BillingStatus } from "@/constants/statuses";
 import { movesAudited } from "@/features/appointments/moves";
 import { auditedChanges, changedFields } from "@/lib/audit/changes";
 import { logActionsSafe } from "@/lib/audit/auditLog";
@@ -145,14 +146,20 @@ export async function startVisit(
   return { visitId: data.visit_id, created: data.created };
 }
 
-/** Done for a visit from a profile (D204): it closes as To bill (D46), audited once. */
+/**
+ * Done for a visit from a profile (D204): it closes as To bill (D46) — or
+ * Billed, its own bill issued while it was open (§15.6) — audited once.
+ */
 export async function finishVisit(tenant: Tenant, id: string, requestId?: string): Promise<{ visitId: string }> {
   const { data, error } = await tenant.supabase
     .rpc("finish_visit", { p_visit_id: id })
-    .single<{ previously: string }>();
+    .single<{ previously: string; billing: BillingStatus }>();
   if (error) throw fromPostgrestError(error);
   if (data.previously === "OPEN") {
-    await logActionsSafe(tenant, movesAudited([{ entity: "VISIT", id, from: "OPEN", to: "COMPLETED" }], requestId));
+    await logActionsSafe(
+      tenant,
+      movesAudited([{ entity: "VISIT", id, from: "OPEN", to: "COMPLETED", billing: data.billing }], requestId),
+    );
   }
   return { visitId: id };
 }
