@@ -457,6 +457,17 @@ describe("as clinic B's owner, with a valid token", () => {
     expect(kept).toEqual({ status: "ISSUED" });
   });
 
+  it("starts no bill for A's patients, visits or arrivals (0030)", async () => {
+    for (const args of [
+      { p_visit_id: visitId, p_appointment_id: null, p_patient_id: null },
+      { p_visit_id: null, p_appointment_id: appointmentId, p_patient_id: null },
+      { p_visit_id: null, p_appointment_id: null, p_patient_id: patientId },
+    ]) {
+      const { error } = await b.owner.tenant.supabase.rpc("bill_start", args);
+      expect(error?.hint).toBe("RECORD_NOT_FOUND");
+    }
+  });
+
   it("takes no payment from A's patient, voids none of A's, and settles none of A's bills (0029)", async () => {
     const { supabase } = b.owner.tenant;
     for (const [name, args] of [

@@ -94,11 +94,29 @@ const FOLLOW_UPS: NavItem = {
   access: FOLLOW_UP_ACCESS.list,
   hint: hints.followUps,
 };
+/** Billing (plan §15.4): its tabs come with R8.6. */
+export const BILLING_ROUTE = "/billing";
+/**
+ * Where a new bill's back arrow leads, when not to what it bills (D302):
+ * Billing, which it was started from; or the patient's profile, for a visit
+ * to bill offered there (D313) — a visit reception may not open.
+ */
+export const BILL_FROM = { param: "from", billing: "billing", patient: "patient" } as const;
+export type BillFrom = (typeof BILL_FROM)["billing" | "patient"];
+/** What a new bill is for (plan §15.2): a visit, an arrival or a patient — or no one yet, to be searched (D313). */
+export type NewBillFor = { visit: string } | { appointment: string } | { patient: string };
+/** A new bill (plan §15.2) — for a visit, an arrival or a patient, or no one yet; started from Billing, it leads back there. */
+export const newBillRoute = (target?: NewBillFor, from?: BillFrom) => {
+  const query = new URLSearchParams(target);
+  if (from) query.set(BILL_FROM.param, from);
+  const text = query.toString();
+  return text ? `${BILLING_ROUTE}/new?${text}` : `${BILLING_ROUTE}/new`;
+};
 const BILLING: NavItem = {
   id: "billing",
   label: places.billing,
   icon: ReceiptIndianRupee,
-  href: "/billing",
+  href: BILLING_ROUTE,
   access: "payments.view",
   hint: hints.billing,
 };

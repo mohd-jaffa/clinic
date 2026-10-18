@@ -4163,3 +4163,97 @@ the user first: D267 – D271.
 
 ### Blockers
 - None.
+
+## 2026-10-18 — R8.3: the new bill screen and the fee at arrival
+
+### Added
+- **New bill — `/billing/new`** (`payments.create`; plan §15.2; D302 –
+  D313), in `src/features/billing`:
+  - Where it starts: **Bill now** at the foot of a visit (D307), **New bill**
+    in a profile's header beside New visit (D311), an arrival's Collect fee,
+    or no one yet — a patient search first, and a patient with a visit to
+    bill offered **Bill that visit** (D313). A visit's bill starts with the
+    consultation at the doctor's own fee (D26) unless it is billed already,
+    and each treatment worked on in it not yet on an issued bill, as the
+    price-list entry of its name (D285, D286).
+  - Lines from a sheet: a search over the price list, grouped by category;
+    **Add typed line** for `payments.discount` (D303). A treatment with no
+    entry of its name is a reminder line, "Crown: pick its price-list
+    entry", with **Pick entry** — nothing is issued until it has one or goes
+    (D308). A line's price is a field for `payments.discount`, its read-out
+    otherwise (D309).
+  - Totals by the one formula (`billing/totals.ts`): subtotal, the discount
+    (None, Amount, Percent, for `payments.discount`; one beyond the bill
+    refused at its field, D293), total, balance now and after. **Collect
+    now** starts on with the total in Cash and follows the total until an
+    amount is typed; off on a bill of nothing (D304).
+  - Lines on the left and the totals on the right from 1024 px, kept in
+    view; stacked on a phone and a tablet, **Issue bill** on a bar fixed
+    above the bottom bar (D310). Issue does not ask first (D312); once
+    issued, back where it came from with "Bill 2026-27/0042 issued · ₹500
+    collected" (D302).
+- **Collect fee at arrival** (plan §11.3; D283, D305, D306): in a clinic that
+  takes the fee at arrival, **Arrived** and **Add walk-in** open a small
+  Collect fee sheet after the token — the doctor's fee, the method, a
+  reference, **Issue and collect** or **Skip** — held above every screen
+  (`FeeCollectionProvider`) so it outlives the queue's sheets. The queue's
+  rows and the appointment's detail say **Fee paid** (an issued bill for the
+  arrival); the detail offers **Collect fee** while the patient is arrived
+  or in, until it is paid.
+- **`0030_bill_start`**: `bill_start(visit, appointment, patient)`, one
+  security-definer read for `payments.create` — reception included, whose
+  preset opens no visit — of where a bill starts: the patient (archived or
+  not), the visit or the arrival and its token, the doctor and their fee,
+  whether its consultation is billed, its treatments not yet on an issued
+  bill, the balance, and a patient's oldest visit to bill; within the doctor
+  scope and the clinic.
+- `POST /api/bills` (`payments.create`, an idempotency key; `create_bill`
+  with the totals by `billing/totals.ts`, audited: the bill, its payment, the
+  visit turned Billed — values only, nothing clinical) and
+  `GET /api/bills/start`.
+- `billSchema`, `billStartQuerySchema`, `collectFeeSchema`; the screen's words
+  in `UI_TEXT.billing`; `BILLING_ROUTE`, `newBillRoute`, `BILL_FROM`.
+
+### Changed
+- `PatientPicker`'s **Change** is optional: a new bill leaves for the
+  patient's own address once one is chosen.
+- The queue, appointments and profile screens read the clinic's profile with
+  their first reads, for when it takes the fee.
+- **Migrations renumbered in the plan:** 0030 is `bill_start`, so expenses
+  are `0031_expenses`, then `0032_dashboard_and_reports` and on (R9.1 –
+  R13.3).
+- **Plan:** D302 – D313; §15.2, §11.3, §12.2, §10.3, §28.7, §29 (0030);
+  the tracker: R8.3 DONE.
+
+### Speed (plan §37)
+- **Round trips:** the new bill screen waits on 2 — the session, then where
+  it starts (`bill_start`, one call) and the price list at once. Issue bill
+  waits on 2: `create_bill`, then the audit rows. Collect fee reads the same
+  two at once, and issues as Issue bill does. Fee paid comes inside the
+  queue's and the detail's own query (an embed of the arrival's bills), so
+  neither adds a call.
+- **Indexes:** every read in `bill_start` leads with the clinic — a bill by
+  its visit or its arrival (0028's partial indexes), a visit's sessions
+  `(clinic_id, visit_id)`, a bill's items by treatment, the balance by its
+  patient, and a patient's visits `(clinic_id, patient_id, …)`. No new
+  index was needed.
+
+### Validation
+- Typecheck, lint, format check passed.
+- Unit and integration tests passed (3569), coverage 100%.
+- E2E passed (142, phone and desktop): `new-bill.spec.ts` — the owner bills a visit
+  from Bill now, its unpriced crown picked, collected by UPI, back on the
+  visit; reception bills a visit from the profile and is led back to the
+  profile, and a patient searched for from the price list; with the fee at
+  arrival, Arrived asks for it after the token, the queue says Fee paid, and
+  a fee skipped is collected from the detail. Axe on every screen.
+- `tests/db/bill-start-migration.test.ts` keeps 0030's definer, search path,
+  checks and grants; `tests/db/integration/bill-start.test.ts` (5): a visit
+  read by reception, who may not open it, billed and not suggested again,
+  audited; an arrival's token and Fee paid, gone with a void; a doctor with
+  no fee; payments.create alone, the doctor scope and the clinic; an
+  archived patient. The permission matrix and tenant isolation have their
+  rows.
+
+### Blockers
+- None.

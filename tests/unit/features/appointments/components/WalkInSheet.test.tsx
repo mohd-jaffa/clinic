@@ -9,7 +9,8 @@ import { ApiError } from "@/lib/api/client";
 import { authStub } from "@tests/support/auth";
 import { Providers } from "@tests/support/providers";
 
-const { client, auth, doctors, types, search } = vi.hoisted(() => ({
+const { client, auth, doctors, types, search, fee } = vi.hoisted(() => ({
+  fee: { atArrival: false, offer: vi.fn() },
   client: { addWalkIn: vi.fn() },
   auth: { current: {} as ReturnType<typeof authStub> },
   doctors: { current: [] as { id: string; name: string }[] | undefined },
@@ -24,6 +25,8 @@ vi.mock("@/features/clinic/hooks/useAppointmentTypes", () => ({
 }));
 vi.mock("@/features/patients/hooks/usePatientSearch", () => ({ usePatientSearch: () => ({ data: search.current }) }));
 vi.mock("@/features/patients/hooks/usePatientMatches", () => ({ usePatientMatches: () => ({ data: undefined }) }));
+vi.mock("@/features/billing/hooks/useFeeAtArrival", () => ({ useFeeAtArrival: () => fee.atArrival }));
+vi.mock("@/features/billing/components/FeeCollection", () => ({ useCollectFee: () => fee.offer }));
 
 const { WalkInSheet } = await import("@/features/appointments/components/WalkInSheet");
 
@@ -44,6 +47,7 @@ const onClose = vi.fn();
 
 beforeEach(() => {
   vi.clearAllMocks();
+  fee.atArrival = false;
   auth.current = authStub({ role: "STAFF", permissions: ["patients.view", "patients.create", "appointments.create"] });
   doctors.current = [MAYA, ARUN];
   types.current = [CONSULTATION];
@@ -178,5 +182,21 @@ describe("WalkInSheet (plan §11.3; D171, D173, D175)", () => {
     await waitFor(() => expect(onClose).toHaveBeenCalled());
     expect(sent().input).toMatchObject({ doctorId: "be528e96-7091-42a3-aedf-4a5b6c7d8e9f" });
     expect(screen.getByRole("status")).toHaveTextContent("Rohan Mehta is #7 with");
+  });
+  it("goes on to Collect fee, saying the token there, in a clinic that takes the fee at arrival (D283, D305)", async () => {
+    fee.atArrival = true;
+    doctors.current = [MAYA];
+    draw();
+    await findRohan();
+    await add();
+    await waitFor(() =>
+      expect(fee.offer).toHaveBeenCalledWith({
+        appointmentId: "a-7",
+        patientName: "Rohan Mehta",
+        doctorName: "Maya Rao",
+        token: 7,
+      }),
+    );
+    expect(onClose).toHaveBeenCalled();
   });
 });

@@ -315,3 +315,14 @@ export {
   type TreatmentStatusInput,
   type TreatmentStatusPayload,
 } from "./schemas/treatments";
+
+export {
+  billSchema,
+  billStartQuerySchema,
+  collectFeeSchema,
+  type BillInput,
+  type BillPayload,
+  type BillStartQuery,
+  type CollectFeeInput,
+  type CollectFeePayload,
+} from "./schemas/bills";

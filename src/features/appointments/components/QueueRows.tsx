@@ -7,6 +7,7 @@ import { Row, RowList, RowToken } from "@/components/ui/row";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { UI_TEXT } from "@/constants/messages";
 import { visitRoute } from "@/constants/navigation";
+import { FeePaidTag } from "@/features/billing/components/FeePaidTag";
 import { formatTime } from "@/lib/format/date";
 
 import { kindOf } from "../describe";
@@ -33,14 +34,23 @@ function line(...parts: ReactNode[]) {
   ));
 }
 
-/** A row's line, led by the Urgent tag for a patient marked so (D201). */
+/** A row's line, led by the Urgent tag for a patient marked so (D201), and Fee paid for one whose fee is in (D306). */
 function tagged(appointment: QueueAppointment, parts: ReactNode) {
-  return appointment.urgentAt ? (
+  if (!appointment.urgentAt && !appointment.feePaid) return parts;
+  return (
     <>
-      <UrgentTag /> {parts}
+      {appointment.urgentAt && (
+        <>
+          <UrgentTag />{" "}
+        </>
+      )}
+      {appointment.feePaid && (
+        <>
+          <FeePaidTag />{" "}
+        </>
+      )}
+      {parts}
     </>
-  ) : (
-    parts
   );
 }
 

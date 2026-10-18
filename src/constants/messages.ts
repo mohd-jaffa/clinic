@@ -142,6 +142,7 @@ export const ERROR_MESSAGES = {
     "A price here isn’t the price list’s, or there’s a discount — that needs permission to give discounts. If the price list just changed, check the lines and issue it again.",
   SERVICE_INACTIVE: "A line’s service has been archived from the price list. Remove that line, or choose another.",
   VISIT_NOT_TO_BILL: "This visit isn’t waiting to be billed any more. Refresh to see where it stands.",
+  BILL_START_LOAD_FAILED: "What to bill couldn't be loaded.",
 
   // Payments (plan §15.3; D297, D301).
   PAYMENT_REFUND_TOO_LARGE: "A refund can’t be more than the patient has paid in advance.",
@@ -208,6 +209,11 @@ export const VALIDATION_MESSAGES = {
   birthDate: `A date of birth can’t be in the future, or more than ${MAX_PATIENT_AGE} years ago.`,
   invalid: "That value is not valid.",
   gstin: "GSTIN must be 15 characters, like 32ABCDE1234F1Z5.",
+  /** A bill (plan §15.2; D293, D308). */
+  billEmpty: "Add a line to the bill first.",
+  atMostBillLines: (max: number) => `A bill holds at most ${max} lines.`,
+  discountTooLarge: "A discount can’t be more than the bill.",
+  pickEntry: (treatment: string) => `Pick a price-list entry for ${treatment}, or remove the line.`,
 } as const;
 
 export const UI_TEXT = {
@@ -1033,6 +1039,84 @@ export const UI_TEXT = {
       `Noted for ${name}: ${outcome}. Back on the list on ${day}.`,
     notNoted: "That contact wasn’t noted",
     reminderNotNoted: "The reminder wasn’t noted",
+  },
+
+  /** A new bill (plan §15.2; D302 – D313) and the fee at arrival (plan §11.3; D283, D305, D306). */
+  billing: {
+    newBill: "New bill",
+    /** What the bill is for, under the patient's name. */
+    forVisit: (day: string, doctor: string) => `Visit ${day} · ${doctor}`,
+    forArrival: (token: number | null, doctor: string) =>
+      token === null ? `Arrival with ${doctor}` : `Arrival · #${token} with ${doctor}`,
+    noDoctor: "No doctor",
+    billThatVisit: "Bill that visit",
+    archived: (patient: string) => `${patient} is archived, so nothing can be billed. Restore them first.`,
+    /** Its lines (D303, D308, D309). */
+    linesTitle: "Lines",
+    noLines: "No lines yet. Add one from the price list.",
+    addLine: "Add line",
+    removeLine: (name: string) => `Remove ${name}`,
+    quantityLabel: "Quantity",
+    quantityOf: (name: string) => `Quantity of ${name}`,
+    priceLabel: "Price",
+    priceOf: (name: string) => `Price of ${name}`,
+    /** What a line, and the bill, may come to at most. */
+    lineLabel: "A line",
+    billLabel: "The bill",
+    forTreatment: (treatment: string) => `For ${treatment}`,
+    pickReminder: (treatment: string) => `${treatment}: pick its price-list entry`,
+    pickEntry: "Pick entry",
+    pickEntryFor: (treatment: string) => `Pick a price-list entry for ${treatment}`,
+    /** The sheet lines are added from (D303). */
+    addLineTitle: "Add a line",
+    pickTitle: (treatment: string) => `Entry for ${treatment}`,
+    searchPriceList: "Search the price list",
+    noMatches: "Nothing in the price list matches.",
+    emptyPriceList: "The price list is empty. Add entries in Settings.",
+    typedTitle: "Or type a line",
+    descriptionLabel: "Description",
+    addTyped: "Add typed line",
+    /** The discount, with permission to give one (D29, D290 – D293). */
+    discountTitle: "Discount",
+    discountKindLabel: "Discount as",
+    discountKinds: { NONE: "None", AMOUNT: "Amount", PERCENT: "Percent" },
+    discountAmountLabel: "Discount",
+    discountPercentLabel: "Discount (%)",
+    notesLabel: "Notes",
+    /** The totals (plan §15.2). */
+    totalsTitle: "Total",
+    subtotal: "Subtotal",
+    discount: "Discount",
+    total: "Total",
+    balanceNow: "Balance now",
+    balanceAfter: "Balance after",
+    due: (amount: string) => `${amount} due`,
+    advance: (amount: string) => `${amount} advance`,
+    settled: "Nothing due",
+    /** Collect now (D304). */
+    collectNow: "Collect now",
+    amountLabel: "Amount",
+    methodLabel: "Method",
+    referenceLabel: "Reference",
+    referenceHint: "A UPI ref or cheque number, if any.",
+    issue: "Issue bill",
+    /** The card after it is issued (D302). */
+    issued: (number: string) => `Bill ${number} issued`,
+    collected: (amount: string) => `${amount} collected`,
+    notIssued: "The bill wasn’t issued",
+    /** The fee at arrival (D283, D305, D306). */
+    collectFee: "Collect fee",
+    collectFeeOf: (patient: string) => `Collect ${patient}’s fee`,
+    feeLabel: "Consultation fee",
+    issueAndCollect: "Issue and collect",
+    skip: "Skip",
+    noConsultation: "The price list has no Consultation to bill. Add one in Settings, or bill at checkout.",
+    feeAlreadyPaid: (patient: string) => `${patient}’s fee is already paid.`,
+    feePaid: "Fee paid",
+    /** On a visit (D307) and a profile (D311). */
+    billNow: "Bill now",
+    billNowOf: (patient: string) => `Bill ${patient}’s visit`,
+    newBillOf: (patient: string) => `New bill for ${patient}`,
   },
 
   /** What the PDFs say (plan §33; D218 – D224). */

@@ -137,6 +137,19 @@ describe("actionsFor (plan §11.2; D161 – D164)", () => {
     expect(actionsFor({ ...waiting, patientArchived: true }, taker, now).takeVitals).toBe(false);
   });
 
+  it("offers Collect fee to one arrived or in whose fee is not paid, in a clinic that takes it at arrival (D306)", () => {
+    const biller = desk(["payments.view", "payments.create"]);
+    const waiting = anAppointmentDetail({ status: "ARRIVED", token: 4 });
+    expect(actionsFor(waiting, biller, now, true)).toEqual({ ...NO_ACTIONS, collectFee: true });
+    expect(actionsFor(anAppointmentDetail({ status: "IN_PROGRESS" }), biller, now, true).collectFee).toBe(true);
+    // Not after the consultation, not paid already, not before they arrive, not without seeing bills.
+    expect(actionsFor(waiting, biller, now).collectFee).toBe(false);
+    expect(actionsFor({ ...waiting, feePaid: true }, biller, now, true).collectFee).toBe(false);
+    expect(actionsFor(anAppointmentDetail(), biller, now, true).collectFee).toBe(false);
+    expect(actionsFor(waiting, desk(["payments.create"]), now, true).collectFee).toBe(false);
+    expect(actionsFor({ ...waiting, patientArchived: true }, biller, now, true).collectFee).toBe(false);
+  });
+
   it("opens the visit for whoever reads visits, and offers no no-show or cancel once one is kept (D195, D197)", () => {
     const kept = anAppointmentDetail({ status: "ARRIVED", visitId: "v-1" });
     expect(actionsFor(kept, desk([...ALL, "visits.view"]), now)).toMatchObject({

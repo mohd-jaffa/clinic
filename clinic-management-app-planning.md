@@ -388,6 +388,18 @@ earlier lines are never rewritten.
 | D299 | **A payment is paid any time up to now** (the user): "when paid" defaults to now and may be set earlier, never later; it counts on that day in the clinic's timezone. | 2026-10-16 |
 | D300 | **A patient who owes, or holds an advance, may be archived** (the user): the balance stays and counts; to take a payment or a refund, they are restored first (D103). | 2026-10-16 |
 | D301 | **A payment with a refund standing on it is voided after the refund** (the user): a void that would leave more refunded than paid is refused (`PAYMENT_HAS_REFUNDS`), the card saying to void the refund first. | 2026-10-16 |
+| D302 | **Once a bill is issued, the screen goes back where it came from, with the card** (the user): the visit, the profile, the queue or Billing — "Bill 2026-27/0042 issued · ₹500 collected". A visit to bill offered on a profile goes back to the profile, never to a visit reception may not open. | 2026-10-18 |
+| D303 | **Lines are added from a sheet** (the user): a search over the price list, grouped by category; **Add typed line** there for `payments.discount`. | 2026-10-18 |
+| D304 | **Collect now starts on, filled with the total, in Cash** (the user): the amount follows the total until one is typed; it is off when the bill comes to nothing. | 2026-10-18 |
+| D305 | **The fee at arrival is a small Collect fee sheet after the token** (the user): the token first, then the doctor's fee (a field for `payments.discount`, its read-out otherwise), the method and a reference; **Issue and collect**, or **Skip** for checkout. A bill that fails never takes the token back. | 2026-10-18 |
+| D306 | **The queue says Fee paid** (the user): a tag on the patient's row once a bill for the arrival is issued, and **Collect fee** in the appointment's detail while they are arrived or in, until it is paid. | 2026-10-18 |
+| D307 | **Bill now is at the foot of the visit** (the user), for `payments.create`. | 2026-10-18 |
+| D308 | **A treatment with no price-list entry of its name is a reminder line** (the user): "Crown: pick its price-list entry", with **Pick entry**; the bill is not issued until an entry is picked for it or the line is removed. | 2026-10-18 |
+| D309 | **A line's price is a field for `payments.discount`, its read-out otherwise** (the user). | 2026-10-18 |
+| D310 | **On a desktop the lines are on the left, the totals, Collect now and Issue on the right, kept in view** (the user); on a phone they stack, and **Issue bill** sits on a bar fixed to the foot. | 2026-10-18 |
+| D311 | **New bill is in the profile's header, beside New visit** (the user); Record payment goes to the balance section with R8.6. | 2026-10-18 |
+| D312 | **Issue bill does not ask first** (the user): the preview is the check. | 2026-10-18 |
+| D313 | **A new bill for no one starts with a patient search** (the user); a patient with a visit to bill is offered **Bill that visit**. A visit's or an arrival's bill leaves out what is billed already: its consultation, and its treatments on an issued bill. | 2026-10-18 |
 | D314 | **A bill's page — `/bills/[id]` — offers Print, Download, Void, Record payment, Re-issue and the profile** (the user): **Void** for `payments.edit` (asks first, a reason); **Record payment** while the bill is Unpaid or Part paid, filled with what is still due on it; **Re-issue** on a void bill, opening a new bill filled with its lines; a quiet link to the patient's profile. | 2026-10-18 |
 | D315 | **A void bill's PDF prints with VOID across it** (the user): still printed and downloaded for the records, with a large grey VOID and its reason, so it never passes for a live bill. | 2026-10-18 |
 | D316 | **The bill PDF ends with a signature line** (the user): "Authorised signatory" under the clinic's name, as the prescription's signed foot, above the small footer. | 2026-10-18 |
@@ -927,8 +939,9 @@ One screen that tells the patient's current state without opening others:
 3. **Open treatments:** name, status, doctor, next due ("Overdue by 4 days")
    and the estimate; **Show closed** for the completed and cancelled; each
    opens its sheet (D260, D261), and **Add treatment** starts one (D258).
-4. **Balance** (`payments.view`): due or advance; **Record payment**, **New
-   bill**.
+4. **Balance** (`payments.view`): due or advance; **Record payment** (R8.6).
+   **New bill** sits in the header, beside New visit, for `payments.create`
+   (R8.3, D311).
 5. **History:** a timeline of visits (date, doctor, diagnosis, treatments
    worked on, prescription), appointments (cancelled and no-show included),
    bills and payments — each part shown only with its permission. Phase 5
@@ -1084,6 +1097,11 @@ the queue (R5.5, D164).
   arrived or in) and records its payment (the payment joins with 0029, D282).
   **Skip** leaves it for checkout. The step is offered only with
   `payments.create`; a bill that fails never takes back the token.
+  **Collect fee** is a small sheet (D305): the token first, then the fee —
+  a field for `payments.discount`, its read-out otherwise — the method and a
+  reference. The queue tags the patient **Fee paid** once a bill for the
+  arrival is issued, and their detail offers **Collect fee** while they are
+  arrived or in, until it is paid (D306).
 
 ### 11.4 Today's queue — `/queue`
 
@@ -1227,8 +1245,8 @@ leads to the queue — or, opened from the patient's profile, back to it
 **Alerts** in the header, **Vitals** for a patient still waiting (D203), and
 **New visit** with its **Done** (D204). **R6.3** adds the prescription (§13),
 under the notes — beside the vitals from a tablet (D209). **R7.2** adds the
-treatments between the notes and the prescription (D256 – D259, D263),
-**Bill now** comes with R8.
+treatments between the notes and the prescription (D256 – D259, D263).
+**R8.3** adds **Bill now** at the visit's foot, for `payments.create` (D307).
 
 ## 13. Prescriptions
 
@@ -1408,15 +1426,37 @@ is refused, never capped (D293).
   without it, prices are the price list's — a Consultation line's may be the
   bill's doctor's fee instead (D289) — and there is no discount. A live
   preview shows subtotal, discount, total and the patient's balance after.
+  - **Where it starts** (D307, D311, D313): **Bill now** at the foot of a
+    visit; **New bill** in a profile's header, beside New visit; for no one
+    yet, a patient search first, and a patient with a visit to bill is
+    offered **Bill that visit**. A visit's or an arrival's bill leaves out
+    what is billed already — its consultation, and its treatments on an
+    issued bill. `bill_start` (0030) reads all of it for whoever may issue a
+    bill, reception included, who may not open a visit.
+  - **Lines** (D303, D308, D309): added from a sheet — a search over the
+    price list, grouped by category, and **Add typed line** for
+    `payments.discount`. A treatment with no entry of its name is a reminder
+    line, "Crown: pick its price-list entry", with **Pick entry**; nothing
+    is issued until an entry is picked or the line removed. A line's price
+    is a field for `payments.discount`, its read-out otherwise.
+  - **Layout** (D310): on a desktop the lines on the left, the totals,
+    Collect now and Issue on the right, kept in view; on a phone they
+    stack, and **Issue bill** sits on a bar fixed to the foot.
 - **Collect now:** an optional payment (amount, method, reference) recorded in
-  the same transaction.
+  the same transaction. It starts on, filled with the total, in Cash; the
+  amount follows the total until one is typed, and it is off when the bill
+  comes to nothing (D304).
 - **Issue:** `create_bill` — one transaction, an idempotency key (a double tap
   makes one bill), the next number of the clinic's **financial year**
   (`2026-27/0001`, April – March in the clinic's timezone — D27) from its
   counter, the totals recomputed, the prices checked against the price list
   and the doctor's fee unless the issuer holds `payments.discount`, and the
   visit marked Billed — from No charge too (D287); a Billed visit may take
-  another bill (D286). A bill is issued final.
+  another bill (D286). A bill is issued final. **Issue bill** does not ask
+  first — the preview is the check (D312); once issued, the screen goes
+  back where it came from with the card, "Bill 2026-27/0042 issued · ₹500
+  collected" (D302), a visit to bill offered on a profile going back to the
+  profile.
 - **Issued bills are never edited.** A mistake is **voided** (`payments.edit`,
   asks first, a reason) and a new bill issued. A void bill stays visible,
   marked Void, and leaves the balance.
@@ -2087,6 +2127,7 @@ expenses              id · clinic_id · category_id · description · amount_pa
 |---|---|
 | `patient_balances` (a table, D295) | billed, paid, refunded, balance per patient, kept by the money functions (`add_to_balance`). |
 | `bill_settlement` (a view, as the caller) | each issued bill's paid, due and state (Paid, Part paid, Unpaid), the patient's net payments settling their bills oldest first (D298); read for a patient. |
+| `bill_start(visit, appointment, patient)` (0030) | where a new bill starts, read for `payments.create` — reception included, who may not open a visit: the patient, the visit or the arrival and its token, the doctor and their fee, whether the consultation is billed, the treatments worked on not yet on an issued bill, the balance, and a patient's oldest visit to bill (D285, D286, D313); within the doctor scope and the clinic. |
 | `last_visit_on(patient)` (0022) | the day of a patient's latest visit, read with the patients list for everyone who sees the patient (D228). |
 | `visit_recorded(visit)` (0022) | whether a visit holds anything: its row in the history (D226), and Back to waiting through `visit_is_empty` (D197). |
 | `follow_up_items(tab)`, `follow_up_counts()`, `record_follow_up_contact` (0026, 0027) | the follow-ups in their tabs, a page at a time, and how many each holds, for whoever sees appointments or visits (§14.3, D267 – D271); a call noted; the last contact with who made it (D275). |
@@ -2183,14 +2224,16 @@ Planned order (one or more per tracker row):
                                 bill in create_bill (D282), patient_balances kept by the
                                 money functions (D295), bill_settlement (D298); no
                                 patient_stats (D296)
-0030_expenses                   expenses
-0031_dashboard_and_reports      dashboard_summary, report_daily, report_monthly
-0032_subscription_notices       the daily pg_cron → pg_net call (address and secret in Vault)
-0033_clinic_deletion            request_clinic_deletion, cancel_clinic_deletion,
+0030_bill_start                 bill_start: where a new bill starts — a visit's, an arrival's or
+                                a patient's — for payments.create, reception included (D313)
+0031_expenses                   expenses
+0032_dashboard_and_reports      dashboard_summary, report_daily, report_monthly
+0033_subscription_notices       the daily pg_cron → pg_net call (address and secret in Vault)
+0034_clinic_deletion            request_clinic_deletion, cancel_clinic_deletion,
                                 delete_clinic (DEV)
-0034_session_profile            session_profile: the session, profile, membership and plan in
+0035_session_profile            session_profile: the session, profile, membership and plan in
                                 one read (R13.2, D134)
-0035_faster_reads               indexes and policies from the load-seeded EXPLAINs (R13.3)
+0036_faster_reads               indexes and policies from the load-seeded EXPLAINs (R13.3)
 ```
 
 ## 30. API
@@ -2795,7 +2838,7 @@ in the row's one commit (D136).
 |---|---|---|---|---|
 | R8.1 | `0028_bills`: bills, items, financial-year counters, `create_bill` (idempotent, price check without `payments.discount`), `void_bill`, `mark_no_charge`, the fee at arrival as a bill for the arrived appointment (D282 – D289: payments with R8.4; the token, then the fee bill; typed lines need `payments.discount`; a treatment through a price-list line; more than one bill a visit; No charge billed after all; no archive with a visit to bill; a Consultation at its price or the doctor's fee) | §15.2, §15.6, §11.3 | — | DONE (2026-10-16) |
 | R8.2 | `billing/totals.ts`, the one formula; discount by amount or % (D290 – D293: a percentage to the nearest rupee; whole percentages, 1 – 100; the amount only on the bill; a discount past the bill refused at its field) | §15.1 | — | DONE (2026-10-16) |
-| R8.3 | New bill screen: from To bill, a visit or a patient; the doctor's fee; discount and price change with `payments.discount`; collect now. Collect fee at arrival | §15.2, §11.3 | — | TODO |
+| R8.3 | New bill screen: from To bill, a visit or a patient; the doctor's fee; discount and price change with `payments.discount`; collect now. Collect fee at arrival (D302 – D313: back where it came from with the card; lines from a sheet; Collect now on with the total; the Collect fee sheet after the token; Fee paid; Bill now at the visit's foot; a reminder line for an unpriced treatment; the price a field with permission; lines left and totals right; New bill in the profile's header; Issue does not ask; a patient search first. `0030_bill_start`, so expenses are 0031 on) | §15.2, §11.3 | — | DONE (2026-10-18) |
 | R8.4 | `0029_payments`: record, refund, void; the payment with a bill in `create_bill` — Collect now, Issue and collect (D282); `patient_balances`, `bill_settlement` (D294 – D301: built before R8.3; balances kept by the money functions; no `patient_stats`; refunds from the advance; oldest first; paid up to now; archived with a balance; a refund voided first) | §15.3, §15.4 | — | DONE (2026-10-16) |
 | R8.5 | Bill PDF; share, download, print | §15.5, §33 | — | TODO |
 | R8.6 | Checkout: the queue's To-bill column, Billing's tabs (To bill, bills, payments, outstanding), No charge; the profile's balance section, its bills and payments in the history, and the patients list's Owing tab and balance chip (D101) | §15.4, §15.6, §10.2, §10.3 | — | TODO |
@@ -2806,14 +2849,14 @@ in the row's one commit (D136).
 
 | ID | Work | Source | Waits on | Status |
 |---|---|---|---|---|
-| R9.1 | `0030_expenses` and the expenses screen (the clinic's categories): add, edit, archive, month totals, by category | §16 | — | TODO |
+| R9.1 | `0031_expenses` and the expenses screen (the clinic's categories): add, edit, archive, month totals, by category | §16 | — | TODO |
 | R9.2 | Integration + E2E | §34 | — | TODO |
 
 ### Phase 10 — Home and reports
 
 | ID | Work | Source | Waits on | Status |
 |---|---|---|---|---|
-| R10.1 | `0031_dashboard_and_reports`: `dashboard_summary`, `report_daily`, `report_monthly` | §17, §18 | — | TODO |
+| R10.1 | `0032_dashboard_and_reports`: `dashboard_summary`, `report_daily`, `report_monthly` | §17, §18 | — | TODO |
 | R10.2 | Home: sections by permission; getting-started for a new clinic | §17 | — | TODO |
 | R10.3 | Reports: daily and monthly, the two charts; the kit's chart kit, bar and donut (D66) | §18 | — | TODO |
 | R10.4 | Integration: a seeded month's figures equal hand-computed ones | §34 | — | TODO |
@@ -2828,7 +2871,7 @@ in the row's one commit (D136).
 | R11.2 | Console: overview, clinics (No trial and Deletion flags), clinic detail, accounts, error log, platform audit | §20 | — | TODO |
 | R11.3 | Extend plan (Monthly, Yearly, Set date); the owner's confirmation email | §7.4 | — | TODO |
 | R11.4 | Platform settings screen | §6, §20.4 | — | TODO |
-| R11.5 | `0032_subscription_notices`: daily notices, each once per period | §22 | — | TODO |
+| R11.5 | `0033_subscription_notices`: daily notices, each once per period | §22 | — | TODO |
 | R11.6 | Owner's activity log | §19 | — | TODO |
 | R11.7 | Integration + E2E: extend, change a setting, notices once, DEV sees no clinic data | §34 | — | TODO |
 | R11.8 | Plan receipts: receipt numbers, the receipt PDF, the business details settings | §7.5, §6 | Q2 | TODO |
@@ -2841,7 +2884,7 @@ in the row's one commit (D136).
 | R12.2 | Privacy and terms | §21 | Q22 | TODO |
 | R12.3 | Manifest, icons, service worker, offline page, Install app | §21 | — | TODO |
 | R12.4 | Security headers; `noindex` on app routes; share-preview image | §21 | — | TODO |
-| R12.5 | `0033_clinic_deletion`: the owner's request and cancel (banner, emails), the admin's delete after the cooling-off | §9.1, §20 | — | TODO |
+| R12.5 | `0034_clinic_deletion`: the owner's request and cancel (banner, emails), the admin's delete after the cooling-off | §9.1, §20 | — | TODO |
 | R12.6 | CSV export, one file per area, audited | §9 | — | TODO |
 
 ### Phase 13 — Speed and the release checks (D134, D185)
@@ -2857,8 +2900,8 @@ deployment, waits on that (D185).**
 | ID | Work | Source | Waits on | Status |
 |---|---|---|---|---|
 | R13.1 | The measuring setup: a load seed (a clinic with 50 000 patients, 200 000 appointments, 100 000 bills, a year of visits); the production build timed locally with 40 ms added to each database request; every screen, read and save timed and its round trips counted; Home, Queue and Patients timed on a throttled phone (4× CPU, 4G). The baseline in the changelog | §37 | — | TODO |
-| R13.2 | `0034_session_profile`: the session in one round trip. The token's signature and expiry checked on the server against the project's published key (`getClaims`), instead of asking Supabase Auth each request. One function checks the session is still open and hands back the profile, membership, clinic, doctor, plan and the settings it needs. Today a session waits on 3: Auth, the profile, then the plan and settings | §5.5, §37 | — | TODO |
-| R13.3 | `0035_faster_reads`: EXPLAIN ANALYZE on the load seed for every list, search, count and report. Indexes added or changed (every paged list in its own order, every foreign key). No policy or list calls `can_see_patient()` per row. Supabase's performance advisor reports nothing: unindexed keys, policies re-run per row, overlapping policies, duplicate or unused indexes | §27, §28, §37 | — | TODO |
+| R13.2 | `0035_session_profile`: the session in one round trip. The token's signature and expiry checked on the server against the project's published key (`getClaims`), instead of asking Supabase Auth each request. One function checks the session is still open and hands back the profile, membership, clinic, doctor, plan and the settings it needs. Today a session waits on 3: Auth, the profile, then the plan and settings | §5.5, §37 | — | TODO |
+| R13.3 | `0036_faster_reads`: EXPLAIN ANALYZE on the load seed for every list, search, count and report. Indexes added or changed (every paged list in its own order, every foreign key). No policy or list calls `can_see_patient()` per row. Supabase's performance advisor reports nothing: unindexed keys, policies re-run per row, overlapping policies, duplicate or unused indexes | §27, §28, §37 | — | TODO |
 | R13.4 | Round trips cut to the budget. Reads that do not depend on each other go at once (`allInOrder`), records come with their children, writes answer from `returning`, and side work runs after the answer. Every screen and read within 2, every save within 4; every list and search under 300 ms at the API on the load seed | §37 | — | TODO |
 | R13.5 | Pages: the proxy starts only where it has work and loads the Supabase client only to renew. Heavy code loads when first needed; first-load JS within 200 KB gzip. Polling stops while the tab is hidden. Reusing a screen revisited within seconds (`staleTimes`) measured, kept only if it helps. LCP and INP within budget on the throttled phone | §37 | — | TODO |
 | R13.6 | Hosting: `vercel.json` with region `bom1` and fluid compute, sent by `vercel deploy --prebuilt` with every release; the release guide (R14.7) says so | §35, §37 | — | TODO |

@@ -325,12 +325,22 @@ describe("getAppointment (D160)", () => {
       visitId: null,
       steppedOutAt: null,
       urgentAt: null,
+      feePaid: false,
     });
     expect(queries).toHaveLength(1);
     expect(argsOf(queries[0], "eq")).toEqual([
       ["clinic_id", "clinic-1"],
       ["id", "a-1"],
     ]);
+  });
+
+  it("says whether the arrival's fee is paid: a bill of its own issued, not void (D306)", async () => {
+    const paid = tenantWith({
+      answer: () => ({ data: { ...detailRow, fee: [{ status: "VOID" }, { status: "ISSUED" }] } }),
+    });
+    expect(await getAppointment(paid.tenant, "a-1")).toMatchObject({ feePaid: true });
+    const voided = tenantWith({ answer: () => ({ data: { ...detailRow, fee: [{ status: "VOID" }] } }) });
+    expect(await getAppointment(voided.tenant, "a-1")).toMatchObject({ feePaid: false });
   });
 
   it("names its visit — however it is embedded — and when its patient stepped out or was marked urgent (D195, D198, D201)", async () => {
@@ -707,6 +717,7 @@ describe("listQueue (plan §11.4)", () => {
       stepped_out_at: "2026-10-13T04:50:00+00:00",
       urgent_at: "2026-10-13T04:45:00+00:00",
       visit: [],
+      fee: [{ status: "ISSUED" }],
     };
     const { tenant, queries, argsOf } = tenantWith({ answer: () => ({ data: [row] }) });
     expect(await listQueue(tenant, {})).toEqual([
@@ -720,6 +731,7 @@ describe("listQueue (plan §11.4)", () => {
         steppedOutAt: "2026-10-13T04:50:00+00:00",
         urgentAt: "2026-10-13T04:45:00+00:00",
         visitId: null,
+        feePaid: true,
       },
     ]);
     expect(queries).toHaveLength(1);

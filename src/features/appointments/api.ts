@@ -30,6 +30,7 @@ import type {
   BookedTime,
   CalendarAppointment,
   CalendarAppointmentRow,
+  FeeLink,
   PatientAppointment,
   QueueAppointment,
   VisitLink,
@@ -191,6 +192,15 @@ const PATIENT = "patient:patients!appointments_patient_id_clinic_id_fkey";
 /** An appointment's visit (plan §12.1), through the visit's foreign key — read as the member, so only with `visits.view`. */
 const VISIT = "visit:visits!visits_appointment_id_clinic_id_fkey(id)";
 
+/**
+ * An arrival's fee bills (D306), through the bills' foreign key — read as the
+ * member, so only with `payments.view`, on the index of bills by appointment.
+ */
+const FEE = "fee:bills!bills_appointment_id_clinic_id_fkey(status)";
+
+/** Whether an arrival's fee is paid (D306): a bill of its own issued, not void. */
+export const feePaidOf = (fee: FeeLink) => (fee ?? []).some((bill) => bill.status === "ISSUED");
+
 /** The id of an appointment's visit, however PostgREST embedded it. */
 export const visitIdOf = (visit: VisitLink): string | null =>
   Array.isArray(visit) ? (visit[0]?.id ?? null) : (visit?.id ?? null);
@@ -206,7 +216,7 @@ const DETAIL_COLUMNS =
   `${OWN_COLUMNS}, appointment_type_id, notes, created_at, cancelled_at, cancel_reason, ` +
   `${PATIENT}(full_name, patient_number, phone, archived_at), ${DOCTOR_AND_TYPE}, ` +
   "booker:profiles!appointments_created_by_fkey(full_name), canceller:profiles!appointments_cancelled_by_fkey(full_name), " +
-  `stepped_out_at, urgent_at, ${VISIT}`;
+  `stepped_out_at, urgent_at, ${VISIT}, ${FEE}`;
 
 /** A row as the calendar reads it, in the shape every screen holds. */
 function toCalendarAppointment(row: CalendarAppointmentRow): CalendarAppointment {
@@ -281,6 +291,7 @@ export async function getAppointment(tenant: Tenant, id: string): Promise<Appoin
     visitId: visitIdOf(row.visit),
     steppedOutAt: row.stepped_out_at,
     urgentAt: row.urgent_at,
+    feePaid: feePaidOf(row.fee),
   };
 }
 
@@ -447,7 +458,7 @@ export async function markReminded(tenant: Tenant, id: string, requestId?: strin
 const QUEUE_STATUSES: readonly AppointmentStatus[] = ["SCHEDULED", "CONFIRMED", "ARRIVED", "IN_PROGRESS", "COMPLETED"];
 
 /** An appointment in the queue: the calendar's, when it arrived, went in and was done, whether it stepped out or is urgent, and its visit. */
-const QUEUE_COLUMNS = `${CALENDAR_COLUMNS}, arrived_at, started_at, completed_at, stepped_out_at, urgent_at, ${VISIT}`;
+const QUEUE_COLUMNS = `${CALENDAR_COLUMNS}, arrived_at, started_at, completed_at, stepped_out_at, urgent_at, ${VISIT}, ${FEE}`;
 
 /**
  * Today's queue (plan §11.4; D168, D170): today's appointments still to come,
@@ -476,6 +487,7 @@ export async function listQueue(tenant: Tenant, { doctorId }: QueueQuery): Promi
       stepped_out_at: string | null;
       urgent_at: string | null;
       visit: VisitLink;
+      fee: FeeLink;
     })[]
   ).map((row) => ({
     ...toCalendarAppointment(row),
@@ -485,6 +497,7 @@ export async function listQueue(tenant: Tenant, { doctorId }: QueueQuery): Promi
     steppedOutAt: row.stepped_out_at,
     urgentAt: row.urgent_at,
     visitId: visitIdOf(row.visit),
+    feePaid: feePaidOf(row.fee),
   }));
 }
 

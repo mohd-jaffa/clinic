@@ -919,6 +919,15 @@ describe("bills: payments.view reads, .create issues and settles free, .discount
     expect((await bill(biller)).error).toBeNull();
   });
 
+  it("starts a bill with payments.create, and refuses payments.view alone (0030)", async () => {
+    const start = (member: SignedIn) =>
+      member.tenant!.supabase.rpc("bill_start", { p_visit_id: null, p_appointment_id: null, p_patient_id: patientId });
+    for (const member of [viewer, receptionist, voider]) {
+      expect((await start(member)).error?.hint).toBe("AUTH_PERMISSION_DENIED");
+    }
+    expect((await start(biller)).error).toBeNull();
+  });
+
   it("changes a price from the price list only with payments.discount (D29)", async () => {
     expect((await bill(biller, 40_000)).error?.hint).toBe("BILL_PRICE_NOT_ALLOWED");
     expect((await bill(discounter, 40_000)).error).toBeNull();

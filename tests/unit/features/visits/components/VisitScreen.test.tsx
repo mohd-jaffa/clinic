@@ -98,6 +98,18 @@ const draw = () =>
 const lake = () => screen.getByRole("region", { name: "With doctor: Asha Iyer" });
 
 describe("VisitScreen (plan §12.2; D193 – D195)", () => {
+  it("offers Bill now at the visit's foot to whoever may issue a bill (D307)", () => {
+    const { unmount } = draw();
+    expect(screen.queryByRole("link", { name: "Bill Asha Iyer’s visit" })).not.toBeInTheDocument();
+    unmount();
+    auth.current = authStub({ role: "STAFF", permissions: [...DESK, "payments.create"] });
+    draw();
+    expect(screen.getByRole("link", { name: "Bill Asha Iyer’s visit" })).toHaveAttribute(
+      "href",
+      "/billing/new?visit=v-1",
+    );
+  });
+
   it("says whose visit it is, with whom, where it stands and the patient's alerts, the way back to the queue", () => {
     draw();
     expect(screen.getByRole("heading", { level: 1, name: "Asha Iyer" })).toBeInTheDocument();

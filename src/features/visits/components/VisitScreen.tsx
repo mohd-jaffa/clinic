@@ -20,6 +20,7 @@ import { UrgentTag } from "@/features/appointments/components/UrgentTag";
 import { useDone, useNextPatient, type QueueParty } from "@/features/appointments/hooks/useQueueMoves";
 import { minutesSince } from "@/features/appointments/queue";
 import { useAuth } from "@/features/auth/AuthProvider";
+import { NewBillLink } from "@/features/billing/components/NewBillLink";
 import { AlertChips } from "@/features/patients/components/AlertChips";
 import { VisitAlerts } from "@/features/patients/components/PatientAlerts";
 import { describePatient } from "@/features/patients/describe";
@@ -68,7 +69,7 @@ function detailsOf(visit: Visit): Detail[] {
  * whoever may write them, read-outs for whoever may only read. A phone
  * stacks them; from a tablet the notes, the treatments and the prescription
  * stand beside the vitals and the follow-up (D209, D263). Then the visit's
- * own details.
+ * own details, and **Bill now** at its foot (D307).
  *
  * Its back arrow leads to the queue — or, opened from the patient's profile
  * (their history, or New visit), back to the profile (D230).
@@ -161,6 +162,14 @@ function Records({ visit }: { visit: Visit }) {
         <div className="md:col-start-1 md:row-start-3">
           <DetailList details={detailsOf(visit)} />
         </div>
+      </div>
+      {/* Bill now, at the foot of the visit (plan §12.2 item 7, D307). */}
+      <div className="flex flex-wrap gap-2 empty:hidden">
+        <NewBillLink
+          target={{ visit: visit.id }}
+          patient={{ name: visit.patient.name, archived: visit.patient.archived }}
+          look="visit"
+        />
       </div>
     </div>
   );

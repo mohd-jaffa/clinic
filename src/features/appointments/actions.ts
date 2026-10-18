@@ -25,6 +25,8 @@ export interface AppointmentActions {
   unmarkUrgent: boolean;
   /** Vitals before they go in (D203). */
   takeVitals: boolean;
+  /** The consultation fee, in a clinic that takes it at arrival (D306). */
+  collectFee: boolean;
   /** Reading its visit (D195): offered whatever else is not. */
   openVisit: boolean;
 }
@@ -46,6 +48,7 @@ export const NO_ACTIONS: AppointmentActions = {
   markUrgent: false,
   unmarkUrgent: false,
   takeVitals: false,
+  collectFee: false,
   openVisit: false,
 };
 
@@ -76,6 +79,9 @@ export const isMovable = (appointment: Pick<AppointmentDetail, "source" | "statu
  * - **Urgent** for a waiting patient; **Not urgent** while they wait or are
  *   in (D201).
  * - **Vitals** for a waiting patient, with `visits.create` (D203).
+ * - **Collect fee** for one arrived or in whose fee is not paid, in a clinic
+ *   that takes it at arrival (`feeAtArrival`), with `payments.create` — and
+ *   `payments.view`, without which a paid fee cannot be seen (D306).
  * - **Open visit** once there is one, to whoever reads visits (D195).
  *
  * The rest need `appointments.edit`. A no-show or a cancellation is not
@@ -86,10 +92,19 @@ export const isMovable = (appointment: Pick<AppointmentDetail, "source" | "statu
 export function actionsFor(
   appointment: Pick<
     AppointmentDetail,
-    "source" | "status" | "scheduledAt" | "day" | "patientArchived" | "steppedOutAt" | "urgentAt" | "visitId"
+    | "source"
+    | "status"
+    | "scheduledAt"
+    | "day"
+    | "patientArchived"
+    | "steppedOutAt"
+    | "urgentAt"
+    | "visitId"
+    | "feePaid"
   >,
   member: { role: ClinicRole; permissions: readonly Permission[] },
   now: Date = new Date(),
+  feeAtArrival = false,
 ): AppointmentActions {
   const openVisit = hasAccess(member, "visits.view") && appointment.visitId !== null;
   if (appointment.patientArchived) return { ...NO_ACTIONS, openVisit };
@@ -116,6 +131,12 @@ export function actionsFor(
     markUrgent: edits && waiting && appointment.urgentAt === null,
     unmarkUrgent: edits && (waiting || inRoom) && appointment.urgentAt !== null,
     takeVitals: hasAccess(member, "visits.create") && waiting,
+    collectFee:
+      feeAtArrival &&
+      hasAccess(member, "payments.create") &&
+      hasAccess(member, "payments.view") &&
+      (waiting || inRoom) &&
+      !appointment.feePaid,
     openVisit,
   };
 }

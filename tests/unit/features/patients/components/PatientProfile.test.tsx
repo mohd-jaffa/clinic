@@ -130,6 +130,14 @@ describe("PatientProfile's header (plan §10.3, D115)", () => {
     );
   });
 
+  it("offers New bill beside New visit, to whoever may issue a bill (D311)", () => {
+    draw();
+    expect(screen.getByRole("link", { name: "New bill for Rohan Mehta" })).toHaveAttribute(
+      "href",
+      expect.stringMatching(/^\/billing\/new\?patient=/),
+    );
+  });
+
   it("says when they have no doctor yet", () => {
     query.current = { data: aPatient({ assignedDoctorId: null, doctorName: null }), isLoading: false };
     draw();

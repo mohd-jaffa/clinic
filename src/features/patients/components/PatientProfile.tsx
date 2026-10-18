@@ -16,6 +16,7 @@ import { hasAccess } from "@/constants/permissions";
 import { AppointmentPanel } from "@/features/appointments/components/AppointmentPanel";
 import { useOpenedAppointment } from "@/features/appointments/hooks/useOpenedAppointment";
 import { useAuth } from "@/features/auth/AuthProvider";
+import { NewBillLink } from "@/features/billing/components/NewBillLink";
 import { ReadOnlyNote } from "@/features/subscription/components/ReadOnlyNote";
 import { PatientTreatments } from "@/features/treatments/components/PatientTreatments";
 import { useReadOnly } from "@/features/subscription/hooks/useReadOnly";
@@ -56,10 +57,10 @@ function detailsOf(patient: Patient): Detail[] {
  * A patient's profile (plan §10.3, D113 – D117, D123), for `patients.view` —
  * a doctor's own only (D3): who they are — age, gender, number and their
  * doctor — whether they are archived, their alerts, and **Call** and
- * **WhatsApp** (a chat, nothing typed); then their details, only what holds a
- * value, notes included, with **Edit** for those who may change them. For
- * those who see appointments, their next appointment — or **Book** (D166);
- * for those who see visits, their treatments (D260); for those who see
+ * **WhatsApp** (a chat, nothing typed), and **New bill** for those who may
+ * issue one (D311); then their details, only what holds a value, notes
+ * included, with **Edit** for those who may change them. For those who see
+ * appointments, their next appointment — or **Book** (D166); for those who see visits, their treatments (D260); for those who see
  * appointments or visits, their history (D167, D225). On
  * a desktop, their state on the left and the history on the right (D114,
  * D231); each later phase adds its part (D101).
@@ -83,6 +84,11 @@ export function PatientProfile({ id }: { id: string }) {
                   <div className="flex flex-wrap gap-2">
                     <Reach patient={patient} />
                     <NewVisit patient={patient} />
+                    <NewBillLink
+                      target={{ patient: patient.id }}
+                      patient={{ name: patient.name, archived: patient.archivedAt !== null }}
+                      look="profile"
+                    />
                   </div>
                 </>
               )

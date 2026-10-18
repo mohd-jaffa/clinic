@@ -10,7 +10,8 @@ import { aCalendarAppointment, anAppointmentDetail } from "@tests/support/appoin
 import { authStub } from "@tests/support/auth";
 import { Providers } from "@tests/support/providers";
 
-const { client, auth, read } = vi.hoisted(() => ({
+const { client, auth, read, fee } = vi.hoisted(() => ({
+  fee: { atArrival: false, offer: vi.fn() },
   client: {
     setStatus: vi.fn(),
     arrive: vi.fn(),
@@ -29,6 +30,8 @@ const { client, auth, read } = vi.hoisted(() => ({
 vi.mock("@/features/appointments/api.client", () => ({ AppointmentsClient: client }));
 vi.mock("@/features/auth/AuthProvider", () => ({ useAuth: () => auth.current }));
 vi.mock("@/features/appointments/hooks/useAppointment", () => ({ useAppointment: () => read.current }));
+vi.mock("@/features/billing/hooks/useFeeAtArrival", () => ({ useFeeAtArrival: () => fee.atArrival }));
+vi.mock("@/features/billing/components/FeeCollection", () => ({ useCollectFee: () => fee.offer }));
 
 const { AppointmentSheet } = await import("@/features/appointments/components/AppointmentSheet");
 
@@ -43,6 +46,7 @@ const handlers = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  fee.atArrival = false;
   // Now, in Kochi: Tuesday 13 October 2026, 10:07 AM; the appointment was at 9:00.
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(new Date("2026-10-13T04:37:00Z"));
@@ -296,6 +300,32 @@ describe("AppointmentSheet (plan §11.2; D160 – D165)", () => {
     draw(aCalendarAppointment({ status: "ARRIVED", token: 4 }));
     await userEvent.click(within(actions()!).getByRole("button", { name: UI_TEXT.visit.takeVitalsOf("Rohan Mehta") }));
     expect(handlers.onTakeVitals).toHaveBeenCalledWith(waiting);
+  });
+
+  it("offers Collect fee to one waiting whose fee is not paid, closing as it opens, and tags one paid (D306)", async () => {
+    fee.atArrival = true;
+    auth.current = authStub({ role: "STAFF", permissions: [...ALL, "payments.view", "payments.create"] });
+    read.current = { data: anAppointmentDetail({ status: "ARRIVED", token: 4 }), mutate: vi.fn(), isValidating: false };
+    const { unmount } = draw(aCalendarAppointment({ status: "ARRIVED", token: 4 }));
+    expect(within(sheet()).queryByText("Fee paid")).not.toBeInTheDocument();
+    await userEvent.click(within(actions()!).getByRole("button", { name: "Collect Rohan Mehta’s fee" }));
+    expect(handlers.onClose).toHaveBeenCalled();
+    expect(fee.offer).toHaveBeenCalledWith({
+      appointmentId: "a-1",
+      patientName: "Rohan Mehta",
+      doctorName: "Maya Rao",
+      token: null,
+    });
+    unmount();
+
+    read.current = {
+      data: anAppointmentDetail({ status: "ARRIVED", token: 4, feePaid: true }),
+      mutate: vi.fn(),
+      isValidating: false,
+    };
+    draw(aCalendarAppointment({ status: "ARRIVED", token: 4 }));
+    expect(within(sheet()).getByText("Fee paid")).toBeInTheDocument();
+    expect(within(actions()!).queryByRole("button", { name: "Collect Rohan Mehta’s fee" })).not.toBeInTheDocument();
   });
 
   it("marks a waiting patient urgent, with no tag before it is (D201)", async () => {

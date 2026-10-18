@@ -121,6 +121,11 @@ export const apiRoutes = {
     status: (id: string) => `/api/treatments/${id}/status`,
     session: (id: string, visitId: string) => `/api/treatments/${id}/sessions/${visitId}`,
   },
+  // Bills (plan §15.2, §30): issued; where a new one starts — a visit, an arrival or a patient, by id.
+  bills: {
+    list: "/api/bills",
+    start: "/api/bills/start",
+  },
   // The follow-ups to call (plan §14.3): a tab a page at a time, how many each holds, a contact noted.
   followUps: {
     list: "/api/follow-ups",

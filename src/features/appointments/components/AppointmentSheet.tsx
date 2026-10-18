@@ -8,6 +8,7 @@ import {
   CircleOff,
   DoorOpen,
   HeartPulse,
+  IndianRupee,
   LogIn,
   LogOut,
   NotebookPen,
@@ -28,6 +29,9 @@ import { UI_TEXT } from "@/constants/messages";
 import { patientRoute, visitRoute } from "@/constants/navigation";
 import { APPOINTMENT_STATUS_LABELS, APPOINTMENT_STATUS_TONES } from "@/constants/statuses";
 import { useAuth } from "@/features/auth/AuthProvider";
+import { useCollectFee } from "@/features/billing/components/FeeCollection";
+import { FeePaidTag } from "@/features/billing/components/FeePaidTag";
+import { useFeeAtArrival } from "@/features/billing/hooks/useFeeAtArrival";
 import { ReadOnlyNote } from "@/features/subscription/components/ReadOnlyNote";
 import { useReadOnly } from "@/features/subscription/hooks/useReadOnly";
 import { dayKey } from "@/lib/dates/calendar";
@@ -83,7 +87,9 @@ function detailsOf(appointment: CalendarAppointment, detail: AppointmentDetail |
  * moves — **Send in** and **Stepped out** or **Back** for a patient waiting,
  * **Done** and **Back to waiting** for one in (D197, D198) — **Urgent** for
  * one waiting and **Not urgent** till they are done, with the tag beside the
- * status (D201), **Vitals** for one waiting (D203), and **Open visit** once
+ * status (D201), **Vitals** for one waiting (D203), **Collect fee** for one
+ * arrived or in whose fee is not paid, with **Fee paid** beside the status
+ * once it is (D306), and **Open visit** once
  * there is one (D195). An archived patient's appointment says
  * why it offers nothing but its visit (D103); a read-only clinic, why nothing
  * can change — though a reminder may still be sent (D181), and a visit read.
@@ -125,7 +131,9 @@ export function AppointmentSheet({
   const returning = useBackToWaiting(moved, onClose);
   const stepping = useStepOut(appointment, onClose);
   const urgency = useUrgent(moved, onClose);
-  const offered = detail && membership ? actionsFor(detail, membership) : undefined;
+  const offerFee = useCollectFee();
+  const feeAtArrival = useFeeAtArrival();
+  const offered = detail && membership ? actionsFor(detail, membership, new Date(), feeAtArrival) : undefined;
   const any = offered !== undefined && Object.values({ ...offered, openVisit: false }).some(Boolean);
   // A view-only clinic changes nothing, but a reminder is sharing what is there (D181), and a visit is read.
   const actions =
@@ -226,6 +234,24 @@ export function AppointmentSheet({
             onClick={() => void urgency.unmarkUrgent()}
           />
         )}
+        {actions.collectFee && (
+          <Button
+            label={UI_TEXT.billing.collectFee}
+            aria-label={UI_TEXT.billing.collectFeeOf(appointment.patientName)}
+            icon={IndianRupee}
+            variant="secondary"
+            size="sm"
+            onClick={() => {
+              onClose();
+              offerFee({
+                appointmentId: appointment.id,
+                patientName: appointment.patientName,
+                doctorName: appointment.doctorName,
+                token: null,
+              });
+            }}
+          />
+        )}
         {actions.arrive && (
           <Button
             label={UI_TEXT.queue.arrived}
@@ -289,6 +315,7 @@ export function AppointmentSheet({
             tone={APPOINTMENT_STATUS_TONES[appointment.status]}
           />
           {detail?.urgentAt && <UrgentTag />}
+          {detail?.feePaid && <FeePaidTag />}
           <span className="text-small text-muted">
             {patients.number(appointment.patientNumber)} · {kindOf(appointment)}
           </span>

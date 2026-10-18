@@ -4,10 +4,12 @@ import { UI_TEXT } from "@/constants/messages";
 import {
   ADD_PARAM,
   ALL_NAV,
+  BILL_FROM,
   BOTTOM_NAV,
   isActivePath,
   memberRoute,
   MORE_NAV,
+  newBillRoute,
   NAV_GROUPS,
   placesFor,
   PLAN_ROUTE,
@@ -155,5 +157,15 @@ describe("a visit's screen (D195, D230)", () => {
   it("is the visit's own address, saying when it was opened from the patient's profile", () => {
     expect(visitRoute("v-1")).toBe("/visits/v-1");
     expect(visitRoute("v-1", VISIT_FROM.patient)).toBe("/visits/v-1?from=patient");
+  });
+});
+
+describe("a new bill (plan §15.2, D313)", () => {
+  it("names what it bills, or no one yet, and Billing when it was started there", () => {
+    expect(newBillRoute()).toBe("/billing/new");
+    expect(newBillRoute({ visit: "v-1" })).toBe("/billing/new?visit=v-1");
+    expect(newBillRoute({ patient: "p-1" }, BILL_FROM.billing)).toBe("/billing/new?patient=p-1&from=billing");
+    expect(newBillRoute(undefined, BILL_FROM.billing)).toBe("/billing/new?from=billing");
+    expect(newBillRoute({ visit: "v-1" }, BILL_FROM.patient)).toBe("/billing/new?visit=v-1&from=patient");
   });
 });

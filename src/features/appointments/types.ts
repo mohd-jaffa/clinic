@@ -72,6 +72,8 @@ export interface AppointmentDetail extends CalendarAppointment {
   steppedOutAt: string | null;
   /** Since when they are marked Urgent (D201), or not: kept through their visit. */
   urgentAt: string | null;
+  /** Their consultation fee collected at arrival (D306) — known only with `payments.view`. */
+  feePaid: boolean;
   patientArchived: boolean;
   notes: string | null;
   bookedAt: string;
@@ -93,6 +95,7 @@ export interface AppointmentDetailRow extends Omit<CalendarAppointmentRow, "pati
   stepped_out_at: string | null;
   urgent_at: string | null;
   visit: VisitLink;
+  fee: FeeLink;
   booker: { full_name: string } | null;
   canceller: { full_name: string } | null;
 }
@@ -122,6 +125,8 @@ export interface QueueAppointment extends CalendarAppointment {
   urgentAt: string | null;
   /** Their visit, once sent in — read only with `visits.view` (D195). */
   visitId: string | null;
+  /** Their consultation fee collected at arrival (D306) — known only with `payments.view`. */
+  feePaid: boolean;
 }
 
 /**
@@ -130,6 +135,9 @@ export interface QueueAppointment extends CalendarAppointment {
  * the member may not read visits.
  */
 export type VisitLink = { id: string } | { id: string }[] | null;
+
+/** An arrival's own bills as PostgREST embeds them (D306): none, or the member may not read bills. */
+export type FeeLink = { status: string }[] | null;
 
 /** Send in answered (D192): the visit the patient is in. */
 export interface SentIn {

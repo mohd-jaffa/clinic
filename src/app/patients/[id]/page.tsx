@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 import { AppScreen } from "@/components/nav/AppScreen";
 import { UI_TEXT } from "@/constants/messages";
+import { getClinic } from "@/features/clinic/api";
 import { appointmentTypes } from "@/features/clinic/catalogues";
 import { listAlerts } from "@/features/patients/alerts";
 import { getPatient } from "@/features/patients/api";
@@ -22,6 +23,8 @@ export default async function PatientPage({ params }: { params: Promise<{ id: st
         [apiRoutes.patients.one(id)]: (tenant) => getPatient(tenant, id),
         [apiRoutes.patients.alerts(id)]: (tenant) => listAlerts(tenant, id),
         [apiRoutes.patients.summary(id)]: (tenant) => getPatientSummary(tenant, id),
+        // Whether an arrival goes on to Collect fee (D283, D305).
+        [apiRoutes.clinic.profile]: getClinic,
         [apiRoutes.doctors.list]: listDoctors,
         [apiRoutes.appointmentTypes.list]: appointmentTypes.list,
       }}

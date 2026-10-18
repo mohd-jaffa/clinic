@@ -7,10 +7,13 @@ import { aQueueAppointment } from "@tests/support/appointments";
 import { authStub } from "@tests/support/auth";
 import { Providers } from "@tests/support/providers";
 
-const { client } = vi.hoisted(() => ({
+const { client, fee } = vi.hoisted(() => ({
   client: { arrive: vi.fn(), remind: vi.fn(), sendIn: vi.fn(), done: vi.fn(), next: vi.fn() },
+  fee: { atArrival: false, offer: vi.fn() },
 }));
 vi.mock("@/features/appointments/api.client", () => ({ AppointmentsClient: client }));
+vi.mock("@/features/billing/hooks/useFeeAtArrival", () => ({ useFeeAtArrival: () => fee.atArrival }));
+vi.mock("@/features/billing/components/FeeCollection", () => ({ useCollectFee: () => fee.offer }));
 vi.mock("@/features/auth/AuthProvider", () => ({ useAuth: () => authStub() }));
 
 const { ComingRow, DoneRow, InRoomButtons, NextPatientButton, QueueSection, tokenNumeral, WaitingRow, WithDoctorRow } =
@@ -22,6 +25,7 @@ const onOpen = vi.fn();
 
 beforeEach(() => {
   vi.clearAllMocks();
+  fee.atArrival = false;
   client.arrive.mockResolvedValue({ id: "a-1", patientId: "p-1", doctorId: "d-1", token: 6 });
   client.sendIn.mockResolvedValue({ visitId: "v-1" });
   client.done.mockResolvedValue({ appointmentId: "a-1" });
@@ -140,6 +144,26 @@ describe("WaitingRow (D168)", () => {
     expect(screen.getByText("Urgent")).toHaveClass("text-coral");
   });
 
+  it("tags one whose fee was collected at arrival, after Urgent (D306)", () => {
+    const paid = aQueueAppointment({ status: "ARRIVED", token: 6, arrivedAt: "2026-10-13T05:05:00Z", feePaid: true });
+    const { unmount } = inList(
+      <WaitingRow appointment={paid} now={now} showDoctor={false} inRoom={[]} canMove={false} onOpen={onOpen} />,
+    );
+    expect(screen.getByRole("listitem")).toHaveTextContent("Rohan MehtaFee paid 9:00 AM · 25 min");
+    unmount();
+    inList(
+      <WaitingRow
+        appointment={{ ...paid, urgentAt: "2026-10-13T05:10:00Z" }}
+        now={now}
+        showDoctor={false}
+        inRoom={[]}
+        canMove={false}
+        onOpen={onOpen}
+      />,
+    );
+    expect(screen.getByRole("listitem")).toHaveTextContent("Rohan MehtaUrgent Fee paid 9:00 AM · 25 min");
+  });
+
   it("sends them in from the row, for whoever may (D172, D192)", async () => {
     const waiting = aQueueAppointment({ status: "ARRIVED", token: 4, arrivedAt: "2026-10-13T05:05:00Z" });
     inList(<WaitingRow appointment={waiting} now={now} showDoctor={false} inRoom={[]} canMove onOpen={onOpen} />);
@@ -216,6 +240,23 @@ describe("ComingRow (D172, D174)", () => {
     );
     await userEvent.click(within(row).getByRole("button", { name: "Rohan Mehta" }));
     expect(onOpen).toHaveBeenCalledWith(late);
+  });
+
+  it("goes on to Collect fee, saying the token there, in a clinic that takes the fee at arrival (D283, D305)", async () => {
+    fee.atArrival = true;
+    inList(
+      <ComingRow appointment={aQueueAppointment()} now={now} showDoctor canRemind={false} canArrive onOpen={onOpen} />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Mark Rohan Mehta arrived" }));
+    await waitFor(() =>
+      expect(fee.offer).toHaveBeenCalledWith({
+        appointmentId: "a-1",
+        patientName: "Rohan Mehta",
+        doctorName: "Maya Rao",
+        token: 6,
+      }),
+    );
+    expect(screen.queryByRole("status")).not.toHaveTextContent("is #6");
   });
 
   it("says nothing of lateness before the time, and offers no Arrived to someone who may not", () => {

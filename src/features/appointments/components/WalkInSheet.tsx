@@ -11,6 +11,8 @@ import { SelectField } from "@/components/ui/select-field";
 import { UI_TEXT } from "@/constants/messages";
 import { hasAccess } from "@/constants/permissions";
 import { useAuth } from "@/features/auth/AuthProvider";
+import { useCollectFee } from "@/features/billing/components/FeeCollection";
+import { useFeeAtArrival } from "@/features/billing/hooks/useFeeAtArrival";
 import { useAppointmentTypes } from "@/features/clinic/hooks/useAppointmentTypes";
 import { useDoctors } from "@/features/team/hooks/useDoctors";
 import { ApiError } from "@/lib/api/client";
@@ -48,6 +50,8 @@ const blank = (doctorId: string, typeId: string): AppointmentForm => ({
  * the card gives the token to tell them: "Rohan Mehta is #7 with Maya Rao". A
  * closed day is named on the card; a new patient added before a refusal stays
  * added, and the sheet goes on with them found. Sent twice, it adds once.
+ * In a clinic that collects the fee at arrival, **Collect fee** follows
+ * instead of the card (D283, D305).
  */
 export function WalkInSheet({
   open,
@@ -60,6 +64,8 @@ export function WalkInSheet({
   doctorId: string;
 }) {
   const respond = useResponse();
+  const offerFee = useCollectFee();
+  const feeAtArrival = useFeeAtArrival();
   const { membership } = useAuth();
   const doctors = useDoctors().data ?? [];
   const types = (useAppointmentTypes().data ?? []).filter((type) => type.active);
@@ -111,7 +117,17 @@ export function WalkInSheet({
       choice.choose(null);
       reset(startsWith());
       onClose();
-      respond.success({ title: queue.tokenGiven(patient, walkedIn.token, doctor) });
+      // In a clinic that collects the fee at arrival, Collect fee follows, saying the token (D283, D305).
+      if (feeAtArrival) {
+        offerFee({
+          appointmentId: walkedIn.id,
+          patientName: patient,
+          doctorName: doctor,
+          token: walkedIn.token,
+        });
+      } else {
+        respond.success({ title: queue.tokenGiven(patient, walkedIn.token, doctor) });
+      }
     },
     onError: (failure) => {
       const { doctor } = sent();

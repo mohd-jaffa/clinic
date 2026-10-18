@@ -34,7 +34,8 @@ export function PatientPicker({
 }: {
   chosen: ChosenPatient | null;
   onChoose: (patient: ChosenPatient) => void;
-  onClear: () => void;
+  /** Change; none where nothing stays chosen — a new bill leaves for the patient's own (D313). */
+  onClear?: () => void;
   /** None for someone who may not add a patient. */
   onNew?: (prefill: PatientPrefill) => void;
   error?: string;

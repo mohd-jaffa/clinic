@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from "next";
 import { ResponseProvider } from "@/components/ui/response-card";
 import { UI_TEXT } from "@/constants/messages";
 import { AuthProvider } from "@/features/auth/AuthProvider";
+import { FeeCollectionProvider } from "@/features/billing/components/FeeCollection";
 import { readInitialSession } from "@/features/auth/session.server";
 import { ThemeProvider } from "@/lib/theme/ThemeProvider";
 import { THEME_BOOT_SCRIPT, THEME_COLORS } from "@/lib/theme/themes";
@@ -49,7 +50,9 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         <KeyboardInset />
         <ThemeProvider>
           <AuthProvider initial={initial}>
-            <ResponseProvider>{children}</ResponseProvider>
+            <ResponseProvider>
+              <FeeCollectionProvider>{children}</FeeCollectionProvider>
+            </ResponseProvider>
           </AuthProvider>
         </ThemeProvider>
       </body>
