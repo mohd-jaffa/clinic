@@ -388,6 +388,26 @@ earlier lines are never rewritten.
 | D299 | **A payment is paid any time up to now** (the user): "when paid" defaults to now and may be set earlier, never later; it counts on that day in the clinic's timezone. | 2026-10-16 |
 | D300 | **A patient who owes, or holds an advance, may be archived** (the user): the balance stays and counts; to take a payment or a refund, they are restored first (D103). | 2026-10-16 |
 | D301 | **A payment with a refund standing on it is voided after the refund** (the user): a void that would leave more refunded than paid is refused (`PAYMENT_HAS_REFUNDS`), the card saying to void the refund first. | 2026-10-16 |
+| D314 | **A bill's page — `/bills/[id]` — offers Print, Download, Void, Record payment, Re-issue and the profile** (the user): **Void** for `payments.edit` (asks first, a reason); **Record payment** while the bill is Unpaid or Part paid, filled with what is still due on it; **Re-issue** on a void bill, opening a new bill filled with its lines; a quiet link to the patient's profile. | 2026-10-18 |
+| D315 | **A void bill's PDF prints with VOID across it** (the user): still printed and downloaded for the records, with a large grey VOID and its reason, so it never passes for a live bill. | 2026-10-18 |
+| D316 | **The bill PDF ends with a signature line** (the user): "Authorised signatory" under the clinic's name, as the prescription's signed foot, above the small footer. | 2026-10-18 |
+| D317 | **The issued card offers Print and View bill** (the user): once the PDF exists, "Bill 2026-27/0042 issued" stays up with **Print** (the PDF) and **View bill** (its page) instead of closing itself. | 2026-10-18 |
+| D318 | **The queue's To bill section follows With doctor** (the user): Waiting, With doctor, To bill, Still to come, Done; with `payments.view`; each row the patient, the doctor, the token and what was done, with **Bill**. | 2026-10-18 |
+| D319 | **No charge is in the To-bill row's sheet and on the visit** (the user): the row keeps one **Bill**; tapped, it opens a small sheet with **Bill** and **No charge** (Review, Courtesy, Other + note); a done visit has **No charge** beside **Bill now**. | 2026-10-18 |
+| D320 | **Billing's Bills and Payments pick dates by chips and a range** (the user): Today, 7 days, This month, or From – To; Bills also by state — All, Paid, Part paid, Unpaid, Void. | 2026-10-18 |
+| D321 | **Outstanding's WhatsApp opens with a dues reminder** (the user): "Hello Rohan, a balance of ₹1,200 is due at Smile Dental. Reply or call 0484 234 5678." — from `WHATSAPP_TEXT`, the clinic's phone when it has one; a person presses send. | 2026-10-18 |
+| D322 | **Refund is on the profile's balance, only while an advance is held** (the user): a sheet filled with the advance, the method and a reference, for `payments.edit`. | 2026-10-18 |
+| D323 | **The ＋'s Record payment starts on a patient search** (the user): it opens Billing with the Record payment sheet, which searches first; the patient picked shows their balance and fills the amount. | 2026-10-18 |
+| D324 | **Record payment's amount starts as what is owed** (the user): filled with the balance due, changeable — more becomes an advance; empty when nothing is due. | 2026-10-18 |
+| D325 | **Bills and payments are rows of their own in the history** (the user): among the visits and appointments, newest first, with `payments.view` — "Bill 2026-27/0042 · ₹1,500 · Part paid" opening the bill, "Paid ₹500 · UPI". | 2026-10-18 |
+| D326 | **A bill not from a visit or an arrival may name no doctor** (the user): its doctor picker starts on the patient's assigned doctor and may be cleared — a bill for medicines or a test has none; a doctor picked lets a Consultation line be at their fee (D289). | 2026-10-18 |
+| D327 | **Send bill on WhatsApp is on the bill's page and the issued card** (the user): as the prescription's — the share sheet with the PDF on a phone, WhatsApp Web and a download on a desktop (D245, D246). | 2026-10-18 |
+| D328 | **An expense is dated today or earlier** (the user): today unless changed; a late entry goes on its own day; never a day to come, as payments (D299). | 2026-10-18 |
+| D329 | **An expense's description is optional** (the user): the category says enough for Rent; a line may say more ("AC repair, room 2"). | 2026-10-18 |
+| D330 | **Expenses: the month, its totals, then the list** (the user): a month with ‹ ›, its total, each category's total — tapped, it filters the list — then the expenses; on a desktop the totals on the left, the list on the right. | 2026-10-18 |
+| D331 | **An archived expense leaves the totals** (the user): **Show archived** lists it, with **Restore** for `expenses.edit`. | 2026-10-18 |
+| D332 | **Expenses are grouped by day, newest first** (the user): "Today", "14 Oct" headings; each row its category, description, method and amount. | 2026-10-18 |
+| D333 | **Any expense, of any month, may be corrected** (the user): with `expenses.edit`, edited or archived, every change audited. | 2026-10-18 |
 
 ## 3. Users and roles
 
