@@ -5,6 +5,7 @@ import {
   ADD_PARAM,
   ALL_NAV,
   BILL_FROM,
+  billRoute,
   BOTTOM_NAV,
   isActivePath,
   memberRoute,
@@ -167,5 +168,11 @@ describe("a new bill (plan §15.2, D313)", () => {
     expect(newBillRoute({ patient: "p-1" }, BILL_FROM.billing)).toBe("/billing/new?patient=p-1&from=billing");
     expect(newBillRoute(undefined, BILL_FROM.billing)).toBe("/billing/new?from=billing");
     expect(newBillRoute({ visit: "v-1" }, BILL_FROM.patient)).toBe("/billing/new?visit=v-1&from=patient");
+    expect(newBillRoute({ visit: "v-1" }, undefined, "b-1")).toBe("/billing/new?visit=v-1&reissue=b-1");
+  });
+
+  it("names a bill's page, and the profile it was opened from (D314, D325)", () => {
+    expect(billRoute("b-1")).toBe("/bills/b-1");
+    expect(billRoute("b-1", BILL_FROM.patient)).toBe("/bills/b-1?from=patient");
   });
 });

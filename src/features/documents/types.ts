@@ -1,4 +1,5 @@
 import type { Gender, PaperSize } from "@/constants/statuses";
+import type { BillDetail } from "@/features/billing/types";
 import type { PrescriptionContent } from "@/features/prescriptions/types";
 import type { Vitals } from "@/features/visits/types";
 import type { Letterhead } from "@/lib/pdf/letterhead";
@@ -42,4 +43,41 @@ export interface PrescriptionSheet {
   advice: string | null;
   /** "Review on Tuesday, 20 Oct 2026". */
   followUp: string | null;
+}
+
+/** What a bill's PDF is made from (plan §15.5): the bill as its page reads it, beside the clinic. */
+export interface BillSource {
+  clinic: Omit<Letterhead, "logo"> & { paperSize: PaperSize };
+  bill: BillDetail;
+}
+
+/** A figure under a bill's lines: "Total ₹5,000". */
+export interface BillFigure {
+  label: string;
+  value: string;
+  /** The total, set larger. */
+  lead?: boolean;
+}
+
+/** A bill in the words it is printed in (plan §15.5; D315, D316). */
+export interface BillSheet {
+  letterhead: Letterhead;
+  /** "No. 2026-27/0042". */
+  number: string;
+  /** "18 Oct 2026". */
+  date: string;
+  patient: string;
+  /** "36 y · Male · P-1002". */
+  about: string;
+  /** "Mobile +91 98765 43210 · Dr. Maya Rao". */
+  contact: string;
+  lines: { description: string; quantity: string; rate: string; amount: string }[];
+  figures: BillFigure[];
+  /** "Patient’s balance: ₹2,000 due"; none on a void bill. */
+  balance: string | null;
+  notes: string | null;
+  /** "Void: Wrong patient" (D315); none on a live bill. */
+  void: string | null;
+  /** Who signs: the clinic (D316). */
+  signatory: string;
 }

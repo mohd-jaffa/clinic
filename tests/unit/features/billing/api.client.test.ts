@@ -20,3 +20,18 @@ describe("BillingClient (plan §30)", () => {
     expect(new Headers(init.headers).get("Idempotency-Key")).toBe("key-1");
   });
 });
+
+describe("BillingClient.void (plan §15.2; D314)", () => {
+  it("voids a bill with its reason", async () => {
+    mockFetch.mockResolvedValue({ ok: true, status: 200, json: async () => ({ data: { balancePaise: 0 } }) });
+    expect(await BillingClient.void({ billId: "b-1", input: { reason: "Wrong patient" } })).toEqual({
+      balancePaise: 0,
+    });
+    const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+    expect([url, init.method, init.body]).toEqual([
+      "/api/bills/b-1/void",
+      "POST",
+      JSON.stringify({ reason: "Wrong patient" }),
+    ]);
+  });
+});

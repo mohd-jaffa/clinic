@@ -8,7 +8,7 @@ import { fakeSupabase, postgrestError, type FakeSupabaseOptions } from "@tests/s
 const { logActionsSafe } = vi.hoisted(() => ({ logActionsSafe: vi.fn() }));
 vi.mock("@/lib/audit/auditLog", () => ({ logActionsSafe }));
 
-const { getBillStart, issueBill } = await import("@/features/billing/api");
+const { getBill, getBillStart, issueBill, voidBill } = await import("@/features/billing/api");
 
 function tenantWith(options: FakeSupabaseOptions) {
   const fake = fakeSupabase(options);
@@ -220,5 +220,207 @@ describe("issueBill (plan §15.2; D282, D302)", () => {
     const { tenant } = tenantWith({ rpc: () => refused("BILL_PRICE_NOT_ALLOWED") });
     await expect(issueBill(tenant, bill, "key-1")).rejects.toMatchObject({ code: "BILL_PRICE_NOT_ALLOWED" });
     expect(logActionsSafe).not.toHaveBeenCalled();
+  });
+});
+
+const billRow = {
+  id: "b-1",
+  bill_number: "2026-27/0042",
+  issued_at: "2026-10-16T05:30:00Z",
+  issued_on: "2026-10-16",
+  status: "ISSUED",
+  visit_id: "v-1",
+  appointment_id: null,
+  subtotal_paise: 62_000,
+  discount_paise: 6_200,
+  total_paise: 55_800,
+  notes: "Paid by her son",
+  void_reason: null,
+  voided_at: null,
+  patient: {
+    id: "p-1",
+    full_name: "Asha Rao",
+    patient_number: 1042,
+    phone: "+919876543210",
+    date_of_birth: "1990-01-01",
+    gender: "FEMALE",
+    archived_at: null,
+    balance: { balance_paise: 25_800 },
+  },
+  doctor: { member: { profile: { full_name: "Maya Rao" } } },
+  items: [
+    {
+      position: 2,
+      description: "Dressing kit",
+      quantity: 3,
+      unit_price_paise: 4_000,
+      amount_paise: 12_000,
+      service_id: null,
+      treatment_id: null,
+    },
+    {
+      position: 1,
+      description: "Consultation",
+      quantity: 1,
+      unit_price_paise: 50_000,
+      amount_paise: 50_000,
+      service_id: "s-1",
+      treatment_id: null,
+    },
+  ],
+  issuer: { full_name: "Priya Shah" },
+  voider: null,
+};
+const settlementRow = { paid_paise: 30_000, due_paise: 25_800, state: "PART_PAID" };
+
+/** Answers the bill and its settlement, each by its table. */
+const billTenant = (
+  bill: object | null,
+  settlement: object | null = settlementRow,
+  errors: Record<string, unknown> = {},
+) =>
+  tenantWith({
+    answer: ({ table }) => (errors[table] ? { error: errors[table] } : { data: table === "bills" ? bill : settlement }),
+  });
+
+describe("getBill (plan §15.2; D314)", () => {
+  it("reads the bill with its patient, balance, doctor, lines in order and people, beside where it stands", async () => {
+    const { tenant, find } = billTenant(billRow);
+    expect(await getBill(tenant, "b-1")).toEqual({
+      id: "b-1",
+      number: "2026-27/0042",
+      issuedAt: "2026-10-16T05:30:00Z",
+      issuedOn: "2026-10-16",
+      status: "ISSUED",
+      patient: {
+        id: "p-1",
+        name: "Asha Rao",
+        number: 1042,
+        phone: "+919876543210",
+        dateOfBirth: "1990-01-01",
+        gender: "FEMALE",
+        archived: false,
+      },
+      visitId: "v-1",
+      appointmentId: null,
+      doctor: "Maya Rao",
+      lines: [
+        {
+          description: "Consultation",
+          quantity: 1,
+          unitPricePaise: 50_000,
+          amountPaise: 50_000,
+          serviceId: "s-1",
+          treatmentId: null,
+        },
+        {
+          description: "Dressing kit",
+          quantity: 3,
+          unitPricePaise: 4_000,
+          amountPaise: 12_000,
+          serviceId: null,
+          treatmentId: null,
+        },
+      ],
+      subtotalPaise: 62_000,
+      discountPaise: 6_200,
+      totalPaise: 55_800,
+      notes: "Paid by her son",
+      issuedBy: "Priya Shah",
+      void: null,
+      settlement: { paidPaise: 30_000, duePaise: 25_800, state: "PART_PAID" },
+      balancePaise: 25_800,
+    });
+    // The clinic's own, by its id; the settlement by the bill.
+    expect(find("bills", "eq", "clinic_id", "clinic-1")).toBeDefined();
+    expect(find("bills", "eq", "id", "b-1")).toBeDefined();
+    expect(find("bill_settlement", "eq", "bill_id", "b-1")).toBeDefined();
+  });
+
+  it("reads a void bill — when, by whom, why — with no settlement, an archived patient, no doctor, no balance row", async () => {
+    const { tenant } = billTenant(
+      {
+        ...billRow,
+        status: "VOID",
+        void_reason: "Wrong patient",
+        voided_at: "2026-10-17T06:00:00Z",
+        voider: { full_name: "Asha Menon" },
+        doctor: null,
+        issuer: null,
+        patient: { ...billRow.patient, archived_at: "2026-10-17T07:00:00Z", balance: [] },
+      },
+      null,
+    );
+    expect(await getBill(tenant, "b-1")).toMatchObject({
+      status: "VOID",
+      void: { reason: "Wrong patient", at: "2026-10-17T06:00:00Z", by: "Asha Menon" },
+      settlement: null,
+      doctor: null,
+      issuedBy: null,
+      patient: { archived: true },
+      balancePaise: 0,
+    });
+    const gone = billTenant(
+      { ...billRow, status: "VOID", void_reason: "Wrong", voided_at: "2026-10-17T06:00:00Z", voider: null },
+      null,
+    );
+    expect((await getBill(gone.tenant, "b-1")).void).toEqual({ reason: "Wrong", at: "2026-10-17T06:00:00Z", by: null });
+  });
+
+  it("refuses a bill it cannot find or read, and says what the database refused", async () => {
+    await expect(getBill(billTenant(null).tenant, "b-1")).rejects.toMatchObject({ code: "RECORD_NOT_FOUND" });
+    await expect(
+      getBill(billTenant(billRow, null, { bills: postgrestError("XX000") }).tenant, "b-1"),
+    ).rejects.toMatchObject({ kind: "INTERNAL" });
+    await expect(
+      getBill(billTenant(billRow, null, { bill_settlement: postgrestError("XX000") }).tenant, "b-1"),
+    ).rejects.toMatchObject({ kind: "INTERNAL" });
+  });
+});
+
+describe("voidBill (plan §15.2; D314)", () => {
+  it("voids through void_bill with its reason, and audits the status, the reason and the visit back in To bill", async () => {
+    const { tenant, rpcs } = tenantWith({
+      rpc: () => ({
+        data: { previously: "ISSUED", visit: { id: "v-1", from: "BILLED", to: "TO_BILL" }, balance_paise: 0 },
+      }),
+    });
+    expect(await voidBill(tenant, "b-1", { reason: "Wrong patient" }, "req_v")).toEqual({
+      balancePaise: 0,
+      visitToBill: true,
+    });
+    expect(rpcs).toEqual([{ name: "void_bill", args: { p_bill_id: "b-1", p_reason: "Wrong patient" } }]);
+    expect(logActionsSafe).toHaveBeenCalledWith(tenant, [
+      {
+        action: "UPDATE",
+        entityType: "bills",
+        entityId: "b-1",
+        changes: { status: { from: "ISSUED", to: "VOID" }, void_reason: { from: null, to: "Wrong patient" } },
+        requestId: "req_v",
+      },
+      {
+        action: "UPDATE",
+        entityType: "visits",
+        entityId: "v-1",
+        changes: { billing_status: { from: "BILLED", to: "TO_BILL" } },
+        requestId: "req_v",
+      },
+    ]);
+  });
+
+  it("audits only the bill when no visit moves, and nothing for one voided already", async () => {
+    const plain = tenantWith({ rpc: () => ({ data: { previously: "ISSUED", visit: null, balance_paise: 500 } }) });
+    expect(await voidBill(plain.tenant, "b-1", { reason: "Typo" })).toEqual({ balancePaise: 500, visitToBill: false });
+    expect(logActionsSafe).toHaveBeenCalledWith(plain.tenant, [expect.objectContaining({ entityType: "bills" })]);
+
+    logActionsSafe.mockClear();
+    const again = tenantWith({ rpc: () => ({ data: { previously: "VOID", visit: null, balance_paise: 500 } }) });
+    await voidBill(again.tenant, "b-1", { reason: "Typo" });
+    expect(logActionsSafe).not.toHaveBeenCalled();
+  });
+
+  it("says, in its own words, what it was refused", async () => {
+    const { tenant } = tenantWith({ rpc: () => refused("AUTH_PERMISSION_DENIED") });
+    await expect(voidBill(tenant, "b-1", { reason: "Typo" })).rejects.toMatchObject({ code: "AUTH_PERMISSION_DENIED" });
   });
 });

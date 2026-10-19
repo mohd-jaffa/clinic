@@ -1460,6 +1460,17 @@ is refused, never capped (D293).
 - **Issued bills are never edited.** A mistake is **voided** (`payments.edit`,
   asks first, a reason) and a new bill issued. A void bill stays visible,
   marked Void, and leaves the balance.
+- **A bill's page — `/bills/[id]`** (`payments.view`; D314): the number, the
+  patient, the day and doctor, and where it stands — Paid, Part paid, Unpaid
+  or Void; **Print** and **Download** (§15.5); **Void bill** for
+  `payments.edit` — a reason in a sheet, then the coral card asks first;
+  **Re-issue** on a void bill, opening a new bill for its visit, arrival or
+  patient filled with its lines, discount and notes; a quiet **Open
+  profile**. Then its lines, notes and figures — paid and due on it, and
+  the patient's balance — and, once void, when, by whom and why. Its back
+  arrow leads to Billing, or to the profile it was opened from (D325).
+  **Record payment** joins it with R8.6. The issued card stays up with
+  **Print** and **View bill** for whoever reads bills (D317).
 - **Paid state of a bill** (Paid / Part paid / Unpaid) is computed: the
   patient's net payments settle their issued bills oldest first
   (`bill_settlement` view). The patient's balance is the truth; the bill's
@@ -1498,6 +1509,16 @@ phone, GSTIN if set), bill number and date, patient name, number and mobile,
 the lines, subtotal, discount, total, paid against this bill, due on this bill,
 the patient's overall balance, and a small "Generated with ClinicDesk" footer
 (D30). On demand, never stored; share, download, print.
+
+As built (R8.5): "Bill" with its day on the right and "No. 2026-27/0042"
+under it; the patient with their age on the bill's day, sex and number, then
+their mobile and the doctor; the lines as a table — description, quantity,
+rate, amount; the figures at the right; the balance and the notes. The foot
+of the last page is signed by the clinic as its **Authorised signatory**
+(D316). A void bill prints with a large, faint VOID across every page and
+"Void: {reason}" under its number, and no payment or balance (D315).
+Saved as "{patient} - Bill 2026-27-0042.pdf". `GET /api/bills/{id}/bill.pdf`
+(`payments.view`; `?download=1` to save); view-only clinics print too.
 
 ### 15.6 Checkout — the To-bill list (D46)
 
@@ -2840,7 +2861,7 @@ in the row's one commit (D136).
 | R8.2 | `billing/totals.ts`, the one formula; discount by amount or % (D290 – D293: a percentage to the nearest rupee; whole percentages, 1 – 100; the amount only on the bill; a discount past the bill refused at its field) | §15.1 | — | DONE (2026-10-16) |
 | R8.3 | New bill screen: from To bill, a visit or a patient; the doctor's fee; discount and price change with `payments.discount`; collect now. Collect fee at arrival (D302 – D313: back where it came from with the card; lines from a sheet; Collect now on with the total; the Collect fee sheet after the token; Fee paid; Bill now at the visit's foot; a reminder line for an unpriced treatment; the price a field with permission; lines left and totals right; New bill in the profile's header; Issue does not ask; a patient search first. `0030_bill_start`, so expenses are 0031 on) | §15.2, §11.3 | — | DONE (2026-10-18) |
 | R8.4 | `0029_payments`: record, refund, void; the payment with a bill in `create_bill` — Collect now, Issue and collect (D282); `patient_balances`, `bill_settlement` (D294 – D301: built before R8.3; balances kept by the money functions; no `patient_stats`; refunds from the advance; oldest first; paid up to now; archived with a balance; a refund voided first) | §15.3, §15.4 | — | DONE (2026-10-16) |
-| R8.5 | Bill PDF; share, download, print | §15.5, §33 | — | TODO |
+| R8.5 | Bill PDF; share, download, print (D314 – D317: the bill's page with Print, Download, Void, Re-issue and the profile; VOID across a void bill; signed by the clinic; the issued card's Print and View bill. Share on WhatsApp is R8.8's, D327) | §15.5, §33 | — | DONE (2026-10-18) |
 | R8.6 | Checkout: the queue's To-bill column, Billing's tabs (To bill, bills, payments, outstanding), No charge; the profile's balance section, its bills and payments in the history, and the patients list's Owing tab and balance chip (D101) | §15.4, §15.6, §10.2, §10.3 | — | TODO |
 | R8.7 | Integration: double submit → one bill/payment; balances to the paisa; read-only refuses | §34 | — | TODO |
 | R8.8 | A bill's doctor (from the visit, or picked); send bill on WhatsApp | §18, §22.1 | — | TODO |

@@ -171,6 +171,12 @@ export const BILL_PAYMENT_STATE_LABELS: Record<BillPaymentState, string> = {
   PART_PAID: "Part paid",
   UNPAID: "Unpaid",
 };
+/** Paid is settled; what is still owed wants attention. A void bill is neutral: a state, not an alarm. */
+export const BILL_PAYMENT_STATE_TONES: Record<BillPaymentState, StatusTone> = {
+  PAID: "live",
+  PART_PAID: "attention",
+  UNPAID: "attention",
+};
 
 /** Money taken from a patient, or handed back (plan §15.3). 0029's CHECK. */
 export const PAYMENT_KINDS = ["PAYMENT", "REFUND"] as const;

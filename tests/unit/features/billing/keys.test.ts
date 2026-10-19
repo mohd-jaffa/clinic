@@ -1,7 +1,15 @@
 import { describe, expect, it } from "vitest";
 
-import { billIssuedRoutes, billStartKey, billTargetIn, billTargetOf } from "@/features/billing/keys";
-import type { BillStart } from "@/features/billing/types";
+import {
+  billIssuedRoutes,
+  billStartKey,
+  billTargetIn,
+  billTargetOf,
+  billVoidedRoutes,
+  reissueIn,
+  reissueOf,
+} from "@/features/billing/keys";
+import type { BillDetail, BillStart } from "@/features/billing/types";
 
 const VISIT = "7b1e4a52-3c5d-4e6f-8a9b-0c1d2e3f4a5b";
 const PATIENT = "8c2f5b63-4d6e-4f70-9bac-1d2e3f4a5b6c";
@@ -40,5 +48,32 @@ describe("billIssuedRoutes", () => {
     ]);
     expect(billIssuedRoutes({ ...start, visit: { id: "v-1" } } as BillStart)).toContain("/api/visits/v-1");
     expect(billIssuedRoutes({ ...start, appointment: { id: "a-1" } } as BillStart)).toContain("/api/appointments/a-1");
+  });
+});
+
+describe("reissueOf, reissueIn (D314)", () => {
+  it("reads the void bill a new one issues again by its id — none for nothing, a name given twice, or not an id", () => {
+    expect(reissueOf(VISIT)).toBe(VISIT);
+    expect(reissueOf(null)).toBeNull();
+    expect(reissueOf("seven")).toBeNull();
+    expect(reissueIn({ reissue: VISIT })).toBe(VISIT);
+    expect(reissueIn({ reissue: [VISIT, VISIT] })).toBeNull();
+    expect(reissueIn({})).toBeNull();
+  });
+});
+
+describe("billVoidedRoutes (D314)", () => {
+  it("reads again the bill, where bills start, the queue, the patient, and the visit or arrival it billed", () => {
+    const bill = { id: "b-1", patient: { id: "p-1" }, visitId: "v-1", appointmentId: null } as BillDetail;
+    expect(billVoidedRoutes(bill)).toEqual([
+      "/api/bills/b-1",
+      "/api/bills/start",
+      "/api/queue",
+      "/api/patients/p-1/summary",
+      "/api/patients/p-1/timeline",
+      "/api/visits/v-1",
+    ]);
+    expect(billVoidedRoutes({ ...bill, visitId: null, appointmentId: "a-1" }).at(-1)).toBe("/api/appointments/a-1");
+    expect(billVoidedRoutes({ ...bill, visitId: null })).toHaveLength(5);
   });
 });

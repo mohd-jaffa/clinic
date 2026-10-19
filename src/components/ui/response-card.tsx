@@ -34,6 +34,8 @@ export interface ResponseAction {
   label: string;
   onClick?: () => void;
   href?: string;
+  /** `href` is a file the server answers with — a PDF — opened beside the app. */
+  file?: boolean;
   /** What its chip holds; an arrow unless it says otherwise. */
   icon?: LucideIcon;
 }
@@ -321,7 +323,15 @@ function ActionButton({
     onDone();
   };
   return action.href ? (
-    <LinkButton href={action.href} label={action.label} variant={variant} icon={action.icon} onClick={onClick} />
+    <LinkButton
+      href={action.href}
+      file={action.file}
+      newTab={action.file}
+      label={action.label}
+      variant={variant}
+      icon={action.icon}
+      onClick={onClick}
+    />
   ) : (
     <Button ref={focusRef} label={action.label} variant={variant} icon={action.icon} onClick={onClick} />
   );

@@ -42,7 +42,10 @@ async function signIn(page: Page, identifier: string, password: string) {
   expect(answer.ok()).toBe(true);
 }
 
-const notice = (page: Page, title: string | RegExp) => page.getByRole("status").filter({ hasText: title });
+/** The issued card, which stays up with Print and View bill (D317). */
+const issuedCard = (page: Page, title: RegExp) => page.getByRole("dialog", { name: title });
+const closeCard = (page: Page, title: RegExp) =>
+  issuedCard(page, title).getByRole("button", { name: UI_TEXT.actions.close }).click();
 const fitsTheScreen = async (page: Page) =>
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
     page.viewportSize()!.width,
@@ -53,8 +56,8 @@ const figure = (page: Page, label: string) =>
     .filter({ hasText: new RegExp(`^${label}$`) })
     .locator("+ dd");
 /** The first bill of the financial year, whichever year the suite runs in. */
-const firstIssued = /^Bill \d{4}-\d{2}\/0001 issued/;
-const secondIssued = /^Bill \d{4}-\d{2}\/0002 issued/;
+const firstIssued = /^Bill \d{4}-\d{2}\/0001 issued$/;
+const secondIssued = /^Bill \d{4}-\d{2}\/0002 issued$/;
 
 /** Now on the clinic's 5-minute steps: today's, whatever the hour the suite runs at. */
 const stepNow = () => new Date(Math.floor(Date.now() / 300_000) * 300_000).toISOString();
@@ -179,7 +182,7 @@ test("the owner bills a visit from Bill now, its unpriced treatment picked, coll
 
   // Back to the visit, with the card (D302).
   await expect(page).toHaveURL(new RegExp(`/visits/${visitId}$`));
-  await expect(notice(page, firstIssued)).toContainText(words.collected("₹13,300"));
+  await expect(issuedCard(page, firstIssued)).toContainText(words.collected("₹13,300"));
   await expectAccessible(page);
 });
 
@@ -208,7 +211,7 @@ test("reception bills a visit from the profile, and a patient searched for from 
   await page.getByRole("button", { name: words.issue }).click();
   // Back to his profile — never to a visit reception may not open (D302).
   await expect(page).toHaveURL(new RegExp(`/patients/${kiran}$`));
-  await expect(notice(page, firstIssued)).toBeVisible();
+  await expect(issuedCard(page, firstIssued)).toBeVisible();
 
   // No one named: the patient searched for first (D313), then a line from the price list (D303).
   await page.goto("/billing/new");
@@ -228,7 +231,7 @@ test("reception bills a visit from the profile, and a patient searched for from 
   await expectAccessible(page);
   await page.getByRole("button", { name: words.issue }).click();
   await expect(page).toHaveURL(new RegExp(`/patients/${sunil}$`));
-  await expect(notice(page, secondIssued)).toContainText(words.collected("₹4,500"));
+  await expect(issuedCard(page, secondIssued)).toContainText(words.collected("₹4,500"));
 });
 
 test("with the fee at arrival, Arrived asks for it after the token, and the queue says Fee paid", async ({ page }) => {
@@ -247,7 +250,8 @@ test("with the fee at arrival, Arrived asks for it after the token, and the queu
   await expectAccessible(page);
   await fee.getByRole("button", { name: words.issueAndCollect }).click();
   await expect(fee).toBeHidden();
-  await expect(notice(page, firstIssued)).toContainText(words.collected("₹800"));
+  await expect(issuedCard(page, firstIssued)).toContainText(words.collected("₹800"));
+  await closeCard(page, firstIssued);
   const waiting = page.getByRole("list", { name: queue.waiting });
   await expect(waiting.getByRole("listitem").filter({ hasText: "Kiran Das" })).toContainText(words.feePaid);
 
@@ -265,7 +269,8 @@ test("with the fee at arrival, Arrived asks for it after the token, and the queu
   await expect(fee).not.toContainText(" is #");
   await page.getByRole("radio", { name: "UPI" }).click();
   await fee.getByRole("button", { name: words.issueAndCollect }).click();
-  await expect(notice(page, secondIssued)).toBeVisible();
+  await expect(issuedCard(page, secondIssued)).toBeVisible();
+  await closeCard(page, secondIssued);
   await expect(sunilRow).toContainText(words.feePaid);
   await fitsTheScreen(page);
   await expectAccessible(page);

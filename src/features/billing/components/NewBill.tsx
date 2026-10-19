@@ -15,7 +15,7 @@ import { SkeletonRows } from "@/components/ui/skeleton";
 import { TextAreaField } from "@/components/ui/text-field";
 import { TEXT_LIMITS } from "@/constants/limits";
 import { UI_TEXT } from "@/constants/messages";
-import { BILL_FROM, newBillRoute, type BillFrom } from "@/constants/navigation";
+import { BILL_FROM, BILL_REISSUE, newBillRoute, type BillFrom } from "@/constants/navigation";
 import { hasAccess } from "@/constants/permissions";
 import { PatientPicker } from "@/features/appointments/components/PatientPicker";
 import { useAuth } from "@/features/auth/AuthProvider";
@@ -27,11 +27,21 @@ import { useReadOnly } from "@/features/subscription/hooks/useReadOnly";
 import { formatDayMonth } from "@/lib/format/date";
 import { billSchema } from "@/lib/validation";
 
-import { billStartKey, billTargetOf } from "../keys";
-import { billBackOf, billFromOf, blankBill, priceOf, serviceLine, toBillInput, type BillForm } from "../form";
+import { billStartKey, billTargetOf, reissueOf } from "../keys";
+import {
+  billBackOf,
+  billFromOf,
+  blankBill,
+  priceOf,
+  reissuedBill,
+  serviceLine,
+  toBillInput,
+  type BillForm,
+} from "../form";
+import { useBill } from "../hooks/useBill";
 import { useBillStart } from "../hooks/useBillStart";
 import { useIssueBill } from "../hooks/useIssueBill";
-import type { BillStart } from "../types";
+import type { BillDetail, BillStart } from "../types";
 import { AddLineSheet } from "./AddLineSheet";
 import { BillLines } from "./BillLines";
 import { BillSummary } from "./BillSummary";
@@ -49,7 +59,8 @@ function forLine(start: BillStart): string | undefined {
 /**
  * A new bill — `/billing/new` (plan §15.2; D302 – D313): for a visit, an
  * arrival or a patient, or — with none named — someone searched for first
- * (D313). It starts with what it bills (`startingLines`), lines are added
+ * (D313). It starts with what it bills (`startingLines`) — or, issuing a
+ * void bill again, with that bill's lines (D314) — lines are added
  * from the price list (D303), and **Issue bill** issues it with what is
  * collected, without asking first (D312), then goes back where it was
  * started from with a card (D302). Lines on the left and the totals on the
@@ -61,10 +72,13 @@ export function NewBill() {
   const router = useRouter();
   const target = billTargetOf((name) => params.get(name));
   const from = billFromOf(params.get(BILL_FROM.param));
+  const reissue = reissueOf(params.get(BILL_REISSUE));
   const startQuery = useBillStart(target);
   const servicesQuery = useServices();
+  const reissuedQuery = useBill(target && reissue);
   const start = startQuery.data;
   const services = servicesQuery.data;
+  const reissued = reissuedQuery.data;
   const back = billBackOf(target, from, start?.patient.id);
 
   let body;
@@ -77,16 +91,25 @@ export function NewBill() {
         />
       </div>
     );
-  } else if (start && services) {
+  } else if (start && services && (reissue === null || reissued)) {
     body = start.patient.archived ? (
       <ScreenNotice>{words.archived(start.patient.name)}</ScreenNotice>
     ) : (
-      <BillEditor key={billStartKey(target)} start={start} services={services} back={back} from={from} />
+      <BillEditor
+        key={`${billStartKey(target)}:${reissue}`}
+        start={start}
+        services={services}
+        reissued={reissued ?? null}
+        back={back}
+        from={from}
+      />
     );
   } else if (startQuery.error != null) {
     body = <LoadFailed query={startQuery} loadFailed="BILL_START_LOAD_FAILED" />;
   } else if (servicesQuery.error != null) {
     body = <LoadFailed query={servicesQuery} loadFailed="SERVICES_LOAD_FAILED" />;
+  } else if (reissuedQuery.error != null) {
+    body = <LoadFailed query={reissuedQuery} loadFailed="BILL_LOAD_FAILED" />;
   } else {
     body = (
       <section aria-busy="true" aria-label={UI_TEXT.states.loading}>
@@ -120,11 +143,14 @@ export function NewBill() {
 function BillEditor({
   start,
   services,
+  reissued,
   back,
   from,
 }: {
   start: BillStart;
   services: readonly Service[];
+  /** A void bill issued again, its lines filling this one (D314). */
+  reissued: BillDetail | null;
   back: string;
   from: BillFrom | undefined;
 }) {
@@ -142,7 +168,7 @@ function BillEditor({
         context,
         options,
       )) as Resolver<BillForm>,
-    defaultValues: blankBill(start, services),
+    defaultValues: reissued ? reissuedBill(start, services, reissued) : blankBill(start, services),
   });
   const lines = useFieldArray({ control: form.control, name: "lines" });
   const { issue, issuing } = useIssueBill(start, () => router.replace(back));

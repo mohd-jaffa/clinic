@@ -24,6 +24,9 @@ export const billStartQuerySchema = z
 
 export type BillStartQuery = z.output<typeof billStartQuerySchema>;
 
+/** A bill named in an address — the void one a new bill issues again (D314). */
+export const billIdSchema = id;
+
 /** A line no more than a bill can hold (0028's CHECK): its quantity times its price. */
 const withinBill = <Line extends { quantity: number; price: number }>(line: Line) =>
   line.quantity * line.price <= MAX_AMOUNT_PAISE;
@@ -169,3 +172,11 @@ export const collectFeeSchema = z.object({
 
 export type CollectFeeInput = z.input<typeof collectFeeSchema>;
 export type CollectFeePayload = z.output<typeof collectFeeSchema>;
+
+/** Why a bill is voided (plan §15.2; D314): one line, asked for before the card asks to be sure. */
+export const voidBillSchema = z.object({
+  reason: requiredLine(UI_TEXT.bill.voidReasonLabel, { max: TEXT_LIMITS.reason }),
+});
+
+export type VoidBillInput = z.input<typeof voidBillSchema>;
+export type VoidBillPayload = z.output<typeof voidBillSchema>;

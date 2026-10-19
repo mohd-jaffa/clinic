@@ -143,6 +143,8 @@ export const ERROR_MESSAGES = {
   SERVICE_INACTIVE: "A line’s service has been archived from the price list. Remove that line, or choose another.",
   VISIT_NOT_TO_BILL: "This visit isn’t waiting to be billed any more. Refresh to see where it stands.",
   BILL_START_LOAD_FAILED: "What to bill couldn't be loaded.",
+  BILL_LOAD_FAILED: "This bill couldn't be loaded.",
+  BILL_PDF_FAILED: "The bill’s PDF couldn’t be made.",
 
   // Payments (plan §15.3; D297, D301).
   PAYMENT_REFUND_TOO_LARGE: "A refund can’t be more than the patient has paid in advance.",
@@ -1117,6 +1119,47 @@ export const UI_TEXT = {
     billNow: "Bill now",
     billNowOf: (patient: string) => `Bill ${patient}’s visit`,
     newBillOf: (patient: string) => `New bill for ${patient}`,
+    /** The issued card's ways on (D317). */
+    viewBill: "View bill",
+  },
+
+  /** A bill's page (plan §15.2; D314, D317). */
+  bill: {
+    title: "Bill",
+    titleOf: (number: string) => `Bill ${number}`,
+    issued: (day: string) => `Issued ${day}`,
+    issuedBy: (name: string) => `Issued by ${name}`,
+    /** A line as it was billed: "2 × ₹400". */
+    times: (quantity: number, price: string) => `${quantity} × ${price}`,
+    forVisit: "For a visit",
+    paid: "Paid",
+    due: "Due on this bill",
+    balance: "Patient’s balance",
+    /** Its PDF (plan §15.5): opened to look at and print, or saved. */
+    print: "Print",
+    printOf: (number: string) => `Print bill ${number}`,
+    download: "Download",
+    downloadOf: (number: string) => `Download bill ${number}`,
+    downloaded: "Bill downloaded",
+    savedAs: (name: string) => `Saved as “${name}”.`,
+    notDownloaded: "The bill wasn’t downloaded",
+    openProfile: "Open profile",
+    /** Voiding it (D314): a reason, then the card asks first. */
+    void: "Void bill",
+    voidTitle: "Void bill",
+    voidReasonLabel: "Reason",
+    voidReasonHint: "For example: wrong patient, or a line missed.",
+    voidAsk: (number: string) => `Void bill ${number}?`,
+    voidAskMessage: "It stays on record, marked Void, and leaves the balance. Issue a new bill to correct it.",
+    keep: "Keep it",
+    voided: (number: string) => `Bill ${number} voided`,
+    visitBackToBill: "Its visit is back in To bill.",
+    notVoided: "The bill wasn’t voided",
+    voidedOn: (day: string) => `Voided ${day}`,
+    voidedBy: (day: string, name: string) => `Voided ${day} by ${name}`,
+    /** A void bill, issued again with its lines (D314). */
+    reissue: "Re-issue",
+    reissueOf: (number: string) => `Re-issue bill ${number}`,
   },
 
   /** What the PDFs say (plan §33; D218 – D224). */
@@ -1134,6 +1177,25 @@ export const UI_TEXT = {
     advice: "Advice",
     followUp: (day: string) => `Review on ${day}`,
     prescriptionTitle: (patient: string, day: string) => `Prescription for ${patient}, ${day}`,
+    /** The bill (plan §15.5; D315, D316). */
+    billTitle: (number: string, patient: string) => `Bill ${number} for ${patient}`,
+    /** The file a bill is saved as: its number as a file may hold it. */
+    billFile: (patient: string, number: string) => `${patient} - Bill ${number}.pdf`,
+    bill: "Bill",
+    billNumber: (number: string) => `No. ${number}`,
+    gstin: (gstin: string) => `GSTIN ${gstin}`,
+    mobile: (phone: string) => `Mobile ${phone}`,
+    billColumns: { description: "Description", quantity: "Qty", rate: "Rate", amount: "Amount" },
+    subtotal: "Subtotal",
+    discount: "Discount",
+    total: "Total",
+    paid: "Paid",
+    due: "Due on this bill",
+    balance: (words: string) => `Patient’s balance: ${words}`,
+    notes: "Notes",
+    voidStamp: "VOID",
+    voidReason: (reason: string) => `Void: ${reason}`,
+    signatory: "Authorised signatory",
     /** The file a prescription is saved as (D223). */
     prescriptionFile: (patient: string, day: string) => `${patient} - ${day} - Prescription.pdf`,
     /** The vitals in one line, each short. */

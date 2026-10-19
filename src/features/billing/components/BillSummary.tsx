@@ -19,6 +19,7 @@ import { formatPaise } from "@/lib/format/currency";
 import { paiseToText } from "@/lib/money";
 
 import { balanceWords, collectedOf, previewOf, type BillForm } from "../form";
+import { Figure } from "./Figure";
 
 const { billing: words } = UI_TEXT;
 const DISCOUNT_OPTIONS = (["NONE", ...DISCOUNT_KINDS] as const).map((kind) => ({
@@ -26,16 +27,6 @@ const DISCOUNT_OPTIONS = (["NONE", ...DISCOUNT_KINDS] as const).map((kind) => ({
   label: words.discountKinds[kind],
 }));
 const METHOD_OPTIONS = PAYMENT_METHODS.map((method) => ({ value: method, label: PAYMENT_METHOD_LABELS[method] }));
-
-/** One figure of the totals: its name, and its value at the right. */
-function Figure({ label, value, lead = false }: { label: string; value: string; lead?: boolean }) {
-  return (
-    <div className={cn("flex items-baseline justify-between gap-3", lead && "border-t border-line pt-3")}>
-      <dt className={lead ? "font-bold text-ink" : "text-muted"}>{label}</dt>
-      <dd className={cn("text-right font-bold text-ink tabular-nums", lead && "text-heading")}>{value}</dd>
-    </div>
-  );
-}
 
 /**
  * The bill's totals and what is collected (plan §15.2; D290 – D293, D304,

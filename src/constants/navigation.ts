@@ -105,13 +105,23 @@ export const BILL_FROM = { param: "from", billing: "billing", patient: "patient"
 export type BillFrom = (typeof BILL_FROM)["billing" | "patient"];
 /** What a new bill is for (plan §15.2): a visit, an arrival or a patient — or no one yet, to be searched (D313). */
 export type NewBillFor = { visit: string } | { appointment: string } | { patient: string };
-/** A new bill (plan §15.2) — for a visit, an arrival or a patient, or no one yet; started from Billing, it leads back there. */
-export const newBillRoute = (target?: NewBillFor, from?: BillFrom) => {
+/** The query naming a void bill a new one issues again (D314). */
+export const BILL_REISSUE = "reissue";
+/**
+ * A new bill (plan §15.2) — for a visit, an arrival or a patient, or no one
+ * yet; started from Billing, it leads back there; issuing a void bill again,
+ * it names that bill (D314).
+ */
+export const newBillRoute = (target?: NewBillFor, from?: BillFrom, reissue?: string) => {
   const query = new URLSearchParams(target);
   if (from) query.set(BILL_FROM.param, from);
+  if (reissue) query.set(BILL_REISSUE, reissue);
   const text = query.toString();
   return text ? `${BILLING_ROUTE}/new?${text}` : `${BILLING_ROUTE}/new`;
 };
+/** A bill's page (D314): back to Billing — or, opened from the patient's history, to their profile (D325). */
+export const billRoute = (id: string, from?: typeof BILL_FROM.patient) =>
+  from ? `/bills/${id}?${BILL_FROM.param}=${from}` : `/bills/${id}`;
 const BILLING: NavItem = {
   id: "billing",
   label: places.billing,

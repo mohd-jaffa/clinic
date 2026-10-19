@@ -17,7 +17,7 @@ import { paiseToText, parseRupees } from "@/lib/money";
 import type { BillInput, CollectFeeInput } from "@/lib/validation";
 
 import { billTotals, type BillDiscount, type BillTotals } from "./totals";
-import type { BillStart } from "./types";
+import type { BillDetail, BillStart } from "./types";
 
 const { billing: words } = UI_TEXT;
 
@@ -124,6 +124,40 @@ export function blankBill(start: BillStart, services: readonly Service[]): BillF
     discount: { kind: "NONE", amount: "", percent: "" },
     notes: "",
     collect: { on: true, amount: "", method: FIRST_METHOD, reference: "", typed: false },
+  };
+}
+
+/**
+ * A void bill issued again (D314): its lines as they were — a price-list
+ * line, its treatment named when the visit still has it to bill; a line
+ * whose entry is gone, typed — its discount as an amount, and its notes, on
+ * the new bill's start.
+ */
+export function reissuedBill(start: BillStart, services: readonly Service[], bill: BillDetail): BillForm {
+  const lines = bill.lines.map((line): BillFormLine => {
+    const service = services.find((each) => each.id === line.serviceId);
+    const price = paiseToText(line.unitPricePaise);
+    if (!service) return { kind: "TYPED", description: line.description, quantity: line.quantity, price };
+    const treatment = start.treatments.find((each) => each.id === line.treatmentId);
+    return {
+      kind: "SERVICE",
+      serviceId: service.id,
+      name: line.description,
+      category: service.category,
+      treatmentId: line.treatmentId,
+      treatmentName: treatment?.name ?? null,
+      quantity: line.quantity,
+      price,
+    };
+  });
+  return {
+    ...blankBill(start, services),
+    lines,
+    discount:
+      bill.discountPaise > 0
+        ? { kind: "AMOUNT", amount: paiseToText(bill.discountPaise), percent: "" }
+        : { kind: "NONE", amount: "", percent: "" },
+    notes: bill.notes ?? "",
   };
 }
 

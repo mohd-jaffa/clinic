@@ -13,12 +13,13 @@ import {
   linePaise,
   previewOf,
   priceOf,
+  reissuedBill,
   serviceLine,
   startingLines,
   toBillInput,
   type BillForm,
 } from "@/features/billing/form";
-import type { BillStart } from "@/features/billing/types";
+import type { BillDetail, BillStart } from "@/features/billing/types";
 import { formatPaise } from "@/lib/format/currency";
 
 const { billing: words } = UI_TEXT;
@@ -238,5 +239,70 @@ describe("feeBillInput (D283, D305)", () => {
     expect(
       feeBillInput({ ...arrival, appointment: null }, consultation, { fee: "x", method: "CASH", reference: "" }),
     ).toMatchObject({ appointmentId: null, collect: { on: false } });
+  });
+});
+
+describe("reissuedBill (D314)", () => {
+  const voided = {
+    lines: [
+      {
+        description: "Root canal",
+        quantity: 1,
+        unitPricePaise: 550_000,
+        amountPaise: 550_000,
+        serviceId: "s-rc",
+        treatmentId: "t-1",
+      },
+      {
+        description: "Crown",
+        quantity: 1,
+        unitPricePaise: 300_000,
+        amountPaise: 300_000,
+        serviceId: "s-rc",
+        treatmentId: "t-9",
+      },
+      {
+        description: "Old kit",
+        quantity: 2,
+        unitPricePaise: 4_050,
+        amountPaise: 8_100,
+        serviceId: "s-gone",
+        treatmentId: null,
+      },
+    ],
+    discountPaise: 10_000,
+    notes: "Paid by her son",
+  } as BillDetail;
+
+  it("fills the new bill with the void one's lines, its treatment named while the visit has it to bill, its discount and notes", () => {
+    expect(reissuedBill(start, services, voided)).toMatchObject({
+      patientId: "p-1",
+      visitId: "v-1",
+      lines: [
+        {
+          kind: "SERVICE",
+          serviceId: "s-rc",
+          name: "Root canal",
+          category: "PROCEDURE",
+          treatmentId: "t-1",
+          treatmentName: "root  canal ",
+          quantity: 1,
+          price: "5500",
+        },
+        { kind: "SERVICE", name: "Crown", treatmentId: "t-9", treatmentName: null },
+        // Its entry gone from the price list: typed.
+        { kind: "TYPED", description: "Old kit", quantity: 2, price: "40.50" },
+      ],
+      discount: { kind: "AMOUNT", amount: "100", percent: "" },
+      notes: "Paid by her son",
+      collect: { on: true, typed: false },
+    });
+  });
+
+  it("gives no discount or notes when the void one had none", () => {
+    expect(reissuedBill(start, services, { ...voided, discountPaise: 0, notes: null })).toMatchObject({
+      discount: { kind: "NONE", amount: "", percent: "" },
+      notes: "",
+    });
   });
 });

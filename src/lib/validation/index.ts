@@ -317,12 +317,16 @@ export {
 } from "./schemas/treatments";
 
 export {
+  billIdSchema,
   billSchema,
   billStartQuerySchema,
   collectFeeSchema,
+  voidBillSchema,
   type BillInput,
   type BillPayload,
   type BillStartQuery,
   type CollectFeeInput,
   type CollectFeePayload,
+  type VoidBillInput,
+  type VoidBillPayload,
 } from "./schemas/bills";

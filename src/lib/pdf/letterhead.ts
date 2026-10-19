@@ -1,3 +1,5 @@
+import { UI_TEXT } from "@/constants/messages";
+
 import type { Composer } from "./layout";
 
 /**
@@ -11,6 +13,8 @@ export interface Letterhead {
   address: string;
   city: string;
   phone: string | null;
+  /** On a bill, when the clinic has one (plan §15.5). */
+  gstin?: string | null;
   /** Whether a logo is drawn beside the name. */
   logo: boolean;
 }
@@ -22,7 +26,7 @@ const LOGO_GAP = 12;
 /**
  * Lays the letterhead out at the top: the logo on the left — when there is
  * one — and beside it the name, then the address and the city on a line, then
- * the phone; a rule under the taller of the two.
+ * the phone and the GSTIN, when given; a rule under the taller of the two.
  */
 export function layoutLetterhead(page: Composer, letterhead: Letterhead) {
   const top = page.y;
@@ -36,6 +40,9 @@ export function layoutLetterhead(page: Composer, letterhead: Letterhead) {
     .join(", ");
   page.text(where, { face: "regular", size: 8, color: "muted" }, { x });
   if (letterhead.phone) page.text(letterhead.phone, { face: "regular", size: 8, color: "muted" }, { x });
+  if (letterhead.gstin) {
+    page.text(UI_TEXT.documents.gstin(letterhead.gstin), { face: "regular", size: 8, color: "muted" }, { x });
+  }
   page.reach(top + (letterhead.logo ? LOGO : 0));
   page.space(10);
   page.rule({ color: "ink", weight: 0.8 });

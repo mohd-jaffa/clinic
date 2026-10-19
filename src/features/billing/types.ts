@@ -1,4 +1,11 @@
-import type { AppointmentStatus, BillingStatus, Gender, VisitStatus } from "@/constants/statuses";
+import type {
+  AppointmentStatus,
+  BillingStatus,
+  BillPaymentState,
+  BillStatus,
+  Gender,
+  VisitStatus,
+} from "@/constants/statuses";
 
 /** What `bill_start` (0030) answers. */
 export interface BillStartRow {
@@ -46,4 +53,58 @@ export interface BillIssued {
   totalPaise: number;
   collectedPaise: number;
   balancePaise: number;
+}
+
+/** A bill's line as it was issued. */
+export interface BillLine {
+  description: string;
+  quantity: number;
+  unitPricePaise: number;
+  amountPaise: number;
+  /** The price-list entry it came from, and the treatment it was for (D285); neither for a typed line. */
+  serviceId: string | null;
+  treatmentId: string | null;
+}
+
+/**
+ * A bill as its page shows it (plan §15.2; D314): who it is for, what it
+ * billed and for which visit or arrival, its lines and totals, who issued
+ * it — or voided it, and why — where it stands with payment (none once
+ * void), and the patient's balance (D295).
+ */
+export interface BillDetail {
+  id: string;
+  number: string;
+  issuedAt: string;
+  /** Its day in the clinic's timezone. */
+  issuedOn: string;
+  status: BillStatus;
+  patient: {
+    id: string;
+    name: string;
+    number: number;
+    phone: string;
+    dateOfBirth: string;
+    gender: Gender;
+    archived: boolean;
+  };
+  visitId: string | null;
+  appointmentId: string | null;
+  /** None for a bill with no doctor (D326), or once their account is gone. */
+  doctor: string | null;
+  lines: BillLine[];
+  subtotalPaise: number;
+  discountPaise: number;
+  totalPaise: number;
+  notes: string | null;
+  issuedBy: string | null;
+  void: { reason: string; at: string; by: string | null } | null;
+  settlement: { paidPaise: number; duePaise: number; state: BillPaymentState } | null;
+  balancePaise: number;
+}
+
+/** What voiding answers: the patient's balance after, and the visit back in To bill, when it is (D286). */
+export interface BillVoided {
+  balancePaise: number;
+  visitToBill: boolean;
 }

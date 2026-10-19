@@ -1,18 +1,21 @@
 import { changedValues } from "@/lib/audit/changes";
 import { logActionsSafe } from "@/lib/audit/auditLog";
 import type { AuditEntry } from "@/lib/audit/types";
-import { fromPostgrestError } from "@/lib/errors";
+import type { BillPaymentState, BillStatus, Gender } from "@/constants/statuses";
+import { fromPostgrestError, notFoundError } from "@/lib/errors";
+import { allInOrder } from "@/lib/parallel";
 import type { Tenant } from "@/lib/supabase/tenant";
-import type { BillPayload, BillStartQuery } from "@/lib/validation";
+import type { BillPayload, BillStartQuery, VoidBillPayload } from "@/lib/validation";
 
 import { billTotals } from "./totals";
-import type { BillIssued, BillStart, BillStartRow } from "./types";
+import type { BillDetail, BillIssued, BillStart, BillStartRow, BillVoided } from "./types";
 
 /**
- * Bills (plan §15.2): where a new one starts, and issuing it. Both through
- * one function each — `bill_start` (0030) and `create_bill` (0028, 0029) —
- * which hold `payments.create`, the doctor scope (D3) and, for issuing, the
- * clinic's plan, the prices and the totals.
+ * Bills (plan §15.2): where a new one starts, issuing it, reading it and
+ * voiding it. Each write through one function — `bill_start` (0030),
+ * `create_bill` (0028, 0029), `void_bill` — which hold the permission, the
+ * doctor scope (D3), the clinic's plan, the prices and the totals; a bill is
+ * read through its policies (`payments.view`).
  */
 
 /**
@@ -181,4 +184,177 @@ export async function issueBill(
     collectedPaise: collected,
     balancePaise: answer.balance_paise,
   };
+}
+
+/** What a bill's page reads of it, in one query: its patient — with their balance — doctor, lines and people. */
+const BILL_COLUMNS =
+  "id, bill_number, issued_at, issued_on, status, visit_id, appointment_id, subtotal_paise, discount_paise, " +
+  "total_paise, notes, void_reason, voided_at, " +
+  "patient:patients!bills_patient_id_clinic_id_fkey(id, full_name, patient_number, phone, date_of_birth, gender, " +
+  "archived_at, balance:patient_balances!patient_balances_patient_id_clinic_id_fkey(balance_paise)), " +
+  "doctor:doctors!bills_doctor_id_clinic_id_fkey(member:clinic_members(profile:profiles!clinic_members_user_id_fkey(full_name))), " +
+  "items:bill_items(position, description, quantity, unit_price_paise, amount_paise, service_id, treatment_id), " +
+  "issuer:profiles!bills_created_by_fkey(full_name), voider:profiles!bills_voided_by_fkey(full_name)";
+
+/** An embedded row, however PostgREST gives it: one, a list of at most one, or none. */
+const oneOf = <Row>(embedded: Row | Row[] | null): Row | null =>
+  Array.isArray(embedded) ? (embedded[0] ?? null) : embedded;
+
+interface BillRow {
+  id: string;
+  bill_number: string;
+  issued_at: string;
+  issued_on: string;
+  status: BillStatus;
+  visit_id: string | null;
+  appointment_id: string | null;
+  subtotal_paise: number;
+  discount_paise: number;
+  total_paise: number;
+  notes: string | null;
+  void_reason: string | null;
+  voided_at: string | null;
+  patient: {
+    id: string;
+    full_name: string;
+    patient_number: number;
+    phone: string;
+    date_of_birth: string;
+    gender: Gender;
+    archived_at: string | null;
+    balance: { balance_paise: number } | { balance_paise: number }[] | null;
+  };
+  doctor: { member: { profile: { full_name: string } | null } | null } | null;
+  items: {
+    position: number;
+    description: string;
+    quantity: number;
+    unit_price_paise: number;
+    amount_paise: number;
+    service_id: string | null;
+    treatment_id: string | null;
+  }[];
+  issuer: { full_name: string } | null;
+  voider: { full_name: string } | null;
+}
+
+interface SettlementRow {
+  paid_paise: number;
+  due_paise: number;
+  state: BillPaymentState;
+}
+
+/**
+ * A bill for its page and its PDF (plan §15.2, §15.5; D314): the bill with
+ * its patient, doctor, lines and people in one query, beside where it stands
+ * with payment (`bill_settlement`, D298) — two at once, one round trip after
+ * the session. Within `payments.view`, the doctor scope and the clinic;
+ * one not found or not theirs is the same refusal.
+ */
+export async function getBill(tenant: Tenant, billId: string): Promise<BillDetail> {
+  const [billRead, settlementRead] = await allInOrder([
+    tenant.supabase.from("bills").select(BILL_COLUMNS).eq("clinic_id", tenant.clinicId).eq("id", billId).maybeSingle(),
+    tenant.supabase
+      .from("bill_settlement")
+      .select("paid_paise, due_paise, state")
+      .eq("clinic_id", tenant.clinicId)
+      .eq("bill_id", billId)
+      .maybeSingle(),
+  ]);
+  if (billRead.error) throw fromPostgrestError(billRead.error);
+  if (settlementRead.error) throw fromPostgrestError(settlementRead.error);
+  if (billRead.data === null) throw notFoundError("RECORD_NOT_FOUND");
+  const row = billRead.data as unknown as BillRow;
+  const settlement = settlementRead.data as SettlementRow | null;
+  return {
+    id: row.id,
+    number: row.bill_number,
+    issuedAt: row.issued_at,
+    issuedOn: row.issued_on,
+    status: row.status,
+    patient: {
+      id: row.patient.id,
+      name: row.patient.full_name,
+      number: row.patient.patient_number,
+      phone: row.patient.phone,
+      dateOfBirth: row.patient.date_of_birth,
+      gender: row.patient.gender,
+      archived: row.patient.archived_at !== null,
+    },
+    visitId: row.visit_id,
+    appointmentId: row.appointment_id,
+    doctor: row.doctor?.member?.profile?.full_name ?? null,
+    lines: [...row.items]
+      .sort((a, b) => a.position - b.position)
+      .map((item) => ({
+        description: item.description,
+        quantity: item.quantity,
+        unitPricePaise: item.unit_price_paise,
+        amountPaise: item.amount_paise,
+        serviceId: item.service_id,
+        treatmentId: item.treatment_id,
+      })),
+    subtotalPaise: row.subtotal_paise,
+    discountPaise: row.discount_paise,
+    totalPaise: row.total_paise,
+    notes: row.notes,
+    issuedBy: row.issuer?.full_name ?? null,
+    void:
+      row.status === "VOID"
+        ? { reason: row.void_reason!, at: row.voided_at!, by: row.voider?.full_name ?? null }
+        : null,
+    settlement: settlement && {
+      paidPaise: settlement.paid_paise,
+      duePaise: settlement.due_paise,
+      state: settlement.state,
+    },
+    balancePaise: oneOf(row.patient.balance)?.balance_paise ?? 0,
+  };
+}
+
+/** What void_bill hands back. */
+interface VoidBillAnswer {
+  previously: BillStatus;
+  visit: { id: string; from: string; to: string } | null;
+  balance_paise: number;
+}
+
+/**
+ * A bill voided (plan §15.2; D314): `payments.edit`, with a reason, through
+ * `void_bill` — once; voiding it again changes nothing. It leaves the
+ * balance, and its visit returns to To bill once nothing billed remains for
+ * it (D286). Audited when it voided it: the bill's status and reason, and
+ * the visit's move. Waits on two round trips after the session.
+ */
+export async function voidBill(
+  tenant: Tenant,
+  billId: string,
+  { reason }: VoidBillPayload,
+  requestId?: string,
+): Promise<BillVoided> {
+  const { data, error } = await tenant.supabase.rpc("void_bill", { p_bill_id: billId, p_reason: reason });
+  if (error) throw fromPostgrestError(error);
+  const answer = data as VoidBillAnswer;
+  if (answer.previously === "ISSUED") {
+    const entries: AuditEntry[] = [
+      {
+        action: "UPDATE",
+        entityType: "bills",
+        entityId: billId,
+        changes: { status: { from: "ISSUED", to: "VOID" }, void_reason: { from: null, to: reason } },
+        requestId,
+      },
+    ];
+    if (answer.visit !== null) {
+      entries.push({
+        action: "UPDATE",
+        entityType: "visits",
+        entityId: answer.visit.id,
+        changes: { billing_status: { from: answer.visit.from, to: answer.visit.to } },
+        requestId,
+      });
+    }
+    await logActionsSafe(tenant, entries);
+  }
+  return { balancePaise: answer.balance_paise, visitToBill: answer.visit !== null };
 }

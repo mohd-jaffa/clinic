@@ -1,8 +1,8 @@
-import type { NewBillFor } from "@/constants/navigation";
+import { BILL_REISSUE, type NewBillFor } from "@/constants/navigation";
 import { apiRoutes, withQuery } from "@/lib/query/keys";
-import { billStartQuerySchema } from "@/lib/validation";
+import { billIdSchema, billStartQuerySchema } from "@/lib/validation";
 
-import type { BillStart } from "./types";
+import type { BillDetail, BillStart } from "./types";
 
 /** Where a new bill starts (plan §15.2): the page's first read and the screen's hook ask for the very same thing. */
 export const billStartKey = (target: NewBillFor) => withQuery(apiRoutes.bills.start, target);
@@ -23,6 +23,18 @@ export function billTargetOf(read: (name: "visit" | "appointment" | "patient") =
   return target;
 }
 
+/** The void bill a new one issues again (D314), when the address names one by its id. */
+export const reissueOf = (value: string | null | undefined) => {
+  const parsed = billIdSchema.safeParse(value);
+  return parsed.success ? parsed.data : null;
+};
+
+/** The same, from a page's search params. */
+export const reissueIn = (params: Record<string, string | string[] | undefined>) => {
+  const value = params[BILL_REISSUE];
+  return reissueOf(typeof value === "string" ? value : null);
+};
+
 /** The same, from a page's search params: a name given twice is none. */
 export const billTargetIn = (params: Record<string, string | string[] | undefined>) =>
   billTargetOf((name) => {
@@ -41,4 +53,19 @@ export const billIssuedRoutes = (start: BillStart) => [
   apiRoutes.patients.timeline(start.patient.id),
   ...(start.visit ? [apiRoutes.visits.one(start.visit.id)] : []),
   ...(start.appointment ? [apiRoutes.appointments.one(start.appointment.id)] : []),
+];
+
+/**
+ * What voiding a bill makes stale: the bill, where bills start, today's
+ * queue (Fee paid, To bill), the patient's profile, and the visit or arrival
+ * it billed.
+ */
+export const billVoidedRoutes = (bill: BillDetail) => [
+  apiRoutes.bills.one(bill.id),
+  apiRoutes.bills.start,
+  apiRoutes.queue.list,
+  apiRoutes.patients.summary(bill.patient.id),
+  apiRoutes.patients.timeline(bill.patient.id),
+  ...(bill.visitId ? [apiRoutes.visits.one(bill.visitId)] : []),
+  ...(bill.appointmentId ? [apiRoutes.appointments.one(bill.appointmentId)] : []),
 ];

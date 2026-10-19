@@ -3,7 +3,15 @@ import { describe, expect, it } from "vitest";
 import { BILL_MAX_ITEMS, MAX_AMOUNT_PAISE, TEXT_LIMITS } from "@/constants/limits";
 import { UI_TEXT, VALIDATION_MESSAGES } from "@/constants/messages";
 import { formatPaise } from "@/lib/format/currency";
-import { billSchema, billStartQuerySchema, collectFeeSchema, firstIssue, type BillInput } from "@/lib/validation";
+import {
+  billIdSchema,
+  billSchema,
+  billStartQuerySchema,
+  collectFeeSchema,
+  firstIssue,
+  voidBillSchema,
+  type BillInput,
+} from "@/lib/validation";
 
 const PATIENT = "11111111-1111-4111-8111-111111111111";
 const VISIT = "22222222-2222-4222-8222-222222222222";
@@ -185,5 +193,22 @@ describe("collectFeeSchema (plan §11.3; D283, D305)", () => {
     expect(messageOf(collectFeeSchema.safeParse({ fee: "800", method: "", reference: "" }))).toBe(
       VALIDATION_MESSAGES.choose(words.methodLabel),
     );
+  });
+});
+
+describe("voidBillSchema, billIdSchema (plan §15.2; D314)", () => {
+  it("asks why, in one line that fits its column", () => {
+    expect(voidBillSchema.parse({ reason: "  Wrong   patient " })).toEqual({ reason: "Wrong patient" });
+    expect(messageOf(voidBillSchema.safeParse({ reason: " " }))).toBe(
+      VALIDATION_MESSAGES.required(UI_TEXT.bill.voidReasonLabel),
+    );
+    expect(messageOf(voidBillSchema.safeParse({ reason: "x".repeat(TEXT_LIMITS.reason + 1) }))).toBe(
+      VALIDATION_MESSAGES.tooLong(UI_TEXT.bill.voidReasonLabel, TEXT_LIMITS.reason),
+    );
+  });
+
+  it("names a bill by its id alone", () => {
+    expect(billIdSchema.safeParse(VISIT).success).toBe(true);
+    expect(messageOf(billIdSchema.safeParse("seven"))).toBe(VALIDATION_MESSAGES.invalid);
   });
 });

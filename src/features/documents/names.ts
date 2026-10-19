@@ -8,3 +8,11 @@ import { fileName } from "@/lib/pdf/response";
  */
 export const prescriptionFileName = (patient: string, day: string) =>
   fileName(UI_TEXT.documents.prescriptionFile(patient, formatDate(day)));
+
+/**
+ * The file a bill is saved as (plan §15.5): "Rohan Mehta - Bill
+ * 2026-27-0042.pdf" — its number's slash, which no file name may hold, a
+ * dash.
+ */
+export const billFileName = (patient: string, number: string) =>
+  fileName(UI_TEXT.documents.billFile(patient, number.replaceAll("/", "-")));

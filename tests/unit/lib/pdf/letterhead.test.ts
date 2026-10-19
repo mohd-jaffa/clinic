@@ -35,6 +35,12 @@ describe("layoutLetterhead (plan §33, D218)", () => {
     expect(page.done().height).toBe(44 + 10);
   });
 
+  it("gives the GSTIN under the phone, when there is one (plan §15.5)", () => {
+    const page = composer(measure, 360);
+    layoutLetterhead(page, { ...CLINIC, gstin: "32ABCDE1234F1Z5" });
+    expect(texts(page.done().ops).at(-1)).toEqual(["GSTIN 32ABCDE1234F1Z5", 56, "regular"]);
+  });
+
   it("starts at the left edge without a logo, and leaves out a phone it has none of", () => {
     const page = composer(measure, 360);
     page.space(5);

@@ -37,6 +37,10 @@ const COLORS: Record<PdfColor, string> = { ink: "#111111", muted: "#4a4a4a", rul
 
 /** The room atop each later page for its running line. */
 const RUNNING = 20;
+/** A stamp across the page (D315): its size, its slant, and how faint, so what it lies over still reads. */
+const STAMP_SIZE = 96;
+const STAMP_SLANT = -30;
+const STAMP_OPACITY = 0.18;
 
 /**
  * Page slices of a layout: the first page `room` tall, each later one
@@ -164,11 +168,22 @@ export async function renderPdf({
       for (const op of layout.foot.ops) paint(document, op, logo);
       document.restore();
     }
+    if (layout.stamp) stamp(document, layout.stamp, height);
     footer(document, { height, page: index + 1, of: pages.length });
     document.restore();
   });
   document.end();
   return done;
+}
+
+/** A word across the middle of the page, slanted and faint (D315). */
+function stamp(document: PDFKit.PDFDocument, text: string, height: number) {
+  document.save();
+  document.font("bold").fontSize(STAMP_SIZE).fillColor(COLORS.rule).fillOpacity(STAMP_OPACITY);
+  const width = document.widthOfString(text);
+  document.rotate(STAMP_SLANT, { origin: [PDF_WIDTH / 2, height / 2] });
+  document.text(text, (PDF_WIDTH - width) / 2, height / 2, { baseline: "middle", lineBreak: false });
+  document.restore();
 }
 
 /** The app's credit at the foot of each page (D30), and the page's number when there are more. */

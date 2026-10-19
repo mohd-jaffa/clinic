@@ -152,6 +152,17 @@ describe("a card with a next step", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
+  it("opens a file the server answers with beside the app — a plain link, in a new tab (D317)", () => {
+    const respond = mount();
+    act(() =>
+      respond.success({ title: "Bill issued", primary: { label: "Print", href: "/api/bills/1/bill.pdf", file: true } }),
+    );
+    const print = screen.getByRole("link", { name: "Print" });
+    expect(print).toHaveAttribute("href", "/api/bills/1/bill.pdf");
+    expect(print).toHaveAttribute("target", "_blank");
+    expect(print).toHaveAttribute("rel", "noopener noreferrer");
+  });
+
   it("closes when its link is followed", async () => {
     const respond = mount();
     act(() => respond.info({ title: "Signed out", primary: { label: "Sign in", href: "/login" } }));

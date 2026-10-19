@@ -185,6 +185,18 @@ describe("renderPdf (plan §33; D28, D30, D218 – D220)", () => {
     ]);
   });
 
+  it("sets a stamp across every page, slanted and faint, under the footer (D315)", async () => {
+    const rotate = vi.spyOn(PDFDocument.prototype, "rotate");
+    const opacity = vi.spyOn(PDFDocument.prototype, "fillOpacity");
+    const { drawn } = await draw(lines(120, { stamp: "VOID" }));
+    expect(drawn.filter((words) => words === "VOID")).toHaveLength(3);
+    expect(rotate).toHaveBeenCalledTimes(3);
+    expect(rotate.mock.calls[0][0]).toBe(-30);
+    expect(opacity).toHaveBeenCalledWith(0.18);
+    // Each page's stamp, then its footer.
+    expect(drawn.slice(drawn.lastIndexOf("VOID"))).toEqual(["VOID", "Generated with ClinicDesk", "Page 3 of 3"]);
+  });
+
   it("draws the logo it is given, and needs no foot", async () => {
     const logo = await sharp({ create: { width: 8, height: 8, channels: 3, background: "#1c6a44" } })
       .png()

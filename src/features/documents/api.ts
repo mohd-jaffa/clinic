@@ -2,6 +2,7 @@ import sharp from "sharp";
 
 import { UI_TEXT } from "@/constants/messages";
 import type { Gender } from "@/constants/statuses";
+import { getBill } from "@/features/billing/api";
 import { downloadLogo, getClinicForDocuments } from "@/features/clinic/api";
 import { toContent } from "@/features/prescriptions/content";
 import type { PrescriptionItemRow } from "@/features/prescriptions/types";
@@ -14,17 +15,19 @@ import { renderPdf } from "@/lib/pdf/render";
 import { pdfResponse } from "@/lib/pdf/response";
 import type { Tenant } from "@/lib/supabase/tenant";
 
-import { prescriptionFileName } from "./names";
+import { billSheet, layoutBill } from "./bill";
+import { billFileName, prescriptionFileName } from "./names";
 import { layoutPrescription, prescriptionSheet } from "./prescription";
-import type { PrescriptionSource } from "./types";
+import type { BillSource, PrescriptionSource } from "./types";
 
 /**
- * The prescription's PDF (plan §13, §33; D218 – D224): made from the stored
- * records when it is asked for, streamed with no-store, and kept nowhere
- * (AGENTS.md §19). Read as the member — `visits.view`, within the doctor
- * scope (D3), the clinic's own — and in a view-only clinic too: printing
- * what is there is reading. Waits on two round trips after the session: the
- * visit and the clinic at once, then the logo.
+ * The prescription's and the bill's PDFs (plan §13, §15.5, §33; D218 –
+ * D224): made from the stored records when they are asked for, streamed
+ * with no-store, and kept nowhere (AGENTS.md §19). Read as the member —
+ * `visits.view` or `payments.view`, within the doctor scope (D3), the
+ * clinic's own — and in a view-only clinic too: printing what is there is
+ * reading. Each waits on two round trips after the session: the record and
+ * the clinic at once, then the logo.
  */
 
 /** What the printout reads of a visit, in one query. */
@@ -157,4 +160,38 @@ export async function getPrescriptionPdf(
     compose: (measure) => layoutPrescription(sheet, measure),
   });
   return pdfResponse(file, { name: prescriptionFileName(source.patient.name, source.day), download, requestId });
+}
+
+/**
+ * `GET /api/bills/{id}/bill.pdf` (plan §15.5): the bill to open and print or,
+ * `download`ed, to save as "{patient} - Bill {number}.pdf" — a void one too,
+ * VOID across it (D315).
+ */
+export async function getBillPdf(
+  tenant: Tenant,
+  billId: string,
+  { download, requestId }: { download: boolean; requestId: string },
+): Promise<Response> {
+  const [bill, { clinic, logoPath }] = await allInOrder([getBill(tenant, billId), getClinicForDocuments(tenant)]);
+  const logo = await logoForPdf(tenant, logoPath);
+  const source: BillSource = {
+    bill,
+    clinic: {
+      name: clinic.name,
+      address: clinic.address,
+      city: clinic.city,
+      phone: clinic.phone,
+      gstin: clinic.gstin,
+      paperSize: clinic.paperSize,
+    },
+  };
+  const sheet = billSheet(source, { logo: logo !== null });
+  const file = await renderPdf({
+    paper: clinic.paperSize,
+    title: UI_TEXT.documents.billTitle(bill.number, bill.patient.name),
+    author: clinic.name,
+    logo,
+    compose: (measure) => layoutBill(sheet, measure),
+  });
+  return pdfResponse(file, { name: billFileName(bill.patient.name, bill.number), download, requestId });
 }

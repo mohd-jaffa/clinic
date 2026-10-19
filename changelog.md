@@ -4257,3 +4257,69 @@ the user first: D267 – D271.
 
 ### Blockers
 - None.
+
+## 2026-10-18 — R8.5: a bill's page and its PDF
+
+### Added
+- **A bill's page — `/bills/[id]`** (`payments.view`; plan §15.2; D314):
+  the number, the patient, the day and doctor, and its state — Paid, Part
+  paid, Unpaid or Void; **Print** and **Download**; **Void bill** for
+  `payments.edit` — a reason in a sheet, then the coral card asks first;
+  **Re-issue** on a void bill, opening a new bill for its visit, arrival or
+  patient filled with its lines, discount and notes; **Open profile**. Its
+  lines, notes and figures, with paid and due on it and the patient's
+  balance; once void, when, by whom and why. Back to Billing, or to the
+  profile it was opened from (`?from=patient`, for D325).
+- **The bill PDF** (plan §15.5; D315, D316), `src/features/documents/bill.ts`:
+  the letterhead with the GSTIN; "Bill", its day and number; the patient, age
+  on the bill's day, mobile and doctor; the lines as a table; the subtotal,
+  discount, total, paid and due; the balance; the notes; signed at the foot
+  by the clinic as its **Authorised signatory**. A void bill has a faint,
+  slanted VOID across every page and its reason under the number
+  (`PdfLayout.stamp`). Saved as "{patient} - Bill 2026-27-0042.pdf".
+- `GET /api/bills/{id}` (`payments.view`), `POST /api/bills/{id}/void`
+  (`payments.edit`, a reason; audited: the status and reason, and the visit
+  back in To bill), `GET /api/bills/{id}/bill.pdf` (`payments.view`,
+  `?download=1`; view-only clinics print too).
+- `getBill`, `voidBill`, `getBillPdf`; `voidBillSchema`, `billIdSchema`;
+  `BILL_PAYMENT_STATE_TONES`; `UI_TEXT.bill` and the PDF's words.
+
+### Changed
+- **The issued card stays up with Print and View bill** (D317) for whoever
+  reads bills — the new bill's and Collect fee's alike. A response card's
+  action may now open a file beside the app (`file`).
+- The letterhead gives a clinic's GSTIN when it has one (the prescription
+  passes none).
+- `Figure` is shared by the new bill and the bill's page.
+- **Plan:** §15.2 (the bill's page), §15.5 (as built); the tracker: R8.5
+  DONE. Share on WhatsApp stays with R8.8 (D327).
+
+### Speed (plan §37)
+- **Round trips:** the bill's page waits on 2 — the session, then the bill
+  (with its patient, balance, doctor, lines and people, one query) and its
+  settlement at once. The PDF waits on 3: the session, the bill, its
+  settlement and the clinic at once, then the logo. Void waits on 2:
+  `void_bill`, then the audit rows. A re-issued bill's screen reads the void
+  bill beside where it starts and the price list — still 2.
+- **Indexes:** a bill by its id (the key) within the clinic; its items by
+  bill (`unique (bill_id, position)`); the settlement's window over the
+  patient's bills `(clinic_id, patient_id, issued_at)`; the balance by its
+  patient (the key). No new index.
+
+### Validation
+- Typecheck, lint, format check passed.
+- Unit and integration tests passed (3634), coverage 100%.
+- E2E passed (144, phone and desktop): `bill-page.spec.ts` — issued part paid, the
+  card's Print and View bill; the page's lines and figures; Print's PDF and
+  Download's file name; reception reads it and may not void it; voided with
+  a reason, asked first, its visit back in To bill; re-issued as the next
+  number. `new-bill.spec.ts` follows the card that now stays up. Axe on
+  every screen.
+- `tests/db/integration/bill-page.test.ts` (6): the bill read whole, part
+  paid; payments.view, the doctor scope and the clinic; the PDF on A5 and
+  A4, named, inline or attached; void for payments.edit only, once, audited,
+  the visit back in To bill, the payment left as an advance, and its PDF
+  still printed.
+
+### Blockers
+- None.

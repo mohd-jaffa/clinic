@@ -3,13 +3,13 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Permission } from "@/constants/permissions";
-import type { BillStart } from "@/features/billing/types";
+import type { BillDetail, BillStart } from "@/features/billing/types";
 import type { Service } from "@/features/clinic/types";
 import type { PatientListItem } from "@/features/patients/types";
 import { authStub } from "@tests/support/auth";
 import { Providers } from "@tests/support/providers";
 
-const { client, auth, start, services, search, router, params } = vi.hoisted(() => ({
+const { client, auth, start, services, search, router, params, reissued } = vi.hoisted(() => ({
   client: { issue: vi.fn() },
   auth: { current: {} as ReturnType<typeof authStub> },
   start: { current: {} as { data?: unknown; error?: unknown; mutate?: () => void; isValidating?: boolean } },
@@ -17,11 +17,21 @@ const { client, auth, start, services, search, router, params } = vi.hoisted(() 
   search: { current: undefined as unknown },
   router: { replace: vi.fn(), push: vi.fn() },
   params: { current: "" },
+  reissued: {
+    current: {} as { data?: unknown; error?: unknown; mutate?: () => void; isValidating?: boolean },
+    asked: [] as unknown[],
+  },
 }));
 vi.mock("@/features/billing/api.client", () => ({ BillingClient: client }));
 vi.mock("@/features/auth/AuthProvider", () => ({ useAuth: () => auth.current }));
 vi.mock("@/features/billing/hooks/useBillStart", () => ({ useBillStart: () => start.current }));
 vi.mock("@/features/clinic/hooks/useServices", () => ({ useServices: () => services.current }));
+vi.mock("@/features/billing/hooks/useBill", () => ({
+  useBill: (id: unknown) => {
+    reissued.asked.push(id);
+    return reissued.current;
+  },
+}));
 vi.mock("@/features/patients/hooks/usePatientSearch", () => ({ usePatientSearch: () => ({ data: search.current }) }));
 vi.mock("next/navigation", () => ({
   useRouter: () => router,
@@ -83,6 +93,8 @@ beforeEach(() => {
   start.current = { data: visitStart };
   services.current = { data: PRICE_LIST };
   params.current = `visit=${VISIT}`;
+  reissued.current = {};
+  reissued.asked.length = 0;
   client.issue.mockResolvedValue({
     billId: "b-1",
     billNumber: "2026-27/0042",
@@ -367,5 +379,54 @@ describe("NewBill (plan §15.2; D302 – D313)", () => {
     services.current = {};
     draw();
     expect(screen.getByRole("region", { name: "Loading…" })).toHaveAttribute("aria-busy", "true");
+  });
+});
+
+describe("NewBill, issuing a void bill again (D314)", () => {
+  const BILL = "9d3a6c74-5e7f-4081-8cbd-2e3f4a5b6c7d";
+  const voided = {
+    id: BILL,
+    lines: [
+      {
+        description: "Root canal",
+        quantity: 1,
+        unitPricePaise: 600_000,
+        amountPaise: 600_000,
+        serviceId: ROOT_CANAL.id,
+        treatmentId: ROOT_CANAL_TREATMENT,
+      },
+    ],
+    discountPaise: 50_000,
+    notes: "Second sitting",
+  } as BillDetail;
+
+  it("fills the bill with the void one's lines, discount and notes, in place of the visit's own", () => {
+    params.current = `visit=${VISIT}&reissue=${BILL}`;
+    reissued.current = { data: voided };
+    draw();
+    expect(reissued.asked).toContain(BILL);
+    expect(lineOf("Root canal")).toHaveTextContent("For Root canal");
+    expect(screen.queryByRole("group", { name: "Consultation" })).not.toBeInTheDocument();
+    expect(figure("Total")).toHaveTextContent("₹5,500");
+    expect(screen.getByRole("textbox", { name: /^Notes/ })).toHaveValue("Second sitting");
+  });
+
+  it("waits for the void bill, and says when it could not be read", () => {
+    params.current = `visit=${VISIT}&reissue=${BILL}`;
+    const first = draw();
+    expect(screen.getByRole("region", { name: "Loading…" })).toBeInTheDocument();
+    first.unmount();
+
+    reissued.current = { error: new Error("down"), mutate: vi.fn(), isValidating: false };
+    draw();
+    expect(screen.getByText("This bill couldn't be loaded.")).toBeInTheDocument();
+  });
+
+  it("asks for no bill to issue again without one named, or with no one billed", () => {
+    draw();
+    expect(reissued.asked.every((asked) => asked === null)).toBe(true);
+    params.current = `reissue=${BILL}`;
+    draw();
+    expect(reissued.asked.at(-1)).toBeNull();
   });
 });

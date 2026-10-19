@@ -39,6 +39,8 @@ export interface PdfLayout extends PdfBlock {
   foot: PdfBlock | null;
   /** A line atop every page after the first — whose it is — so a loose page is never another's. */
   running: string | null;
+  /** A word set large and grey across every page — VOID — so the page never passes for a live one (D315). */
+  stamp?: string;
 }
 
 /** A line's height for text of a size. */

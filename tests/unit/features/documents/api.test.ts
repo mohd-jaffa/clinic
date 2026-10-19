@@ -6,19 +6,21 @@ import type { Measure } from "@/lib/pdf/layout";
 import type { Tenant } from "@/lib/supabase/tenant";
 import { fakeSupabase, postgrestError, type FakeSupabaseOptions } from "@tests/support/supabase";
 
-const { downloadLogo, getClinicForDocuments, renderPdf, toPng, warn } = vi.hoisted(() => ({
+const { downloadLogo, getBill, getClinicForDocuments, renderPdf, toPng, warn } = vi.hoisted(() => ({
   downloadLogo: vi.fn(),
+  getBill: vi.fn(),
   getClinicForDocuments: vi.fn(),
   renderPdf: vi.fn(),
   toPng: vi.fn(),
   warn: vi.fn(),
 }));
 vi.mock("@/features/clinic/api", () => ({ downloadLogo, getClinicForDocuments }));
+vi.mock("@/features/billing/api", () => ({ getBill }));
 vi.mock("@/lib/pdf/render", async (actual) => ({ ...(await actual()), renderPdf }));
 vi.mock("@/lib/logger", () => ({ logger: { warn, info: vi.fn(), error: vi.fn() } }));
 vi.mock("sharp", () => ({ default: vi.fn(() => ({ png: () => ({ toBuffer: toPng }) })) }));
 
-const { getPrescriptionPdf } = await import("@/features/documents/api");
+const { getBillPdf, getPrescriptionPdf } = await import("@/features/documents/api");
 
 const measure: Measure = (text, _face, size) => text.length * size * 0.5;
 const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47]);
@@ -219,5 +221,93 @@ describe("getPrescriptionPdf's letterhead logo", () => {
     downloadLogo.mockRejectedValue("gone");
     await get(withRow(aRow()));
     expect(warn).toHaveBeenLastCalledWith(expect.any(String), { clinicId: "clinic-1", reason: "unknown" });
+  });
+});
+
+const aBill = {
+  id: "b-1",
+  number: "2026-27/0042",
+  issuedAt: "2026-10-14T05:30:00Z",
+  issuedOn: "2026-10-14",
+  status: "ISSUED",
+  patient: {
+    id: "p-1",
+    name: "Rohan Mehta",
+    number: 1002,
+    phone: "+919876543210",
+    dateOfBirth: "1990-04-12",
+    gender: "MALE",
+    archived: false,
+  },
+  visitId: "v-1",
+  appointmentId: null,
+  doctor: "Maya Rao",
+  lines: [
+    {
+      description: "Consultation",
+      quantity: 1,
+      unitPricePaise: 80_000,
+      amountPaise: 80_000,
+      serviceId: "s-1",
+      treatmentId: null,
+    },
+  ],
+  subtotalPaise: 80_000,
+  discountPaise: 0,
+  totalPaise: 80_000,
+  notes: null,
+  issuedBy: null,
+  void: null,
+  settlement: { paidPaise: 80_000, duePaise: 0, state: "PAID" },
+  balancePaise: 0,
+};
+
+describe("getBillPdf (plan §15.5; D315, D316)", () => {
+  const getIt = (download = false) => getBillPdf(tenantWith({}), "b-1", { download, requestId: "req_2" });
+
+  it("draws the bill on the clinic's paper, with its GSTIN, and answers it to open — named, never kept", async () => {
+    getBill.mockResolvedValue(aBill);
+    getClinicForDocuments.mockResolvedValue({
+      clinic: { ...clinic, gstin: "32ABCDE1234F1Z5", paperSize: "A4" },
+      logoPath: null,
+    });
+    const answer = await getIt();
+    expect(getBill).toHaveBeenCalledWith(expect.objectContaining({ clinicId: "clinic-1" }), "b-1");
+    expect(answer.headers.get("Content-Type")).toBe("application/pdf");
+    expect(answer.headers.get("Content-Disposition")).toContain("inline");
+    expect(answer.headers.get("Content-Disposition")).toContain(
+      encodeURIComponent("Rohan Mehta - Bill 2026-27-0042.pdf"),
+    );
+    expect(answer.headers.get("Cache-Control")).toBe("private, no-store");
+    const { lines, ...rest } = drawn();
+    expect(rest).toMatchObject({
+      paper: "A4",
+      title: "Bill 2026-27/0042 for Rohan Mehta",
+      author: "Smile Care",
+      logo: null,
+    });
+    expect(lines).toContain("GSTIN 32ABCDE1234F1Z5");
+    expect(lines).toContain("No. 2026-27/0042");
+  });
+
+  it("answers it to save when asked to download it, a void one with VOID across it (D315)", async () => {
+    getBill.mockResolvedValue({
+      ...aBill,
+      status: "VOID",
+      void: { reason: "Wrong patient", at: "2026-10-15T05:00:00Z", by: null },
+      settlement: null,
+    });
+    const answer = await getIt(true);
+    expect(answer.headers.get("Content-Disposition")).toContain("attachment");
+    const [{ compose }] = renderPdf.mock.calls.at(-1)! as [{ compose: (measure: Measure) => { stamp?: string } }];
+    expect(compose(measure).stamp).toBe("VOID");
+  });
+
+  it("draws the clinic's logo on it", async () => {
+    getBill.mockResolvedValue(aBill);
+    getClinicForDocuments.mockResolvedValue({ clinic, logoPath: "clinics/clinic-1/logo/a" });
+    downloadLogo.mockResolvedValue({ file: new Blob([PNG]), type: "image/png" });
+    await getIt();
+    expect(drawn().logo).toEqual(PNG);
   });
 });

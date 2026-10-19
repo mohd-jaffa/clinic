@@ -1,14 +1,19 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { BillStart } from "@/features/billing/types";
 import { ApiError } from "@/lib/api/client";
 import type { BillInput } from "@/lib/validation";
+import { authStub } from "@tests/support/auth";
 import { Providers } from "@tests/support/providers";
 
-const { client } = vi.hoisted(() => ({ client: { issue: vi.fn() } }));
+const { client, auth } = vi.hoisted(() => ({
+  client: { issue: vi.fn() },
+  auth: { current: {} as ReturnType<typeof authStub> },
+}));
 vi.mock("@/features/billing/api.client", () => ({ BillingClient: client }));
+vi.mock("@/features/auth/AuthProvider", () => ({ useAuth: () => auth.current }));
 
 const { useIssueBill } = await import("@/features/billing/hooks/useIssueBill");
 
@@ -28,10 +33,13 @@ function Issue() {
 /** A notice is shown, and announced: its words are found twice. */
 const notice = async (text: string) => (await screen.findAllByText(text))[0];
 
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => {
+  vi.clearAllMocks();
+  auth.current = authStub({ role: "STAFF", permissions: ["patients.view", "payments.view", "payments.create"] });
+});
 
-describe("useIssueBill (plan §15.2; D302, D312)", () => {
-  it("issues once per key, takes the person on, and says what was issued and collected", async () => {
+describe("useIssueBill (plan §15.2; D302, D312, D317)", () => {
+  it("issues once per key, takes the person on, and says what was issued and collected — with Print and View bill", async () => {
     const issued = {
       billId: "b-1",
       billNumber: "2026-27/0042",
@@ -50,6 +58,11 @@ describe("useIssueBill (plan §15.2; D302, D312)", () => {
     expect(await notice("Bill 2026-27/0042 issued")).toBeInTheDocument();
     expect(screen.getAllByText("₹500 collected")[0]).toBeInTheDocument();
     expect(onIssued).toHaveBeenCalledWith(issued);
+    // It stays up with the bill's PDF, opened beside the app, and its page (D317).
+    const card = screen.getByRole("dialog", { name: "Bill 2026-27/0042 issued" });
+    expect(within(card).getByRole("link", { name: "Print" })).toHaveAttribute("href", "/api/bills/b-1/bill.pdf");
+    expect(within(card).getByRole("link", { name: "Print" })).toHaveAttribute("target", "_blank");
+    expect(within(card).getByRole("link", { name: "View bill" })).toHaveAttribute("href", "/bills/b-1");
   });
 
   it("says nothing of collecting when nothing was", async () => {
@@ -58,6 +71,15 @@ describe("useIssueBill (plan §15.2; D302, D312)", () => {
     await userEvent.click(screen.getByRole("button", { name: "Issue" }));
     expect(await notice("Bill 2026-27/0043 issued")).toBeInTheDocument();
     expect(screen.queryByText(/collected/)).not.toBeInTheDocument();
+  });
+
+  it("offers neither Print nor View bill to whoever may not read bills", async () => {
+    auth.current = authStub({ role: "STAFF", permissions: ["patients.view", "payments.create"] });
+    client.issue.mockResolvedValue({ billId: "b-1", billNumber: "2026-27/0044", collectedPaise: 0 });
+    render(<Issue />, { wrapper: Providers });
+    await userEvent.click(screen.getByRole("button", { name: "Issue" }));
+    expect(await notice("Bill 2026-27/0044 issued")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "View bill" })).not.toBeInTheDocument();
   });
 
   it("says why it was not issued, sending the same key with Try again", async () => {
