@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import { MAX_PAGE_START, MAX_SEARCH_LENGTH } from "@/constants/limits";
+import { MAX_PAGE_START, MAX_RANGE_DAYS, MAX_SEARCH_LENGTH } from "@/constants/limits";
 import { VALIDATION_MESSAGES } from "@/constants/messages";
-import { firstIssue, listQuerySchema, timelineQuerySchema } from "@/lib/validation";
+import { dayRangeQuery, firstIssue, listQuerySchema, pageQuerySchema, timelineQuerySchema } from "@/lib/validation";
 
 describe("listQuerySchema", () => {
   it("starts at the beginning with no search", () => {
@@ -46,5 +46,40 @@ describe("timelineQuerySchema (D225)", () => {
       expect(parsed.success, cursor).toBe(false);
       expect(firstIssue(parsed.error!)).toBe(VALIDATION_MESSAGES.invalid);
     }
+  });
+});
+
+describe("pageQuerySchema", () => {
+  it("reads where a page starts, and nothing else", () => {
+    expect(pageQuerySchema.parse({})).toEqual({ cursor: undefined });
+    expect(pageQuerySchema.parse({ cursor: "20", search: "Anu" })).toEqual({ cursor: 20 });
+  });
+});
+
+describe("dayRangeQuery (D320)", () => {
+  const messageOf = (value: unknown) => {
+    const result = dayRangeQuery.safeParse(value);
+    return result.success ? null : firstIssue(result.error);
+  };
+
+  it("reads two days of the calendar, the last on or after the first", () => {
+    expect(dayRangeQuery.parse({ from: "2026-10-01", to: "2026-10-19" })).toEqual({
+      from: "2026-10-01",
+      to: "2026-10-19",
+    });
+    expect(dayRangeQuery.parse({ from: "2026-10-19", to: "2026-10-19" })).toEqual({
+      from: "2026-10-19",
+      to: "2026-10-19",
+    });
+  });
+
+  it("refuses a day missing or not of the calendar, the last before the first, and more than a year and a day", () => {
+    expect(messageOf({ to: "2026-10-19" })).toBe(VALIDATION_MESSAGES.required("From"));
+    expect(messageOf({ from: "2026-02-30", to: "2026-03-01" })).toBe(VALIDATION_MESSAGES.day("From"));
+    expect(messageOf({ from: "2026-10-19", to: "2026-10-01" })).toBe(VALIDATION_MESSAGES.endsBeforeStart("To", "From"));
+    expect(messageOf({ from: "2025-10-19", to: "2026-10-19" })).toBeNull();
+    expect(messageOf({ from: "2025-10-18", to: "2026-10-19" })).toBe(
+      VALIDATION_MESSAGES.atMostRangeDays(MAX_RANGE_DAYS),
+    );
   });
 });

@@ -178,6 +178,41 @@ export const BILL_PAYMENT_STATE_TONES: Record<BillPaymentState, StatusTone> = {
   UNPAID: "attention",
 };
 
+/**
+ * What Billing's Bills tab may keep to (plan §15.4, D320): a state of an
+ * issued bill, or Void. 0031's list_bills.
+ */
+export const BILL_LIST_STATES = [...BILL_PAYMENT_STATES, "VOID"] as const;
+export type BillListState = (typeof BILL_LIST_STATES)[number];
+export const BILL_LIST_STATE_LABELS: Record<BillListState, string> = {
+  ...BILL_PAYMENT_STATE_LABELS,
+  VOID: BILL_STATUS_LABELS.VOID,
+};
+export const BILL_LIST_STATE_TONES: Record<BillListState, StatusTone> = {
+  ...BILL_PAYMENT_STATE_TONES,
+  VOID: "neutral",
+};
+
+/** Billing's tabs (plan §15.4): what waits to be billed, the bills, the payments, and who owes. */
+export const BILLING_TABS = ["TO_BILL", "BILLS", "PAYMENTS", "OUTSTANDING"] as const;
+export type BillingTab = (typeof BILLING_TABS)[number];
+export const BILLING_TAB_LABELS: Record<BillingTab, string> = {
+  TO_BILL: "To bill",
+  BILLS: "Bills",
+  PAYMENTS: "Payments",
+  OUTSTANDING: "Outstanding",
+};
+
+/** How a list's days are picked (D320): today, the last 7 days, this month, or From – To. */
+export const DATE_RANGES = ["TODAY", "WEEK", "MONTH", "CUSTOM"] as const;
+export type DateRangeKind = (typeof DATE_RANGES)[number];
+export const DATE_RANGE_LABELS: Record<DateRangeKind, string> = {
+  TODAY: "Today",
+  WEEK: "7 days",
+  MONTH: "This month",
+  CUSTOM: "Pick dates",
+};
+
 /** Money taken from a patient, or handed back (plan §15.3). 0029's CHECK. */
 export const PAYMENT_KINDS = ["PAYMENT", "REFUND"] as const;
 export type PaymentKind = (typeof PAYMENT_KINDS)[number];

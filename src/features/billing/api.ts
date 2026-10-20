@@ -1,14 +1,17 @@
 import { changedValues } from "@/lib/audit/changes";
 import { logActionsSafe } from "@/lib/audit/auditLog";
 import type { AuditEntry } from "@/lib/audit/types";
-import type { BillPaymentState, BillStatus, Gender } from "@/constants/statuses";
+import type { BillListState, BillPaymentState, BillStatus, Gender } from "@/constants/statuses";
+import { pageWindow, toPage, type Page } from "@/lib/api/pagination";
+import { rangeBounds } from "@/lib/dates/range";
 import { fromPostgrestError, notFoundError } from "@/lib/errors";
 import { allInOrder } from "@/lib/parallel";
+import { oneOf } from "@/lib/supabase/embedded";
 import type { Tenant } from "@/lib/supabase/tenant";
-import type { BillPayload, BillStartQuery, VoidBillPayload } from "@/lib/validation";
+import type { BillPayload, BillsQuery, BillStartQuery, VoidBillPayload } from "@/lib/validation";
 
 import { billTotals } from "./totals";
-import type { BillDetail, BillIssued, BillStart, BillStartRow, BillVoided } from "./types";
+import type { BillDetail, BillIssued, BillListItem, BillStart, BillStartRow, BillVoided } from "./types";
 
 /**
  * Bills (plan §15.2): where a new one starts, issuing it, reading it and
@@ -196,10 +199,6 @@ const BILL_COLUMNS =
   "items:bill_items(position, description, quantity, unit_price_paise, amount_paise, service_id, treatment_id), " +
   "issuer:profiles!bills_created_by_fkey(full_name), voider:profiles!bills_voided_by_fkey(full_name)";
 
-/** An embedded row, however PostgREST gives it: one, a list of at most one, or none. */
-const oneOf = <Row>(embedded: Row | Row[] | null): Row | null =>
-  Array.isArray(embedded) ? (embedded[0] ?? null) : embedded;
-
 interface BillRow {
   id: string;
   bill_number: string;
@@ -357,4 +356,51 @@ export async function voidBill(
     await logActionsSafe(tenant, entries);
   }
   return { balancePaise: answer.balance_paise, visitToBill: answer.visit !== null };
+}
+
+/** What list_bills (0031) answers for a bill. */
+interface BillListRow {
+  id: string;
+  bill_number: string;
+  issued_at: string;
+  total_paise: number;
+  patient_id: string;
+  patient_name: string;
+  patient_number: number;
+  paid_paise: number | null;
+  due_paise: number | null;
+  state: BillListState;
+}
+
+/**
+ * A page of Billing's Bills tab (plan §15.4; D320, D335): the bills issued
+ * on the days asked, newest first, each with its patient and where it
+ * stands — and only those in a state, when one is asked — through
+ * `list_bills`, as the caller (`payments.view`, the doctor scope). One more
+ * than a page, so it knows whether another follows. One call.
+ */
+export async function listBills(tenant: Tenant, { from, to, state, cursor }: BillsQuery): Promise<Page<BillListItem>> {
+  const bounds = rangeBounds({ from, to });
+  const start = cursor ?? 0;
+  const window = pageWindow(start);
+  const { data, error } = await tenant.supabase.rpc("list_bills", {
+    p_from: bounds.from,
+    p_to: bounds.to,
+    p_state: state ?? null,
+    p_offset: window.from,
+    p_limit: window.to - window.from + 1,
+  });
+  if (error) throw fromPostgrestError(error);
+  return toPage(
+    ((data ?? []) as BillListRow[]).map((row) => ({
+      id: row.id,
+      number: row.bill_number,
+      issuedAt: row.issued_at,
+      totalPaise: row.total_paise,
+      patient: { id: row.patient_id, name: row.patient_name, number: row.patient_number },
+      settlement: row.state === "VOID" ? null : { paidPaise: Number(row.paid_paise), duePaise: Number(row.due_paise) },
+      state: row.state,
+    })),
+    start,
+  );
 }

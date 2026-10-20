@@ -1,9 +1,13 @@
 import type {
   AppointmentStatus,
   BillingStatus,
+  BillListState,
   BillPaymentState,
   BillStatus,
   Gender,
+  PaymentKind,
+  PaymentMethod,
+  PaymentStatus,
   VisitStatus,
 } from "@/constants/statuses";
 
@@ -107,4 +111,91 @@ export interface BillDetail {
 export interface BillVoided {
   balancePaise: number;
   visitToBill: boolean;
+}
+
+/**
+ * A visit waiting in To bill (plan §15.6; D318): its day, the patient — and
+ * whether they are archived — the doctor, the arrival's token, the
+ * treatments worked on in it, and whether its consultation was paid at
+ * arrival (§11.3).
+ */
+export interface ToBillVisit {
+  visitId: string;
+  day: string;
+  completedAt: string | null;
+  patient: { id: string; name: string; number: number; archived: boolean };
+  /** None once their account is gone. */
+  doctor: { id: string; name: string | null } | null;
+  appointmentId: string | null;
+  token: number | null;
+  treatments: string[];
+  feePaid: boolean;
+}
+
+/** How many wait in To bill (D337). */
+export interface ToBillCount {
+  count: number;
+}
+
+/** A bill as Billing's Bills tab lists it (plan §15.4; D320): its number, day, patient, total and where it stands. */
+export interface BillListItem {
+  id: string;
+  number: string;
+  issuedAt: string;
+  totalPaise: number;
+  patient: { id: string; name: string; number: number };
+  /** Paid and due on it; none once void. */
+  settlement: { paidPaise: number; duePaise: number } | null;
+  state: BillListState;
+}
+
+/**
+ * A payment taken, or a refund handed back (plan §15.3; D325, D336): how
+ * much, how and when, its reference and note, who took it, and — voided —
+ * when, by whom and why. The patient it is from.
+ */
+export interface Payment {
+  id: string;
+  kind: PaymentKind;
+  amountPaise: number;
+  method: PaymentMethod;
+  reference: string | null;
+  paidAt: string;
+  /** Its day in the clinic's timezone (D334). */
+  paidOn: string;
+  note: string | null;
+  status: PaymentStatus;
+  receivedBy: string | null;
+  void: { reason: string; at: string; by: string | null } | null;
+  patient: { id: string; name: string; number: number; archived: boolean };
+}
+
+/** Someone who owes (plan §15.4; D321): the patient, how to reach them, and how much. */
+export interface OutstandingPatient {
+  patient: {
+    id: string;
+    name: string;
+    number: number;
+    phone: string;
+    dateOfBirth: string;
+    gender: Gender;
+    archived: boolean;
+  };
+  balancePaise: number;
+}
+
+/** What recording a payment or a refund answers: the payment, and the patient's balance after. */
+export interface PaymentRecorded {
+  paymentId: string;
+  balancePaise: number;
+}
+
+/** What voiding a payment answers: the patient's balance after. */
+export interface PaymentVoided {
+  balancePaise: number;
+}
+
+/** What marking a visit No charge answers (D319). */
+export interface NoChargeMarked {
+  visitId: string;
 }

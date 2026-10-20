@@ -194,8 +194,9 @@ describe("patientListSchema (plan §10.2, D98)", () => {
     expect(patientListSchema.parse({})).toEqual({ search: null, tab: "ALL" });
   });
 
-  it("refuses a tab it does not know", () => {
-    expect(messageOf(patientListSchema, { tab: "OWING" })).toBe(VALIDATION_MESSAGES.invalid);
+  it("reads those who owe as a tab (D101), and refuses a tab it does not know", () => {
+    expect(patientListSchema.parse({ tab: "OWING" })).toMatchObject({ tab: "OWING" });
+    expect(messageOf(patientListSchema, { tab: "DUE" })).toBe(VALIDATION_MESSAGES.invalid);
   });
 });
 

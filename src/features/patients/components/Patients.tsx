@@ -1,6 +1,6 @@
 "use client";
 
-import { Archive, FileUp, UserPlus, UsersRound } from "lucide-react";
+import { Archive, FileUp, IndianRupee, UserPlus, UsersRound } from "lucide-react";
 import { useId, useState, type ReactNode } from "react";
 
 import { Avatar } from "@/components/ui/avatar";
@@ -16,6 +16,7 @@ import { UI_TEXT } from "@/constants/messages";
 import { ADD_FORMS, IMPORT_ROUTE, patientRoute } from "@/constants/navigation";
 import { hasAccess, ROUTE_ACCESS } from "@/constants/permissions";
 import { useAuth } from "@/features/auth/AuthProvider";
+import { OwingPill } from "@/features/billing/components/OwingPill";
 import { ReadOnlyNote } from "@/features/subscription/components/ReadOnlyNote";
 import { useReadOnly } from "@/features/subscription/hooks/useReadOnly";
 import { useAddForm } from "@/hooks/useAddForm";
@@ -30,16 +31,16 @@ import { prefillFrom, type PatientPrefill } from "../prefill";
 import { PatientSheet } from "./PatientSheet";
 
 const { patients } = UI_TEXT;
-const TAB_OPTIONS = PATIENT_TABS.map((tab) => ({ value: tab, label: patients.tabs[tab] }));
 
 /**
  * Patients (plan §10.2, D104, D111, D112, D121): searched by name, mobile or
  * number — in the body, never the address (D98) — newest first with nothing
  * typed, a page at a time. Each row gives age, gender and number — the mobile
  * too, wider than a phone — and the last visit, and opens the profile, where
- * Call and WhatsApp are. A doctor finds only
- * their own patients; the archived wait on their own tab for those who may
- * restore them. **Add patient**, or the ＋'s Patient, opens the sheet; a
+ * Call and WhatsApp are, and — when they owe — a coral chip of how much. A
+ * doctor finds only their own patients. Those who owe, most first, wait on
+ * their own tab for those who read payments (D101); the archived on theirs,
+ * for those who may restore them. **Add patient**, or the ＋'s Patient, opens the sheet; a
  * search that found no one offers it with what was typed. A clinic with no
  * patients yet offers its owner **Import from a file** (D132).
  */
@@ -54,8 +55,11 @@ export function Patients() {
   const searched = useDebouncedValue(search.trim());
   const query = usePatients(searched, tab);
 
-  const canAdd = membership !== null && hasAccess(membership, "patients.create");
-  const seesArchived = membership !== null && hasAccess(membership, "patients.edit");
+  const may = (permission: Parameters<typeof hasAccess>[1]) => membership !== null && hasAccess(membership, permission);
+  const canAdd = may("patients.create");
+  const tabs = PATIENT_TABS.filter(
+    (each) => (each !== "OWING" || may("payments.view")) && (each !== "ARCHIVED" || may("patients.edit")),
+  ).map((each) => ({ value: each, label: patients.tabs[each] }));
   const adds = canAdd && !readOnly;
   // Someone moving from a spreadsheet looks here first (D132).
   const imports = membership !== null && hasAccess(membership, ROUTE_ACCESS.owner) && !readOnly;
@@ -72,6 +76,8 @@ export function Patients() {
       empty={
         tab === "ARCHIVED" ? (
           <EmptyState icon={Archive} title={patients.archivedEmptyTitle} hint={patients.archivedEmptyHint} />
+        ) : tab === "OWING" ? (
+          <EmptyState icon={IndianRupee} title={patients.owingEmptyTitle} hint={patients.owingEmptyHint} />
         ) : (
           <EmptyState
             icon={UsersRound}
@@ -120,9 +126,9 @@ export function Patients() {
             </div>
           )}
           <SearchField value={search} onChange={setSearch} placeholder={patients.searchPlaceholder} />
-          {seesArchived ? (
+          {tabs.length > 1 ? (
             <div>
-              <Tabs id={tabsId} label={patients.tabsLabel} value={tab} options={TAB_OPTIONS} onChange={setTab} />
+              <Tabs id={tabsId} label={patients.tabsLabel} value={tab} options={tabs} onChange={setTab} />
               <TabPanel id={tabsId} value={tab}>
                 {list}
               </TabPanel>
@@ -140,7 +146,8 @@ export function Patients() {
 /**
  * One patient in the list (D121), opening their profile — where Call is. The
  * mobile joins the line from 640 px; on a phone it would only be cut short.
- * Their last visit has a line of its own under it (D229).
+ * Their last visit has a line of its own under it (D229); what they owe, a
+ * chip at its end (D101).
  */
 function PatientListRow({ patient }: { patient: PatientListItem }) {
   return (
@@ -154,6 +161,7 @@ function PatientListRow({ patient }: { patient: PatientListItem }) {
         </>
       }
       note={lastVisitLine(patient.lastVisitOn)}
+      detail={patient.balancePaise > 0 && <OwingPill balancePaise={patient.balancePaise} />}
       href={patientRoute(patient.id)}
     />
   );

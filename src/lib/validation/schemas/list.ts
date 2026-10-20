@@ -1,9 +1,10 @@
 import * as z from "zod";
 
-import { MAX_PAGE_START, MAX_SEARCH_LENGTH } from "@/constants/limits";
-import { VALIDATION_MESSAGES } from "@/constants/messages";
+import { MAX_PAGE_START, MAX_RANGE_DAYS, MAX_SEARCH_LENGTH } from "@/constants/limits";
+import { UI_TEXT, VALIDATION_MESSAGES } from "@/constants/messages";
+import { dayCount } from "@/lib/dates/calendar";
 
-import { optionalLine } from "../primitives";
+import { optionalLine, requiredDay } from "../primitives";
 
 /**
  * Where a page of a list starts: the `nextCursor` the page before it gave
@@ -20,6 +21,29 @@ export const cursorParam = z.optional(
 
 /** What a list is searched for, normalised like any line; blank is no search. */
 export const searchParam = optionalLine("Search", MAX_SEARCH_LENGTH);
+
+/** A list that pages and takes nothing else — Outstanding (plan §15.4). */
+export const pageQuerySchema = z.object({ cursor: cursorParam });
+
+export type PageQuery = z.output<typeof pageQuerySchema>;
+
+/**
+ * A list's days, From – To (D320): two days of the calendar, the last not
+ * before the first, at most MAX_RANGE_DAYS apart, both counted.
+ */
+export const dayRangeQuery = z
+  .object({ from: requiredDay(UI_TEXT.ranges.from), to: requiredDay(UI_TEXT.ranges.to) })
+  .superRefine(({ from, to }, ctx) => {
+    if (to < from) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["to"],
+        message: VALIDATION_MESSAGES.endsBeforeStart(UI_TEXT.ranges.to, UI_TEXT.ranges.from),
+      });
+    } else if (dayCount(from, to) > MAX_RANGE_DAYS) {
+      ctx.addIssue({ code: "custom", path: ["to"], message: VALIDATION_MESSAGES.atMostRangeDays(MAX_RANGE_DAYS) });
+    }
+  });
 
 /** The two every paged list takes. */
 export const listQuerySchema = z.object({ cursor: cursorParam, search: searchParam });

@@ -288,6 +288,7 @@ describe("NewBill (plan §15.2; D302 – D313)", () => {
       dateOfBirth: "1990-01-01",
       gender: "FEMALE",
       lastVisitOn: null,
+      balancePaise: 0,
     };
     search.current = { items: [found], nextCursor: null };
     draw();

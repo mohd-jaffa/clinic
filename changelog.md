@@ -4323,3 +4323,74 @@ the user first: D267 – D271.
 
 ### Blockers
 - None.
+
+## 2026-10-19 — R8.6 (1 of 3): Billing's tabs, payments, Outstanding and the Owing tab
+
+### Added
+- **`0031_checkout`** (plan §29; the later migrations move up one —
+  expenses are now `0032`): `to_bill_visits` and `to_bill_count`, the visits
+  waiting in To bill for whoever reads bills — reception, who may not open a
+  visit, included — with their doctor, token, the treatments worked on and a
+  fee paid at arrival (D318, D337), on a new partial index of the visits in
+  To bill; `list_bills`, Billing's bills of some days with each one's state
+  as `bill_settlement` works it out, read for the patients billed in the
+  range only (D320); `search_patients` takes the Owing tab (D101); and
+  `billing_status(appointment)`, a finished arrival's billing state for the
+  queue's Done (the next part).
+- **Billing — `/billing`** (`features/billing/components/Billing.tsx`):
+  tabs **To bill** (with its count), **Bills**, **Payments** and
+  **Outstanding** (plan §15.4). To bill's rows open a sheet with **Bill** —
+  the new bill, back to Billing — and **No charge** (Review, Courtesy, Other
+  with a note; D319). Bills and Payments open on Today and pick 7 days, This
+  month or From – To (D320, D335); Bills also by state. Outstanding offers
+  Call, the dues reminder on WhatsApp (D321, `WHATSAPP_TEXT.duesReminder`)
+  and Record payment.
+- **Record payment** (`RecordPaymentSheet`, D322 – D324, D334): from
+  Billing, the ＋ and Outstanding — a patient search first, the amount filled
+  with what they owe, **Paid on** a day (today, or an earlier day stamped at
+  its noon, counted on that day), the method, a reference and a note; as
+  **Refund**, the advance held. `GET, POST /api/payments` (once per
+  Idempotency-Key; a refund needs `payments.edit`).
+- **A payment's sheet** (`PaymentPanel`, D336) with **Void payment** for
+  `payments.edit`: a reason, then the coral card;
+  `POST /api/payments/[id]/void`.
+- `GET /api/to-bill`, `GET /api/to-bill/count`, `GET /api/bills` (a page of
+  some days), `GET /api/outstanding`, `POST /api/visits/[id]/no-charge`.
+- The patients list's **Owing** tab (`payments.view`), most first, and a
+  coral "₹1,200 due" chip on each row that owes (`OwingPill`, D101).
+- The kit's `DateRangeFilter` (`date-range.tsx`), `src/lib/dates/range.ts`,
+  `useOpened`, and `oneOf` moved to `src/lib/supabase/embedded.ts`.
+
+### Changed
+- Issuing or voiding a bill also reads To bill, Billing's lists and the
+  patients' chips again. The picker hands back the patient as the search
+  found them, their balance with them.
+- **Plan:** D334 – D336 recorded; §15.3, §15.4 and §15.6 say what was built;
+  §29 and the tracker renumber the migrations after `0031_checkout`.
+
+### Speed (plan §37)
+- **Round trips:** Billing waits on 2 — the session, then To bill's first
+  page, its count and the clinic at once; each other tab one read. Record
+  payment, Void payment and No charge each wait on 2: the function, then the
+  audit row. The patients list still waits on 1 — the balance is embedded.
+- **Indexes:** `visits_clinic_id_to_bill_idx` (new, partial, oldest first);
+  the bills of some days on `(clinic_id, issued_at desc)`, their settlement
+  on `(clinic_id, patient_id, issued_at)`; the payments of some days on
+  `(clinic_id, paid_at desc)`; who owes on 0029's partial index of balances
+  above nothing.
+
+### Validation
+- Typecheck, lint, format check passed.
+- Unit and integration tests passed (3,779), coverage 100%.
+- E2E passed (phone, desktop; 156 tests in 35 files): `billing.spec.ts`
+  new. `front-desk-journey.spec.ts`'s desktop booking failed once in the
+  full run (the slot left in the day) and passed on its own.
+- `tests/db/integration/checkout.test.ts`: To bill for reception, the doctor
+  scope and the clinic; No charge once, audited, refused once billed; bills
+  by their days and state, equal to `bill_settlement`; payments on their own
+  day, once per key, audited; refunds within the advance, voids after the
+  refund; a view-only clinic refused; who owes, most first, and the Owing
+  tab.
+
+### Blockers
+- None.

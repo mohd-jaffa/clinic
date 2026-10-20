@@ -4,6 +4,7 @@ import { pageWindow, toPage, type Page } from "@/lib/api/pagination";
 import { logActionSafe } from "@/lib/audit/auditLog";
 import { auditedChanges } from "@/lib/audit/changes";
 import { authorizationError, fromPostgrestError } from "@/lib/errors";
+import { oneOf, type Embedded } from "@/lib/supabase/embedded";
 import { tenantRecords } from "@/lib/supabase/records";
 import { searchTerms } from "@/lib/supabase/search";
 import type { Tenant } from "@/lib/supabase/tenant";
@@ -163,6 +164,7 @@ export async function addPatient(
     dateOfBirth: row.date_of_birth,
     gender: row.gender,
     lastVisitOn: null,
+    balancePaise: 0,
   }));
   return { id: added.id, recorded };
 }
@@ -221,15 +223,18 @@ export async function findPatientMatches(tenant: Tenant, phone: string): Promise
  * A page of the patients list (plan §10.2, D104): through `search_patients`,
  * as the caller — so a doctor finds only their own — newest first, or best
  * match first for a search read as words, a mobile's digits or a number.
- * The archived wait on their own tab, for those who may restore them. Each
- * comes with the day of their last visit (D228), worked out in the same
- * query (`last_visit_on`).
+ * Those who owe, most first, on their own tab for those who read payments
+ * (D101); the archived on theirs, for those who may restore them. Each comes
+ * with the day of their last visit (D228), worked out in the same query
+ * (`last_visit_on`), and their balance, embedded — none for those who do
+ * not read payments.
  */
 export async function listPatients(
   tenant: Tenant,
   { search, tab, cursor }: PatientListPayload,
 ): Promise<Page<PatientListItem>> {
   if (tab === "ARCHIVED" && !hasAccess(tenant, "patients.edit")) throw authorizationError();
+  if (tab === "OWING" && !hasAccess(tenant, "payments.view")) throw authorizationError();
   const start = cursor ?? 0;
   const { from, to } = pageWindow(start);
   const { words, digits, number } = searchTerms(search);
@@ -239,15 +244,19 @@ export async function listPatients(
       p_digits: digits,
       p_number: number,
       p_archived: tab === "ARCHIVED",
+      p_owing: tab === "OWING",
       p_offset: from,
       p_limit: to - from + 1,
     })
-    .select("id, patient_number, full_name, phone, date_of_birth, gender, last_visit_on");
+    .select(
+      "id, patient_number, full_name, phone, date_of_birth, gender, last_visit_on, " +
+        "balance:patient_balances!patient_balances_patient_id_clinic_id_fkey(balance_paise)",
+    );
   if (error) throw fromPostgrestError(error);
-  const rows = (data ?? []) as (Pick<
+  const rows = (data ?? []) as unknown as (Pick<
     PatientRow,
     "id" | "patient_number" | "full_name" | "phone" | "date_of_birth" | "gender"
-  > & { last_visit_on: string | null })[];
+  > & { last_visit_on: string | null; balance: Embedded<{ balance_paise: number }> })[];
   return toPage(
     rows.map((row) => ({
       id: row.id,
@@ -257,6 +266,7 @@ export async function listPatients(
       dateOfBirth: row.date_of_birth,
       gender: row.gender,
       lastVisitOn: row.last_visit_on,
+      balancePaise: oneOf(row.balance)?.balance_paise ?? 0,
     })),
     start,
   );

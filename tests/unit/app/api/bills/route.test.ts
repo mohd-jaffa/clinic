@@ -3,12 +3,16 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { aSession } from "@tests/support/auth";
 import { answerOf, apiRequest, supabaseClients } from "@tests/support/routes";
 
-const { getSession, issueBill } = vi.hoisted(() => ({ getSession: vi.fn(), issueBill: vi.fn() }));
+const { getSession, issueBill, listBills } = vi.hoisted(() => ({
+  getSession: vi.fn(),
+  issueBill: vi.fn(),
+  listBills: vi.fn(),
+}));
 vi.mock("@/features/auth/session", async (actual) => ({ ...(await actual()), getSession }));
-vi.mock("@/features/billing/api", () => ({ issueBill }));
+vi.mock("@/features/billing/api", () => ({ issueBill, listBills }));
 vi.mock("@/lib/supabase/server", () => supabaseClients);
 
-const { POST } = await import("@/app/api/bills/route");
+const { GET, POST } = await import("@/app/api/bills/route");
 
 const KEY = "3f2b1c4d-0a1b-4c2d-8e3f-1a2b3c4d5e6f";
 const PATIENT = "7b1e4a52-3c5d-4e6f-8a9b-0c1d2e3f4a5b";
@@ -37,10 +41,42 @@ const post = async (body: unknown, key: string | null = KEY) =>
     ),
   );
 
+const get = async (query: string) =>
+  answerOf(await GET(apiRequest(`/api/bills${query}`, { method: "GET", headers: { authorization: "Bearer tok" } })));
+
 beforeEach(() => {
   vi.clearAllMocks();
   getSession.mockResolvedValue(member(["patients.view", "payments.create"]));
   issueBill.mockResolvedValue({ billId: "b-1", billNumber: "2026-27/0001" });
+  listBills.mockResolvedValue({ items: [{ id: "b-1" }], nextCursor: null });
+});
+
+describe("GET /api/bills (plan §15.4; D320)", () => {
+  it("reads a page of the days asked, kept to a state or not, for payments.view", async () => {
+    getSession.mockResolvedValue(member(["patients.view", "payments.view"]));
+    expect(await get("?from=2026-10-01&to=2026-10-19&state=PART_PAID&cursor=20")).toMatchObject({
+      status: 200,
+      body: { data: { items: [{ id: "b-1" }] } },
+    });
+    expect(listBills).toHaveBeenCalledWith(expect.objectContaining({ clinicId: "clinic-1" }), {
+      from: "2026-10-01",
+      to: "2026-10-19",
+      state: "PART_PAID",
+      cursor: 20,
+    });
+  });
+
+  it("refuses a state it does not know, days too far apart, and someone who does not read bills", async () => {
+    getSession.mockResolvedValue(member(["patients.view", "payments.view"]));
+    expect((await get("?from=2026-10-01&to=2026-10-19&state=OVERDUE")).status).toBe(400);
+    expect(await get("?from=2025-01-01&to=2026-10-19")).toMatchObject({
+      status: 400,
+      body: { error: { code: "VALIDATION_ERROR" } },
+    });
+    getSession.mockResolvedValue(member(["patients.view", "payments.create"]));
+    expect((await get("?from=2026-10-01&to=2026-10-19")).status).toBe(403);
+    expect(listBills).not.toHaveBeenCalled();
+  });
 });
 
 describe("POST /api/bills (plan §15.2)", () => {

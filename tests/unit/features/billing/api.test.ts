@@ -8,7 +8,7 @@ import { fakeSupabase, postgrestError, type FakeSupabaseOptions } from "@tests/s
 const { logActionsSafe } = vi.hoisted(() => ({ logActionsSafe: vi.fn() }));
 vi.mock("@/lib/audit/auditLog", () => ({ logActionsSafe }));
 
-const { getBill, getBillStart, issueBill, voidBill } = await import("@/features/billing/api");
+const { getBill, getBillStart, issueBill, listBills, voidBill } = await import("@/features/billing/api");
 
 function tenantWith(options: FakeSupabaseOptions) {
   const fake = fakeSupabase(options);
@@ -422,5 +422,65 @@ describe("voidBill (plan §15.2; D314)", () => {
   it("says, in its own words, what it was refused", async () => {
     const { tenant } = tenantWith({ rpc: () => refused("AUTH_PERMISSION_DENIED") });
     await expect(voidBill(tenant, "b-1", { reason: "Typo" })).rejects.toMatchObject({ code: "AUTH_PERMISSION_DENIED" });
+  });
+});
+
+describe("listBills (plan §15.4; D320, D335)", () => {
+  const listed = {
+    id: "b-1",
+    bill_number: "2026-27/0042",
+    issued_at: "2026-10-19T05:30:00Z",
+    total_paise: 90_000,
+    patient_id: "p-1",
+    patient_name: "Asha Rao",
+    patient_number: 1042,
+    paid_paise: 50_000,
+    due_paise: 40_000,
+    state: "PART_PAID",
+  };
+
+  it("reads a page of the days asked through list_bills, from midnight in India, kept to a state", async () => {
+    const { tenant, rpcs } = tenantWith({
+      rpc: () => ({
+        data: [listed, { ...listed, id: "b-2", paid_paise: null, due_paise: null, state: "VOID" }],
+      }),
+    });
+    expect(await listBills(tenant, { from: "2026-10-19", to: "2026-10-19", state: "PART_PAID", cursor: 20 })).toEqual({
+      items: [
+        {
+          id: "b-1",
+          number: "2026-27/0042",
+          issuedAt: "2026-10-19T05:30:00Z",
+          totalPaise: 90_000,
+          patient: { id: "p-1", name: "Asha Rao", number: 1042 },
+          settlement: { paidPaise: 50_000, duePaise: 40_000 },
+          state: "PART_PAID",
+        },
+        expect.objectContaining({ id: "b-2", settlement: null, state: "VOID" }),
+      ],
+      nextCursor: null,
+    });
+    expect(rpcs).toEqual([
+      {
+        name: "list_bills",
+        args: {
+          p_from: "2026-10-18T18:30:00.000Z",
+          p_to: "2026-10-19T18:30:00.000Z",
+          p_state: "PART_PAID",
+          p_offset: 20,
+          p_limit: 21,
+        },
+      },
+    ]);
+  });
+
+  it("reads every state from the first page, nothing found as none, and says what it was refused", async () => {
+    const { tenant, rpcs } = tenantWith({ rpc: () => ({ data: null }) });
+    expect(await listBills(tenant, { from: "2026-10-01", to: "2026-10-19" })).toEqual({ items: [], nextCursor: null });
+    expect(rpcs[0].args).toMatchObject({ p_state: null, p_offset: 0 });
+    const down = tenantWith({ rpc: () => refused("AUTH_PERMISSION_DENIED") });
+    await expect(listBills(down.tenant, { from: "2026-10-01", to: "2026-10-19" })).rejects.toMatchObject({
+      code: "AUTH_PERMISSION_DENIED",
+    });
   });
 });

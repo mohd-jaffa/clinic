@@ -145,6 +145,10 @@ export const ERROR_MESSAGES = {
   BILL_START_LOAD_FAILED: "What to bill couldn't be loaded.",
   BILL_LOAD_FAILED: "This bill couldn't be loaded.",
   BILL_PDF_FAILED: "The bill’s PDF couldn’t be made.",
+  TO_BILL_LOAD_FAILED: "What’s to bill couldn't be loaded.",
+  BILLS_LOAD_FAILED: "The bills couldn't be loaded.",
+  PAYMENTS_LOAD_FAILED: "The payments couldn't be loaded.",
+  OUTSTANDING_LOAD_FAILED: "Who owes couldn't be loaded.",
 
   // Payments (plan §15.3; D297, D301).
   PAYMENT_REFUND_TOO_LARGE: "A refund can’t be more than the patient has paid in advance.",
@@ -202,6 +206,8 @@ export const VALIDATION_MESSAGES = {
   day: (label: string) => `${label} must be a date.`,
   notBeforeToday: (label: string) => `${label} can’t be before today.`,
   afterToday: (label: string) => `${label} must be after today.`,
+  notAfterToday: (label: string) => `${label} can’t be after today.`,
+  atMostRangeDays: (max: number) => `Pick at most ${max} days.`,
   endsBeforeStart: (last: string, first: string) => `${last} can’t be before the ${first.toLowerCase()}.`,
   atMostDays: (max: number) => `It can last at most ${max} days.`,
   atMostMedicines: (max: number) => `A prescription holds at most ${max} medicines.`,
@@ -1121,6 +1127,91 @@ export const UI_TEXT = {
     newBillOf: (patient: string) => `New bill for ${patient}`,
     /** The issued card's ways on (D317). */
     viewBill: "View bill",
+    /** Billing (plan §15.4; D318 – D325, D334 – D336). */
+    tabsLabel: "Billing views",
+    recordPayment: "Record payment",
+    /** To bill (plan §15.6; D318, D319). */
+    toBillEmpty: "Nothing to bill",
+    toBillEmptyHint: "Finished visits wait here until they’re billed or marked No charge.",
+    consultation: "Consultation",
+    token: (token: number) => `#${token}`,
+    workedLabel: "What was done",
+    visitOf: (patient: string) => `${patient}’s visit`,
+    bill: "Bill",
+    checkOut: (patient: string) => `Check out ${patient}’s visit`,
+    archivedNoBill: "Archived: restore them to bill this visit.",
+    /** No charge (plan §15.6; D319). */
+    noCharge: "No charge",
+    noChargeOf: (patient: string) => `Mark ${patient}’s visit No charge`,
+    noChargeReasonLabel: "Why",
+    noChargeNoteLabel: "Note",
+    noChargeNoteHint: "Needed for Other.",
+    markNoCharge: "Mark No charge",
+    noCharged: (patient: string) => `${patient}’s visit marked No charge`,
+    notNoCharged: "The visit wasn’t marked No charge",
+    /** Bills and Payments by their days (D320, D335). */
+    stateLabel: "Show",
+    allStates: "All",
+    billsEmpty: "No bills on these days",
+    billsEmptyHint: "Bills issued on the days picked show here.",
+    billLine: (number: string, day: string) => `${number} · ${day}`,
+    paymentsEmpty: "No payments on these days",
+    paymentsEmptyHint: "Payments and refunds recorded on the days picked show here.",
+    /** Outstanding (plan §15.4; D321). */
+    outstandingEmpty: "No one owes",
+    outstandingEmptyHint: "Patients with a balance due show here, most first.",
+    remindDues: (patient: string) => `Remind ${patient} on WhatsApp of what’s due`,
+    recordPaymentFrom: (patient: string) => `Record a payment from ${patient}`,
+  },
+
+  /** A list's days (D320): a chip, or From – To. */
+  ranges: {
+    label: "Dates",
+    from: "From",
+    to: "To",
+  },
+
+  /** Payments and refunds (plan §15.3; D322 – D324, D334, D336). */
+  payment: {
+    title: "Record payment",
+    refundTitle: "Refund",
+    balance: (words: string) => `Balance: ${words}`,
+    amountLabel: "Amount",
+    amountHint: "More than is due is kept as an advance.",
+    paidOnLabel: "Paid on",
+    methodLabel: "Method",
+    referenceLabel: "Reference",
+    referenceHint: "A UPI ref or cheque number, if any.",
+    noteLabel: "Note",
+    record: "Record payment",
+    recorded: (amount: string, patient: string) => `${amount} received from ${patient}`,
+    notRecorded: "The payment wasn’t recorded",
+    refund: "Refund",
+    refundHint: (advance: string) => `Up to the ${advance} advance they hold.`,
+    refunded: (amount: string, patient: string) => `${amount} refunded to ${patient}`,
+    notRefunded: "The refund wasn’t recorded",
+    balanceNow: (words: string) => `Balance now: ${words}.`,
+    /** A payment as a row and its sheet (D325, D336). */
+    paidLine: (amount: string, method: string) => `Paid ${amount} · ${method}`,
+    refundedLine: (amount: string, method: string) => `Refunded ${amount} · ${method}`,
+    paidOn: "Paid on",
+    refundedOn: "Refunded on",
+    receivedBy: "Received by",
+    handedBackBy: "Handed back by",
+    void: "Void payment",
+    voidRefund: "Void refund",
+    voidReasonLabel: "Reason",
+    voidReasonHint: "For example: entered twice, or the wrong patient.",
+    voidAsk: (amount: string) => `Void the payment of ${amount}?`,
+    voidRefundAsk: (amount: string) => `Void the refund of ${amount}?`,
+    voidAskMessage: "It stays on record, marked Void, and leaves the balance.",
+    keep: "Keep it",
+    voided: "Payment voided",
+    refundVoided: "Refund voided",
+    notVoided: "It wasn’t voided",
+    voidedOn: (day: string) => `Voided ${day}`,
+    voidedBy: (day: string, name: string) => `Voided ${day} by ${name}`,
+    voidReason: (reason: string) => `Void: ${reason}`,
   },
 
   /** A bill's page (plan §15.2; D314, D317). */
@@ -1474,11 +1565,13 @@ export const UI_TEXT = {
     yours: "Your patients",
     searchPlaceholder: "Search by name, mobile or number",
     tabsLabel: "Which patients",
-    tabs: { ALL: "All", ARCHIVED: "Archived" },
+    tabs: { ALL: "All", OWING: "Owing", ARCHIVED: "Archived" },
     call: (name: string) => `Call ${name}`,
     emptyTitle: "No patients yet",
     emptyHint: "Patients you add appear here, the newest first.",
     emptyHintDoctor: "Patients assigned to you, or booked with you, appear here.",
+    owingEmptyTitle: "No one owes",
+    owingEmptyHint: "Patients with a balance due show here, most first.",
     archivedEmptyTitle: "No archived patients",
     archivedEmptyHint: "A patient archived from their profile waits here, to be restored.",
     noMatches: (search: string) => `No patient matches “${search}”`,
@@ -1685,6 +1778,14 @@ export const WHATSAPP_TEXT = {
   followUpReminder: (doctor: string | null, clinic: string, day: string, phone: string | null) =>
     `${doctor ? `${doctor} at ${clinic}` : clinic} asked to see you again around ${day}. ${
       phone ? `Reply or call ${phone} to book.` : "Reply to book."
+    }`,
+  /**
+   * "Hello Rohan, a balance of ₹1,200 is due at Smile Dental. Reply or call
+   * 0484 234 5678." (D321) — without the clinic's phone, a reply does.
+   */
+  duesReminder: (firstName: string, amount: string, clinic: string, phone: string | null) =>
+    `Hello ${firstName}, a balance of ${amount} is due at ${clinic}. ${
+      phone ? `Reply or call ${phone}.` : "Reply with any questions."
     }`,
   /** "Your prescription from Dr. Maya Rao, Smile Care, 15 Oct." — with the PDF (D245). */
   prescription: (doctor: string | null, clinic: string, day: string) =>

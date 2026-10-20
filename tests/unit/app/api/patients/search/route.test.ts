@@ -46,7 +46,7 @@ describe("POST /api/patients/search (plan §10.2, D98)", () => {
   });
 
   it("refuses a tab it does not know, and someone who may not see patients", async () => {
-    expect(await answerOf(await post({ tab: "OWING" }))).toMatchObject({ status: 400 });
+    expect(await answerOf(await post({ tab: "DUE" }))).toMatchObject({ status: 400 });
     getSession.mockResolvedValue(member(["expenses.view"]));
     expect(await answerOf(await post({}))).toMatchObject({ status: 403 });
     expect(listPatients).not.toHaveBeenCalled();

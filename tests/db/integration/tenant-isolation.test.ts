@@ -265,6 +265,7 @@ describe("as clinic B's owner, with a valid token", () => {
       p_digits: "9876543210",
       p_number: null,
       p_archived: false,
+      p_owing: false,
       p_offset: 0,
       p_limit: 20,
     });

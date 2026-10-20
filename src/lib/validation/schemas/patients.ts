@@ -142,8 +142,8 @@ export const patientMatchesSchema = z.object({ phone: indianMobile(patients.mobi
 export type PatientMatchesInput = z.input<typeof patientMatchesSchema>;
 export type PatientMatchesPayload = z.output<typeof patientMatchesSchema>;
 
-/** The patients list's tabs (plan §10.2): everyone, or the archived. Owing comes with Phase 8 (D101). */
-export const PATIENT_TABS = ["ALL", "ARCHIVED"] as const;
+/** The patients list's tabs (plan §10.2, D101): everyone, those who owe, or the archived. */
+export const PATIENT_TABS = ["ALL", "OWING", "ARCHIVED"] as const;
 export type PatientTab = (typeof PATIENT_TABS)[number];
 
 /**

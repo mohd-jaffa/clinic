@@ -1,10 +1,17 @@
 import { withClinicRoute } from "@/features/auth/guard";
-import { issueBill } from "@/features/billing/api";
-import { readJson } from "@/lib/api/handler";
+import { issueBill, listBills } from "@/features/billing/api";
+import { readJson, readQuery } from "@/lib/api/handler";
 import { readIdempotencyKey } from "@/lib/api/idempotency";
-import { billSchema } from "@/lib/validation";
+import { billSchema, billsQuerySchema } from "@/lib/validation";
 
 export const runtime = "nodejs";
+
+/** A page of the bills issued on the days asked, each with where it stands (plan §15.4; D320), for `payments.view`. */
+export async function GET(request: Request) {
+  return withClinicRoute(request, { access: "payments.view" }, (tenant) =>
+    listBills(tenant, readQuery(request, billsQuerySchema)),
+  );
+}
 
 /**
  * Issue a bill (plan §15.2), for `payments.create` — with what is collected

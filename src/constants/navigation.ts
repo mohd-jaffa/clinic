@@ -94,7 +94,7 @@ const FOLLOW_UPS: NavItem = {
   access: FOLLOW_UP_ACCESS.list,
   hint: hints.followUps,
 };
-/** Billing (plan §15.4): its tabs come with R8.6. */
+/** Billing (plan §15.4): To bill, bills, payments and who owes. */
 export const BILLING_ROUTE = "/billing";
 /**
  * Where a new bill's back arrow leads, when not to what it bills (D302):

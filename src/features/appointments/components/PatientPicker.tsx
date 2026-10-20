@@ -33,7 +33,8 @@ export function PatientPicker({
   error,
 }: {
   chosen: ChosenPatient | null;
-  onChoose: (patient: ChosenPatient) => void;
+  /** The patient as the search found them — their balance too, for a payment (D323). */
+  onChoose: (patient: PatientListItem) => void;
   /** Change; none where nothing stays chosen — a new bill leaves for the patient's own (D313). */
   onClear?: () => void;
   /** None for someone who may not add a patient. */

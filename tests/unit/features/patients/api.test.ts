@@ -130,6 +130,7 @@ describe("addPatient (D145)", () => {
       dateOfBirth: "1990-04-12",
       gender: "FEMALE",
       lastVisitOn: null,
+      balancePaise: 0,
     });
     expect(logActionSafe).toHaveBeenCalledWith(
       tenant,
@@ -370,6 +371,7 @@ describe("listPatients (plan §10.2, D104)", () => {
     date_of_birth: "1990-04-12",
     gender: "MALE",
     last_visit_on: number === 1100 ? "2026-09-28" : null,
+    balance: number === 1100 ? [{ balance_paise: 120_000 }] : null,
   });
 
   it("asks search_patients as the caller for a page and one more, so it knows another follows", async () => {
@@ -379,11 +381,23 @@ describe("listPatients (plan §10.2, D104)", () => {
     expect(rpcs).toEqual([
       {
         name: "search_patients",
-        args: { p_words: null, p_digits: null, p_number: null, p_archived: false, p_offset: 0, p_limit: 21 },
+        args: {
+          p_words: null,
+          p_digits: null,
+          p_number: null,
+          p_archived: false,
+          p_owing: false,
+          p_offset: 0,
+          p_limit: 21,
+        },
       },
     ]);
     expect(rpcChains[0]).toEqual([
-      ["select", "id, patient_number, full_name, phone, date_of_birth, gender, last_visit_on"],
+      [
+        "select",
+        "id, patient_number, full_name, phone, date_of_birth, gender, last_visit_on, " +
+          "balance:patient_balances!patient_balances_patient_id_clinic_id_fkey(balance_paise)",
+      ],
     ]);
     expect(page.items).toHaveLength(20);
     expect(page.items[0]).toEqual({
@@ -394,8 +408,9 @@ describe("listPatients (plan §10.2, D104)", () => {
       dateOfBirth: "1990-04-12",
       gender: "MALE",
       lastVisitOn: "2026-09-28",
+      balancePaise: 120_000,
     });
-    expect(page.items[1].lastVisitOn).toBeNull();
+    expect(page.items[1]).toMatchObject({ lastVisitOn: null, balancePaise: 0 });
     expect(page.nextCursor).toBe("20");
   });
 
@@ -407,6 +422,7 @@ describe("listPatients (plan §10.2, D104)", () => {
       p_digits: "1012",
       p_number: 1012,
       p_archived: false,
+      p_owing: false,
       p_offset: 20,
       p_limit: 21,
     });
@@ -423,6 +439,21 @@ describe("listPatients (plan §10.2, D104)", () => {
 
     const viewer = tenantWith({ rpc: () => ({ data: [] }) }, { role: "STAFF", permissions: ["patients.view"] });
     await expect(listPatients(viewer.tenant, { search: null, tab: "ARCHIVED" })).rejects.toMatchObject({
+      kind: "AUTHORIZATION",
+    });
+    expect(viewer.rpcs).toEqual([]);
+  });
+
+  it("reads those who owe for those who read payments (D101), and refuses them to anyone else", async () => {
+    const desk = tenantWith(
+      { rpc: () => ({ data: [] }) },
+      { role: "STAFF", permissions: ["patients.view", "payments.view"] },
+    );
+    await listPatients(desk.tenant, { search: null, tab: "OWING" });
+    expect(desk.rpcs[0].args).toMatchObject({ p_archived: false, p_owing: true });
+
+    const viewer = tenantWith({ rpc: () => ({ data: [] }) }, { role: "STAFF", permissions: ["patients.view"] });
+    await expect(listPatients(viewer.tenant, { search: null, tab: "OWING" })).rejects.toMatchObject({
       kind: "AUTHORIZATION",
     });
     expect(viewer.rpcs).toEqual([]);

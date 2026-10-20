@@ -43,6 +43,7 @@ const ROHAN: PatientListItem = {
   dateOfBirth: "1990-04-12",
   gender: "MALE",
   lastVisitOn: null,
+  balancePaise: 0,
 };
 
 const draw = () =>
@@ -196,6 +197,37 @@ describe("Patients' archived tab (plan §10.2)", () => {
     draw();
     expect(screen.queryByRole("tablist")).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: /^Rohan Mehta/ })).toBeInTheDocument();
+  });
+});
+
+describe("Patients' Owing tab and balance chip (plan §10.2; D101)", () => {
+  it("lists those who owe on their own tab, most first, for those who read payments, with what each owes", async () => {
+    list.current = {
+      ...list.current,
+      data: [
+        { ...ROHAN, balancePaise: 120_000 },
+        { ...ROHAN, id: "p-2" },
+      ],
+    };
+    draw();
+    const [owes, settled] = within(screen.getByRole("list", { name: "Patients" })).getAllByRole("listitem");
+    expect(owes).toHaveTextContent("₹1,200 due");
+    expect(settled).not.toHaveTextContent("due");
+    await userEvent.click(screen.getByRole("tab", { name: "Owing" }));
+    expect(list.asked).toHaveBeenLastCalledWith("", "OWING");
+  });
+
+  it("says when no one owes", async () => {
+    list.current = { ...list.current, data: [] };
+    draw();
+    await userEvent.click(screen.getByRole("tab", { name: "Owing" }));
+    expect(screen.getByRole("heading", { name: "No one owes" })).toBeInTheDocument();
+  });
+
+  it("has Owing without Archived for someone who reads payments but may not restore", () => {
+    auth.current = authStub({ role: "STAFF", permissions: ["patients.view", "payments.view"] });
+    draw();
+    expect(screen.getAllByRole("tab").map((tab) => tab.textContent)).toEqual(["All", "Owing"]);
   });
 });
 

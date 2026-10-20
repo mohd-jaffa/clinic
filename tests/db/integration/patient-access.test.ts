@@ -160,6 +160,7 @@ describe("staff without patients.view", () => {
       p_digits: null,
       p_number: null,
       p_archived: false,
+      p_owing: false,
       p_offset: 0,
       p_limit: 20,
     });

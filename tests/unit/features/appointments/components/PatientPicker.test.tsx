@@ -22,6 +22,7 @@ const patient = (n: number, name: string): PatientListItem => ({
   dateOfBirth: "1990-04-12",
   gender: "MALE",
   lastVisitOn: null,
+  balancePaise: 0,
 });
 const ROHAN = patient(12, "Rohan Mehta");
 

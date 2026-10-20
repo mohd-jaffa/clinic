@@ -70,6 +70,8 @@ export interface PatientListItem {
   gender: Gender;
   /** The day of their latest visit (D228), or none yet. */
   lastVisitOn: string | null;
+  /** What they owe — positive — or hold in advance (D101, D295); nothing for those who do not read payments. */
+  balancePaise: number;
 }
 
 /** An alert as the database holds it (plan §10.4). */

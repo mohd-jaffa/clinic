@@ -10,6 +10,13 @@
  */
 export const MAX_AMOUNT_PAISE = 100_000_000;
 
+/**
+ * The hour a payment recorded for an earlier day is stamped at, in the
+ * clinic's timezone (D334): noon, so it counts on that day; today's is
+ * stamped when it is recorded.
+ */
+export const EARLIER_PAYMENT_HOUR = 12;
+
 /** One bill line's quantity: 1 – 999 (plan §28.6). */
 export const MAX_QUANTITY = 999;
 
@@ -27,6 +34,12 @@ export const PAGE_SIZE = 20;
 
 /** How far into a list a page may start — far past any list a clinic keeps. */
 export const MAX_PAGE_START = 100_000;
+
+/**
+ * The most days a list's From – To may span (D320): a year and a day, so a
+ * financial year fits — longer is a report's, never one query's.
+ */
+export const MAX_RANGE_DAYS = 366;
 
 /** How many of a visit's medicines its row in the history names before "+2" (D226). */
 export const HISTORY_MEDICINES_NAMED = 2;

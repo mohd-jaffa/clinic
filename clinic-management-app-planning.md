@@ -420,6 +420,9 @@ earlier lines are never rewritten.
 | D331 | **An archived expense leaves the totals** (the user): **Show archived** lists it, with **Restore** for `expenses.edit`. | 2026-10-18 |
 | D332 | **Expenses are grouped by day, newest first** (the user): "Today", "14 Oct" headings; each row its category, description, method and amount. | 2026-10-18 |
 | D333 | **Any expense, of any month, may be corrected** (the user): with `expenses.edit`, edited or archived, every change audited. | 2026-10-18 |
+| D334 | **Record payment's "Paid on" is a day, today by default** (the user): a day field, never after today; today's payment is stamped when recorded, an earlier day's at noon of that day in the clinic's timezone, so it counts on that day. | 2026-10-19 |
+| D335 | **Billing's Bills and Payments open on Today** (the user): the chips then pick 7 days, This month or From – To (D320); each tab keeps its days while another is looked at. | 2026-10-19 |
+| D336 | **A payment is voided from its sheet** (the user): a payment's row — in Billing's Payments, and in the history — opens its sheet: how much, how, when, its reference and note, who took it; **Void payment** for `payments.edit` asks a reason, then the coral card. | 2026-10-19 |
 
 ## 3. Users and roles
 
@@ -1483,6 +1486,17 @@ is refused, never capped (D293).
   (defaults to now; any time up to now, never later, D299), note. Recorded
   against the patient; an amount beyond what is owed becomes an **advance**
   (negative balance), used by later bills.
+  - **As built (R8.6):** the sheet opens from Billing and the ＋ on a patient
+    search (D323); the patient picked shows their balance and fills the
+    amount with what they owe — empty when nothing is (D324). **Paid on** is
+    a day, today unless changed, never after it: today's payment is stamped
+    when recorded, an earlier day's at noon of that day, so it counts on that
+    day (D334). Opened for a patient — Outstanding's row — it names them.
+    `POST /api/payments` (once per Idempotency-Key); the card says "₹500
+    received from Anita Rao" and the balance now.
+- **A payment's sheet** (D336): Billing's Payments rows open it — how much,
+  how, when, its reference and note, who took it; once void, when, by whom
+  and why — with **Void payment** (or **Void refund**) for `payments.edit`.
 - **Refund** (`payments.edit`): money returned — no more than the advance
   held, so a refund never makes a patient owe (D297).
 - **Void** (`payments.edit`, asks first, a reason): a payment entered by
@@ -1501,6 +1515,16 @@ holds an advance, may be archived; the balance stays and counts (D300).
 **Bills** (number, patient, date, total, state; filters by date and state),
 **Payments** (date, patient, amount, method, received by), **Outstanding**
 (patients who owe, most first, with Call / WhatsApp / Record payment).
+
+As built (R8.6): **To bill** carries how many wait, and every doctor's
+visits, oldest first; **Bills** and **Payments** open on Today (D335) and pick
+7 days, This month or From – To (D320, at most 366 days), Bills also All,
+Paid, Part paid, Unpaid or Void; each tab keeps its days while another is
+looked at. **New bill** and **Record payment** sit in the header for
+`payments.create`. **Outstanding**'s WhatsApp opens the dues reminder from
+the clinic (D321); its archived patients' balances still count, with no
+Record payment until restored. The patients list's **Owing** tab lists those
+who owe, most first, and every row a coral "₹1,200 due" chip (D101).
 
 ### 15.5 The bill PDF
 
@@ -1545,6 +1569,13 @@ one tap when nothing changes. **No charge** settles it without a bill; a bill
 issued for it afterwards makes it `BILLED` (D287). Voiding a bill returns its
 visit to `TO_BILL` once nothing billed remains for it, by the rule above
 (D286).
+
+As built (R8.6, Billing's tab): each row the patient, the doctor, the token,
+the day when not today and what was done — the consultation unless paid at
+arrival (**Fee paid**), and the treatments worked on. Its one **Bill** opens
+a small sheet with **Bill** (the new bill, leading back to Billing) and **No
+charge** — Review, Courtesy, or Other with a note (D319). `to_bill_visits`
+(0031) reads it for `payments.view`, reception included.
 
 ## 16. Expenses
 
@@ -2247,14 +2278,17 @@ Planned order (one or more per tracker row):
                                 patient_stats (D296)
 0030_bill_start                 bill_start: where a new bill starts — a visit's, an arrival's or
                                 a patient's — for payments.create, reception included (D313)
-0031_expenses                   expenses
-0032_dashboard_and_reports      dashboard_summary, report_daily, report_monthly
-0033_subscription_notices       the daily pg_cron → pg_net call (address and secret in Vault)
-0034_clinic_deletion            request_clinic_deletion, cancel_clinic_deletion,
+0031_checkout                   to_bill_visits and to_bill_count for reception, who may not open a
+                                visit (D318, D337); list_bills with each bill's state (D320);
+                                search_patients' Owing tab (D101)
+0032_expenses                   expenses
+0033_dashboard_and_reports      dashboard_summary, report_daily, report_monthly
+0034_subscription_notices       the daily pg_cron → pg_net call (address and secret in Vault)
+0035_clinic_deletion            request_clinic_deletion, cancel_clinic_deletion,
                                 delete_clinic (DEV)
-0035_session_profile            session_profile: the session, profile, membership and plan in
+0036_session_profile            session_profile: the session, profile, membership and plan in
                                 one read (R13.2, D134)
-0036_faster_reads               indexes and policies from the load-seeded EXPLAINs (R13.3)
+0037_faster_reads               indexes and policies from the load-seeded EXPLAINs (R13.3)
 ```
 
 ## 30. API
@@ -2870,14 +2904,14 @@ in the row's one commit (D136).
 
 | ID | Work | Source | Waits on | Status |
 |---|---|---|---|---|
-| R9.1 | `0031_expenses` and the expenses screen (the clinic's categories): add, edit, archive, month totals, by category | §16 | — | TODO |
+| R9.1 | `0032_expenses` and the expenses screen (the clinic's categories): add, edit, archive, month totals, by category | §16 | — | TODO |
 | R9.2 | Integration + E2E | §34 | — | TODO |
 
 ### Phase 10 — Home and reports
 
 | ID | Work | Source | Waits on | Status |
 |---|---|---|---|---|
-| R10.1 | `0032_dashboard_and_reports`: `dashboard_summary`, `report_daily`, `report_monthly` | §17, §18 | — | TODO |
+| R10.1 | `0033_dashboard_and_reports`: `dashboard_summary`, `report_daily`, `report_monthly` | §17, §18 | — | TODO |
 | R10.2 | Home: sections by permission; getting-started for a new clinic | §17 | — | TODO |
 | R10.3 | Reports: daily and monthly, the two charts; the kit's chart kit, bar and donut (D66) | §18 | — | TODO |
 | R10.4 | Integration: a seeded month's figures equal hand-computed ones | §34 | — | TODO |
@@ -2892,7 +2926,7 @@ in the row's one commit (D136).
 | R11.2 | Console: overview, clinics (No trial and Deletion flags), clinic detail, accounts, error log, platform audit | §20 | — | TODO |
 | R11.3 | Extend plan (Monthly, Yearly, Set date); the owner's confirmation email | §7.4 | — | TODO |
 | R11.4 | Platform settings screen | §6, §20.4 | — | TODO |
-| R11.5 | `0033_subscription_notices`: daily notices, each once per period | §22 | — | TODO |
+| R11.5 | `0034_subscription_notices`: daily notices, each once per period | §22 | — | TODO |
 | R11.6 | Owner's activity log | §19 | — | TODO |
 | R11.7 | Integration + E2E: extend, change a setting, notices once, DEV sees no clinic data | §34 | — | TODO |
 | R11.8 | Plan receipts: receipt numbers, the receipt PDF, the business details settings | §7.5, §6 | Q2 | TODO |
@@ -2905,7 +2939,7 @@ in the row's one commit (D136).
 | R12.2 | Privacy and terms | §21 | Q22 | TODO |
 | R12.3 | Manifest, icons, service worker, offline page, Install app | §21 | — | TODO |
 | R12.4 | Security headers; `noindex` on app routes; share-preview image | §21 | — | TODO |
-| R12.5 | `0034_clinic_deletion`: the owner's request and cancel (banner, emails), the admin's delete after the cooling-off | §9.1, §20 | — | TODO |
+| R12.5 | `0035_clinic_deletion`: the owner's request and cancel (banner, emails), the admin's delete after the cooling-off | §9.1, §20 | — | TODO |
 | R12.6 | CSV export, one file per area, audited | §9 | — | TODO |
 
 ### Phase 13 — Speed and the release checks (D134, D185)
@@ -2921,8 +2955,8 @@ deployment, waits on that (D185).**
 | ID | Work | Source | Waits on | Status |
 |---|---|---|---|---|
 | R13.1 | The measuring setup: a load seed (a clinic with 50 000 patients, 200 000 appointments, 100 000 bills, a year of visits); the production build timed locally with 40 ms added to each database request; every screen, read and save timed and its round trips counted; Home, Queue and Patients timed on a throttled phone (4× CPU, 4G). The baseline in the changelog | §37 | — | TODO |
-| R13.2 | `0035_session_profile`: the session in one round trip. The token's signature and expiry checked on the server against the project's published key (`getClaims`), instead of asking Supabase Auth each request. One function checks the session is still open and hands back the profile, membership, clinic, doctor, plan and the settings it needs. Today a session waits on 3: Auth, the profile, then the plan and settings | §5.5, §37 | — | TODO |
-| R13.3 | `0036_faster_reads`: EXPLAIN ANALYZE on the load seed for every list, search, count and report. Indexes added or changed (every paged list in its own order, every foreign key). No policy or list calls `can_see_patient()` per row. Supabase's performance advisor reports nothing: unindexed keys, policies re-run per row, overlapping policies, duplicate or unused indexes | §27, §28, §37 | — | TODO |
+| R13.2 | `0036_session_profile`: the session in one round trip. The token's signature and expiry checked on the server against the project's published key (`getClaims`), instead of asking Supabase Auth each request. One function checks the session is still open and hands back the profile, membership, clinic, doctor, plan and the settings it needs. Today a session waits on 3: Auth, the profile, then the plan and settings | §5.5, §37 | — | TODO |
+| R13.3 | `0037_faster_reads`: EXPLAIN ANALYZE on the load seed for every list, search, count and report. Indexes added or changed (every paged list in its own order, every foreign key). No policy or list calls `can_see_patient()` per row. Supabase's performance advisor reports nothing: unindexed keys, policies re-run per row, overlapping policies, duplicate or unused indexes | §27, §28, §37 | — | TODO |
 | R13.4 | Round trips cut to the budget. Reads that do not depend on each other go at once (`allInOrder`), records come with their children, writes answer from `returning`, and side work runs after the answer. Every screen and read within 2, every save within 4; every list and search under 300 ms at the API on the load seed | §37 | — | TODO |
 | R13.5 | Pages: the proxy starts only where it has work and loads the Supabase client only to renew. Heavy code loads when first needed; first-load JS within 200 KB gzip. Polling stops while the tab is hidden. Reusing a screen revisited within seconds (`staleTimes`) measured, kept only if it helps. LCP and INP within budget on the throttled phone | §37 | — | TODO |
 | R13.6 | Hosting: `vercel.json` with region `bom1` and fluid compute, sent by `vercel deploy --prebuilt` with every release; the release guide (R14.7) says so | §35, §37 | — | TODO |

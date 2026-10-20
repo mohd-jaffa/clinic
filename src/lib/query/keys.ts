@@ -104,6 +104,8 @@ export const apiRoutes = {
     prescription: (id: string) => `/api/visits/${id}/prescription`,
     /** Its PDF (D221): to open and print; `?download=1` to save it. */
     prescriptionPdf: (id: string) => `/api/visits/${id}/prescription.pdf`,
+    /** Settled free, from To bill (plan §15.6; D319). */
+    noCharge: (id: string) => `/api/visits/${id}/no-charge`,
   },
   // Prescriptions (plan §13, §30): this clinic's medicines, as written before (D211).
   prescriptions: {
@@ -121,7 +123,7 @@ export const apiRoutes = {
     status: (id: string) => `/api/treatments/${id}/status`,
     session: (id: string, visitId: string) => `/api/treatments/${id}/sessions/${visitId}`,
   },
-  // Bills (plan §15.2, §30): issued; where a new one starts — a visit, an arrival or a patient, by id; one; voided.
+  // Bills (plan §15.2, §15.4, §30): issued, and a page of a range; where a new one starts — a visit, an arrival or a patient, by id; one; voided.
   bills: {
     list: "/api/bills",
     start: "/api/bills/start",
@@ -129,6 +131,20 @@ export const apiRoutes = {
     void: (id: string) => `/api/bills/${id}/void`,
     /** Its PDF (plan §15.5): to open and print; `?download=1` to save it. */
     pdf: (id: string) => `/api/bills/${id}/bill.pdf`,
+  },
+  // Checkout (plan §15.6; D318, D337): the visits waiting in To bill, a page at a time, and how many.
+  toBill: {
+    list: "/api/to-bill",
+    count: "/api/to-bill/count",
+  },
+  // Payments (plan §15.3, §15.4): recorded, a page of a range at a time; voided.
+  payments: {
+    list: "/api/payments",
+    void: (id: string) => `/api/payments/${id}/void`,
+  },
+  // Who owes, most first (plan §15.4).
+  outstanding: {
+    list: "/api/outstanding",
   },
   // The follow-ups to call (plan §14.3): a tab a page at a time, how many each holds, a contact noted.
   followUps: {

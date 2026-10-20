@@ -1035,6 +1035,16 @@ describe("payments: .create records, .edit refunds and voids, .view reads with t
     // Nor does a doctor who takes payments take one from a patient not theirs.
     expect((await pay(stranger)).error?.hint).toBe("RECORD_NOT_FOUND");
   });
+
+  it("reads To bill and how many wait with payments.view, and refuses them without it (0031)", async () => {
+    const list = (member: SignedIn) =>
+      member.tenant!.supabase.rpc("to_bill_visits", { p_doctor_id: null, p_offset: 0, p_limit: 20 });
+    const count = (member: SignedIn) => member.tenant!.supabase.rpc("to_bill_count", { p_doctor_id: null });
+    expect((await list(viewer)).error).toBeNull();
+    expect((await count(viewer)).error).toBeNull();
+    expect((await list(receptionist)).error?.hint).toBe("AUTH_PERMISSION_DENIED");
+    expect((await count(receptionist)).error?.hint).toBe("AUTH_PERMISSION_DENIED");
+  });
 });
 
 describe("the owner's own", () => {

@@ -355,6 +355,7 @@ describe("the search (plan §10.2; D104)", () => {
       p_digits: terms.digits ?? null,
       p_number: terms.number ?? null,
       p_archived: terms.archived ?? false,
+      p_owing: false,
       p_offset: terms.offset ?? 0,
       p_limit: terms.limit ?? 20,
     });
