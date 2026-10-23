@@ -18,8 +18,10 @@ import {
   quickAddFor,
   type NavItem,
 } from "@/constants/navigation";
+import { hasAccess } from "@/constants/permissions";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { RequireAuth } from "@/features/auth/components/RequireAuth";
+import { useToBillCount } from "@/features/billing/hooks/useToBillCount";
 import { ClinicLogo } from "@/features/clinic/components/ClinicLogo";
 import { useReadOnly } from "@/features/subscription/hooks/useReadOnly";
 import { useNavigationPending } from "@/hooks/useNavigationPending";
@@ -46,6 +48,10 @@ import { AddButton } from "./QuickAdd";
  * and while the clinic's plan is not active (`PlanBanner`); in a view-only
  * clinic the ＋ still opens its actions, each turned off and saying why
  * (plan §7.2).
+ *
+ * For whoever reads bills, the Queue item carries a small coral count of the
+ * visits waiting in To bill (D337), read beside the screen and again every
+ * 15 s, as the queue is.
  *
  * Only the places and quick adds the person may use are shown. The current
  * place is a patch of land behind its icon — or, in the sidebar, behind the
@@ -76,6 +82,9 @@ function AppFrame({ children }: { children: ReactNode }) {
   const groups = NAV_GROUPS.map(may).filter((group) => group.length > 0);
   const [home, queue] = BOTTOM_NAV.start.map((item) => may([item])[0]);
   const [patients] = BOTTOM_NAV.end.map((item) => may([item])[0]);
+  const billsQueue = queue !== undefined && membership !== null && hasAccess(membership, "payments.view");
+  const toBill = useToBillCount(billsQueue).data?.count ?? 0;
+  const countOf = (item: NavItem) => (item.id === "queue" ? toBill : 0);
   const behindMore = MORE_NAV.some((item) => isActivePath(item.href, pathname));
   const openAdd = () => setAdding(true);
 
@@ -113,7 +122,7 @@ function AppFrame({ children }: { children: ReactNode }) {
             >
               {group.map((item) => (
                 <li key={item.id}>
-                  <SidePlace item={item} active={isActivePath(item.href, pathname)} />
+                  <SidePlace item={item} active={isActivePath(item.href, pathname)} count={countOf(item)} />
                 </li>
               ))}
             </ul>
@@ -149,7 +158,7 @@ function AppFrame({ children }: { children: ReactNode }) {
           )}
           {queue && (
             <li className="col-start-2 min-w-0">
-              <BarPlace item={queue} active={isActivePath(queue.href, pathname)} />
+              <BarPlace item={queue} active={isActivePath(queue.href, pathname)} count={toBill} />
             </li>
           )}
           {adds.length > 0 && (
@@ -192,40 +201,96 @@ function AppFrame({ children }: { children: ReactNode }) {
 const BAR_PLACE = "flex h-full w-full flex-col items-center justify-center gap-1 text-tab";
 
 /** One place in the bottom bar: its icon over its name, on a patch of land while current. */
-function BarPlace({ item, active }: { item: NavItem; active: boolean }) {
+function BarPlace({ item, active, count = 0 }: { item: NavItem; active: boolean; count?: number }) {
   return (
-    <Link href={item.href} aria-current={active ? "page" : undefined} className={BAR_PLACE}>
-      <BarMark icon={item.icon} label={item.label} active={active} />
+    <Link
+      href={item.href}
+      aria-current={active ? "page" : undefined}
+      aria-label={namedWith(item.label, count)}
+      className={BAR_PLACE}
+    >
+      <BarMark icon={item.icon} label={item.label} active={active} count={count} />
     </Link>
   );
 }
 
-function BarMark({ icon: Icon, label, active }: { icon: NavItem["icon"]; label: string; active: boolean }) {
+function BarMark({
+  icon: Icon,
+  label,
+  active,
+  count = 0,
+}: {
+  icon: NavItem["icon"];
+  label: string;
+  active: boolean;
+  count?: number;
+}) {
   return (
     <>
       <span
         className={cn(
-          "grid h-8 w-14 place-items-center rounded-full transition-colors duration-(--duration-map) ease-map",
+          "relative grid h-8 w-14 place-items-center rounded-full transition-colors duration-(--duration-map) ease-map",
           active ? "bg-land text-land-ink" : "text-muted",
         )}
       >
         <Icon size={22} strokeWidth={2.25} aria-hidden="true" />
+        <PlaceCount count={count} />
       </span>
       <span className={cn("max-w-full truncate px-1", active ? "font-bold text-ink" : "text-muted")}>{label}</span>
     </>
   );
 }
 
+/** The most a place's count shows; more reads "99+". */
+const MOST_SHOWN = 99;
+
+const COUNT = "place-items-center rounded-full bg-coral font-bold text-on-coral tabular-nums";
+
+/**
+ * How many wait at a place (D337), in coral: on its icon's corner in the bar
+ * and the rail, at the end of its capsule in the sidebar (`end`). A screen
+ * reader hears it in the place's name (`namedWith`).
+ */
+function PlaceCount({ count, end = false }: { count: number; end?: boolean }) {
+  if (count <= 0) return null;
+  return (
+    <span
+      aria-hidden="true"
+      className={cn(
+        COUNT,
+        end
+          ? "ml-auto hidden h-6 min-w-6 px-1.5 text-small lg:grid"
+          : "absolute -top-1 right-1.5 grid h-5 min-w-5 px-1 text-tab",
+      )}
+    >
+      {count > MOST_SHOWN ? `${MOST_SHOWN}+` : count}
+    </span>
+  );
+}
+
+/** A place's name, with how many wait there when any do (D337): "Queue, 3 to bill". */
+const namedWith = (label: string, count: number) =>
+  count > 0 ? UI_TEXT.nav.counted(label, UI_TEXT.billing.toBillCount(count)) : undefined;
+
 /**
  * One place in the rail — its icon over its name, the icon on a patch of land
  * while current — and, from 1024 px, in the sidebar: a capsule, all land
  * while current.
  */
-function SidePlace({ item: { href, label, icon: Icon }, active }: { item: NavItem; active: boolean }) {
+function SidePlace({
+  item: { href, label, icon: Icon },
+  active,
+  count,
+}: {
+  item: NavItem;
+  active: boolean;
+  count: number;
+}) {
   return (
     <Link
       href={href}
       aria-current={active ? "page" : undefined}
+      aria-label={namedWith(label, count)}
       className={cn(
         "group flex items-center rounded-full transition-colors duration-(--duration-map) ease-map",
         "max-lg:flex-col max-lg:gap-1 max-lg:py-1 max-lg:text-tab",
@@ -235,14 +300,18 @@ function SidePlace({ item: { href, label, icon: Icon }, active }: { item: NavIte
     >
       <span
         className={cn(
-          "grid shrink-0 place-items-center rounded-full transition-colors duration-(--duration-map) ease-map",
+          "relative grid shrink-0 place-items-center rounded-full transition-colors duration-(--duration-map) ease-map",
           "max-lg:h-8 max-lg:w-14",
           active && "max-lg:bg-land max-lg:text-land-ink",
         )}
       >
         <Icon size={22} strokeWidth={2.25} aria-hidden="true" />
+        <span className="lg:hidden">
+          <PlaceCount count={count} />
+        </span>
       </span>
       <span className="max-w-full truncate">{label}</span>
+      <PlaceCount count={count} end />
     </Link>
   );
 }

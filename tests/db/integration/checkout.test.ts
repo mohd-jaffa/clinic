@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import type { Permission } from "@/constants/permissions";
-import { addWalkIn } from "@/features/appointments/api";
+import { addWalkIn, listQueue } from "@/features/appointments/api";
 import { markDone, sendIn } from "@/features/appointments/moves";
 import { issueBill, listBills, voidBill } from "@/features/billing/api";
 import { countToBill, listToBill, markNoCharge } from "@/features/billing/checkout";
@@ -22,10 +22,11 @@ import {
 } from "@tests/support/integration";
 
 /**
- * Checkout (plan §15.4, §15.6, §10.2; R8.6, D318 – D325, D334 – D338), from
+ * Checkout (plan §15.4, §15.6, §10.2; R8.6, D318 – D325, D334 – D340), from
  * the feature functions against the local database: the visits waiting in
  * To bill for reception, who may not open them — their doctor, token, the
  * treatments worked on and a fee paid at arrival — and how many; No charge;
+ * where the queue's done patients stand with billing;
  * Billing's bills by their days and state, as `bill_settlement` works them
  * out; payments recorded today or on an earlier day, voided, refunded; who
  * owes; and the patients list's Owing tab and balance — within the
@@ -255,6 +256,31 @@ describe("No charge (plan §15.6; D319)", () => {
     await expect(
       markNoCharge(looker.tenant!, visitId, noChargeSchema.parse({ reason: "REVIEW", note: "" })),
     ).rejects.toMatchObject({ code: "AUTH_PERMISSION_DENIED" });
+  });
+});
+
+describe("The queue's Done (plan §11.4; D339)", () => {
+  it("says where each done patient's visit stands with billing, for whoever reads bills or visits", async () => {
+    const [nisha, tara] = await Promise.all([addPatient("Nisha Rao"), addPatient("Tara Iyer")]);
+    const [unbilled, billed] = await Promise.all([seen(nisha), seen(tara, arunDoctor)]);
+    await issueBill(desk.tenant!, aBill({ patientId: tara, visitId: billed.visitId }), randomUUID());
+    const statusOf = async (member: Member, appointmentId: string) =>
+      (await listQueue(member.tenant!, {})).find((appointment) => appointment.id === appointmentId)?.billingStatus;
+
+    // Reception, who reads no visit; and a nurse, who reads visits and no bill.
+    const nurse = await addMember(clinic.clinicId, {
+      permissions: ["patients.view", "appointments.view", "visits.view"],
+    });
+    expect(await statusOf(desk, unbilled.appointmentId)).toBe("TO_BILL");
+    expect(await statusOf(desk, billed.appointmentId)).toBe("BILLED");
+    expect(await statusOf(nurse, billed.appointmentId)).toBe("BILLED");
+    expect(await statusOf(nurse, unbilled.appointmentId)).toBe("TO_BILL");
+    // Marked No charge, it is settled.
+    await markNoCharge(desk.tenant!, unbilled.visitId, noChargeSchema.parse({ reason: "COURTESY", note: "" }));
+    expect(await statusOf(desk, unbilled.appointmentId)).toBe("NO_CHARGE");
+    // Whoever reads neither bills nor visits sees the patient done, and nothing of their billing.
+    const seenBy = (await listQueue(looker.tenant!, {})).find((appointment) => appointment.id === billed.appointmentId);
+    expect(seenBy).toMatchObject({ status: "COMPLETED", billingStatus: null });
   });
 });
 

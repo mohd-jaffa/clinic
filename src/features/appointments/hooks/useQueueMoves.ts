@@ -27,10 +27,16 @@ const { queue, appointment: words } = UI_TEXT;
 const listOf = (names: readonly string[]) =>
   new Intl.ListFormat("en-IN", { style: "long", type: "conjunction" }).format(names);
 
-/** Every read a queue move makes stale: the appointment's, the queue's, and the visit's, once it has one. */
+/**
+ * Every read a queue move makes stale: the appointment's, the queue's, the
+ * visit's, once it has one — and To bill with its count, which a patient
+ * done joins (D318, D337).
+ */
 const movedRoutes = (appointment: QueueParty) => [
   ...appointmentRoutes(appointment),
   ...(appointment.visitId ? [apiRoutes.visits.one(appointment.visitId)] : []),
+  apiRoutes.toBill.list,
+  apiRoutes.toBill.count,
 ];
 
 /**

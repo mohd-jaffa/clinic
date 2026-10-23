@@ -110,6 +110,20 @@ describe("VisitScreen (plan §12.2; D193 – D195)", () => {
     );
   });
 
+  it("offers No charge beside Bill now on a done visit waiting in To bill (D319)", () => {
+    auth.current = authStub({ role: "STAFF", permissions: [...DESK, "payments.create"] });
+    const { unmount } = draw();
+    expect(screen.queryByRole("button", { name: "Mark Asha Iyer’s visit No charge" })).not.toBeInTheDocument();
+    unmount();
+    read.current = {
+      ...read.current,
+      data: aVisit({ status: "COMPLETED", completedAt: "2026-10-13T05:20:00Z", billingStatus: "TO_BILL" }),
+    };
+    draw();
+    expect(screen.getByRole("link", { name: "Bill Asha Iyer’s visit" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Mark Asha Iyer’s visit No charge" })).toBeInTheDocument();
+  });
+
   it("says whose visit it is, with whom, where it stands and the patient's alerts, the way back to the queue", () => {
     draw();
     expect(screen.getByRole("heading", { level: 1, name: "Asha Iyer" })).toBeInTheDocument();

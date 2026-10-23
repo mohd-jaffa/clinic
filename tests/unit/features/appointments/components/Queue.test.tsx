@@ -7,7 +7,7 @@ import { aQueueAppointment } from "@tests/support/appointments";
 import { authStub } from "@tests/support/auth";
 import { Providers } from "@tests/support/providers";
 
-const { auth, adding, query, doctors, asked, sheet, client } = vi.hoisted(() => ({
+const { auth, adding, query, doctors, asked, sheet, client, counted, toBill } = vi.hoisted(() => ({
   client: { arrive: vi.fn(), remind: vi.fn(), sendIn: vi.fn(), done: vi.fn(), next: vi.fn() },
   auth: { current: {} as ReturnType<typeof authStub> },
   adding: { current: { open: false, show: vi.fn(), close: vi.fn() } },
@@ -23,6 +23,8 @@ const { auth, adding, query, doctors, asked, sheet, client } = vi.hoisted(() => 
   doctors: { current: [] as { id: string; name: string }[] | undefined },
   asked: vi.fn(),
   sheet: { doctorId: undefined as string | undefined },
+  counted: vi.fn(),
+  toBill: { count: 0, drawn: [] as { doctorId: string; total?: number }[] },
 }));
 vi.mock("@/features/auth/AuthProvider", () => ({ useAuth: () => auth.current }));
 vi.mock("@/features/appointments/api.client", () => ({ AppointmentsClient: client }));
@@ -38,6 +40,23 @@ vi.mock("@/features/appointments/components/WalkInSheet", () => ({
   WalkInSheet: ({ open, doctorId }: { open: boolean; doctorId: string }) => {
     sheet.doctorId = doctorId;
     return open ? <div role="dialog" aria-label="Add a walk-in" /> : null;
+  },
+}));
+vi.mock("@/features/billing/hooks/useToBillCount", () => ({
+  useToBillCount: (enabled: boolean, doctorId?: string) => {
+    counted(enabled, doctorId);
+    return { data: enabled ? { count: toBill.count } : undefined };
+  },
+}));
+// The To bill section is tested on its own: here, where it sits, and for whom.
+vi.mock("@/features/appointments/components/QueueToBill", () => ({
+  QueueToBill: (props: { doctorId: string; total?: number }) => {
+    toBill.drawn.push(props);
+    return (
+      <section id="to-bill" aria-label="To bill">
+        <h2>To bill</h2>
+      </section>
+    );
   },
 }));
 vi.mock("@/features/appointments/components/AppointmentPanel", () => ({
@@ -94,6 +113,8 @@ beforeEach(() => {
   ];
   query.current = { data: today, error: undefined, isLoading: false, isValidating: false, mutate: vi.fn() };
   sheet.doctorId = undefined;
+  toBill.count = 0;
+  toBill.drawn = [];
 });
 afterEach(() => vi.useRealTimers());
 
@@ -115,6 +136,54 @@ describe("Queue (plan §11.4; D168 – D175)", () => {
     expect(within(section(/^Done/)).getByRole("listitem")).toHaveTextContent("Farah Khan");
     expect(screen.getByRole("button", { name: "Done (1)" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Mark Kiran Das arrived" })).toBeInTheDocument();
+  });
+
+  it("for whoever reads bills: To bill after With doctor, the pin saying how many wait, Done once settled (D318, D337 – D340)", () => {
+    toBill.count = 3;
+    query.current.data = [
+      ...today,
+      aQueueAppointment({
+        id: "unbilled",
+        patientName: "Vikram Shah",
+        status: "COMPLETED",
+        token: 2,
+        completedAt: "2026-10-13T05:00:00Z",
+        billingStatus: "TO_BILL",
+      }),
+    ];
+    draw();
+    expect(counted).toHaveBeenLastCalledWith(true, undefined);
+    expect(toBill.drawn.at(-1)).toEqual({ doctorId: "", total: 3 });
+    const titles = screen.getAllByRole("heading", { level: 2 }).map((heading) => heading.textContent);
+    expect(titles.indexOf("To bill")).toBe(titles.findIndex((title) => title?.startsWith("With doctor")) + 1);
+    expect(titles.findIndex((title) => title?.startsWith("Still to come"))).toBe(titles.indexOf("To bill") + 1);
+    expect(screen.getByRole("link", { name: "3 to bill" })).toHaveAttribute("href", "#to-bill");
+    // Done once billed: Vikram waits in To bill.
+    expect(within(section(/^Done/)).getAllByRole("listitem")).toHaveLength(1);
+    expect(section(/^Done/)).not.toHaveTextContent("Vikram Shah");
+  });
+
+  it("counts and lists one doctor's To bill on their queue, and has no pin with none waiting", async () => {
+    draw();
+    expect(screen.queryByRole("link", { name: /to bill$/ })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("radio", { name: "Maya Rao" }));
+    expect(counted).toHaveBeenLastCalledWith(true, "d-1");
+    expect(toBill.drawn.at(-1)).toEqual({ doctorId: "d-1", total: 0 });
+  });
+
+  it("has no To bill, pin or count for whoever does not read bills, and lists every patient done (D339)", () => {
+    auth.current = authStub({ role: "STAFF", permissions: ["patients.view", "appointments.view"] });
+    toBill.count = 3;
+    query.current.data = [
+      ...today,
+      aQueueAppointment({ id: "unbilled", status: "COMPLETED", billingStatus: "TO_BILL" }),
+    ];
+    draw();
+    expect(counted).toHaveBeenLastCalledWith(false, undefined);
+    expect(toBill.drawn).toEqual([]);
+    expect(screen.queryByRole("heading", { name: "To bill" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /to bill$/ })).not.toBeInTheDocument();
+    expect(within(section(/^Done/)).getAllByRole("listitem")).toHaveLength(2);
   });
 
   it("says the room is free when no one is in, each section when it holds no one, and no Done to open", () => {

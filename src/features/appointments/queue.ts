@@ -8,14 +8,21 @@ export interface QueueSections {
   waiting: QueueAppointment[];
   /** Booked for today and not here yet, by time — those past their time too, until marked (D174). */
   stillToCome: QueueAppointment[];
-  /** Finished today, the latest first. */
+  /** Finished today, the latest first — once settled, beside To bill (D339). */
   done: QueueAppointment[];
 }
 
 const at = (instant: string | null) => (instant === null ? 0 : Date.parse(instant));
 
-/** Sorts today's queue into its sections, each in its own order. */
-export function queueSections(appointments: readonly QueueAppointment[]): QueueSections {
+/**
+ * Sorts today's queue into its sections, each in its own order. Beside the
+ * To bill section (`toBill`, D318), a patient done reaches Done once their
+ * visit is billed or marked No charge, so no one is listed twice (D339).
+ */
+export function queueSections(
+  appointments: readonly QueueAppointment[],
+  { toBill = false }: { toBill?: boolean } = {},
+): QueueSections {
   const of = (...statuses: QueueAppointment["status"][]) =>
     appointments.filter((appointment) => statuses.includes(appointment.status));
   return {
@@ -24,7 +31,9 @@ export function queueSections(appointments: readonly QueueAppointment[]): QueueS
       (a, b) => (a.token ?? Infinity) - (b.token ?? Infinity) || at(a.arrivedAt) - at(b.arrivedAt),
     ),
     stillToCome: of("SCHEDULED", "CONFIRMED").sort((a, b) => at(a.scheduledAt) - at(b.scheduledAt)),
-    done: of("COMPLETED").sort((a, b) => at(b.completedAt) - at(a.completedAt)),
+    done: of("COMPLETED")
+      .filter((appointment) => !toBill || appointment.billingStatus !== "TO_BILL")
+      .sort((a, b) => at(b.completedAt) - at(a.completedAt)),
   };
 }
 

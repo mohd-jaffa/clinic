@@ -21,6 +21,7 @@ import { useDone, useNextPatient, type QueueParty } from "@/features/appointment
 import { minutesSince } from "@/features/appointments/queue";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { NewBillLink } from "@/features/billing/components/NewBillLink";
+import { NoChargeButton } from "@/features/billing/components/NoChargeButton";
 import { AlertChips } from "@/features/patients/components/AlertChips";
 import { VisitAlerts } from "@/features/patients/components/PatientAlerts";
 import { describePatient } from "@/features/patients/describe";
@@ -163,13 +164,14 @@ function Records({ visit }: { visit: Visit }) {
           <DetailList details={detailsOf(visit)} />
         </div>
       </div>
-      {/* Bill now, at the foot of the visit (plan §12.2 item 7, D307). */}
+      {/* Bill now, at the foot of the visit (plan §12.2 item 7, D307) — and No charge, once done (D319). */}
       <div className="flex flex-wrap gap-2 empty:hidden">
         <NewBillLink
           target={{ visit: visit.id }}
           patient={{ name: visit.patient.name, archived: visit.patient.archived }}
           look="visit"
         />
+        <NoChargeButton visit={visit} />
       </div>
     </div>
   );

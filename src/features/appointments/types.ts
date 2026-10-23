@@ -1,4 +1,4 @@
-import type { AppointmentSource, AppointmentStatus } from "@/constants/statuses";
+import type { AppointmentSource, AppointmentStatus, BillingStatus } from "@/constants/statuses";
 
 /**
  * What a booking answers (plan §11.1, D150): the appointment, its patient —
@@ -127,6 +127,11 @@ export interface QueueAppointment extends CalendarAppointment {
   visitId: string | null;
   /** Their consultation fee collected at arrival (D306) — known only with `payments.view`. */
   feePaid: boolean;
+  /**
+   * Where their visit stands with billing once done (D339) — To bill, Billed
+   * or No charge — known only with `payments.view` or `visits.view`.
+   */
+  billingStatus: BillingStatus | null;
 }
 
 /**

@@ -54,6 +54,8 @@ type Member = Parameters<typeof hasAccess>[0];
 const HOME: NavItem = { id: "home", label: places.home, icon: House, href: HOME_ROUTE, access: ROUTE_ACCESS.member };
 /** Today's queue (plan §11.4). */
 export const QUEUE_ROUTE = "/queue";
+/** The queue's To bill section, which its pin jumps to (D340). */
+export const QUEUE_TO_BILL = "to-bill";
 /** Where a visit's screen was opened from, when not the queue: its back arrow returns there (D230). */
 export const VISIT_FROM = { param: "from", patient: "patient" } as const;
 /** A visit's screen (plan §12.2, D195) — opened from the patient's profile, it leads back there (D230). */
@@ -98,11 +100,12 @@ const FOLLOW_UPS: NavItem = {
 export const BILLING_ROUTE = "/billing";
 /**
  * Where a new bill's back arrow leads, when not to what it bills (D302):
- * Billing, which it was started from; or the patient's profile, for a visit
- * to bill offered there (D313) — a visit reception may not open.
+ * Billing, or the queue, whose To bill it was started from (D318); or the
+ * patient's profile, for a visit to bill offered there (D313) — a visit
+ * reception may not open.
  */
-export const BILL_FROM = { param: "from", billing: "billing", patient: "patient" } as const;
-export type BillFrom = (typeof BILL_FROM)["billing" | "patient"];
+export const BILL_FROM = { param: "from", billing: "billing", queue: "queue", patient: "patient" } as const;
+export type BillFrom = (typeof BILL_FROM)["billing" | "queue" | "patient"];
 /** What a new bill is for (plan §15.2): a visit, an arrival or a patient — or no one yet, to be searched (D313). */
 export type NewBillFor = { visit: string } | { appointment: string } | { patient: string };
 /** The query naming a void bill a new one issues again (D314). */

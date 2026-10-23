@@ -1,7 +1,7 @@
 import type { PostgrestError } from "@supabase/supabase-js";
 
 import { hasAccess } from "@/constants/permissions";
-import type { AppointmentStatus } from "@/constants/statuses";
+import type { AppointmentStatus, BillingStatus } from "@/constants/statuses";
 import { addPatient } from "@/features/patients/api";
 import type { PatientListItem } from "@/features/patients/types";
 import { pageWindow } from "@/lib/api/pagination";
@@ -457,8 +457,13 @@ export async function markReminded(tenant: Tenant, id: string, requestId?: strin
 /** What today's queue holds (plan §11.4): those still to come, arrived, with a doctor, and done — none cancelled. */
 const QUEUE_STATUSES: readonly AppointmentStatus[] = ["SCHEDULED", "CONFIRMED", "ARRIVED", "IN_PROGRESS", "COMPLETED"];
 
-/** An appointment in the queue: the calendar's, when it arrived, went in and was done, whether it stepped out or is urgent, and its visit. */
-const QUEUE_COLUMNS = `${CALENDAR_COLUMNS}, arrived_at, started_at, completed_at, stepped_out_at, urgent_at, ${VISIT}, ${FEE}`;
+/**
+ * An appointment in the queue: the calendar's, when it arrived, went in and
+ * was done, whether it stepped out or is urgent, its visit, its fee — and
+ * where its visit stands with billing (`billing_status`, 0031's computed
+ * column, D339), on the visits' unique appointment.
+ */
+const QUEUE_COLUMNS = `${CALENDAR_COLUMNS}, arrived_at, started_at, completed_at, stepped_out_at, urgent_at, ${VISIT}, ${FEE}, billing_status`;
 
 /**
  * Today's queue (plan §11.4; D168, D170): today's appointments still to come,
@@ -488,6 +493,7 @@ export async function listQueue(tenant: Tenant, { doctorId }: QueueQuery): Promi
       urgent_at: string | null;
       visit: VisitLink;
       fee: FeeLink;
+      billing_status: BillingStatus | null;
     })[]
   ).map((row) => ({
     ...toCalendarAppointment(row),
@@ -498,6 +504,7 @@ export async function listQueue(tenant: Tenant, { doctorId }: QueueQuery): Promi
     urgentAt: row.urgent_at,
     visitId: visitIdOf(row.visit),
     feePaid: feePaidOf(row.fee),
+    billingStatus: row.billing_status,
   }));
 }
 

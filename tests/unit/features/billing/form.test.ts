@@ -196,9 +196,10 @@ describe("toBillInput (D304, D308)", () => {
   });
 });
 
-describe("billFromOf, billBackOf (D302, D313)", () => {
+describe("billFromOf, billBackOf (D302, D313, D318)", () => {
   it("reads where the address says it was started from, when it is one it knows", () => {
     expect(billFromOf("billing")).toBe("billing");
+    expect(billFromOf("queue")).toBe("queue");
     expect(billFromOf("patient")).toBe("patient");
     expect(billFromOf("elsewhere")).toBeUndefined();
     expect(billFromOf(null)).toBeUndefined();
@@ -210,6 +211,10 @@ describe("billFromOf, billBackOf (D302, D313)", () => {
     expect(billBackOf({ visit: "v-1" }, undefined)).toBe("/visits/v-1");
     expect(billBackOf({ patient: "p-1" }, undefined)).toBe("/patients/p-1");
     expect(billBackOf({ appointment: "a-1" }, undefined)).toBe("/queue");
+  });
+
+  it("leads a visit billed from the queue's To bill back to the queue", () => {
+    expect(billBackOf({ visit: "v-1" }, "queue")).toBe("/queue");
   });
 
   it("leads a visit to bill offered on a profile back to the profile, once the patient is known", () => {

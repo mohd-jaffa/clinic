@@ -36,10 +36,13 @@ import { useSeeded } from "./useSeeded";
  * `post`: a list searched for a patient (D98) — its key is held in memory
  * only, and each page is asked as a POST with the key's query as its body,
  * so what was typed never reaches an address.
+ *
+ * `refreshInterval`: a list kept fresh beside a screen that is (the queue's
+ * To bill, D318), read again that often — never while the tab is hidden.
  */
 export function useApiPages<T, P extends Page<T> = Page<T>>(
   key: string | null,
-  { post = false, list }: { post?: boolean; list?: string } = {},
+  { post = false, list, refreshInterval }: { post?: boolean; list?: string; refreshInterval?: number } = {},
 ) {
   const seeded = useSeeded(key === null ? null : pageKey(key));
   const { data, error, isLoading, isValidating, mutate, size, setSize } = useSWRInfinite<P>(
@@ -49,7 +52,7 @@ export function useApiPages<T, P extends Page<T> = Page<T>>(
       return previous?.nextCursor ? withQuery(key, { cursor: previous.nextCursor }) : null;
     },
     post ? posted : fetcher,
-    { revalidateAll: true, ...(seeded && { revalidateOnMount: false }) },
+    { revalidateAll: true, ...(seeded && { revalidateOnMount: false }), ...(refreshInterval && { refreshInterval }) },
   );
 
   // The pages last read, and the list they are: what a search in the same

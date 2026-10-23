@@ -232,19 +232,21 @@ export function toBillInput(form: BillForm): BillInput {
   };
 }
 
-const BILL_FROMS: readonly BillFrom[] = [BILL_FROM.billing, BILL_FROM.patient];
+const BILL_FROMS: readonly BillFrom[] = [BILL_FROM.billing, BILL_FROM.queue, BILL_FROM.patient];
 
 /** Where the address says a new bill was started from, when it says so. */
 export const billFromOf = (value: string | null) => BILL_FROMS.find((from) => from === value);
 
 /**
- * Where a new bill leads back to, and goes once issued (D302): Billing, when
- * started there; the patient's profile, for the visit to bill it offered
- * (D313) — once the patient is known; else what it bills — the visit, the
- * patient's profile, or the queue for an arrival.
+ * Where a new bill leads back to, and goes once issued (D302): Billing, or
+ * the queue, when started from its To bill (D318); the patient's profile,
+ * for the visit to bill it offered (D313) — once the patient is known; else
+ * what it bills — the visit, the patient's profile, or the queue for an
+ * arrival.
  */
 export function billBackOf(target: NewBillFor | null, from: BillFrom | undefined, patientId?: string): string {
   if (from === BILL_FROM.patient && patientId) return patientRoute(patientId);
+  if (from === BILL_FROM.queue) return QUEUE_ROUTE;
   if (from === BILL_FROM.billing || target === null) return BILLING_ROUTE;
   if ("visit" in target) return visitRoute(target.visit);
   if ("patient" in target) return patientRoute(target.patient);

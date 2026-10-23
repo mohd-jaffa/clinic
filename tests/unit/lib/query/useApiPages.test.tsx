@@ -85,6 +85,15 @@ describe("useApiPages", () => {
     expect(result.current.hasMore).toBe(false);
   });
 
+  it("reads the list again as often as it is told to, for a list kept fresh beside a screen (D318)", async () => {
+    const { result } = renderHook(
+      () => useApiPages<string>("/api/appointments?status=PENDING&cursor=2", { refreshInterval: 20 }),
+      { wrapper },
+    );
+    await waitFor(() => expect(result.current.data).toEqual(["c"]));
+    await waitFor(() => expect(fetcher.mock.calls.length).toBeGreaterThanOrEqual(2));
+  });
+
   describe("while a new key's rows come (D191)", () => {
     /** Answers held until let go, so a test can look at the list while they come. */
     function held() {

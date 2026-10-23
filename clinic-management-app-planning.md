@@ -423,6 +423,10 @@ earlier lines are never rewritten.
 | D334 | **Record payment's "Paid on" is a day, today by default** (the user): a day field, never after today; today's payment is stamped when recorded, an earlier day's at noon of that day in the clinic's timezone, so it counts on that day. | 2026-10-19 |
 | D335 | **Billing's Bills and Payments open on Today** (the user): the chips then pick 7 days, This month or From – To (D320); each tab keeps its days while another is looked at. | 2026-10-19 |
 | D336 | **A payment is voided from its sheet** (the user): a payment's row — in Billing's Payments, and in the history — opens its sheet: how much, how, when, its reference and note, who took it; **Void payment** for `payments.edit` asks a reason, then the coral card. | 2026-10-19 |
+| D337 | **The Queue item counts To bill, and the queue's land carries the pin** (the user): for `payments.view`, a small coral count of the visits waiting in To bill on the Queue item — bottom bar, rail and sidebar — read beside the screen and again every 15 s, as the queue; the queue's land pins "3 to bill" on its coastline. | 2026-10-19 |
+| D338 | **On a desktop the queue is four columns, the last stacked** (the user): Waiting · With doctor · To bill · Still to come, with Done under Still to come — D318's order, each column wide enough for its buttons. | 2026-10-19 |
+| D339 | **A patient done waits in To bill, then reaches Done** (the user): beside To bill, the queue's Done lists those billed or marked No charge, so no one is listed twice; whoever does not read bills sees no To bill, and Done lists everyone finished. | 2026-10-24 |
+| D340 | **The queue's pin jumps to its To bill** (the user): tapping "3 to bill" scrolls to the queue's own To bill section — below Waiting on a phone — counting the doctor whose queue is shown, or every doctor's. | 2026-10-24 |
 
 ## 3. Users and roles
 
@@ -1169,6 +1173,17 @@ card (D173). **Send in**, **Done**, **Back to waiting**, **Stepped out** and
 **Next patient** come with the visit (R6.1, D192 – D198), **Urgent** after it
 (R6.9, D201); To bill and the fee at arrival with billing (R8.1, R8.6).
 
+As built (R8.6): for `payments.view`, **To bill** follows With doctor —
+Waiting, With doctor, To bill, Still to come, Done (D318) — on a phone
+below Waiting, the lake above; on a desktop four columns, Still to come with
+Done under it (D338). It lists the shown doctor's visits waiting to be
+billed, or every doctor's, from any day, oldest first, a page at a time,
+read again with the queue; each row's **Bill** opens its sheet, whose new
+bill leads back to the queue. A patient done reaches Done once billed or
+marked No charge (D339; `billing_status`, 0031's computed column, read with
+each row). The land pins "3 to bill" on its coastline, jumping to To bill
+(D340), and the Queue item counts the same (D337).
+
 Refreshes every `QUEUE_REFRESH_MS` (15 s) and on focus; realtime is later
 (D34).
 
@@ -1575,7 +1590,9 @@ the day when not today and what was done — the consultation unless paid at
 arrival (**Fee paid**), and the treatments worked on. Its one **Bill** opens
 a small sheet with **Bill** (the new bill, leading back to Billing) and **No
 charge** — Review, Courtesy, or Other with a note (D319). `to_bill_visits`
-(0031) reads it for `payments.view`, reception included.
+(0031) reads it for `payments.view`, reception included. The queue's To bill
+is the same rows and sheet, its bill leading back to the queue (§11.4); a
+done visit waiting in To bill has **No charge** beside **Bill now** (D319).
 
 ## 16. Expenses
 
@@ -2329,7 +2346,9 @@ take an `Idempotency-Key` header.
 Items are filtered by permission (`NAVIGATION` in `src/constants/navigation.ts`).
 
 - **Phone — bottom bar (5):** Home · Queue · **＋** · Patients · More.
-  The Queue tab carries the To-bill count for those who bill.
+  The Queue tab carries the To-bill count for those who bill — as built
+  (R8.6, D337), a coral count on its icon in the bar and the rail, at the
+  end of its capsule in the sidebar, read beside the screen every 15 s.
   **＋ (quick add)** opens the Quick Actions lobe: Walk-in, Appointment,
   Patient, Payment, Expense — each only with its permission; each goes to its
   screen with its form open (D67). No top bar (D68). **More:** who is signed

@@ -718,6 +718,7 @@ describe("listQueue (plan §11.4)", () => {
       urgent_at: "2026-10-13T04:45:00+00:00",
       visit: [],
       fee: [{ status: "ISSUED" }],
+      billing_status: null,
     };
     const { tenant, queries, argsOf } = tenantWith({ answer: () => ({ data: [row] }) });
     expect(await listQueue(tenant, {})).toEqual([
@@ -732,6 +733,7 @@ describe("listQueue (plan §11.4)", () => {
         urgentAt: "2026-10-13T04:45:00+00:00",
         visitId: null,
         feePaid: true,
+        billingStatus: null,
       },
     ]);
     expect(queries).toHaveLength(1);
@@ -741,6 +743,25 @@ describe("listQueue (plan §11.4)", () => {
       ["status", ["SCHEDULED", "CONFIRMED", "ARRIVED", "IN_PROGRESS", "COMPLETED"]],
     ]);
     expect(argsOf(queries[0], "order")).toEqual([["scheduled_at"]]);
+  });
+
+  it("says where a done patient's visit stands with billing (D339)", async () => {
+    const row = {
+      ...calendarRow,
+      status: "COMPLETED",
+      arrived_at: null,
+      started_at: null,
+      completed_at: "2026-10-13T05:20:00+00:00",
+      stepped_out_at: null,
+      urgent_at: null,
+      visit: [{ id: "v-1" }],
+      fee: [],
+      billing_status: "TO_BILL",
+    };
+    const { tenant, queries, argsOf } = tenantWith({ answer: () => ({ data: [row] }) });
+    const [done] = await listQueue(tenant, {});
+    expect(done).toMatchObject({ visitId: "v-1", billingStatus: "TO_BILL" });
+    expect(argsOf(queries[0], "select")[0][0]).toMatch(/, billing_status$/);
   });
 
   it("keeps to one doctor when asked, and says why it could not read", async () => {

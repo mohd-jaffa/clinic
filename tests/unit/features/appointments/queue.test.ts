@@ -40,6 +40,18 @@ describe("queueSections (plan §11.4, D168)", () => {
     ]);
     expect(waiting.map(({ id }) => id)).toEqual(["unknown", "later"]);
   });
+
+  it("beside To bill, keeps Done to those settled — billed, No charge, or not known — so no one is listed twice (D339)", () => {
+    const appointments = [
+      aQueueAppointment({ id: "to-bill", status: "COMPLETED", billingStatus: "TO_BILL" }),
+      aQueueAppointment({ id: "billed", status: "COMPLETED", billingStatus: "BILLED" }),
+      aQueueAppointment({ id: "free", status: "COMPLETED", billingStatus: "NO_CHARGE" }),
+      aQueueAppointment({ id: "unknown", status: "COMPLETED", billingStatus: null }),
+    ];
+    const ids = (list: readonly { id: string }[]) => list.map(({ id }) => id).sort();
+    expect(ids(queueSections(appointments, { toBill: true }).done)).toEqual(["billed", "free", "unknown"]);
+    expect(ids(queueSections(appointments).done)).toEqual(["billed", "free", "to-bill", "unknown"]);
+  });
 });
 
 describe("minutesSince and lateBy (D174)", () => {

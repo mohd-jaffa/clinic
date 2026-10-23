@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCheck, Footprints, Stethoscope } from "lucide-react";
+import { CheckCheck, Footprints, ReceiptIndianRupee, Stethoscope } from "lucide-react";
 import { useState } from "react";
 
 import { Button, LinkButton } from "@/components/ui/button";
@@ -10,13 +10,15 @@ import { Disclosure } from "@/components/ui/disclosure";
 import { Lake } from "@/components/ui/lake";
 import { LoadFailed } from "@/components/ui/list-screen";
 import { PageHeader } from "@/components/ui/page-header";
+import { Pin } from "@/components/ui/pin";
 import { RowList } from "@/components/ui/row";
 import { SkeletonRows } from "@/components/ui/skeleton";
 import { QUEUE_REFRESH_MS } from "@/constants/limits";
 import { UI_TEXT } from "@/constants/messages";
-import { ADD_FORMS, visitRoute } from "@/constants/navigation";
+import { ADD_FORMS, QUEUE_TO_BILL, visitRoute } from "@/constants/navigation";
 import { hasAccess } from "@/constants/permissions";
 import { useAuth } from "@/features/auth/AuthProvider";
+import { useToBillCount } from "@/features/billing/hooks/useToBillCount";
 import { ReadOnlyNote } from "@/features/subscription/components/ReadOnlyNote";
 import { useReadOnly } from "@/features/subscription/hooks/useReadOnly";
 import { useDoctors } from "@/features/team/hooks/useDoctors";
@@ -41,6 +43,7 @@ import {
   WaitingRow,
   WithDoctorRow,
 } from "./QueueRows";
+import { QueueToBill } from "./QueueToBill";
 import { UrgentTag } from "./UrgentTag";
 import { WalkInSheet } from "./WalkInSheet";
 
@@ -62,8 +65,13 @@ const { queue, appointment: words } = UI_TEXT;
  * asking first while the doctor has someone in; **Done** and **Next patient**
  * beside each patient in — in the lake, and the With doctor column — and
  * **Next patient** alone on one doctor's queue with the room free. A patient
- * in opens their visit for whoever reads visits. To bill comes with billing
- * (R8.6).
+ * in opens their visit for whoever reads visits.
+ *
+ * Checkout (R8.6; D318, D337 – D340): for whoever reads bills, **To bill**
+ * follows With doctor — the visits waiting to be billed, from any day — and
+ * a patient done reaches Done once billed or marked No charge; the land's
+ * coral pin says how many wait and jumps to it. On a desktop the sections
+ * sit in four columns, Still to come with Done under it.
  */
 export function Queue() {
   const { membership } = useAuth();
@@ -74,7 +82,9 @@ export function Queue() {
   const query = useQueue(doctorId);
   const now = useNow(QUEUE_REFRESH_MS);
   const opened = useOpenedAppointment();
-  const { withDoctor, waiting, stillToCome, done } = queueSections(query.data ?? []);
+  const bills = membership !== null && hasAccess(membership, "payments.view");
+  const toBill = useToBillCount(bills, doctorId || undefined).data?.count ?? 0;
+  const { withDoctor, waiting, stillToCome, done } = queueSections(query.data ?? [], { toBill: bills });
 
   const canAdd = membership !== null && hasAccess(membership, "appointments.create");
   const adds = canAdd && !readOnly;
@@ -88,6 +98,45 @@ export function Queue() {
   const shownDoctor = doctors.find((doctor) => doctor.id === doctorId);
   const callsNext = moves && shownDoctor !== undefined && withDoctor.length === 0 && waiting.length > 0;
   const nextFree = callsNext && <NextPatientButton doctorId={shownDoctor.id} doctorName={shownDoctor.name} />;
+
+  const later = (
+    <>
+      <QueueSection title={queue.stillToCome} count={stillToCome.length} empty={queue.noneToCome}>
+        {stillToCome.map((appointment) => (
+          <ComingRow
+            key={appointment.id}
+            appointment={appointment}
+            now={now}
+            showDoctor={showDoctor}
+            canRemind={edits}
+            canArrive={arrives}
+            onOpen={open}
+          />
+        ))}
+      </QueueSection>
+      <QueueSection className="hidden md:block" title={queue.done} count={done.length} empty={queue.noneDone}>
+        {done.map((appointment) => (
+          <DoneRow key={appointment.id} appointment={appointment} showDoctor={showDoctor} onOpen={open} />
+        ))}
+      </QueueSection>
+      {done.length > 0 && (
+        <div className="md:hidden">
+          <Disclosure
+            label={queue.done}
+            showLabel={queue.doneCount(done.length)}
+            hideLabel={queue.hideDone}
+            icon={CheckCheck}
+          >
+            <RowList label={queue.done}>
+              {done.map((appointment) => (
+                <DoneRow key={appointment.id} appointment={appointment} showDoctor={showDoctor} onOpen={open} />
+              ))}
+            </RowList>
+          </Disclosure>
+        </div>
+      )}
+    </>
+  );
 
   let body;
   if (query.data === undefined && query.error != null) {
@@ -125,47 +174,22 @@ export function Queue() {
             <WithDoctorRow key={appointment.id} appointment={appointment} now={now} canMove={moves} onOpen={open} />
           ))}
         </QueueSection>
-        <QueueSection title={queue.stillToCome} count={stillToCome.length} empty={queue.noneToCome}>
-          {stillToCome.map((appointment) => (
-            <ComingRow
-              key={appointment.id}
-              appointment={appointment}
-              now={now}
-              showDoctor={showDoctor}
-              canRemind={edits}
-              canArrive={arrives}
-              onOpen={open}
-            />
-          ))}
-        </QueueSection>
-        <QueueSection className="hidden md:block" title={queue.done} count={done.length} empty={queue.noneDone}>
-          {done.map((appointment) => (
-            <DoneRow key={appointment.id} appointment={appointment} showDoctor={showDoctor} onOpen={open} />
-          ))}
-        </QueueSection>
-        {done.length > 0 && (
-          <div className="md:hidden">
-            <Disclosure
-              label={queue.done}
-              showLabel={queue.doneCount(done.length)}
-              hideLabel={queue.hideDone}
-              icon={CheckCheck}
-            >
-              <RowList label={queue.done}>
-                {done.map((appointment) => (
-                  <DoneRow key={appointment.id} appointment={appointment} showDoctor={showDoctor} onOpen={open} />
-                ))}
-              </RowList>
-            </Disclosure>
-          </div>
-        )}
+        {bills && <QueueToBill doctorId={doctorId} total={toBill} />}
+        {/* On a desktop, beside To bill, Still to come with Done under it (D338). */}
+        {bills ? <div className="grid content-start gap-6">{later}</div> : later}
       </div>
     );
   }
 
   return (
     <>
-      <CoastHeader>
+      <CoastHeader
+        pin={
+          toBill > 0 && (
+            <Pin label={UI_TEXT.billing.toBillCount(toBill)} icon={ReceiptIndianRupee} href={`#${QUEUE_TO_BILL}`} />
+          )
+        }
+      >
         <div className="grid gap-4 pb-6">
           <PageHeader title={UI_TEXT.nav.places.queue} subtitle={formatLongDate(todayKey())} />
           {doctors.length > 1 && (

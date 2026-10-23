@@ -305,6 +305,8 @@ export const UI_TEXT = {
     more: "More",
     account: (name: string) => `Account: ${name}`,
     myAccount: "My account",
+    /** A place with how many wait there, read whole (D337): "Queue, 3 to bill". */
+    counted: (place: string, waiting: string) => `${place}, ${waiting}`,
     /** Under a person's name: where they work, and as what. */
     membership: (clinic: string, role: string) => `${clinic} · ${role}`,
     /** Every place in the app, by its nav id. */
@@ -693,6 +695,9 @@ export const UI_TEXT = {
     noneWithDoctor: "No one is with the doctor",
     noneToCome: "No one else is booked today",
     noneDone: "No one is done yet",
+    /** The queue's To bill (D318): those done, from any day, waiting to be billed. */
+    toBill: "To bill",
+    noneToBill: "No one is waiting to be billed",
     arrived: "Arrived",
     markArrived: (patient: string) => `Mark ${patient} arrived`,
     /** What the card says as a patient joins the queue (D173): the number to tell them. */
@@ -1131,6 +1136,8 @@ export const UI_TEXT = {
     tabsLabel: "Billing views",
     recordPayment: "Record payment",
     /** To bill (plan §15.6; D318, D319). */
+    /** How many visits wait in To bill (D337): the queue's pin and the Queue item's count. */
+    toBillCount: (count: number) => `${count} to bill`,
     toBillEmpty: "Nothing to bill",
     toBillEmptyHint: "Finished visits wait here until they’re billed or marked No charge.",
     consultation: "Consultation",

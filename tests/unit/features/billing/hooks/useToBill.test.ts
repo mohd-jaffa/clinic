@@ -13,4 +13,11 @@ describe("useToBill (plan §15.6; D318)", () => {
     renderHook(() => useToBill("d-1"));
     expect(useApiPages).toHaveBeenLastCalledWith("/api/to-bill?doctorId=d-1", { list: "d-1" });
   });
+
+  it("on the queue, reads them again as often as the queue — and nothing for whoever does not read bills", () => {
+    renderHook(() => useToBill("d-1", { beside: true }));
+    expect(useApiPages).toHaveBeenLastCalledWith("/api/to-bill?doctorId=d-1", { list: "d-1", refreshInterval: 15_000 });
+    renderHook(() => useToBill(undefined, { enabled: false, beside: true }));
+    expect(useApiPages).toHaveBeenLastCalledWith(null, { list: "", refreshInterval: 15_000 });
+  });
 });

@@ -197,6 +197,14 @@ test("the front desk books and arrives patients, the doctor sees them with an as
     .eq("patient.full_name", "Kiran Das")
     .single();
   expect(kiransVisit).toMatchObject({ status: "COMPLETED", billing_status: "TO_BILL", recorded: false });
+  // He waits in the queue's To bill, with Bill (D318).
+  await expect(
+    desk
+      .getByRole("list", { name: queue.toBill })
+      .getByRole("listitem")
+      .filter({ hasText: "Kiran Das" })
+      .getByRole("button", { name: UI_TEXT.billing.checkOut("Kiran Das") }),
+  ).toBeVisible();
 
   // The doctor presses Next patient: Anita, #2, goes in, and the doctor opens her visit.
   await rahul.goto("/queue");

@@ -4394,3 +4394,66 @@ the user first: D267 – D271.
 
 ### Blockers
 - None.
+
+## 2026-10-24 — R8.6 (2 of 3): the queue's To bill, the Queue item's count, No charge on the visit
+
+### Added
+- **The queue's To bill** (`features/appointments/components/QueueToBill.tsx`,
+  plan §11.4, §15.6; D318, D338 – D340): for whoever reads bills, after With
+  doctor — Waiting, With doctor, To bill, Still to come, Done; on a phone
+  below Waiting, on a desktop four columns with Done under Still to come.
+  The shown doctor's visits waiting to be billed, or every doctor's, from
+  any day, oldest first, a page at a time, read again with the queue every
+  15 s; each row's **Bill** opens the To-bill sheet, whose new bill leads
+  back to the queue (`BILL_FROM.queue`). The land pins a coral "3 to bill"
+  on its coastline that jumps to it (D340) — the `Pin`'s first use.
+- **The Queue item's count** (`AppShell`, plan §31.1; D337): for
+  `payments.view`, a small coral count of the visits waiting in To bill on
+  the Queue item — on its icon in the bar and the rail, at the end of its
+  capsule in the sidebar, "99+" past ninety-nine — named with it ("Queue,
+  3 to bill"), read beside the screen and again every 15 s.
+- **No charge on the visit** (`NoChargeButton`, D319): a done visit waiting
+  in To bill has **No charge** beside **Bill now**, opening the same reason
+  sheet; once marked the visit says No charge.
+
+### Changed
+- **The queue's Done keeps to the settled** (D339): beside To bill, a
+  patient done reaches Done once billed or marked No charge, so no one is
+  listed twice — from `billing_status`, 0031's computed column, now read
+  with each queue row (`QueueAppointment.billingStatus`). Whoever does not
+  read bills sees no To bill, and Done lists everyone finished, as before.
+- `useApiPages` takes a `refreshInterval`, for a list kept fresh beside a
+  screen; `useToBill` uses it on the queue, and asks nothing of whoever does
+  not read bills.
+- A queue move (Send in, Done, Next patient, Back to waiting) reads To bill
+  and its count again.
+- `QueueSection` takes an `id` (what a pin jumps to), a `state` (loading or
+  failed, in place of its rows) and a `footer` (Show more).
+- Plan: D337 – D340 recorded; §11.4, §15.6 and §31.1 as built. `DESIGN.md`:
+  the queue's To bill and pin, the place count, the visit's No charge.
+
+### Speed (plan §37)
+- **Round trips:** the queue still waits on 2 — the session, then the
+  queue, the doctors, the types, the clinic and, for whoever reads bills,
+  To bill's first page and its count, at once. The Queue item's count is
+  read beside the screen (1, waited on by nothing; on the queue of every
+  doctor it is the screen's own read). No charge from the visit waits on
+  2: the function, then the audit row.
+- **Indexes:** none new. To bill and its count are 0031's partial index;
+  each queue row's `billing_status` is one look-up on the visits' unique
+  appointment.
+
+### Validation
+- Typecheck, lint, format check passed.
+- Unit and integration tests passed (3,802), coverage 100%.
+- E2E passed (phone, desktop; 150 passed, 8 skipped by design):
+  `billing.spec.ts`'s new journey — the count
+  and the pin, To bill on the queue, a bill back to the queue, Done once
+  billed, No charge on the visit; `front-desk-journey.spec.ts` finds Kiran
+  in the queue's To bill.
+- `tests/db/integration/checkout.test.ts`: the queue's done patients and
+  where they stand with billing — for reception, a nurse who reads visits
+  and no bill, and as nothing for whoever reads neither.
+
+### Blockers
+- None.

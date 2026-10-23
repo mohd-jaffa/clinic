@@ -53,6 +53,7 @@ export function aQueueAppointment(overrides: Partial<QueueAppointment> = {}): Qu
     urgentAt: null,
     visitId: null,
     feePaid: false,
+    billingStatus: null,
     ...overrides,
   };
 }

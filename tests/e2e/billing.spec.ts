@@ -18,12 +18,16 @@ import { addMember, admin, registerClinic, removeAll } from "@tests/support/inte
  * back to Billing, where Bills shows it Paid today. Then a payment from the
  * ＋: Anita searched for, the amount filled with what she owes, part paid by
  * UPI; Outstanding offers her dues reminder on WhatsApp, the patients list's
- * Owing tab her chip, and the owner voids the payment from its sheet. Each
- * screen checked by axe, nothing wider than the screen.
+ * Owing tab her chip, and the owner voids the payment from its sheet. And
+ * the queue's checkout (D318, D337 – D340): the Queue item and the land's
+ * pin say how many wait; the pin jumps to To bill; Kiran billed from there
+ * comes back to the queue and reaches Done; Anita's visit is marked No
+ * charge by the owner on the visit itself (D319). Each screen checked by
+ * axe, nothing wider than the screen.
  */
 test.afterAll(removeAll);
 
-const { billing: words, payment, quickActions } = UI_TEXT;
+const { billing: words, payment, quickActions, queue, nav } = UI_TEXT;
 /** Reception's preset (plan §8.3): bills, and no visits. */
 const DESK: Permission[] = [
   "patients.view",
@@ -231,5 +235,64 @@ test("a payment from the ＋, Outstanding's reminder, the Owing tab, and the own
     .click();
   await expect(notice(ownerPage, payment.voided)).toContainText(payment.balanceNow(words.due("₹800")));
   await expect(tabList(ownerPage, "Payments").getByText("Void", { exact: true })).toBeVisible();
+  await owner.close();
+});
+
+test("the queue's To bill: the count and the pin, a bill back to the queue, Done; No charge on the visit", async ({
+  page,
+  browser,
+}) => {
+  const { clinic, desk, anita } = await aClinic();
+  await signIn(page, desk.email, desk.password);
+
+  // The Queue item counts the two waiting (D337); the land's pin too, and jumps to To bill (D340).
+  await page.goto("/queue");
+  await expect(page.getByRole("link", { name: nav.counted(nav.places.queue, words.toBillCount(2)) })).toBeVisible();
+  const pin = page.getByRole("link", { name: words.toBillCount(2), exact: true });
+  await pin.click();
+  await expect(page).toHaveURL(/\/queue#to-bill$/);
+  const toBill = page.getByRole("list", { name: queue.toBill });
+  await expect(toBill).toBeInViewport();
+  await expect(toBill.getByRole("listitem")).toHaveCount(2);
+  await fitsTheScreen(page);
+  await expectAccessible(page);
+
+  // Kiran billed from the queue, and back to it with the card (D318).
+  await page.getByRole("button", { name: words.checkOut("Kiran Das") }).click();
+  await page
+    .getByRole("dialog", { name: words.visitOf("Kiran Das") })
+    .getByRole("link", { name: words.billNowOf("Kiran Das") })
+    .click();
+  await expect(page).toHaveURL(/\/billing\/new\?visit=[0-9a-f-]+&from=queue$/);
+  await page.getByRole("button", { name: words.issue }).click();
+  await expect(page).toHaveURL(/\/queue$/);
+  const card = page.getByRole("dialog", { name: /^Bill \d{4}-\d{2}\/0001 issued$/ });
+  await card.getByRole("button", { name: UI_TEXT.actions.close }).click();
+
+  // One waits now; Kiran is Done, once billed (D339).
+  await expect(toBill.getByRole("listitem")).toHaveCount(1);
+  await expect(toBill).not.toContainText("Kiran Das");
+  await expect(page.getByRole("link", { name: words.toBillCount(1), exact: true })).toBeVisible();
+  if (page.viewportSize()!.width < 768) await page.getByRole("button", { name: queue.doneCount(1) }).click();
+  await expect(page.getByRole("list", { name: queue.done })).toContainText("Kiran Das");
+  await fitsTheScreen(page);
+  await expectAccessible(page);
+
+  // Anita's visit, marked No charge by the owner on the visit itself (D319).
+  const owner = await browser.newContext({ viewport: page.viewportSize()! });
+  const ownerPage = await owner.newPage();
+  await signIn(ownerPage, clinic.owner.email, clinic.owner.password);
+  await ownerPage.goto(`/visits/${anita.visitId}`);
+  await expect(ownerPage.getByRole("link", { name: words.billNowOf("Anita Rao") })).toBeVisible();
+  await ownerPage.getByRole("button", { name: words.noChargeOf("Anita Rao") }).click();
+  const reason = ownerPage.getByRole("dialog", { name: words.noCharge });
+  await reason.getByRole("radio", { name: "Review" }).click();
+  await expectAccessible(ownerPage);
+  await reason.getByRole("button", { name: words.markNoCharge }).click();
+  await expect(notice(ownerPage, words.noCharged("Anita Rao"))).toBeVisible();
+  await expect(ownerPage.getByRole("button", { name: words.noChargeOf("Anita Rao") })).toBeHidden();
+  await expect(ownerPage.getByText("No charge", { exact: true })).toBeVisible();
+  await expect(ownerPage.getByRole("link", { name: nav.places.queue, exact: true })).toBeVisible();
+  await expectAccessible(ownerPage);
   await owner.close();
 });

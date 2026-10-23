@@ -3,6 +3,7 @@
 import { Fragment, useId, type ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
+import { cn } from "@/components/ui/cn";
 import { Row, RowList, RowToken } from "@/components/ui/row";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { UI_TEXT } from "@/constants/messages";
@@ -61,35 +62,55 @@ const doctorOf = (appointment: QueueAppointment, shown: boolean) =>
 /**
  * One of the queue's sections (plan §11.4, D168): its title with how many it
  * holds, then its rows — or a quiet line when it holds none, and what may be
- * done about it (`action`: Next patient, with the room free).
+ * done about it (`action`: Next patient, with the room free). A section read
+ * apart from the queue (To bill, D318) shows its loading or failure in
+ * place of its rows (`state`), and its Show more under them (`footer`); `id`
+ * is what a pin jumps to (D340).
  */
 export function QueueSection({
+  id,
   title,
   count,
   empty,
   action,
+  state,
+  footer,
   className,
   children,
 }: {
+  id?: string;
   title: string;
   count: number;
   empty: string;
   action?: ReactNode;
+  state?: ReactNode;
+  footer?: ReactNode;
   className?: string;
   children: ReactNode;
 }) {
   const headingId = useId();
-  return (
-    <section aria-labelledby={headingId} className={className}>
-      <SectionHeading id={headingId} title={title} count={count} />
-      {count === 0 ? (
-        <div className="grid justify-items-start gap-3">
-          <p className="text-small text-muted">{empty}</p>
-          {action}
-        </div>
-      ) : (
+  let body;
+  if (state) {
+    body = state;
+  } else if (count === 0) {
+    body = (
+      <div className="grid justify-items-start gap-3">
+        <p className="text-small text-muted">{empty}</p>
+        {action}
+      </div>
+    );
+  } else {
+    body = (
+      <>
         <RowList label={title}>{children}</RowList>
-      )}
+        {footer}
+      </>
+    );
+  }
+  return (
+    <section id={id} aria-labelledby={headingId} className={cn("scroll-mt-4", className)}>
+      <SectionHeading id={headingId} title={title} count={state ? undefined : count} />
+      {body}
     </section>
   );
 }

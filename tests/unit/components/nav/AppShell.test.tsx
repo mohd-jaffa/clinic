@@ -6,11 +6,18 @@ import { settleNavigation, SLOW_MS, startNavigation } from "@/lib/navigation/pen
 import { aSession, authStub } from "@tests/support/auth";
 import { Providers } from "@tests/support/providers";
 
-const { auth, place } = vi.hoisted(() => ({
+const { auth, place, toBill } = vi.hoisted(() => ({
   auth: { current: {} as ReturnType<typeof authStub> },
   place: { pathname: "/home" },
+  toBill: { count: 0, asked: [] as boolean[] },
 }));
 vi.mock("@/features/auth/AuthProvider", () => ({ useAuth: () => auth.current }));
+vi.mock("@/features/billing/hooks/useToBillCount", () => ({
+  useToBillCount: (enabled: boolean) => {
+    toBill.asked.push(enabled);
+    return { data: enabled ? { count: toBill.count } : undefined };
+  },
+}));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: vi.fn(), push: vi.fn(), prefetch: vi.fn() }),
   usePathname: () => place.pathname,
@@ -21,6 +28,8 @@ const { AppShell } = await import("@/components/nav/AppShell");
 beforeEach(() => {
   auth.current = authStub();
   place.pathname = "/home";
+  toBill.count = 0;
+  toBill.asked = [];
 });
 
 function shell() {
@@ -269,5 +278,46 @@ describe("on the way to another screen", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+describe("the Queue item's To-bill count (D337)", () => {
+  it("carries how many wait in To bill for whoever reads bills, in the bar, the rail and the sidebar", () => {
+    toBill.count = 3;
+    const { side, bar } = shell();
+    expect(toBill.asked.at(-1)).toBe(true);
+    expect(within(bar).getByRole("link", { name: "Queue, 3 to bill" })).toHaveTextContent("3");
+    // The rail's corner count and the sidebar's at the capsule's end: the screen's width shows one.
+    expect(within(side).getByRole("link", { name: "Queue, 3 to bill" })).toHaveTextContent(/^3Queue3$/);
+    expect(within(side).getByRole("link", { name: "Billing" })).toBeInTheDocument();
+  });
+
+  it("says 99+ past ninety-nine, and nothing with none waiting", () => {
+    toBill.count = 120;
+    const { unmount } = render(
+      <Providers>
+        <AppShell>
+          <h1>Hello</h1>
+        </AppShell>
+      </Providers>,
+    );
+    const [, bar] = screen.getAllByRole("navigation", { name: "Main" });
+    expect(within(bar).getByRole("link", { name: "Queue, 120 to bill" })).toHaveTextContent("99+");
+    unmount();
+    toBill.count = 0;
+    const shown = shell();
+    expect(within(shown.bar).getByRole("link", { name: "Queue" })).toHaveTextContent(/^Queue$/);
+  });
+
+  it("asks nothing for whoever does not read bills, or sees no queue", () => {
+    toBill.count = 3;
+    auth.current = authStub({ role: "STAFF", permissions: ["patients.view", "appointments.view"] });
+    const { bar } = shell();
+    expect(toBill.asked.at(-1)).toBe(false);
+    expect(within(bar).getByRole("link", { name: "Queue" })).toBeInTheDocument();
+    cleanup();
+    auth.current = authStub({ role: "STAFF", permissions: ["patients.view", "payments.view"] });
+    shell();
+    expect(toBill.asked.at(-1)).toBe(false);
   });
 });
