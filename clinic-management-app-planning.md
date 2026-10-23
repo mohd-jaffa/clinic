@@ -2935,7 +2935,7 @@ in the row's one commit (D136).
 | R8.4 | `0029_payments`: record, refund, void; the payment with a bill in `create_bill` — Collect now, Issue and collect (D282); `patient_balances`, `bill_settlement` (D294 – D301: built before R8.3; balances kept by the money functions; no `patient_stats`; refunds from the advance; oldest first; paid up to now; archived with a balance; a refund voided first) | §15.3, §15.4 | — | DONE (2026-10-16) |
 | R8.5 | Bill PDF; share, download, print (D314 – D317: the bill's page with Print, Download, Void, Re-issue and the profile; VOID across a void bill; signed by the clinic; the issued card's Print and View bill. Share on WhatsApp is R8.8's, D327) | §15.5, §33 | — | DONE (2026-10-18) |
 | R8.6 | Checkout: the queue's To-bill column, Billing's tabs (To bill, bills, payments, outstanding), No charge; the profile's balance section, its bills and payments in the history, and the patients list's Owing tab and balance chip (D101) | §15.4, §15.6, §10.2, §10.3 | — | DONE (2026-10-24) |
-| R8.7 | Integration: double submit → one bill/payment; balances to the paisa; read-only refuses | §34 | — | TODO |
+| R8.7 | Integration: double submit → one bill/payment; balances to the paisa; read-only refuses | §34 | — | DONE (2026-10-24) |
 | R8.8 | A bill's doctor (from the visit, or picked); send bill on WhatsApp | §18, §22.1 | — | TODO |
 
 ### Phase 9 — Expenses

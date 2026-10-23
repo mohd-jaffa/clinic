@@ -4522,3 +4522,39 @@ the user first: D267 – D271.
 
 ### Blockers
 - None.
+
+## 2026-10-24 — R8.7: money that must be right, tested end to end
+
+### Added
+- **`tests/db/integration/money.test.ts`** (plan §15.2 – §15.4, §7.2,
+  §34): through the routes the browser calls (`POST /api/bills`,
+  `/api/payments`, the voids, No charge), with a member's own token, against
+  the local database —
+  - **a double tap:** Issue bill sent twice at once under one key makes one
+    bill, one number, one audit row, the patient billed once (another key
+    is another bill); Issue and collect twice makes one bill and one
+    payment; Record payment twice, and a refund twice, one each, the
+    balance moved once; a payment or a bill voided twice at once is voided
+    and audited once; a bill or a payment sent with no key is refused
+    (`IDEMPOTENCY_KEY_REQUIRED`) rather than risk two.
+  - **a balance to the paisa:** one patient through ₹333.33 × 3 at 7% off,
+    ₹1,250.50 less ₹50.25, ₹500.75 and ₹1,000.10 paid, a bill voided into
+    an advance, ₹123.45 refunded, a payment voided and a later bill — after
+    every step the balance equals the issued bills less what was paid plus
+    what was refunded, and so do the profile's summary, the patients list,
+    Outstanding and every bill's page; the bills' settlement holds what was
+    paid net, never more than was billed, each bill's paid and due adding
+    up to its total.
+  - **a view-only clinic:** every money route — issue, record, refund, void
+    a payment, void a bill, No charge — refuses with `CLINIC_PLAN_EXPIRED`
+    and changes nothing; the money tables written straight through the
+    database's API are refused too; its bills, payments, Outstanding, To
+    bill and a bill's page still read, and its bill still prints.
+
+### Validation
+- Typecheck, lint, format check passed.
+- Unit and integration tests passed (3,832), coverage 100%.
+- E2E passed (phone, desktop; 152 passed, 8 skipped by design).
+
+### Blockers
+- None.
