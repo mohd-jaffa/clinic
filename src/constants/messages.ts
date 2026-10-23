@@ -149,6 +149,7 @@ export const ERROR_MESSAGES = {
   BILLS_LOAD_FAILED: "The bills couldn't be loaded.",
   PAYMENTS_LOAD_FAILED: "The payments couldn't be loaded.",
   OUTSTANDING_LOAD_FAILED: "Who owes couldn't be loaded.",
+  BALANCE_LOAD_FAILED: "The balance couldn't be loaded.",
 
   // Payments (plan §15.3; D297, D301).
   PAYMENT_REFUND_TOO_LARGE: "A refund can’t be more than the patient has paid in advance.",
@@ -1194,6 +1195,7 @@ export const UI_TEXT = {
     recorded: (amount: string, patient: string) => `${amount} received from ${patient}`,
     notRecorded: "The payment wasn’t recorded",
     refund: "Refund",
+    refundTo: (patient: string) => `Refund ${patient}`,
     refundHint: (advance: string) => `Up to the ${advance} advance they hold.`,
     refunded: (amount: string, patient: string) => `${amount} refunded to ${patient}`,
     notRefunded: "The refund wasn’t recorded",
@@ -1615,7 +1617,10 @@ export const UI_TEXT = {
     bookFor: (name: string) => `Book an appointment for ${name}`,
     history: "History",
     historyEmpty: "No visits or appointments yet",
-    historyEmptyHint: "Their visits and appointments show here, newest first — cancelled ones and no-shows too.",
+    historyEmptyHint:
+      "Their visits, appointments, bills and payments show here, newest first — cancelled ones and no-shows too.",
+    /** Where the patient stands with the clinic's money (plan §10.3 item 4). */
+    balance: "Balance",
     /** A visit in their history (D225, D226). */
     visitOn: (day: string) => `${day} · Visit`,
     nothingRecorded: "Nothing recorded",

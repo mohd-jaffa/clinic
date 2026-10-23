@@ -4457,3 +4457,68 @@ the user first: D267 – D271.
 
 ### Blockers
 - None.
+
+## 2026-10-24 — R8.6 (3 of 3): the profile's balance, money in the history, Record payment on a bill
+
+### Added
+- **The profile's Balance** (`features/billing/components/PatientBalance.tsx`,
+  plan §10.3 item 4; D295, D311, D322, D324): for `payments.view`, after the
+  treatments — "₹1,200 due" in coral, "₹300 advance", or "Nothing due" —
+  with **Record payment** (`payments.create`), filled with what is owed, and
+  **Refund** (`payments.edit`) while an advance is held, filled with it.
+  Neither for an archived patient (D300), nor in a view-only clinic, which
+  says why. The balance comes with the profile's summary
+  (`getPatientBalance`, `PatientSummary.balancePaise`).
+- **Bills and payments in the history** (`PatientHistory`, D325, D336): for
+  `payments.view`, among the visits and appointments by when each happened —
+  a bill "Bill 2026-27/0042", its day, total and where it stands (Paid,
+  Part paid, Unpaid, Void), opening its page, which leads back to the
+  profile; a payment "Paid ₹500 · UPI" or "Refunded ₹700 · Cash", its day
+  and who took it, opening its sheet with **Void payment**. A member who
+  reads bills alone now sees the history too.
+- **Record payment on a bill's page** (`BillScreen`, D314): for
+  `payments.create` while the bill is Unpaid or Part paid, the sheet for its
+  patient filled with what is still due on it; the bill is read again once
+  recorded.
+- `listPatientBills` (a page of a patient's bills, beside their
+  settlement) and `listPatientPayments` (a page of their payments and
+  refunds), for the history.
+
+### Changed
+- **The history's cursor counts four parts** — visits, appointments, bills,
+  payments ("12.8.3.5") — and `mergeTimeline` merges them by when each
+  happened, the larger id first at the same moment; a two-part cursor is
+  refused. `TimelineEntry` takes `{ bill }` and `{ payment }`.
+- The history's empty hint names bills and payments.
+- Plan: tracker **R8.6 DONE (2026-10-24)**; §10.3, §15.2 and §15.3 as built.
+  `DESIGN.md`: the profile's balance, the history's bill and payment rows,
+  the bill page's Record payment.
+
+### Speed (plan §37)
+- **Round trips:** the profile still waits on 2 — the session, then the
+  patient, the alerts, the summary (now with the balance, read beside the
+  next appointment and the treatments) and the history's first page (now
+  with the bills, their settlement and the payments, read beside the visits
+  and appointments), all at once. Record payment and Refund from the
+  profile or a bill wait on 2: the function, then the audit row.
+- **Indexes:** none new. A patient's bills on `(clinic_id, patient_id,
+  issued_at)`, their settlement through the same; their payments on
+  `(clinic_id, patient_id, paid_at desc)`; their balance on its primary key.
+  The settlement is read for the patient's issued bills — a patient's own,
+  so a short list — beside the page, rather than after it.
+
+### Validation
+- Typecheck, lint, format check passed.
+- Unit and integration tests passed (3,823), coverage 100%.
+- E2E passed (phone, desktop; 152 passed, 8 skipped by design):
+  `billing.spec.ts`'s new journey — the bill
+  in the history, paid in part from its page; ₹1,000 paid from the balance,
+  the ₹700 advance refunded; the refund, both payments and the bill, Paid,
+  in the history, a payment opening its sheet.
+- `tests/db/integration/checkout.test.ts`: a patient's bills and payments
+  in their history, newest first, each where it stands, and their balance —
+  for reception, a doctor's own patient, and none for another doctor or
+  whoever reads no bill; `patient-timeline.test.ts` pages across four parts.
+
+### Blockers
+- None.

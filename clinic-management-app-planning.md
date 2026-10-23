@@ -962,6 +962,20 @@ right, D231); a phone stacks them in that order. Phase 4 builds the header, the
 alerts and the details; each later phase adds its part as its records arrive
 (D101).
 
+As built (R8.6): **Balance**, for `payments.view`, after the treatments —
+"₹1,200 due" in coral, "₹300 advance", or "Nothing due" — with **Record
+payment** (`payments.create`), filled with what is owed (D324), and
+**Refund** (`payments.edit`) while an advance is held, filled with it
+(D322); neither for an archived patient (D300) or in a view-only clinic.
+Read with the profile's summary (`patient_balances`). The history takes the
+bills and payments, for `payments.view` (D325), among the visits and
+appointments by when each happened: a bill "Bill 2026-27/0042", its day and
+total and where it stands, opening its page, which leads back here; a
+payment "Paid ₹500 · UPI" (or "Refunded …"), its day and who took it,
+opening its sheet with **Void payment** (D336). Its cursor counts the four
+parts ("12.8.3.5"); a patient's bills are read beside their settlement, at
+once.
+
 ### 10.4 Alerts — allergies, conditions, current medications
 
 `patient_alerts`: kind (Allergy, Condition, Medication), a label ("Penicillin"),
@@ -1487,7 +1501,9 @@ is refused, never capped (D293).
   profile**. Then its lines, notes and figures — paid and due on it, and
   the patient's balance — and, once void, when, by whom and why. Its back
   arrow leads to Billing, or to the profile it was opened from (D325).
-  **Record payment** joins it with R8.6. The issued card stays up with
+  **Record payment** (R8.6), for `payments.create` while it is Unpaid or
+  Part paid, opens the sheet for its patient filled with what is still due
+  on it, and the page is read again once recorded. The issued card stays up with
   **Print** and **View bill** for whoever reads bills (D317).
 - **Paid state of a bill** (Paid / Part paid / Unpaid) is computed: the
   patient's net payments settle their issued bills oldest first
@@ -1509,7 +1525,10 @@ is refused, never capped (D293).
     day (D334). Opened for a patient — Outstanding's row — it names them.
     `POST /api/payments` (once per Idempotency-Key); the card says "₹500
     received from Anita Rao" and the balance now.
-- **A payment's sheet** (D336): Billing's Payments rows open it — how much,
+- **Refund** (D322), as built: on the profile's balance while an advance is
+  held, the same sheet titled Refund — the amount filled with the advance,
+  the method and a reference; "₹700 refunded to Anita Rao".
+- **A payment's sheet** (D336): Billing's Payments rows, and the history's, open it — how much,
   how, when, its reference and note, who took it; once void, when, by whom
   and why — with **Void payment** (or **Void refund**) for `payments.edit`.
 - **Refund** (`payments.edit`): money returned — no more than the advance
@@ -2915,7 +2934,7 @@ in the row's one commit (D136).
 | R8.3 | New bill screen: from To bill, a visit or a patient; the doctor's fee; discount and price change with `payments.discount`; collect now. Collect fee at arrival (D302 – D313: back where it came from with the card; lines from a sheet; Collect now on with the total; the Collect fee sheet after the token; Fee paid; Bill now at the visit's foot; a reminder line for an unpriced treatment; the price a field with permission; lines left and totals right; New bill in the profile's header; Issue does not ask; a patient search first. `0030_bill_start`, so expenses are 0031 on) | §15.2, §11.3 | — | DONE (2026-10-18) |
 | R8.4 | `0029_payments`: record, refund, void; the payment with a bill in `create_bill` — Collect now, Issue and collect (D282); `patient_balances`, `bill_settlement` (D294 – D301: built before R8.3; balances kept by the money functions; no `patient_stats`; refunds from the advance; oldest first; paid up to now; archived with a balance; a refund voided first) | §15.3, §15.4 | — | DONE (2026-10-16) |
 | R8.5 | Bill PDF; share, download, print (D314 – D317: the bill's page with Print, Download, Void, Re-issue and the profile; VOID across a void bill; signed by the clinic; the issued card's Print and View bill. Share on WhatsApp is R8.8's, D327) | §15.5, §33 | — | DONE (2026-10-18) |
-| R8.6 | Checkout: the queue's To-bill column, Billing's tabs (To bill, bills, payments, outstanding), No charge; the profile's balance section, its bills and payments in the history, and the patients list's Owing tab and balance chip (D101) | §15.4, §15.6, §10.2, §10.3 | — | TODO |
+| R8.6 | Checkout: the queue's To-bill column, Billing's tabs (To bill, bills, payments, outstanding), No charge; the profile's balance section, its bills and payments in the history, and the patients list's Owing tab and balance chip (D101) | §15.4, §15.6, §10.2, §10.3 | — | DONE (2026-10-24) |
 | R8.7 | Integration: double submit → one bill/payment; balances to the paisa; read-only refuses | §34 | — | TODO |
 | R8.8 | A bill's doctor (from the visit, or picked); send bill on WhatsApp | §18, §22.1 | — | TODO |
 

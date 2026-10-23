@@ -9,6 +9,8 @@ import { issueBill, listBills, voidBill } from "@/features/billing/api";
 import { countToBill, listToBill, markNoCharge } from "@/features/billing/checkout";
 import { listOutstanding, listPayments, recordPayment, voidPayment } from "@/features/billing/payments";
 import { listPatients } from "@/features/patients/api";
+import { getPatientSummary } from "@/features/patients/summary";
+import { listPatientTimeline } from "@/features/patients/timeline";
 import { addDaysKey, todayKey } from "@/lib/dates/calendar";
 import { billSchema, noChargeSchema, paymentSchema, walkInSchema } from "@/lib/validation";
 import {
@@ -26,7 +28,8 @@ import {
  * the feature functions against the local database: the visits waiting in
  * To bill for reception, who may not open them — their doctor, token, the
  * treatments worked on and a fee paid at arrival — and how many; No charge;
- * where the queue's done patients stand with billing;
+ * where the queue's done patients stand with billing; a patient's bills,
+ * payments and balance on their profile;
  * Billing's bills by their days and state, as `bill_settlement` works them
  * out; payments recorded today or on an earlier day, voided, refunded; who
  * owes; and the patients list's Owing tab and balance — within the
@@ -491,5 +494,52 @@ describe("Who owes (plan §15.4, §10.2; D101, D321)", () => {
       kind: "AUTHORIZATION",
     });
     expect((await listOutstanding(other.owner.tenant, {})).items).toEqual([]);
+  });
+});
+
+describe("A patient's money on their profile (plan §10.3; D322, D325, D336)", () => {
+  it("puts their bills and payments in the history, newest first, each where it stands; and their balance", async () => {
+    const patient = await addPatient("Kabir Shah");
+    const { visitId } = await seen(patient);
+    const kept = await issueBill(desk.tenant!, aBill({ patientId: patient, visitId }), randomUUID());
+    const voided = await issueBill(desk.tenant!, aBill({ patientId: patient }), randomUUID());
+    await voidBill(clinic.owner.tenant, voided.billId, { reason: "Twice" });
+    const paid = await recordPayment(
+      desk.tenant!,
+      aPayment({ patientId: patient, amount: "500", method: "UPI" }),
+      randomUUID(),
+    );
+
+    const page = await listPatientTimeline(desk.tenant!, patient);
+    const money = page.items.filter((entry) => "bill" in entry || "payment" in entry);
+    expect(money).toEqual([
+      {
+        payment: expect.objectContaining({ id: paid.paymentId, kind: "PAYMENT", amountPaise: 50_000, method: "UPI" }),
+      },
+      { bill: expect.objectContaining({ id: voided.billId, state: "VOID", settlement: null }) },
+      {
+        bill: {
+          id: kept.billId,
+          number: expect.stringMatching(/^\d{4}-\d{2}\/\d{4}$/),
+          issuedAt: expect.any(String),
+          totalPaise: 80_000,
+          settlement: { paidPaise: 50_000, duePaise: 30_000 },
+          state: "PART_PAID",
+        },
+      },
+    ]);
+    // Reception reads no visit: its history is the arrival, the bills and the payment.
+    expect(page.items.some((entry) => "visit" in entry)).toBe(false);
+    expect((await getPatientSummary(desk.tenant!, patient)).balancePaise).toBe(30_000);
+
+    // A doctor who reads bills sees their own patient's; another doctor, and whoever reads no bill, none.
+    const mayas = await listPatientTimeline(maya.tenant!, patient);
+    expect(mayas.items.filter((entry) => "bill" in entry)).toHaveLength(2);
+    expect((await listPatientTimeline(arun.tenant!, patient)).items).toEqual([]);
+    const lookers = await listPatientTimeline(looker.tenant!, patient);
+    expect(lookers.items.some((entry) => "bill" in entry || "payment" in entry)).toBe(false);
+    expect(await getPatientSummary(looker.tenant!, patient)).not.toHaveProperty("balancePaise");
+    // One never billed owes nothing.
+    expect((await getPatientSummary(desk.tenant!, await addPatient("Nila Das"))).balancePaise).toBe(0);
   });
 });

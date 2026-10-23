@@ -9,7 +9,7 @@ import { fakeSupabase, postgrestError, type FakeSupabaseOptions } from "@tests/s
 const { logActionSafe } = vi.hoisted(() => ({ logActionSafe: vi.fn() }));
 vi.mock("@/lib/audit/auditLog", () => ({ logActionSafe }));
 
-const { listOutstanding, listPayments, recordPayment, toPayment, voidPayment } =
+const { getPatientBalance, listOutstanding, listPatientPayments, listPayments, recordPayment, toPayment, voidPayment } =
   await import("@/features/billing/payments");
 
 function tenantWith(options: FakeSupabaseOptions, permissions: Permission[] = ["payments.create"]) {
@@ -272,5 +272,51 @@ describe("listOutstanding (plan §15.4; D321)", () => {
     expect(next.queries[0].calls.at(-1)).toEqual(["range", 20, 40]);
     const down = tenantWith({ answer: () => ({ error: postgrestError("XX000") }) });
     await expect(listOutstanding(down.tenant, {})).rejects.toBeDefined();
+  });
+});
+
+describe("listPatientPayments (plan §10.3; D325, D336)", () => {
+  it("reads a page of a patient's payments for their history, newest first, one more than a page", async () => {
+    const { tenant, queries } = tenantWith({ answer: () => ({ data: [row] }) });
+    expect(await listPatientPayments(tenant, "p-1", 20)).toEqual([
+      expect.objectContaining({ id: "pay-1", amountPaise: 50_000, method: "UPI", receivedBy: "Priya Shah" }),
+    ]);
+    expect(queries[0].table).toBe("payments");
+    expect(queries[0].calls).toEqual([
+      ["select", expect.stringContaining("patient:patients!payments_patient_id_clinic_id_fkey(")],
+      ["eq", "clinic_id", "clinic-1"],
+      ["eq", "patient_id", "p-1"],
+      ["order", "paid_at", { ascending: false }],
+      ["order", "id", { ascending: false }],
+      ["range", 20, 40],
+    ]);
+  });
+
+  it("starts at the first page, and says what it was refused", async () => {
+    const first = tenantWith({ answer: () => ({ data: [] }) });
+    await listPatientPayments(first.tenant, "p-1");
+    expect(first.queries[0].calls.at(-1)).toEqual(["range", 0, 20]);
+    const down = tenantWith({ answer: () => ({ error: postgrestError("XX000") }) });
+    await expect(listPatientPayments(down.tenant, "p-1")).rejects.toBeDefined();
+  });
+});
+
+describe("getPatientBalance (plan §15.4; D295)", () => {
+  it("reads a patient's balance, and nothing for one never billed or paid", async () => {
+    const owing = tenantWith({ answer: () => ({ data: { balance_paise: 30_000 } }) });
+    expect(await getPatientBalance(owing.tenant, "p-1")).toBe(30_000);
+    expect(owing.queries[0].table).toBe("patient_balances");
+    expect(owing.queries[0].calls).toEqual([
+      ["select", "balance_paise"],
+      ["eq", "clinic_id", "clinic-1"],
+      ["eq", "patient_id", "p-1"],
+      ["maybeSingle"],
+    ]);
+    expect(await getPatientBalance(tenantWith({ answer: () => ({ data: null }) }).tenant, "p-1")).toBe(0);
+  });
+
+  it("says what it was refused", async () => {
+    const down = tenantWith({ answer: () => ({ error: postgrestError("XX000") }) });
+    await expect(getPatientBalance(down.tenant, "p-1")).rejects.toBeDefined();
   });
 });

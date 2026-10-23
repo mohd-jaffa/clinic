@@ -4,12 +4,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Permission } from "@/constants/permissions";
 import type { Tenant } from "@/lib/supabase/tenant";
 
-const { nextAppointment, listPatientTreatments } = vi.hoisted(() => ({
+const { nextAppointment, listPatientTreatments, getPatientBalance } = vi.hoisted(() => ({
   nextAppointment: vi.fn(),
   listPatientTreatments: vi.fn(),
+  getPatientBalance: vi.fn(),
 }));
 vi.mock("@/features/appointments/api", () => ({ nextAppointment }));
 vi.mock("@/features/treatments/api", () => ({ listPatientTreatments }));
+vi.mock("@/features/billing/payments", () => ({ getPatientBalance }));
 
 const { getPatientSummary } = await import("@/features/patients/summary");
 
@@ -20,6 +22,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   nextAppointment.mockResolvedValue({ id: "a-1" });
   listPatientTreatments.mockResolvedValue([{ id: "t-1" }]);
+  getPatientBalance.mockResolvedValue(30_000);
 });
 
 describe("getPatientSummary (plan §10.3)", () => {
@@ -41,9 +44,18 @@ describe("getPatientSummary (plan §10.3)", () => {
     expect(await getPatientSummary(tenant(["visits.view"]), "p-1")).toEqual({ treatments: [{ id: "t-1" }] });
   });
 
-  it("leaves both out, unread, for anyone else", async () => {
+  it("gives the balance to whoever reads bills (D101), nothing owed included", async () => {
+    const asked = tenant(["patients.view", "payments.view"]);
+    expect(await getPatientSummary(asked, "p-1")).toEqual({ balancePaise: 30_000 });
+    expect(getPatientBalance).toHaveBeenCalledWith(asked, "p-1");
+    getPatientBalance.mockResolvedValue(0);
+    expect(await getPatientSummary(asked, "p-1")).toEqual({ balancePaise: 0 });
+  });
+
+  it("leaves every part out, unread, for anyone else", async () => {
     expect(await getPatientSummary(tenant(["patients.view"]), "p-1")).toEqual({});
     expect(nextAppointment).not.toHaveBeenCalled();
     expect(listPatientTreatments).not.toHaveBeenCalled();
+    expect(getPatientBalance).not.toHaveBeenCalled();
   });
 });

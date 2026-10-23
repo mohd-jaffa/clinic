@@ -30,18 +30,32 @@ describe("listQuerySchema", () => {
   });
 });
 
-describe("timelineQuerySchema (D225)", () => {
-  it("reads where a page of the history starts: how many visits and appointments are shown", () => {
+describe("timelineQuerySchema (D225, D325)", () => {
+  it("reads where a page of the history starts: how many visits, appointments, bills and payments are shown", () => {
     expect(timelineQuerySchema.parse({})).toEqual({ cursor: undefined });
-    expect(timelineQuerySchema.parse({ cursor: "12.8" })).toEqual({ cursor: { visits: 12, appointments: 8 } });
-    expect(timelineQuerySchema.parse({ cursor: `${MAX_PAGE_START}.0` }).cursor).toEqual({
-      visits: MAX_PAGE_START,
+    expect(timelineQuerySchema.parse({ cursor: "12.8.3.5" })).toEqual({
+      cursor: { visits: 12, appointments: 8, bills: 3, payments: 5 },
+    });
+    expect(timelineQuerySchema.parse({ cursor: `0.0.0.${MAX_PAGE_START}` }).cursor).toEqual({
+      visits: 0,
       appointments: 0,
+      bills: 0,
+      payments: MAX_PAGE_START,
     });
   });
 
   it("refuses anything else rather than reading it as the start", () => {
-    for (const cursor of ["x", "20", "1.2.3", "-1.2", "1.", `${MAX_PAGE_START + 1}.0`, `0.${MAX_PAGE_START + 1}`]) {
+    for (const cursor of [
+      "x",
+      "20",
+      "12.8",
+      "1.2.3",
+      "1.2.3.4.5",
+      "-1.2.3.4",
+      "1.2.3.",
+      `${MAX_PAGE_START + 1}.0.0.0`,
+      `0.0.${MAX_PAGE_START + 1}.0`,
+    ]) {
       const parsed = timelineQuerySchema.safeParse({ cursor });
       expect(parsed.success, cursor).toBe(false);
       expect(firstIssue(parsed.error!)).toBe(VALIDATION_MESSAGES.invalid);

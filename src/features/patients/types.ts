@@ -1,5 +1,6 @@
 import type { AlertKind, Gender } from "@/constants/statuses";
 import type { CalendarAppointment, PatientAppointment } from "@/features/appointments/types";
+import type { PatientBill, Payment } from "@/features/billing/types";
 import type { Treatment } from "@/features/treatments/types";
 import type { PatientVisit } from "@/features/visits/types";
 
@@ -114,24 +115,30 @@ export interface ImportResult {
 
 /**
  * Where a patient stands (plan §10.3): each part only for those who may see
- * it, so a part left out is not shown. For now, their next appointment —
- * none when nothing is to come (D166).
+ * it, so a part left out is not shown — their next appointment, none when
+ * nothing is to come (D166); their treatments; and their balance.
  */
 export interface PatientSummary {
   nextAppointment?: CalendarAppointment | null;
   /** Their treatments, open and closed, with `visits.view` (D260). */
   treatments?: Treatment[];
+  /** Due above nothing, an advance below (D295), with `payments.view`. */
+  balancePaise?: number;
 }
 
 /**
- * One entry of a patient's history (plan §10.3, D225): a visit — standing
- * for the appointment it was opened for — or an appointment that has no
- * visit, still to come, cancelled or missed.
+ * One entry of a patient's history (plan §10.3; D225, D325): a visit —
+ * standing for the appointment it was opened for — an appointment that has
+ * no visit, still to come, cancelled or missed; a bill; or a payment or a
+ * refund.
  */
-export type TimelineEntry = { visit: PatientVisit } | { appointment: PatientAppointment };
+export type TimelineEntry =
+  { visit: PatientVisit } | { appointment: PatientAppointment } | { bill: PatientBill } | { payment: Payment };
 
-/** Where a page of the history starts: how many of the visits and of the appointments are already shown. */
+/** Where a page of the history starts: how many of each part are already shown. */
 export interface TimelineCursor {
   visits: number;
   appointments: number;
+  bills: number;
+  payments: number;
 }

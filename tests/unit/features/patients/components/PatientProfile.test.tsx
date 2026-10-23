@@ -54,6 +54,9 @@ vi.mock("@/features/patients/components/PatientHistory", () => ({
 vi.mock("@/features/treatments/components/PatientTreatments", () => ({
   PatientTreatments: ({ patient }: { patient: Patient }) => <p>{`Treatments of ${patient.name}`}</p>,
 }));
+vi.mock("@/features/billing/components/PatientBalance", () => ({
+  PatientBalance: ({ patient }: { patient: Patient }) => <p>{`Balance of ${patient.name}`}</p>,
+}));
 vi.mock("@/features/appointments/components/AppointmentPanel", () => ({
   AppointmentPanel: ({
     appointment,
@@ -246,7 +249,7 @@ describe("PatientProfile while it loads", () => {
   });
 });
 
-describe("PatientProfile's appointments and history (D166, D167, D225, D231)", () => {
+describe("PatientProfile's appointments, balance and history (D166, D167, D225, D231, D322, D325)", () => {
   it("shows the next appointment and the history to whoever sees appointments, each opening its detail here", async () => {
     draw();
     expect(screen.getByText("History")).toBeInTheDocument();
@@ -255,12 +258,22 @@ describe("PatientProfile's appointments and history (D166, D167, D225, D231)", (
     expect(screen.getByRole("dialog", { name: "Rohan Mehta, false" })).toBeInTheDocument();
   });
 
-  it("shows neither to someone who may not see appointments or visits — nor the treatments", () => {
+  it("shows neither to someone who may not see appointments, visits or bills — nor the treatments, nor the balance", () => {
     auth.current = authStub({ role: "STAFF", permissions: ["patients.view"] });
     draw();
     expect(screen.queryByRole("button", { name: "Next appointment" })).not.toBeInTheDocument();
     expect(screen.queryByText("History")).not.toBeInTheDocument();
     expect(screen.queryByText("Treatments of Rohan Mehta")).not.toBeInTheDocument();
+    expect(screen.queryByText("Balance of Rohan Mehta")).not.toBeInTheDocument();
+  });
+
+  it("shows the balance among their state, and the history, to someone who reads bills alone (D322, D325)", () => {
+    auth.current = authStub({ role: "STAFF", permissions: ["patients.view", "payments.view"] });
+    draw();
+    expect(screen.getByText("History")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Next appointment" })).not.toBeInTheDocument();
+    const balance = screen.getByText("Balance of Rohan Mehta");
+    expect(within(balance.parentElement!).getByRole("heading", { name: "Details" })).toBeInTheDocument();
   });
 
   it("shows the history and the treatments, with no next appointment, to someone who sees visits alone (D225, D260)", () => {

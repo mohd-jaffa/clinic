@@ -225,3 +225,40 @@ export async function listOutstanding(tenant: Tenant, { cursor }: PageQuery): Pr
     start,
   );
 }
+
+/**
+ * A page of a patient's payments and refunds for their history (plan §10.3;
+ * D325, D336): newest first, voided ones too, as the member
+ * (`payments.view`, the doctor scope). One more than a page, so the history
+ * can tell whether more follow. One query, on the index on (clinic_id,
+ * patient_id, paid_at desc).
+ */
+export async function listPatientPayments(tenant: Tenant, patientId: string, start = 0): Promise<Payment[]> {
+  const { from, to } = pageWindow(start);
+  const { data, error } = await tenant.supabase
+    .from("payments")
+    .select(PAYMENT_COLUMNS)
+    .eq("clinic_id", tenant.clinicId)
+    .eq("patient_id", patientId)
+    .order("paid_at", { ascending: false })
+    .order("id", { ascending: false })
+    .range(from, to);
+  if (error) throw fromPostgrestError(error);
+  return (data as unknown as PaymentRow[]).map(toPayment);
+}
+
+/**
+ * A patient's balance (plan §15.4; D295): due when above nothing, an advance
+ * below — nothing for one never billed or paid. As the member
+ * (`payments.view`, the doctor scope); one query, on its primary key.
+ */
+export async function getPatientBalance(tenant: Tenant, patientId: string): Promise<number> {
+  const { data, error } = await tenant.supabase
+    .from("patient_balances")
+    .select("balance_paise")
+    .eq("clinic_id", tenant.clinicId)
+    .eq("patient_id", patientId)
+    .maybeSingle<{ balance_paise: number }>();
+  if (error) throw fromPostgrestError(error);
+  return Number(data?.balance_paise ?? 0);
+}

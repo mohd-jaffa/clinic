@@ -51,20 +51,20 @@ export const listQuerySchema = z.object({ cursor: cursorParam, search: searchPar
 export type ListQuery = z.output<typeof listQuerySchema>;
 
 /**
- * Where a page of a patient's history starts (plan §10.3, D225): the
- * `nextCursor` the page before it gave — how many of their visits and of
- * their appointments are already shown, written "12.8"; anything else is
- * refused rather than read as the start.
+ * Where a page of a patient's history starts (plan §10.3; D225, D325): the
+ * `nextCursor` the page before it gave — how many of their visits, their
+ * appointments, their bills and their payments are already shown, written
+ * "12.8.3.5"; anything else is refused rather than read as the start.
  */
 export const timelineCursorParam = z.optional(
   z
     .string()
-    .regex(/^\d{1,6}\.\d{1,6}$/, { error: VALIDATION_MESSAGES.invalid })
+    .regex(/^\d{1,6}(\.\d{1,6}){3}$/, { error: VALIDATION_MESSAGES.invalid })
     .transform((cursor) => {
-      const [visits, appointments] = cursor.split(".").map(Number);
-      return { visits, appointments };
+      const [visits, appointments, bills, payments] = cursor.split(".").map(Number);
+      return { visits, appointments, bills, payments };
     })
-    .refine(({ visits, appointments }) => Math.max(visits, appointments) <= MAX_PAGE_START, {
+    .refine((shown) => Math.max(...Object.values(shown)) <= MAX_PAGE_START, {
       error: VALIDATION_MESSAGES.invalid,
     }),
 );

@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -7,14 +7,15 @@ import type { BillDetail } from "@/features/billing/types";
 import { authStub } from "@tests/support/auth";
 import { Providers } from "@tests/support/providers";
 
-const { auth, bill, params } = vi.hoisted(() => ({
+const { auth, bill, params, client } = vi.hoisted(() => ({
+  client: { void: vi.fn(), record: vi.fn() },
   auth: { current: {} as ReturnType<typeof authStub> },
   bill: { current: {} as { data?: unknown; error?: unknown; mutate?: () => void; isValidating?: boolean } },
   params: { current: "" },
 }));
 vi.mock("@/features/auth/AuthProvider", () => ({ useAuth: () => auth.current }));
 vi.mock("@/features/billing/hooks/useBill", () => ({ useBill: () => bill.current }));
-vi.mock("@/features/billing/api.client", () => ({ BillingClient: { void: vi.fn() } }));
+vi.mock("@/features/billing/api.client", () => ({ BillingClient: client }));
 vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams(params.current) }));
 
 const { BillScreen } = await import("@/features/billing/components/BillScreen");
@@ -179,6 +180,47 @@ describe("BillScreen (plan §15.2; D314)", () => {
     as(["patients.view", "payments.view", "payments.edit"]);
     draw();
     expect(screen.queryByRole("link", { name: /^Re-issue/ })).not.toBeInTheDocument();
+  });
+
+  it("records a payment while something is due on it, filled with that, and reads the bill again (D314)", async () => {
+    client.record.mockResolvedValue({ paymentId: "pay-1", balancePaise: 0 });
+    const asha = { ...issued.patient, id: "8c2f5b63-4d6e-4f70-9bac-1d2e3f4a5b6c" };
+    bill.current = { data: { ...issued, patient: asha } };
+    draw();
+    await userEvent.click(screen.getByRole("button", { name: "Record a payment from Asha Rao" }));
+    const sheet = screen.getByRole("dialog", { name: "Record payment" });
+    expect(within(sheet).getByText("Balance: ₹400 due")).toBeInTheDocument();
+    expect(within(sheet).getByRole("textbox", { name: /^Amount/ })).toHaveValue("400");
+    await userEvent.click(within(sheet).getByRole("button", { name: "Record payment" }));
+    await waitFor(() =>
+      expect(client.record).toHaveBeenCalledWith({
+        input: expect.objectContaining({ patientId: asha.id, amount: "400" }),
+        key: expect.any(String),
+      }),
+    );
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Record payment" })).not.toBeInTheDocument());
+  });
+
+  it("offers no Record payment once paid or void, without payments.create, in a view-only clinic, or for an archived patient", () => {
+    const offered = () => {
+      const { unmount } = draw();
+      const any = screen.queryByRole("button", { name: /^Record a payment/ }) !== null;
+      unmount();
+      return any;
+    };
+    expect(offered()).toBe(true);
+    bill.current = { data: { ...issued, settlement: { paidPaise: 90_000, duePaise: 0, state: "PAID" } } };
+    expect(offered()).toBe(false);
+    bill.current = { data: voided };
+    expect(offered()).toBe(false);
+    bill.current = { data: { ...issued, patient: { ...issued.patient, archived: true } } };
+    expect(offered()).toBe(false);
+    bill.current = { data: issued };
+    as(["patients.view", "payments.view", "payments.edit"]);
+    expect(offered()).toBe(false);
+    const stub = authStub();
+    auth.current = { ...stub, subscription: { ...stub.subscription!, state: "READ_ONLY" } };
+    expect(offered()).toBe(false);
   });
 
   it("leaves out what it does not have — a discount, notes, a doctor, who issued it", () => {

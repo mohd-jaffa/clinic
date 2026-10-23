@@ -22,8 +22,11 @@ import { addMember, admin, registerClinic, removeAll } from "@tests/support/inte
  * the queue's checkout (D318, D337 – D340): the Queue item and the land's
  * pin say how many wait; the pin jumps to To bill; Kiran billed from there
  * comes back to the queue and reaches Done; Anita's visit is marked No
- * charge by the owner on the visit itself (D319). Each screen checked by
- * axe, nothing wider than the screen.
+ * charge by the owner on the visit itself (D319). And a patient's money on
+ * their profile (D314, D322, D325, D336): the bill in the history, paid in
+ * part from its page; the balance paid beyond what is owed, and the advance
+ * refunded; each payment a row of the history, opening its sheet. Each
+ * screen checked by axe, nothing wider than the screen.
  */
 test.afterAll(removeAll);
 
@@ -295,4 +298,80 @@ test("the queue's To bill: the count and the pin, a bill back to the queue, Done
   await expect(ownerPage.getByRole("link", { name: nav.places.queue, exact: true })).toBeVisible();
   await expectAccessible(ownerPage);
   await owner.close();
+});
+
+test("a patient's money on their profile: the bill paid in part from its page, an advance refunded, all in the history", async ({
+  page,
+}) => {
+  const { clinic, desk, anita, consultation } = await aClinic();
+  // Anita's visit billed, nothing paid: ₹800 due.
+  const { billId } = await issueBill(
+    desk.tenant!,
+    billSchema.parse({
+      patientId: anita.patientId,
+      visitId: anita.visitId,
+      appointmentId: null,
+      lines: [{ kind: "SERVICE", serviceId: consultation, treatmentId: null, quantity: 1, price: "800" }],
+      discount: { kind: "NONE" },
+      notes: "",
+      collect: { on: false },
+    }),
+    randomUUID(),
+  );
+  await signIn(page, clinic.owner.email, clinic.owner.password);
+
+  // The profile: what she owes, and the bill in her history (D325).
+  await page.goto(`/patients/${anita.patientId}`);
+  const balance = page.getByRole("region", { name: UI_TEXT.patients.balance });
+  await expect(balance).toContainText(words.due("₹800"));
+  const history = page.getByRole("list", { name: UI_TEXT.patients.history });
+  const billRow = history.getByRole("listitem").filter({ hasText: /^Bill \d{4}-\d{2}\/0001/ });
+  await expect(billRow).toContainText("Unpaid");
+  await fitsTheScreen(page);
+  await expectAccessible(page);
+
+  // Its page: Record payment, filled with what is due on it, ₹500 paid (D314).
+  await billRow.getByRole("link").click();
+  await expect(page).toHaveURL(new RegExp(`/bills/${billId}\\?from=patient$`));
+  await page.getByRole("button", { name: words.recordPaymentFrom("Anita Rao") }).click();
+  const sheet = page.getByRole("dialog", { name: payment.title });
+  const amount = sheet.getByRole("textbox", { name: new RegExp(`^${payment.amountLabel}`) });
+  await expect(amount).toHaveValue("800");
+  await amount.fill("500");
+  await expectAccessible(page);
+  await sheet.getByRole("button", { name: payment.record }).click();
+  await expect(notice(page, payment.recorded("₹500", "Anita Rao"))).toContainText(
+    payment.balanceNow(words.due("₹300")),
+  );
+  await expect(page.getByText("Part paid", { exact: true })).toBeVisible();
+
+  // Back on the profile: ₹1,000 paid from the balance, ₹700 kept as an advance, then refunded (D322).
+  await page.getByRole("link", { name: UI_TEXT.actions.back }).click();
+  await expect(balance).toContainText(words.due("₹300"));
+  await balance.getByRole("button", { name: words.recordPaymentFrom("Anita Rao") }).click();
+  await expect(amount).toHaveValue("300");
+  await amount.fill("1000");
+  await sheet.getByRole("button", { name: payment.record }).click();
+  await expect(notice(page, payment.recorded("₹1,000", "Anita Rao"))).toContainText(
+    payment.balanceNow(words.advance("₹700")),
+  );
+  await expect(balance).toContainText(words.advance("₹700"));
+  await balance.getByRole("button", { name: payment.refundTo("Anita Rao") }).click();
+  const refund = page.getByRole("dialog", { name: payment.refundTitle });
+  await expect(refund.getByRole("textbox", { name: new RegExp(`^${payment.amountLabel}`) })).toHaveValue("700");
+  await expectAccessible(page);
+  await refund.getByRole("button", { name: payment.refund }).click();
+  await expect(notice(page, payment.refunded("₹700", "Anita Rao"))).toContainText(payment.balanceNow(words.settled));
+  await expect(balance).toContainText(words.settled);
+
+  // The history: the refund, both payments and the bill, Paid (D325); a payment opens its sheet (D336).
+  await expect(history.getByRole("listitem").filter({ hasText: "Refunded ₹700 · Cash" })).toBeVisible();
+  await expect(history.getByRole("listitem").filter({ hasText: "Paid ₹1,000 · Cash" })).toBeVisible();
+  await expect(billRow).toContainText("Paid");
+  await history.getByRole("button", { name: "Paid ₹500 · Cash" }).click();
+  const opened = page.getByRole("dialog", { name: "Payment" });
+  await expect(opened).toContainText("₹500");
+  await expect(opened.getByRole("button", { name: payment.void })).toBeVisible();
+  await fitsTheScreen(page);
+  await expectAccessible(page);
 });

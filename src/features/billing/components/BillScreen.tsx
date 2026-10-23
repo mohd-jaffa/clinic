@@ -1,6 +1,6 @@
 "use client";
 
-import { Ban, RotateCcw, UserRound } from "lucide-react";
+import { Ban, IndianRupee, RotateCcw, UserRound } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 
@@ -28,6 +28,7 @@ import { balanceWords } from "../form";
 import { useBill } from "../hooks/useBill";
 import type { BillDetail } from "../types";
 import { Figure } from "./Figure";
+import { RecordPaymentSheet } from "./RecordPaymentSheet";
 import { VoidBillSheet } from "./VoidBillSheet";
 
 const { bill: words, billing } = UI_TEXT;
@@ -44,6 +45,8 @@ const targetOf = (bill: BillDetail): NewBillFor =>
  * A bill's page — `/bills/[id]` (plan §15.2; D314). Its land holds the bill's
  * number, the patient, the day and doctor, and where it stands — Paid, Part
  * paid, Unpaid, or Void. Under it **Print** and **Download** (plan §15.5);
+ * **Record payment** for `payments.create` while it is Unpaid or Part paid,
+ * filled with what is still due on it, the bill read again once recorded;
  * **Void bill** for `payments.edit`, asking a reason and then to be sure;
  * **Re-issue** on a void bill, opening a new bill filled with its lines; and
  * a quiet way to the patient's profile. Then its lines and its figures —
@@ -95,9 +98,13 @@ function BillBody({ bill }: { bill: BillDetail }) {
   const { membership } = useAuth();
   const { readOnly } = useReadOnly();
   const [voiding, setVoiding] = useState(false);
+  const [paying, setPaying] = useState({ open: false, count: 0 });
   const may = (permission: Parameters<typeof hasAccess>[1]) => membership !== null && hasAccess(membership, permission);
   const writable = !readOnly && !bill.patient.archived;
   const voidable = bill.void === null && writable && may("payments.edit");
+  // While something is still due on it (D314).
+  const due = bill.settlement !== null && bill.settlement.state !== "PAID" ? bill.settlement.duePaise : null;
+  const payable = due !== null && writable && may("payments.create");
   const reissuable = bill.void !== null && writable && may("payments.create");
 
   return (
@@ -105,6 +112,16 @@ function BillBody({ bill }: { bill: BillDetail }) {
       <div className="grid gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <BillPdf billId={bill.id} patient={bill.patient.name} number={bill.number} />
+          {payable && (
+            <Button
+              label={billing.recordPayment}
+              aria-label={billing.recordPaymentFrom(bill.patient.name)}
+              icon={IndianRupee}
+              variant="primary"
+              size="sm"
+              onClick={() => setPaying(({ count }) => ({ open: true, count: count + 1 }))}
+            />
+          )}
           {reissuable && (
             <LinkButton
               href={newBillRoute(targetOf(bill), undefined, bill.id)}
@@ -183,6 +200,16 @@ function BillBody({ bill }: { bill: BillDetail }) {
         </Panel>
       </div>
       {voidable && <VoidBillSheet bill={bill} open={voiding} onClose={() => setVoiding(false)} />}
+      {payable && paying.count > 0 && (
+        <RecordPaymentSheet
+          key={paying.count}
+          open={paying.open}
+          onClose={() => setPaying((now) => ({ ...now, open: false }))}
+          patient={{ ...bill.patient, balancePaise: bill.balancePaise }}
+          amountPaise={due}
+          billId={bill.id}
+        />
+      )}
     </div>
   );
 }

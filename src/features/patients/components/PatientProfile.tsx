@@ -17,6 +17,7 @@ import { AppointmentPanel } from "@/features/appointments/components/Appointment
 import { useOpenedAppointment } from "@/features/appointments/hooks/useOpenedAppointment";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { NewBillLink } from "@/features/billing/components/NewBillLink";
+import { PatientBalance } from "@/features/billing/components/PatientBalance";
 import { ReadOnlyNote } from "@/features/subscription/components/ReadOnlyNote";
 import { PatientTreatments } from "@/features/treatments/components/PatientTreatments";
 import { useReadOnly } from "@/features/subscription/hooks/useReadOnly";
@@ -60,9 +61,11 @@ function detailsOf(patient: Patient): Detail[] {
  * **WhatsApp** (a chat, nothing typed), and **New bill** for those who may
  * issue one (D311); then their details, only what holds a value, notes
  * included, with **Edit** for those who may change them. For those who see
- * appointments, their next appointment — or **Book** (D166); for those who see visits, their treatments (D260); for those who see
- * appointments or visits, their history (D167, D225). On
- * a desktop, their state on the left and the history on the right (D114,
+ * appointments, their next appointment — or **Book** (D166); for those who
+ * see visits, their treatments (D260); for those who read bills, their
+ * balance, with **Record payment** and **Refund** (D322); for those who see
+ * appointments, visits or bills, their history (D167, D225, D325). On a
+ * desktop, their state on the left and the history on the right (D114,
  * D231); each later phase adds its part (D101).
  */
 export function PatientProfile({ id }: { id: string }) {
@@ -138,11 +141,11 @@ function Reach({ patient }: { patient: Patient }) {
 
 /**
  * The profile's parts (D114, D231): their state — the next appointment, for
- * `appointments.view`, their treatments, for `visits.view` (D260), and
- * their details — then their history, for
- * `appointments.view` or `visits.view`, and the detail of an appointment
- * opened from either (D160). A phone stacks them in that order; a desktop
- * puts the history in a column of its own on the right.
+ * `appointments.view`, their treatments, for `visits.view` (D260), their
+ * balance, for `payments.view`, and their details — then their history, for
+ * `appointments.view`, `visits.view` or `payments.view`, and the detail of an
+ * appointment opened from either (D160). A phone stacks them in that order;
+ * a desktop puts the history in a column of its own on the right.
  */
 function Body({ patient }: { patient: Patient }) {
   const { membership } = useAuth();
@@ -157,9 +160,12 @@ function Body({ patient }: { patient: Patient }) {
         {mayEdit && <ReadOnlyNote />}
         {seesAppointments && <NextAppointment patient={patient} onOpen={opened.show} />}
         {may("visits.view") && <PatientTreatments patient={patient} />}
+        {may("payments.view") && <PatientBalance patient={patient} />}
         <Details patient={patient} mayEdit={mayEdit} />
       </div>
-      {(seesAppointments || may("visits.view")) && <PatientHistory patient={patient} onOpen={opened.show} />}
+      {(seesAppointments || may("visits.view") || may("payments.view")) && (
+        <PatientHistory patient={patient} onOpen={opened.show} />
+      )}
       {seesAppointments && (
         <AppointmentPanel
           key={opened.appointment?.id}

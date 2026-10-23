@@ -149,6 +149,9 @@ export interface BillListItem {
   state: BillListState;
 }
 
+/** A bill in a patient's history (D325): its number, day, total and where it stands — the patient is theirs. */
+export type PatientBill = Omit<BillListItem, "patient">;
+
 /**
  * A payment taken, or a refund handed back (plan §15.3; D325, D336): how
  * much, how and when, its reference and note, who took it, and — voided —

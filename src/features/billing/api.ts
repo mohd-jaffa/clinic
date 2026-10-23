@@ -11,7 +11,7 @@ import type { Tenant } from "@/lib/supabase/tenant";
 import type { BillPayload, BillsQuery, BillStartQuery, VoidBillPayload } from "@/lib/validation";
 
 import { billTotals } from "./totals";
-import type { BillDetail, BillIssued, BillListItem, BillStart, BillStartRow, BillVoided } from "./types";
+import type { BillDetail, BillIssued, BillListItem, BillStart, BillStartRow, BillVoided, PatientBill } from "./types";
 
 /**
  * Bills (plan §15.2): where a new one starts, issuing it, reading it and
@@ -403,4 +403,63 @@ export async function listBills(tenant: Tenant, { from, to, state, cursor }: Bil
     })),
     start,
   );
+}
+
+/** A bill as a patient's history reads it, and where it stands as `bill_settlement` works it out. */
+interface PatientBillRow {
+  id: string;
+  bill_number: string;
+  issued_at: string;
+  total_paise: number;
+}
+interface PatientSettlementRow {
+  bill_id: string;
+  paid_paise: number;
+  due_paise: number;
+  state: BillPaymentState;
+}
+
+/**
+ * A page of a patient's bills for their history (plan §10.3; D325): newest
+ * first, void ones too, each with where it stands — Paid, Part paid or
+ * Unpaid as `bill_settlement` works it out for this patient alone, or Void —
+ * as the member (`payments.view`, the doctor scope). One more than a page,
+ * so the history can tell whether more follow. Two queries at once, on the
+ * index on (clinic_id, patient_id, issued_at): the page, and the patient's
+ * settlement.
+ */
+export async function listPatientBills(tenant: Tenant, patientId: string, start = 0): Promise<PatientBill[]> {
+  const { from, to } = pageWindow(start);
+  const [billsRead, settlementRead] = await allInOrder([
+    tenant.supabase
+      .from("bills")
+      .select("id, bill_number, issued_at, total_paise")
+      .eq("clinic_id", tenant.clinicId)
+      .eq("patient_id", patientId)
+      .order("issued_at", { ascending: false })
+      .order("id", { ascending: false })
+      .range(from, to),
+    tenant.supabase
+      .from("bill_settlement")
+      .select("bill_id, paid_paise, due_paise, state")
+      .eq("clinic_id", tenant.clinicId)
+      .eq("patient_id", patientId),
+  ]);
+  if (billsRead.error) throw fromPostgrestError(billsRead.error);
+  if (settlementRead.error) throw fromPostgrestError(settlementRead.error);
+  const settled = new Map((settlementRead.data as PatientSettlementRow[]).map((row) => [row.bill_id, row] as const));
+  return (billsRead.data as PatientBillRow[]).map((row) => {
+    const settlement = settled.get(row.id);
+    return {
+      id: row.id,
+      number: row.bill_number,
+      issuedAt: row.issued_at,
+      totalPaise: row.total_paise,
+      // A void bill has no settlement: it leaves the balance (D298).
+      settlement: settlement
+        ? { paidPaise: Number(settlement.paid_paise), duePaise: Number(settlement.due_paise) }
+        : null,
+      state: settlement?.state ?? "VOID",
+    };
+  });
 }

@@ -8,7 +8,8 @@ import { fakeSupabase, postgrestError, type FakeSupabaseOptions } from "@tests/s
 const { logActionsSafe } = vi.hoisted(() => ({ logActionsSafe: vi.fn() }));
 vi.mock("@/lib/audit/auditLog", () => ({ logActionsSafe }));
 
-const { getBill, getBillStart, issueBill, listBills, voidBill } = await import("@/features/billing/api");
+const { getBill, getBillStart, issueBill, listBills, listPatientBills, voidBill } =
+  await import("@/features/billing/api");
 
 function tenantWith(options: FakeSupabaseOptions) {
   const fake = fakeSupabase(options);
@@ -482,5 +483,65 @@ describe("listBills (plan §15.4; D320, D335)", () => {
     await expect(listBills(down.tenant, { from: "2026-10-01", to: "2026-10-19" })).rejects.toMatchObject({
       code: "AUTH_PERMISSION_DENIED",
     });
+  });
+});
+
+describe("listPatientBills (plan §10.3; D325)", () => {
+  it("reads a page of a patient's bills for their history beside their settlement, each where it stands", async () => {
+    const { tenant, queries } = tenantWith({
+      answer: (query) =>
+        query.table === "bills"
+          ? {
+              data: [
+                { id: "b-2", bill_number: "2026-27/0043", issued_at: "2026-10-17T05:30:00Z", total_paise: 50_000 },
+                { id: "b-1", bill_number: "2026-27/0042", issued_at: "2026-10-16T05:30:00Z", total_paise: 80_000 },
+              ],
+            }
+          : { data: [{ bill_id: "b-1", paid_paise: 50_000, due_paise: 30_000, state: "PART_PAID" }] },
+    });
+    expect(await listPatientBills(tenant, "p-1", 20)).toEqual([
+      {
+        id: "b-2",
+        number: "2026-27/0043",
+        issuedAt: "2026-10-17T05:30:00Z",
+        totalPaise: 50_000,
+        settlement: null,
+        state: "VOID",
+      },
+      {
+        id: "b-1",
+        number: "2026-27/0042",
+        issuedAt: "2026-10-16T05:30:00Z",
+        totalPaise: 80_000,
+        settlement: { paidPaise: 50_000, duePaise: 30_000 },
+        state: "PART_PAID",
+      },
+    ]);
+    expect(queries.map((query) => query.table)).toEqual(["bills", "bill_settlement"]);
+    expect(queries[0].calls).toEqual([
+      ["select", "id, bill_number, issued_at, total_paise"],
+      ["eq", "clinic_id", "clinic-1"],
+      ["eq", "patient_id", "p-1"],
+      ["order", "issued_at", { ascending: false }],
+      ["order", "id", { ascending: false }],
+      ["range", 20, 40],
+    ]);
+    expect(queries[1].calls).toEqual([
+      ["select", "bill_id, paid_paise, due_paise, state"],
+      ["eq", "clinic_id", "clinic-1"],
+      ["eq", "patient_id", "p-1"],
+    ]);
+  });
+
+  it("starts at the first page, and says what either read was refused", async () => {
+    const first = tenantWith({ answer: () => ({ data: [] }) });
+    expect(await listPatientBills(first.tenant, "p-1")).toEqual([]);
+    expect(first.queries[0].calls.at(-1)).toEqual(["range", 0, 20]);
+    for (const table of ["bills", "bill_settlement"]) {
+      const { tenant } = tenantWith({
+        answer: (query) => (query.table === table ? { error: postgrestError("42501") } : { data: [] }),
+      });
+      await expect(listPatientBills(tenant, "p-1")).rejects.toMatchObject({ code: "AUTH_PERMISSION_DENIED" });
+    }
   });
 });

@@ -84,8 +84,14 @@ async function anAppointment(patientId: string, at: string, status: string, canc
 }
 
 /** Which entry an entry is: its kind and id. */
-const idOf = (entry: TimelineEntry) =>
-  "visit" in entry ? `visit:${entry.visit.id}` : `appointment:${entry.appointment.id}`;
+const idOf = (entry: TimelineEntry) => {
+  if ("visit" in entry) return `visit:${entry.visit.id}`;
+  if ("appointment" in entry) return `appointment:${entry.appointment.id}`;
+  return "bill" in entry ? `bill:${entry.bill.id}` : `payment:${entry.payment.id}`;
+};
+/** The day an entry is on: a visit's or an appointment's. */
+const dayOf = (entry: TimelineEntry) =>
+  "visit" in entry ? entry.visit.day : "appointment" in entry ? entry.appointment.day : null;
 
 beforeAll(async () => {
   [clinic, other] = await Promise.all([
@@ -234,16 +240,16 @@ describe("a patient's history (plan §10.3, D225)", () => {
   it("pages across both parts without a gap or a repeat", async () => {
     const first = await listPatientTimeline(doctorA.tenant!, paged);
     expect(first.items).toHaveLength(PAGE_SIZE);
-    expect(first.nextCursor).toBe("10.10");
-    const [visits, appointments] = (first.nextCursor ?? "").split(".").map(Number);
-    const second = await listPatientTimeline(doctorA.tenant!, paged, { visits, appointments });
+    expect(first.nextCursor).toBe("10.10.0.0");
+    const [visits, appointments, bills, payments] = (first.nextCursor ?? "").split(".").map(Number);
+    const second = await listPatientTimeline(doctorA.tenant!, paged, { visits, appointments, bills, payments });
     expect(second.items).toHaveLength(5);
     expect(second.nextCursor).toBeNull();
 
     const all = [...first.items, ...second.items];
     expect(new Set(all.map(idOf)).size).toBe(25);
     // A visit at ten, then that day's appointment at nine, a day at a time.
-    expect(all.slice(0, 4).map((entry) => ("visit" in entry ? entry.visit.day : entry.appointment.day))).toEqual([
+    expect(all.slice(0, 4).map(dayOf)).toEqual([
       addDaysKey(todayKey(), -1),
       addDaysKey(todayKey(), -1),
       addDaysKey(todayKey(), -2),
