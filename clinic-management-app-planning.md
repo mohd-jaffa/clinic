@@ -429,6 +429,8 @@ earlier lines are never rewritten.
 | D340 | **The queue's pin jumps to its To bill** (the user): tapping "3 to bill" scrolls to the queue's own To bill section — below Waiting on a phone — counting the doctor whose queue is shown, or every doctor's. | 2026-10-24 |
 | D341 | **Send bill on WhatsApp says its number, day, total and what is due** (the user): "Your bill 2026-27/0042 from Smile Care, 15 Oct: ₹1,500." — and "₹1,000 is due." only while something is still due on it — with the PDF; a void bill is not offered for sending. | 2026-10-24 |
 | D342 | **A patient's bill names its doctor by chips** (the user): under "Doctor", No doctor and each active doctor, starting on the patient's assigned doctor (else No doctor); picking one prices a Consultation line at their fee. A visit's or an arrival's bill keeps the visit's doctor, named and not changed. | 2026-10-24 |
+| D343 | **An expense's category is picked from wrapping chips** (the user): every active category as a chip, one tap, none chosen to start so one must be picked; a corrected expense keeps its own category though archived since. | 2026-10-24 |
+| D344 | **An expense's row opens its edit sheet** (the user): for `expenses.edit` the row opens the Add sheet filled, with Save and **Archive** at its foot (asked first); without `expenses.edit` the row is not tappable — it already shows everything. | 2026-10-24 |
 
 ## 3. Users and roles
 
@@ -1635,6 +1637,27 @@ the clinic's own (`expense_categories`, §9, D40), seeded with Rent,
 Electricity, Equipment, Medicine, Supplies, Salary, Maintenance, Marketing,
 Other. The list shows a month at a time with the month's total and a total per
 category.
+
+As built (R9.1, D328 – D333, D343, D344): a month at a time with ‹ › — this
+month to start, none after it (no expense is dated later) — "Spent in
+October 2026" and its total in display numerals, then **By category**, each
+category's total in the clinic's order, tapped to keep the list to it (again,
+or **Show all**, for every one); then the expenses grouped by day, newest
+first — "Today", "14 Oct" — each row its category, what it was for and how
+it was paid, and the amount. On a desktop the totals on the left, the list on
+the right. **Add expense** (`expenses.create`, or the ＋'s Expense) opens a
+sheet: the category as wrapping chips, none chosen to start; the amount; the
+day, today unless changed, never later; **Paid by** (Cash, UPI, Bank
+transfer, Card, Other); a description, optional. Sent twice, it adds once.
+For `expenses.edit` a row opens the same sheet filled — its category kept
+though archived since — with **Archive** at its foot, asked first; **Show
+archived** under the list lists the month's archived, with **Restore**. An
+archived expense leaves the totals. Every add, change, archive and restore is
+audited with its values (nothing in an expense is clinical). `0033_expenses`:
+`expenses` (read by its policy for `expenses.view`, written only through
+`create_expense`, `change_expense` and `archive_expense`) and
+`expense_totals` — the month's category totals and the whole in one
+grouping-sets query.
 
 ## 17. Home (dashboard) — `/home`
 
@@ -2960,7 +2983,7 @@ in the row's one commit (D136).
 
 | ID | Work | Source | Waits on | Status |
 |---|---|---|---|---|
-| R9.1 | `0033_expenses` and the expenses screen (the clinic's categories): add, edit, archive, month totals, by category | §16 | — | TODO |
+| R9.1 | `0033_expenses` and the expenses screen (the clinic's categories): add, edit, archive, month totals, by category | §16 | — | DONE (2026-10-24) |
 | R9.2 | Integration + E2E | §34 | — | TODO |
 
 ### Phase 10 — Home and reports

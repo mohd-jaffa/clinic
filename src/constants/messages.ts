@@ -149,6 +149,11 @@ export const ERROR_MESSAGES = {
   BILLS_LOAD_FAILED: "The bills couldn't be loaded.",
   PAYMENTS_LOAD_FAILED: "The payments couldn't be loaded.",
   OUTSTANDING_LOAD_FAILED: "Who owes couldn't be loaded.",
+  // Expenses (plan §16; D328 – D333).
+  EXPENSES_LOAD_FAILED: "The expenses couldn't be loaded.",
+  EXPENSE_TOTALS_LOAD_FAILED: "The month's totals couldn't be loaded.",
+  EXPENSE_CATEGORY_ARCHIVED: "That category is archived. Choose another.",
+  EXPENSE_ARCHIVED: "This expense is archived. Restore it to change it.",
   BALANCE_LOAD_FAILED: "The balance couldn't be loaded.",
 
   // Payments (plan §15.3; D297, D301).
@@ -1179,6 +1184,47 @@ export const UI_TEXT = {
     label: "Dates",
     from: "From",
     to: "To",
+  },
+
+  /** Expenses (plan §16; D328 – D333, D343, D344). */
+  expenses: {
+    add: "Add expense",
+    addTitle: "Add expense",
+    editTitle: "Expense",
+    categoryLabel: "Category",
+    amountLabel: "Amount",
+    dateLabel: "Date",
+    methodLabel: "Paid by",
+    descriptionLabel: "Description",
+    descriptionHint: "What it was for, if the category doesn’t say: “AC repair, room 2”.",
+    save: "Save expense",
+    added: (amount: string, category: string) => `${amount} for ${category} added`,
+    notAdded: "The expense wasn’t added",
+    saved: "Expense saved",
+    notSaved: "The expense wasn’t saved",
+    archiveAsk: (amount: string, category: string) => `Archive ${amount} for ${category}?`,
+    archiveAskMessage: "It leaves the month’s totals. Show archived lists it, to restore.",
+    archived: "Expense archived",
+    restored: "Expense restored",
+    notChanged: "The expense wasn’t changed",
+    restoreOf: (amount: string, category: string) => `Restore ${amount} for ${category}`,
+    /** The month shown (D330). */
+    monthLabel: "Month",
+    previousMonth: "Previous month",
+    nextMonth: "Next month",
+    spentIn: (month: string) => `Spent in ${month}`,
+    byCategory: "By category",
+    /** A category's total, tapped, shows its expenses alone (D330). */
+    onlyOf: (category: string) => `Show only ${category}`,
+    showAll: "Show all",
+    list: "Expenses",
+    empty: "No expenses this month",
+    emptyHint: "Rent, salaries, supplies — what the clinic spends, totalled by category.",
+    noneOf: (category: string) => `No ${category} this month`,
+    today: "Today",
+    showArchived: "Show archived",
+    hideArchived: "Hide archived",
+    archivedEmpty: "Nothing archived this month",
   },
 
   /** Payments and refunds (plan §15.3; D322 – D324, D334, D336). */

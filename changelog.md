@@ -4615,3 +4615,60 @@ the user first: D267 – D271.
 
 ### Blockers
 - None.
+
+## 2026-10-24 — R9.1: expenses — added, corrected, archived, the month's totals by category
+
+### Added
+- **`0033_expenses`** (plan §16, §28.6): `expenses` — the clinic's own
+  category, an amount within the app's bound, the day, how it was paid, an
+  optional description; archived, never deleted; once per idempotency key;
+  `created_by`, `updated_by`, `archived_by` kept. Read by its policy for
+  `expenses.view`; written only through `create_expense`
+  (`expenses.create`, a category in use, today or earlier in the clinic's
+  timezone — D328), `change_expense` (`expenses.edit`, not once archived,
+  its own category kept though archived since — D333) and `archive_expense`
+  (`expenses.edit`, archive or restore — D331), each checking the clinic can
+  write. `expense_totals`: the month's category totals and the whole in one
+  grouping-sets query, archived ones left out. Indexed by day, by category
+  and the archived, each leading with the clinic. `expense_categories` gets
+  `unique (id, clinic_id)` for the expense's composite key.
+- **Expenses — `/expenses`** (`features/expenses`, D330 – D332, D343,
+  D344): a month at a time with ‹ › (`MonthSwitcher`, in the kit) — this
+  month to start, none after it; "Spent in October 2026" and each
+  category's total, tapped to keep the list to it; the expenses by day,
+  newest first — "Today", "14 Oct"; on a desktop the totals left, the list
+  right. **Add expense** (or the ＋'s Expense) opens `ExpenseSheet` —
+  category chips, none chosen to start; amount; day, today unless changed;
+  Paid by; a description, optional — sent twice, added once. For
+  `expenses.edit` a row opens it filled, with **Archive** asked first;
+  **Show archived** lists the month's archived with **Restore**.
+- Routes `GET, POST /api/expenses`, `PATCH /api/expenses/[id]`,
+  `POST /api/expenses/[id]/archive`, `GET /api/expenses/summary` (plan
+  §30); `ExpensesClient`; `expenseSchema` and the queries; every change
+  audited with its values — nothing in an expense is clinical.
+- Error codes `EXPENSE_CATEGORY_ARCHIVED`, `EXPENSE_ARCHIVED`,
+  `EXPENSES_LOAD_FAILED`, `EXPENSE_TOTALS_LOAD_FAILED`.
+
+### Changed
+- Plan: D343, D344 recorded; tracker R9.1 DONE (2026-10-24); §16 as
+  built. `DESIGN.md`: Expenses, the expense sheet, `MonthSwitcher`.
+
+### Speed (plan §37)
+- **Round trips:** Expenses waits on 2 — the session, then the month's
+  totals, its first page and the categories, at once; another month, a
+  category or the archived, one read each. Adding, correcting, archiving
+  and restoring wait on 2: the function, then the audit row.
+- **Indexes:** `expenses_clinic_id_expense_date_idx` (partial, in use, by
+  day), `expenses_clinic_id_category_id_idx`, `expenses_clinic_id_archived_idx`
+  (partial), and one on each person who added, changed or archived.
+
+### Validation
+- Typecheck, lint, format check passed.
+- Unit and integration tests passed (3,929), coverage 100%.
+- E2E passed (phone, desktop; 154 passed, 8 skipped by design).
+- `tests/db/expenses-migration.test.ts`: the table's bounds, key, indexes,
+  policy and grant; each function's permission, plan check, category and
+  day; the totals as the caller. Integration and E2E come with R9.2.
+
+### Blockers
+- None.

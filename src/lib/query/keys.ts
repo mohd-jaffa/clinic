@@ -142,6 +142,13 @@ export const apiRoutes = {
     list: "/api/payments",
     void: (id: string) => `/api/payments/${id}/void`,
   },
+  // Expenses (plan §16): a month's, a page at a time; one corrected, archived or restored; a month's totals.
+  expenses: {
+    list: "/api/expenses",
+    one: (id: string) => `/api/expenses/${id}`,
+    archive: (id: string) => `/api/expenses/${id}/archive`,
+    summary: "/api/expenses/summary",
+  },
   // Who owes, most first (plan §15.4).
   outstanding: {
     list: "/api/outstanding",

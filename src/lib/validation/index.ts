@@ -347,6 +347,19 @@ export {
 } from "./schemas/payments";
 
 export {
+  archiveExpenseSchema,
+  expenseIdSchema,
+  expenseSchema,
+  expensesQuerySchema,
+  expenseTotalsQuerySchema,
+  type ArchiveExpensePayload,
+  type ExpenseInput,
+  type ExpensePayload,
+  type ExpensesQuery,
+  type ExpenseTotalsQuery,
+} from "./schemas/expenses";
+
+export {
   billsQuerySchema,
   noChargeSchema,
   toBillCountQuerySchema,

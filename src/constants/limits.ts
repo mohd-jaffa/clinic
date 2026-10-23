@@ -140,6 +140,8 @@ export const TEXT_LIMITS = {
   contactNote: 200,
   /** A line on a payment: "Paid by her son". */
   paymentNote: 200,
+  /** What an expense was for, when its category does not say (D329). */
+  expenseDescription: 120,
 } as const;
 
 /** How many medicines one prescription holds (plan §13): more than any visit writes. 0021's CHECK. */
