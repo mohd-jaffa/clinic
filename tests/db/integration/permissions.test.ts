@@ -23,7 +23,7 @@ import {
 } from "@tests/support/integration";
 
 /**
- * The permission matrix, so far (plan §34.3, R1.11, R3.8, R4.7, R5.1, R6.1, R6.3, R6.4, R6.7, R7.1, R7.2, R7.3, R8.1, R8.4): every
+ * The permission matrix, so far (plan §34.3, R1.11, R3.8, R4.7, R5.1, R6.1, R6.3, R6.4, R6.7, R7.1, R7.2, R7.3, R8.1, R8.4, R9.2): every
  * permission the schema enforces yet, allowed and refused — by the route
  * guard, and by RLS or a function with the member's own token. Each phase
  * adds the rows its tables bring; the patients routes themselves are asked in
@@ -1073,5 +1073,94 @@ describe("a deactivated member", () => {
       status: 403,
       body: { error: { code: "AUTH_MEMBERSHIP_INACTIVE" } },
     });
+  });
+});
+
+describe("expenses.view, expenses.create and expenses.edit, by the guard, RLS and the 0033 functions", () => {
+  let viewer: SignedIn & { memberId: string };
+  let clerk: SignedIn & { memberId: string };
+  let keeper: SignedIn & { memberId: string };
+  let rent: string;
+  let expenseId: string;
+  const add = (member: SignedIn) =>
+    member.tenant!.supabase.rpc("create_expense", {
+      p_expense: { category_id: rent, amount_paise: 1_000, expense_date: todayKey(), payment_method: "CASH" },
+      p_idempotency_key: randomUUID(),
+    });
+
+  beforeAll(async () => {
+    [viewer, clerk, keeper] = await Promise.all([
+      addMember(clinic.clinicId, { permissions: ["expenses.view"] }),
+      addMember(clinic.clinicId, { permissions: ["expenses.view", "expenses.create"] }),
+      addMember(clinic.clinicId, { permissions: ["expenses.view", "expenses.edit"] }),
+    ]);
+    const { data } = await admin()
+      .from("expense_categories")
+      .select("id")
+      .eq("clinic_id", clinic.clinicId)
+      .eq("name", "Rent")
+      .single();
+    rent = data!.id as string;
+    const { data: made, error } = await add(clerk);
+    expect(error).toBeNull();
+    expenseId = (made as { expense_id: string }).expense_id;
+  });
+
+  it("lets each through the guard to what it allows, and no further", async () => {
+    await expect(ask(viewer, "expenses.view", "GET")).resolves.toMatchObject({ status: 200 });
+    await expect(ask(clerk, "expenses.create")).resolves.toMatchObject({ status: 200 });
+    await expect(ask(keeper, "expenses.edit")).resolves.toMatchObject({ status: 200 });
+    for (const [member, access] of [
+      [viewer, "expenses.create"],
+      [viewer, "expenses.edit"],
+      [clerk, "expenses.edit"],
+      [keeper, "expenses.create"],
+      [receptionist, "expenses.view"],
+    ] as const) {
+      await expect(ask(member, access)).resolves.toMatchObject({ status: 403 });
+    }
+  });
+
+  it("reads expenses and their totals with expenses.view, and none without it", async () => {
+    const { data: seen } = await viewer.tenant!.supabase.from("expenses").select("id").eq("id", expenseId);
+    expect(seen).toHaveLength(1);
+    const { data: unseen } = await receptionist.tenant!.supabase.from("expenses").select("id");
+    expect(unseen).toEqual([]);
+    const { data: totals } = await receptionist.tenant!.supabase.rpc("expense_totals", {
+      p_from: todayKey(),
+      p_to: todayKey(),
+    });
+    expect(totals).toEqual([{ category_id: null, category_name: null, total_paise: null }]);
+  });
+
+  it("adds with expenses.create, corrects and archives with expenses.edit — each and no other", async () => {
+    expect((await add(viewer)).error?.hint).toBe("AUTH_PERMISSION_DENIED");
+    expect((await add(keeper)).error?.hint).toBe("AUTH_PERMISSION_DENIED");
+    const change = (member: SignedIn) =>
+      member.tenant!.supabase.rpc("change_expense", {
+        p_expense_id: expenseId,
+        p_expense: { category_id: rent, amount_paise: 2_000, expense_date: todayKey(), payment_method: "UPI" },
+      });
+    const archive = (member: SignedIn, archived: boolean) =>
+      member.tenant!.supabase.rpc("archive_expense", { p_expense_id: expenseId, p_archived: archived });
+    expect((await change(clerk)).error?.hint).toBe("AUTH_PERMISSION_DENIED");
+    expect((await archive(clerk, true)).error?.hint).toBe("AUTH_PERMISSION_DENIED");
+    expect((await change(keeper)).error).toBeNull();
+    expect((await archive(keeper, true)).error).toBeNull();
+    expect((await archive(keeper, false)).error).toBeNull();
+  });
+
+  it("writes the table directly for no one, the owner included", async () => {
+    for (const member of [clinic.owner, keeper]) {
+      const { data } = await member
+        .tenant!.supabase.from("expenses")
+        .update({ amount_paise: 1 })
+        .eq("id", expenseId)
+        .select("id");
+      expect(data ?? []).toEqual([]);
+      const { error } = await member.tenant!.supabase.from("expenses").delete().eq("id", expenseId);
+      const { data: kept } = await admin().from("expenses").select("id").eq("id", expenseId);
+      expect(kept, String(error?.code)).toHaveLength(1);
+    }
   });
 });

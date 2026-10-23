@@ -2984,7 +2984,7 @@ in the row's one commit (D136).
 | ID | Work | Source | Waits on | Status |
 |---|---|---|---|---|
 | R9.1 | `0033_expenses` and the expenses screen (the clinic's categories): add, edit, archive, month totals, by category | §16 | — | DONE (2026-10-24) |
-| R9.2 | Integration + E2E | §34 | — | TODO |
+| R9.2 | Integration + E2E | §34 | — | DONE (2026-10-24) |
 
 ### Phase 10 — Home and reports
 

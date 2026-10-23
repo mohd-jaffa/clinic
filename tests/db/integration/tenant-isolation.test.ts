@@ -49,6 +49,7 @@ const CLINIC_TABLES: readonly { table: string; column: string }[] = [
   { table: "bill_items", column: "clinic_id" },
   { table: "payments", column: "clinic_id" },
   { table: "patient_balances", column: "clinic_id" },
+  { table: "expenses", column: "clinic_id" },
   { table: "audit_logs", column: "clinic_id" },
 ];
 
@@ -77,6 +78,9 @@ let sessionId: string;
 /** A's bill for that visit, issued in the room (0028), and a payment on A's patient (0029). */
 let billId: string;
 let paymentId: string;
+/** A's rent, filed under A's own category (0033). */
+let expenseId: string;
+let rentId: string;
 
 beforeAll(async () => {
   [a, b] = await Promise.all([registerClinic({ clinicName: "Clinic A" }), registerClinic({ clinicName: "Clinic B" })]);
@@ -204,6 +208,25 @@ beforeAll(async () => {
   });
   if (unpaid) throw unpaid;
   paymentId = (payment as { payment_id: string }).payment_id;
+  // And A's rent for the month (0033).
+  const { data: rent } = await admin()
+    .from("expense_categories")
+    .select("id")
+    .eq("clinic_id", a.clinicId)
+    .eq("name", "Rent")
+    .single();
+  rentId = rent!.id as string;
+  const { data: expense, error: unspent } = await a.owner.tenant.supabase.rpc("create_expense", {
+    p_expense: {
+      category_id: rentId,
+      amount_paise: 2_500_000,
+      expense_date: todayKey(),
+      payment_method: "BANK_TRANSFER",
+    },
+    p_idempotency_key: randomUUID(),
+  });
+  if (unspent) throw unspent;
+  expenseId = (expense as { expense_id: string }).expense_id;
   developer = await makeDeveloper();
 });
 
@@ -495,6 +518,36 @@ describe("as clinic B's owner, with a valid token", () => {
     expect(settled).toEqual([]);
     const { data: kept } = await admin().from("payments").select("status").eq("id", paymentId).single();
     expect(kept).toEqual({ status: "RECORDED" });
+  });
+
+  it("files nothing under A's categories, and corrects, archives or totals none of A's expenses (0033)", async () => {
+    const { supabase } = b.owner.tenant;
+    const { error: filed } = await supabase.rpc("create_expense", {
+      p_expense: { category_id: rentId, amount_paise: 100, expense_date: todayKey(), payment_method: "CASH" },
+      p_idempotency_key: randomUUID(),
+    });
+    expect(filed?.hint).toBe("EXPENSE_CATEGORY_ARCHIVED");
+    for (const [name, args] of [
+      [
+        "change_expense",
+        {
+          p_expense_id: expenseId,
+          p_expense: { category_id: rentId, amount_paise: 1, expense_date: todayKey(), payment_method: "CASH" },
+        },
+      ],
+      ["archive_expense", { p_expense_id: expenseId, p_archived: true }],
+    ] as const) {
+      const { error } = await supabase.rpc(name, args);
+      expect(error?.hint, name).toBe("RECORD_NOT_FOUND");
+    }
+    const { data: totals } = await supabase.rpc("expense_totals", { p_from: todayKey(), p_to: todayKey() });
+    expect(totals).toEqual([{ category_id: null, category_name: null, total_paise: null }]);
+    const { data: kept } = await admin()
+      .from("expenses")
+      .select("amount_paise, archived_at")
+      .eq("id", expenseId)
+      .single();
+    expect(kept).toEqual({ amount_paise: 2_500_000, archived_at: null });
   });
 
   it("prints none of A's prescriptions (R6.4)", async () => {

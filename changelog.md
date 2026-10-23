@@ -4672,3 +4672,44 @@ the user first: D267 – D271.
 
 ### Blockers
 - None.
+
+## 2026-10-24 — R9.2: expenses tested against the database and in the browser
+
+### Added
+- **`tests/db/integration/expenses.test.ts`** (plan §16, §34): an expense
+  added once per key, saved as typed and audited with its values; dated
+  today or earlier, a day to come refused by the database too (D328); filed
+  only under one of the clinic's categories in use — not an archived one,
+  nor another clinic's; for `expenses.create` alone, the table written
+  through its functions only. A month listed by day, newest first, the
+  latest added first within a day; one category's alone; the archived; the
+  totals by category and the whole, last month's and the archived left out
+  (D330 – D332). Corrected of any month — its own category kept though
+  archived since, moved only to one in use — audited with what changed
+  (D333); archived (out of the totals, stamped with who), refused a
+  correction then, restored, each audited once (D331); for `expenses.edit`
+  alone, no other clinic's touched. A view-only clinic refused every write,
+  changing nothing, still reading its totals.
+- **Tenant isolation:** `expenses` among the clinic tables; clinic B files
+  nothing under A's categories and corrects, archives or totals none of A's
+  expenses.
+- **The permission matrix:** `expenses.view`, `.create` and `.edit` — by
+  the route guard, by RLS (read, and the totals) and by the 0033 functions;
+  the table written directly by no one, the owner included.
+- **`tests/e2e/expenses.spec.ts`** (phone, desktop, axe on every screen):
+  the phase's exit — Supplies from the ＋, Rent from Add expense; the
+  month's total and each category's; the Supplies corrected from its row;
+  Rent kept to alone, archived (asked first) out of the totals and restored
+  from Show archived; last month empty, none after this one; a reader with
+  `expenses.view` alone adds and opens nothing.
+
+### Changed
+- Plan: tracker R9.2 DONE (2026-10-24) — Phase 9 complete.
+
+### Validation
+- Typecheck, lint, format check passed.
+- Unit and integration tests passed (3,944), coverage 100%.
+- E2E passed (phone, desktop; 156 passed, 8 skipped by design).
+
+### Blockers
+- None.
