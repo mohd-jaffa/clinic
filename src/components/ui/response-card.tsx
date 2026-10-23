@@ -52,6 +52,8 @@ export interface OutcomeCard {
   facts?: readonly ResponseFact[];
   primary?: ResponseAction;
   secondary?: ResponseAction;
+  /** A third way on, quiet, before the others: the issued bill's View bill beside Print and WhatsApp (D327). */
+  tertiary?: ResponseAction;
   /** A success or info card with no next step closes itself; `false` keeps it. */
   autoClose?: boolean;
 }
@@ -139,7 +141,11 @@ const same = (a: Card, b: Card) => a.kind === b.kind && a.title === b.title && a
 
 /** A success or info card with nothing to do next, which closes itself. */
 const closesItself = (card: Card) =>
-  (card.kind === "success" || card.kind === "info") && !card.primary && !card.secondary && card.autoClose !== false;
+  (card.kind === "success" || card.kind === "info") &&
+  !card.primary &&
+  !card.secondary &&
+  !card.tertiary &&
+  card.autoClose !== false;
 
 const ResponseContext = createContext<Respond | null>(null);
 
@@ -361,10 +367,11 @@ function ResponseCard({ card, onClose }: { card: Card; onClose: (answer?: boolea
       initialFocus={danger ? safe : first}
       mark={<Mark look={danger ? DANGER_MARK : MARKS[card.kind]} size="md" />}
       closable={!confirming}
-      // Cancel, a second way to go ahead and the main one: a row of three is wider than the card.
-      stackActions={confirming && card.secondary !== undefined}
+      // Cancel, a second way to go ahead and the main one — or three ways on: a row of three is wider than the card.
+      stackActions={(confirming && card.secondary !== undefined) || card.tertiary !== undefined}
       actions={
         <>
+          {card.tertiary && <ActionButton action={card.tertiary} variant="quiet" onDone={() => onClose(false)} />}
           {confirming && (
             <ActionButton
               action={{ label: card.cancelLabel ?? UI_TEXT.actions.cancel }}

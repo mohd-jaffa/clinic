@@ -17,7 +17,7 @@ import { paiseToText, parseRupees } from "@/lib/money";
 import type { BillInput, CollectFeeInput } from "@/lib/validation";
 
 import { billTotals, type BillDiscount, type BillTotals } from "./totals";
-import type { BillDetail, BillStart } from "./types";
+import type { BillDetail, BillDoctor, BillIssued, BillStart } from "./types";
 
 const { billing: words } = UI_TEXT;
 
@@ -42,7 +42,9 @@ export type BillFormLine =
   | { kind: "PICK"; treatmentId: string; name: string };
 
 /** A new bill as its form holds it: what the schema reads, the lines with what they show. */
-export interface BillForm extends Omit<BillInput, "lines" | "discount" | "collect"> {
+export interface BillForm extends Omit<BillInput, "doctorId" | "lines" | "discount" | "collect"> {
+  /** The doctor picked for a patient's bill (D342) — "" for none; a visit's or an arrival's keeps its own. */
+  doctorId: string;
   lines: BillFormLine[];
   discount: { kind: "NONE" | DiscountKind; amount: string; percent: string };
   /** `typed` once an amount is typed: until then it is the total (D304). */
@@ -51,6 +53,16 @@ export interface BillForm extends Omit<BillInput, "lines" | "discount" | "collec
 
 /** The method Collect now starts on (D304). */
 export const FIRST_METHOD: PaymentMethod = "CASH";
+
+/** Whether a bill names its own doctor (D326, D342): one not from a visit or an arrival, which keep theirs. */
+export const picksDoctor = (start: Pick<BillStart, "visit" | "appointment">) =>
+  start.visit === null && start.appointment === null;
+
+/** Who a bill is priced by (D289): the visit's or the arrival's doctor, or the one picked for a patient's bill. */
+export function billDoctorOf(start: BillStart, doctorId: string): BillDoctor | null {
+  if (!picksDoctor(start)) return start.doctor;
+  return start.doctors.find((doctor) => doctor.id === doctorId) ?? null;
+}
 
 /** The clinic's consultation (D26): its Consultation entry, or else its first in that category — none when archived. */
 export function consultationOf(services: readonly Service[]): Service | null {
@@ -81,6 +93,26 @@ export function serviceLine(
     quantity: 1,
     price: paiseToText(pricePaise),
   };
+}
+
+/**
+ * A bill's lines once its doctor is changed (D289, D342): a Consultation
+ * line still at the last doctor's price takes the new one's — their own fee,
+ * or the price list's; a price typed by hand stays.
+ */
+export function repriced(
+  lines: readonly BillFormLine[],
+  services: readonly Service[],
+  fees: { from: number | null; to: number | null },
+): BillFormLine[] {
+  const consultation = consultationOf(services);
+  if (!consultation) return [...lines];
+  const [was, now] = [fees.from, fees.to].map((fee) => paiseToText(priceOf(consultation, services, fee)));
+  return lines.map((line) =>
+    line.kind === "SERVICE" && line.serviceId === consultation.id && line.price === was
+      ? { ...line, price: now }
+      : line,
+  );
 }
 
 /** The same name, however it is cased or spaced. */
@@ -120,6 +152,8 @@ export function blankBill(start: BillStart, services: readonly Service[]): BillF
     patientId: start.patient.id,
     visitId: start.visit?.id ?? null,
     appointmentId: start.visit ? null : (start.appointment?.id ?? null),
+    // A patient's bill starts on their assigned doctor, or none (D326).
+    doctorId: picksDoctor(start) ? (start.doctor?.id ?? "") : "",
     lines: startingLines(start, services),
     discount: { kind: "NONE", amount: "", percent: "" },
     notes: "",
@@ -150,8 +184,12 @@ export function reissuedBill(start: BillStart, services: readonly Service[], bil
       price,
     };
   });
+  const blank = blankBill(start, services);
+  // Its doctor again, while they practise (D342).
+  const doctor = start.doctors.find((each) => each.id === bill.doctorId);
   return {
-    ...blankBill(start, services),
+    ...blank,
+    doctorId: doctor ? doctor.id : blank.doctorId,
     lines,
     discount:
       bill.discountPaise > 0
@@ -197,6 +235,14 @@ export function previewOf(form: Pick<BillForm, "lines" | "discount">): BillTotal
 /** What is collected, as typed (D304) — nothing while Collect now is off, or the amount is not one yet. */
 export const collectedOf = ({ on, amount }: BillForm["collect"]) => (on ? (parseRupees(amount) ?? 0) : 0);
 
+/**
+ * What is still due on a bill just issued (D298, D341): bills settle oldest
+ * first, so the newest holds what the patient owes — no more than its total,
+ * nothing with an advance.
+ */
+export const dueOnNewest = ({ totalPaise, balancePaise }: Pick<BillIssued, "totalPaise" | "balancePaise">) =>
+  Math.min(totalPaise, Math.max(0, balancePaise));
+
 /** A balance in words (plan §15.4): due, advance, or nothing due. */
 export function balanceWords(paise: number): string {
   if (paise > 0) return words.due(formatPaise(paise));
@@ -214,6 +260,7 @@ export function toBillInput(form: BillForm): BillInput {
   const { typed, ...collect } = form.collect;
   return {
     ...form,
+    doctorId: form.doctorId || null,
     lines: form.lines.map((line) =>
       line.kind === "SERVICE"
         ? {

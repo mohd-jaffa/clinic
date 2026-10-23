@@ -70,11 +70,13 @@ const visitStart: BillStart = {
     number: 1042,
     dateOfBirth: "1990-01-01",
     gender: "FEMALE",
+    phone: "+919876543210",
     archived: false,
   },
   visit: { id: VISIT, day: "2026-10-16", status: "COMPLETED", billingStatus: "TO_BILL" },
   appointment: null,
   doctor: { id: "d-1", name: "Maya Rao", feePaise: 80_000 },
+  doctors: [],
   consultationBilled: false,
   treatments: [
     { id: ROOT_CANAL_TREATMENT, name: "Root canal" },
@@ -147,6 +149,8 @@ describe("NewBill (plan §15.2; D302 – D313)", () => {
       patientId: PATIENT,
       visitId: VISIT,
       appointmentId: null,
+      // A visit's bill keeps the visit's doctor: none is sent (D342).
+      doctorId: null,
       lines: [
         { kind: "SERVICE", serviceId: CONSULTATION.id, treatmentId: null, quantity: 1, price: "800" },
         { kind: "SERVICE", serviceId: ROOT_CANAL.id, treatmentId: ROOT_CANAL_TREATMENT, quantity: 1, price: "6000" },
@@ -328,6 +332,64 @@ describe("NewBill (plan §15.2; D302 – D313)", () => {
       "href",
       `/billing/new?visit=${VISIT}&from=billing`,
     );
+  });
+
+  it("names a patient's bill's doctor by chips — their assigned one to start — pricing a Consultation by them (D326, D342)", async () => {
+    const ARUN = "9a1e4a52-3c5d-4e6f-8a9b-0c1d2e3f4a51";
+    const MAYA = "9a1e4a52-3c5d-4e6f-8a9b-0c1d2e3f4a52";
+    params.current = `patient=${PATIENT}`;
+    start.current = {
+      data: {
+        ...visitStart,
+        visit: null,
+        treatments: [],
+        doctor: { id: ARUN, name: "Arun Sen", feePaise: null },
+        doctors: [
+          { id: ARUN, name: "Arun Sen", feePaise: null },
+          { id: MAYA, name: "Maya Rao", feePaise: 80_000 },
+          { id: "9a1e4a52-3c5d-4e6f-8a9b-0c1d2e3f4a53", name: null, feePaise: null },
+        ],
+      },
+    };
+    draw();
+    const doctors = screen.getByRole("radiogroup", { name: "Doctor" });
+    expect(within(doctors).getByRole("radio", { name: "Arun Sen" })).toBeChecked();
+    expect(within(doctors).getByRole("radio", { name: "No doctor" })).toBeInTheDocument();
+    expect(within(doctors).getByRole("radio", { name: "No longer on the team" })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Add line" }));
+    await userEvent.click(
+      within(screen.getByRole("dialog", { name: "Add a line" })).getByRole("button", { name: /Consultation/ }),
+    );
+    // Arun has no fee of his own: the price list's ₹500; Maya's own is ₹800.
+    expect(within(lineOf("Consultation")).getAllByText("₹500")).toHaveLength(2);
+    await userEvent.click(within(doctors).getByRole("radio", { name: "Maya Rao" }));
+    expect(within(lineOf("Consultation")).getAllByText("₹800")).toHaveLength(2);
+    // No doctor: the price list's again; then Maya once more.
+    await userEvent.click(within(doctors).getByRole("radio", { name: "No doctor" }));
+    expect(within(lineOf("Consultation")).getAllByText("₹500")).toHaveLength(2);
+    await userEvent.click(within(doctors).getByRole("radio", { name: "Maya Rao" }));
+    await issue();
+    await waitFor(() => expect(client.issue).toHaveBeenCalled());
+    expect(sent()).toMatchObject({ visitId: null, doctorId: MAYA });
+  });
+
+  it("issues a patient's bill with no doctor when none is picked, and offers no chips without doctors", async () => {
+    params.current = `patient=${PATIENT}`;
+    start.current = {
+      data: {
+        ...visitStart,
+        visit: null,
+        treatments: [],
+        doctor: null,
+        doctors: [{ id: "9a1e4a52-3c5d-4e6f-8a9b-0c1d2e3f4a52", name: "Maya Rao", feePaise: 80_000 }],
+      },
+    };
+    const first = draw();
+    expect(screen.getByRole("radio", { name: "No doctor" })).toBeChecked();
+    first.unmount();
+    start.current = { data: { ...visitStart, visit: null, treatments: [], doctor: null, doctors: [] } };
+    draw();
+    expect(screen.queryByRole("radiogroup", { name: "Doctor" })).not.toBeInTheDocument();
   });
 
   it("names an arrival's token, and a doctor gone as no doctor", () => {

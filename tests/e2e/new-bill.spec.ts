@@ -137,7 +137,7 @@ async function aClinic() {
       });
     expect(error).toBeNull();
   };
-  return { clinic, desk, addPatient, doneVisit, bookNow };
+  return { clinic, desk, doctorId: doctor.id as string, addPatient, doneVisit, bookNow };
 }
 
 test("the owner bills a visit from Bill now, its unpriced treatment picked, collected in full", async ({ page }) => {
@@ -187,7 +187,7 @@ test("the owner bills a visit from Bill now, its unpriced treatment picked, coll
 });
 
 test("reception bills a visit from the profile, and a patient searched for from the price list", async ({ page }) => {
-  const { desk, addPatient, doneVisit } = await aClinic();
+  const { desk, doctorId, addPatient, doneVisit } = await aClinic();
   const [kiran, sunil] = await Promise.all([addPatient("Kiran Das"), addPatient("Sunil Nair")]);
   const visitId = await doneVisit(kiran);
   await signIn(page, desk.email, desk.password);
@@ -229,9 +229,22 @@ test("reception bills a visit from the profile, and a patient searched for from 
   await expect(adding).toBeHidden();
   await expect(figure(page, words.total)).toHaveText("₹4,500");
   await expectAccessible(page);
+
+  // His bill names its doctor by chips — none assigned, so No doctor to start (D326, D342);
+  // Dr. Maya Rao picked, a Consultation is at her own ₹800.
+  const doctors = page.getByRole("radiogroup", { name: words.doctorLabel });
+  await expect(doctors.getByRole("radio", { name: words.noDoctor })).toBeChecked();
+  await doctors.getByRole("radio", { name: "Maya Rao" }).click();
+  await page.getByRole("button", { name: words.addLine }).click();
+  await adding.getByRole("searchbox").fill("consult");
+  await adding.getByRole("button", { name: /Consultation/ }).click();
+  await expect(figure(page, words.total)).toHaveText("₹5,300");
+  await expectAccessible(page);
   await page.getByRole("button", { name: words.issue }).click();
   await expect(page).toHaveURL(new RegExp(`/patients/${sunil}$`));
-  await expect(issuedCard(page, secondIssued)).toContainText(words.collected("₹4,500"));
+  await expect(issuedCard(page, secondIssued)).toContainText(words.collected("₹5,300"));
+  const { data: billed } = await admin().from("bills").select("doctor_id").eq("patient_id", sunil);
+  expect(billed).toEqual([{ doctor_id: doctorId }]);
 });
 
 test("with the fee at arrival, Arrived asks for it after the token, and the queue says Fee paid", async ({ page }) => {

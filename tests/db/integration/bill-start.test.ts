@@ -22,9 +22,11 @@ import {
  * bill_start reads, for whoever may issue a bill — reception, who may not
  * open visits — a visit's patient, doctor and fee, its treatments not yet
  * billed and whether its consultation is; an arrival's token; a patient's
- * oldest visit to bill; within the doctor scope and the clinic. issueBill
- * sends the totals by billing/totals.ts and audits; the queue and an
- * appointment say Fee paid.
+ * oldest visit to bill; within the doctor scope and the clinic. A
+ * patient's bill starts on their assigned doctor, lists the doctors to pick
+ * and is priced by the one picked (R8.8, D326, D342); the patient's mobile
+ * comes for WhatsApp (D341). issueBill sends the totals by billing/totals.ts
+ * and audits; the queue and an appointment say Fee paid.
  */
 type Member = SignedIn & { memberId: string };
 
@@ -162,6 +164,7 @@ describe("bill_start (plan §15.2; D285, D286, D313)", () => {
       visit: expect.objectContaining({ id: visitId, status: "COMPLETED", billingStatus: "TO_BILL" }),
       appointment: null,
       doctor: { id: mayaDoctor, name: expect.any(String), feePaise: FEE },
+      doctors: [],
       consultationBilled: false,
       treatments: [{ id: expect.any(String), name: "Root canal" }],
       balancePaise: 0,
@@ -297,5 +300,61 @@ describe("bill_start (plan §15.2; D285, D286, D313)", () => {
     await expect(
       issueBill(desk.tenant!, aBill({ patientId, lines: [consultationLine("500")] }), randomUUID()),
     ).rejects.toMatchObject({ code: "PATIENT_ARCHIVED" });
+  });
+});
+
+describe("a patient's bill's doctor (plan §15.2, §18; R8.8, D326, D341, D342)", () => {
+  it("starts on their assigned doctor, with the clinic's doctors and their fees to pick from, and their mobile", async () => {
+    const patientId = await addPatient("Zara Khan");
+    await admin().from("patients").update({ assigned_doctor_id: mayaDoctor }).eq("id", patientId);
+    const start = await getBillStart(desk.tenant!, { patient: patientId });
+    expect(start.patient.phone).toBe("+919876543210");
+    expect(start.doctor).toMatchObject({ id: mayaDoctor, feePaise: FEE });
+    expect(start.doctors.map(({ id, feePaise }) => ({ id, feePaise }))).toEqual(
+      expect.arrayContaining([
+        { id: mayaDoctor, feePaise: FEE },
+        { id: arunDoctor, feePaise: null },
+      ]),
+    );
+    // A visit's or an arrival's bill keeps its own doctor: none to pick.
+    const { appointmentId } = await arrived(patientId);
+    expect((await getBillStart(desk.tenant!, { appointment: appointmentId })).doctors).toEqual([]);
+  });
+
+  it("starts on no one when their doctor no longer practises, who is not offered either", async () => {
+    const patientId = await addPatient("Ira Sen");
+    await admin().from("patients").update({ assigned_doctor_id: arunDoctor }).eq("id", patientId);
+    await admin().from("doctors").update({ active: false }).eq("id", arunDoctor);
+    try {
+      const start = await getBillStart(desk.tenant!, { patient: patientId });
+      expect(start.doctor).toBeNull();
+      expect(start.doctors.map(({ id }) => id)).not.toContain(arunDoctor);
+    } finally {
+      await admin().from("doctors").update({ active: true }).eq("id", arunDoctor);
+    }
+  });
+
+  it("issues the bill with the doctor picked, a Consultation at their fee — and at the price list's with none", async () => {
+    const patientId = await addPatient("Leela Nair");
+    const mayas = await issueBill(
+      desk.tenant!,
+      aBill({ patientId, doctorId: mayaDoctor, lines: [consultationLine("800")] }),
+      randomUUID(),
+    );
+    const none = await issueBill(desk.tenant!, aBill({ patientId, lines: [consultationLine("500")] }), randomUUID());
+    const { data: bills } = await admin()
+      .from("bills")
+      .select("id, doctor_id, total_paise")
+      .in("id", [mayas.billId, none.billId]);
+    expect(bills).toEqual(
+      expect.arrayContaining([
+        { id: mayas.billId, doctor_id: mayaDoctor, total_paise: FEE },
+        { id: none.billId, doctor_id: null, total_paise: 50_000 },
+      ]),
+    );
+    // Without payments.discount, no one's fee but the doctor's own (D284, D289).
+    await expect(
+      issueBill(desk.tenant!, aBill({ patientId, lines: [consultationLine("800")] }), randomUUID()),
+    ).rejects.toMatchObject({ code: "BILL_PRICE_NOT_ALLOWED" });
   });
 });

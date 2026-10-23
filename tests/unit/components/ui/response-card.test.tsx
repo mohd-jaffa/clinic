@@ -141,6 +141,35 @@ describe("a card with a next step", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
+  it("offers a third way on, quiet, before the others — the card stays up, and closes once it is taken", async () => {
+    const respond = mount();
+    const onSend = vi.fn();
+    act(() =>
+      respond.success({
+        title: "Bill 2026-27/0042 issued",
+        primary: { label: "Print", href: "/api/bills/1/bill.pdf", file: true },
+        secondary: { label: "WhatsApp", onClick: onSend },
+        tertiary: { label: "View bill", href: "/bills/1" },
+      }),
+    );
+    const card = screen.getByRole("dialog", { name: "Bill 2026-27/0042 issued" });
+    const [view, send, print] = [
+      within(card).getByRole("link", { name: "View bill" }),
+      within(card).getByRole("button", { name: "WhatsApp" }),
+      within(card).getByRole("link", { name: "Print" }),
+    ];
+    // In that order: the quiet one first, the primary last.
+    expect(view.compareDocumentPosition(send) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(send.compareDocumentPosition(print) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    await userEvent.click(within(card).getByRole("button", { name: "WhatsApp" }));
+    expect(onSend).toHaveBeenCalledOnce();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+    act(() => respond.info({ title: "Ready", tertiary: { label: "Later", onClick: vi.fn() } }));
+    await userEvent.click(within(screen.getByRole("dialog", { name: "Ready" })).getByRole("button", { name: "Later" }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
   it("puts focus on its primary action, which closes it", async () => {
     const respond = mount();
     const onView = vi.fn();

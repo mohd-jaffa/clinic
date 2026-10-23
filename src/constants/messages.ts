@@ -1063,6 +1063,8 @@ export const UI_TEXT = {
     forArrival: (token: number | null, doctor: string) =>
       token === null ? `Arrival with ${doctor}` : `Arrival · #${token} with ${doctor}`,
     noDoctor: "No doctor",
+    /** A patient's bill names its doctor (D326, D342). */
+    doctorLabel: "Doctor",
     billThatVisit: "Bill that visit",
     archived: (patient: string) => `${patient} is archived, so nothing can be billed. Restore them first.`,
     /** Its lines (D303, D308, D309). */
@@ -1235,6 +1237,17 @@ export const UI_TEXT = {
     paid: "Paid",
     due: "Due on this bill",
     balance: "Patient’s balance",
+    /** Sent on WhatsApp with its PDF (D327, D341), as the prescription is. */
+    whatsApp: "WhatsApp",
+    whatsAppOf: (number: string) => `Send bill ${number} on WhatsApp`,
+    shared: "Bill shared",
+    attachTitle: "Attach it in WhatsApp",
+    attachBody: (name: string) =>
+      `WhatsApp opened in a new tab with the message, and “${name}” was downloaded. Attach it in the chat.`,
+    readyTitle: "The bill is ready",
+    readyBody: "Tap Send, then choose WhatsApp.",
+    send: "Send",
+    notSent: "The bill wasn’t sent",
     /** Its PDF (plan §15.5): opened to look at and print, or saved. */
     print: "Print",
     printOf: (number: string) => `Print bill ${number}`,
@@ -1799,6 +1812,12 @@ export const WHATSAPP_TEXT = {
     `Hello ${firstName}, a balance of ${amount} is due at ${clinic}. ${
       phone ? `Reply or call ${phone}.` : "Reply with any questions."
     }`,
+  /**
+   * "Your bill 2026-27/0042 from Smile Care, 15 Oct: ₹1,500. ₹1,000 is
+   * due." — with the PDF (D341); the due only while something is.
+   */
+  bill: (number: string, clinic: string, day: string, total: string, due: string | null) =>
+    `Your bill ${number} from ${clinic}, ${day}: ${total}.${due ? ` ${due} is due.` : ""}`,
   /** "Your prescription from Dr. Maya Rao, Smile Care, 15 Oct." — with the PDF (D245). */
   prescription: (doctor: string | null, clinic: string, day: string) =>
     doctor ? `Your prescription from ${doctor}, ${clinic}, ${day}.` : `Your prescription from ${clinic}, ${day}.`,

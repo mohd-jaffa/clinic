@@ -26,11 +26,13 @@ const startRow = {
     patient_number: 1042,
     date_of_birth: "1990-01-01",
     gender: "FEMALE",
+    phone: "+919876543210",
     archived: false,
   },
   visit: { id: "v-1", visit_date: "2026-10-16", status: "COMPLETED", billing_status: "TO_BILL" },
   appointment: null,
   doctor: { id: "d-1", full_name: "Maya Rao", fee_paise: 80_000 },
+  doctors: [],
   consultation_billed: false,
   treatments: [{ id: "t-1", name: "Root canal" }],
   balance_paise: 20_000,
@@ -49,11 +51,13 @@ describe("getBillStart (plan §15.2; D285, D313)", () => {
         number: 1042,
         dateOfBirth: "1990-01-01",
         gender: "FEMALE",
+        phone: "+919876543210",
         archived: false,
       },
       visit: { id: "v-1", day: "2026-10-16", status: "COMPLETED", billingStatus: "TO_BILL" },
       appointment: null,
       doctor: { id: "d-1", name: "Maya Rao", feePaise: 80_000 },
+      doctors: [],
       consultationBilled: false,
       treatments: [{ id: "t-1", name: "Root canal" }],
       balancePaise: 20_000,
@@ -64,7 +68,7 @@ describe("getBillStart (plan §15.2; D285, D313)", () => {
     ]);
   });
 
-  it("reads an arrival's token, and a patient's oldest visit to bill, without a doctor", async () => {
+  it("reads an arrival's token, and a patient's oldest visit to bill, their assigned doctor and the doctors to pick (D342)", async () => {
     const arrival = tenantWith({
       rpc: () => ({
         data: { ...startRow, visit: null, appointment: { id: "a-1", status: "ARRIVED", token_number: 7 } },
@@ -81,14 +85,22 @@ describe("getBillStart (plan §15.2; D285, D313)", () => {
         data: {
           ...startRow,
           visit: null,
-          doctor: null,
+          doctor: { id: "d-2", full_name: "Arun Sen", fee_paise: null },
+          doctors: [
+            { id: "d-2", full_name: "Arun Sen", fee_paise: null },
+            { id: "d-1", full_name: "Maya Rao", fee_paise: 80_000 },
+          ],
           treatments: [],
           to_bill: { visit_id: "v-9", visit_date: "2026-10-12" },
         },
       }),
     });
     expect(await getBillStart(patient.tenant, { patient: "p-1" })).toMatchObject({
-      doctor: null,
+      doctor: { id: "d-2", name: "Arun Sen", feePaise: null },
+      doctors: [
+        { id: "d-2", name: "Arun Sen", feePaise: null },
+        { id: "d-1", name: "Maya Rao", feePaise: 80_000 },
+      ],
       toBill: { visitId: "v-9", day: "2026-10-12" },
     });
     expect(patient.rpcs[0].args).toEqual({ p_visit_id: null, p_appointment_id: null, p_patient_id: "p-1" });
@@ -104,6 +116,7 @@ const bill: BillPayload = {
   patientId: "p-1",
   visitId: "v-1",
   appointmentId: null,
+  doctorId: null,
   items: [
     { serviceId: "s-1", treatmentId: null, description: null, quantity: 1, unitPricePaise: 50_000 },
     { serviceId: null, treatmentId: null, description: "Dressing kit", quantity: 3, unitPricePaise: 4_000 },
@@ -141,6 +154,7 @@ describe("issueBill (plan §15.2; D282, D302)", () => {
             patient_id: "p-1",
             visit_id: "v-1",
             appointment_id: null,
+            doctor_id: null,
             subtotal_paise: 62_000,
             discount_paise: 6_200,
             total_paise: 55_800,
@@ -203,6 +217,12 @@ describe("issueBill (plan §15.2; D282, D302)", () => {
     ]);
   });
 
+  it("sends the doctor picked for a patient's bill (D326, D342)", async () => {
+    const picked = tenantWith({ rpc: () => ({ data: { ...issued, visit: null } }) });
+    await issueBill(picked.tenant, { ...bill, visitId: null, doctorId: "d-2" }, "key-3");
+    expect(picked.rpcs[0].args).toMatchObject({ p_bill: { visit_id: null, doctor_id: "d-2" } });
+  });
+
   it("audits only the bill when nothing is collected and no visit moves, and nothing for a repeat", async () => {
     const plain = tenantWith({ rpc: () => ({ data: { ...issued, payment_id: null, visit: null } }) });
     expect(await issueBill(plain.tenant, { ...bill, discount: null, payment: null }, "key-2")).toMatchObject({
@@ -232,6 +252,7 @@ const billRow = {
   status: "ISSUED",
   visit_id: "v-1",
   appointment_id: null,
+  doctor_id: "d-1",
   subtotal_paise: 62_000,
   discount_paise: 6_200,
   total_paise: 55_800,
@@ -304,6 +325,7 @@ describe("getBill (plan §15.2; D314)", () => {
       },
       visitId: "v-1",
       appointmentId: null,
+      doctorId: "d-1",
       doctor: "Maya Rao",
       lines: [
         {

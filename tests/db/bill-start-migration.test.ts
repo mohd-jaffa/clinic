@@ -56,9 +56,10 @@ describe("0030 where a new bill starts (plan §15.2, §28.7; D302 – D313)", ()
     expect(start).toContain("order by visit.visit_date, visit.completed_at");
   });
 
-  it("is called by members only, and is the one the database runs", () => {
+  it("is called by members only, and is carried on by 0032", () => {
     expect(sql).toContain("revoke all on function public.bill_start(uuid, uuid, uuid) from public, anon;");
     expect(sql).toContain("grant execute on function public.bill_start(uuid, uuid, uuid) to authenticated;");
-    expect(latestFunctionBody("bill_start")).toBe(start);
+    // 0032 redefines it with the bill's doctor (R8.8).
+    expect(latestFunctionBody("bill_start")).toContain("'consultation_billed', exists (");
   });
 });

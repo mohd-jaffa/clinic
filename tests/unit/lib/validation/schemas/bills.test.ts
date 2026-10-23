@@ -54,11 +54,18 @@ describe("billSchema (plan §15.2; D284, D285, D290 – D293, D304, D308)", () =
       patientId: PATIENT,
       visitId: VISIT,
       appointmentId: null,
+      doctorId: null,
       items: [{ serviceId: SERVICE, treatmentId: null, description: null, quantity: 1, unitPricePaise: 50_000 }],
       discount: null,
       notes: null,
       payment: null,
     });
+  });
+
+  it("names the doctor picked for a patient's bill, or none, and refuses one that is not an id (D326, D342)", () => {
+    expect(billSchema.parse({ ...typed, visitId: null, doctorId: PATIENT }).doctorId).toBe(PATIENT);
+    expect(billSchema.parse({ ...typed, doctorId: null }).doctorId).toBeNull();
+    expect(billSchema.safeParse({ ...typed, doctorId: "maya" }).success).toBe(false);
   });
 
   it("keeps the treatment a price-list line is for, and a typed line's own words and price", () => {

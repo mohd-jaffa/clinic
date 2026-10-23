@@ -111,6 +111,8 @@ export const billSchema = z
     patientId: id,
     visitId: id.nullable(),
     appointmentId: id.nullable(),
+    /** The doctor picked for a bill not from a visit or an arrival (D326, D342); none, or theirs, otherwise. */
+    doctorId: id.nullable().optional(),
     lines: z
       .array(z.discriminatedUnion("kind", [serviceLine, typedLine, pickLine]), { error: VALIDATION_MESSAGES.invalid })
       .min(1, VALIDATION_MESSAGES.billEmpty)
@@ -134,10 +136,11 @@ export const billSchema = z
       ctx.addIssue({ code: "custom", path: ["discount", "amount"], message: VALIDATION_MESSAGES.discountTooLarge });
     }
   })
-  .transform(({ patientId, visitId, appointmentId, lines, discount: given, notes, collect: taken }) => ({
+  .transform(({ patientId, visitId, appointmentId, doctorId, lines, discount: given, notes, collect: taken }) => ({
     patientId,
     visitId,
     appointmentId,
+    doctorId: doctorId ?? null,
     // A reminder line is refused above, so none reaches here.
     items: lines.filter(issuable).map((line) => ({
       serviceId: line.kind === "SERVICE" ? line.serviceId : null,

@@ -427,6 +427,8 @@ earlier lines are never rewritten.
 | D338 | **On a desktop the queue is four columns, the last stacked** (the user): Waiting · With doctor · To bill · Still to come, with Done under Still to come — D318's order, each column wide enough for its buttons. | 2026-10-19 |
 | D339 | **A patient done waits in To bill, then reaches Done** (the user): beside To bill, the queue's Done lists those billed or marked No charge, so no one is listed twice; whoever does not read bills sees no To bill, and Done lists everyone finished. | 2026-10-24 |
 | D340 | **The queue's pin jumps to its To bill** (the user): tapping "3 to bill" scrolls to the queue's own To bill section — below Waiting on a phone — counting the doctor whose queue is shown, or every doctor's. | 2026-10-24 |
+| D341 | **Send bill on WhatsApp says its number, day, total and what is due** (the user): "Your bill 2026-27/0042 from Smile Care, 15 Oct: ₹1,500." — and "₹1,000 is due." only while something is still due on it — with the PDF; a void bill is not offered for sending. | 2026-10-24 |
+| D342 | **A patient's bill names its doctor by chips** (the user): under "Doctor", No doctor and each active doctor, starting on the patient's assigned doctor (else No doctor); picking one prices a Consultation line at their fee. A visit's or an arrival's bill keeps the visit's doctor, named and not changed. | 2026-10-24 |
 
 ## 3. Users and roles
 
@@ -1503,8 +1505,20 @@ is refused, never capped (D293).
   arrow leads to Billing, or to the profile it was opened from (D325).
   **Record payment** (R8.6), for `payments.create` while it is Unpaid or
   Part paid, opens the sheet for its patient filled with what is still due
-  on it, and the page is read again once recorded. The issued card stays up with
-  **Print** and **View bill** for whoever reads bills (D317).
+  on it, and the page is read again once recorded. **WhatsApp** (R8.8,
+  D327, D341) sends a live bill with its number, day, total and what is due
+  — the share sheet with the PDF on a phone, WhatsApp Web and a download on
+  a desktop, as the prescription is (§22.1). The issued card stays up with
+  **Print**, **WhatsApp** (what is due on the newest bill: the balance, no
+  more than its total) and **View bill** for whoever reads bills (D317,
+  D327).
+- **A bill's doctor** (§18; R8.8, D326, D342): a visit's or an arrival's
+  bill is the visit's doctor's. A bill from a patient names its doctor by
+  chips — No doctor or each active doctor, starting on the patient's
+  assigned doctor while they practise — and a doctor picked prices a
+  Consultation line at their own fee (D289), a line still at the last
+  doctor's price moving with the pick. `bill_start` (0032) lists the
+  doctors and their fees; `create_bill` checks the one picked is active.
 - **Paid state of a bill** (Paid / Part paid / Unpaid) is computed: the
   patient's net payments settle their issued bills oldest first
   (`bill_settlement` view). The patient's balance is the truth; the bill's
@@ -1777,7 +1791,7 @@ clinic's name, the doctor, the date and time filled in; English in V1.
 |---|---|---|
 | Remind | Appointment detail; Still-to-come in the queue; tomorrow's list | "Reminder: your appointment with Dr. Maya at Smile Dental on Tue 14 Oct, 10:30 AM." |
 | Remind | Follow-ups (§14.3) | "Dr. Maya Rao at Smile Care asked to see you again around 14 Oct. Reply or call 0484 234 5678 to book." — the clinic's phone, when it has one (D273) |
-| Send bill | Bill | "Your bill 2026-27/0042 from Smile Dental: ₹1,500." + the PDF |
+| Send bill | A bill's page; the issued card (D327) | "Your bill 2026-27/0042 from Smile Dental, 15 Oct: ₹1,500." — and "₹1,000 is due." while something is (D341) — + the PDF; never a void bill |
 | Send prescription | Visit, prescription | "Your prescription from Dr. Maya, Smile Dental, 12 Oct." + the PDF |
 
 - **The PDF:** on a phone, the share sheet (Web Share API with the file) hands
@@ -2316,15 +2330,19 @@ Planned order (one or more per tracker row):
                                 a patient's — for payments.create, reception included (D313)
 0031_checkout                   to_bill_visits and to_bill_count for reception, who may not open a
                                 visit (D318, D337); list_bills with each bill's state (D320);
-                                search_patients' Owing tab (D101)
-0032_expenses                   expenses
-0033_dashboard_and_reports      dashboard_summary, report_daily, report_monthly
-0034_subscription_notices       the daily pg_cron → pg_net call (address and secret in Vault)
-0035_clinic_deletion            request_clinic_deletion, cancel_clinic_deletion,
+                                search_patients' Owing tab (D101); billing_status of an
+                                arrival for the queue's Done (D339)
+0032_bill_doctor                bill_start with a patient's assigned doctor, the doctors to
+                                pick and their fees (D326, D342), and the patient's mobile
+                                for Send bill on WhatsApp (D341)
+0033_expenses                   expenses
+0034_dashboard_and_reports      dashboard_summary, report_daily, report_monthly
+0035_subscription_notices       the daily pg_cron → pg_net call (address and secret in Vault)
+0036_clinic_deletion            request_clinic_deletion, cancel_clinic_deletion,
                                 delete_clinic (DEV)
-0036_session_profile            session_profile: the session, profile, membership and plan in
+0037_session_profile            session_profile: the session, profile, membership and plan in
                                 one read (R13.2, D134)
-0037_faster_reads               indexes and policies from the load-seeded EXPLAINs (R13.3)
+0038_faster_reads               indexes and policies from the load-seeded EXPLAINs (R13.3)
 ```
 
 ## 30. API
@@ -2936,20 +2954,20 @@ in the row's one commit (D136).
 | R8.5 | Bill PDF; share, download, print (D314 – D317: the bill's page with Print, Download, Void, Re-issue and the profile; VOID across a void bill; signed by the clinic; the issued card's Print and View bill. Share on WhatsApp is R8.8's, D327) | §15.5, §33 | — | DONE (2026-10-18) |
 | R8.6 | Checkout: the queue's To-bill column, Billing's tabs (To bill, bills, payments, outstanding), No charge; the profile's balance section, its bills and payments in the history, and the patients list's Owing tab and balance chip (D101) | §15.4, §15.6, §10.2, §10.3 | — | DONE (2026-10-24) |
 | R8.7 | Integration: double submit → one bill/payment; balances to the paisa; read-only refuses | §34 | — | DONE (2026-10-24) |
-| R8.8 | A bill's doctor (from the visit, or picked); send bill on WhatsApp | §18, §22.1 | — | TODO |
+| R8.8 | A bill's doctor (from the visit, or picked); send bill on WhatsApp | §18, §22.1 | — | DONE (2026-10-24) |
 
 ### Phase 9 — Expenses
 
 | ID | Work | Source | Waits on | Status |
 |---|---|---|---|---|
-| R9.1 | `0032_expenses` and the expenses screen (the clinic's categories): add, edit, archive, month totals, by category | §16 | — | TODO |
+| R9.1 | `0033_expenses` and the expenses screen (the clinic's categories): add, edit, archive, month totals, by category | §16 | — | TODO |
 | R9.2 | Integration + E2E | §34 | — | TODO |
 
 ### Phase 10 — Home and reports
 
 | ID | Work | Source | Waits on | Status |
 |---|---|---|---|---|
-| R10.1 | `0033_dashboard_and_reports`: `dashboard_summary`, `report_daily`, `report_monthly` | §17, §18 | — | TODO |
+| R10.1 | `0034_dashboard_and_reports`: `dashboard_summary`, `report_daily`, `report_monthly` | §17, §18 | — | TODO |
 | R10.2 | Home: sections by permission; getting-started for a new clinic | §17 | — | TODO |
 | R10.3 | Reports: daily and monthly, the two charts; the kit's chart kit, bar and donut (D66) | §18 | — | TODO |
 | R10.4 | Integration: a seeded month's figures equal hand-computed ones | §34 | — | TODO |
@@ -2964,7 +2982,7 @@ in the row's one commit (D136).
 | R11.2 | Console: overview, clinics (No trial and Deletion flags), clinic detail, accounts, error log, platform audit | §20 | — | TODO |
 | R11.3 | Extend plan (Monthly, Yearly, Set date); the owner's confirmation email | §7.4 | — | TODO |
 | R11.4 | Platform settings screen | §6, §20.4 | — | TODO |
-| R11.5 | `0034_subscription_notices`: daily notices, each once per period | §22 | — | TODO |
+| R11.5 | `0035_subscription_notices`: daily notices, each once per period | §22 | — | TODO |
 | R11.6 | Owner's activity log | §19 | — | TODO |
 | R11.7 | Integration + E2E: extend, change a setting, notices once, DEV sees no clinic data | §34 | — | TODO |
 | R11.8 | Plan receipts: receipt numbers, the receipt PDF, the business details settings | §7.5, §6 | Q2 | TODO |
@@ -2977,7 +2995,7 @@ in the row's one commit (D136).
 | R12.2 | Privacy and terms | §21 | Q22 | TODO |
 | R12.3 | Manifest, icons, service worker, offline page, Install app | §21 | — | TODO |
 | R12.4 | Security headers; `noindex` on app routes; share-preview image | §21 | — | TODO |
-| R12.5 | `0035_clinic_deletion`: the owner's request and cancel (banner, emails), the admin's delete after the cooling-off | §9.1, §20 | — | TODO |
+| R12.5 | `0036_clinic_deletion`: the owner's request and cancel (banner, emails), the admin's delete after the cooling-off | §9.1, §20 | — | TODO |
 | R12.6 | CSV export, one file per area, audited | §9 | — | TODO |
 
 ### Phase 13 — Speed and the release checks (D134, D185)
@@ -2993,8 +3011,8 @@ deployment, waits on that (D185).**
 | ID | Work | Source | Waits on | Status |
 |---|---|---|---|---|
 | R13.1 | The measuring setup: a load seed (a clinic with 50 000 patients, 200 000 appointments, 100 000 bills, a year of visits); the production build timed locally with 40 ms added to each database request; every screen, read and save timed and its round trips counted; Home, Queue and Patients timed on a throttled phone (4× CPU, 4G). The baseline in the changelog | §37 | — | TODO |
-| R13.2 | `0036_session_profile`: the session in one round trip. The token's signature and expiry checked on the server against the project's published key (`getClaims`), instead of asking Supabase Auth each request. One function checks the session is still open and hands back the profile, membership, clinic, doctor, plan and the settings it needs. Today a session waits on 3: Auth, the profile, then the plan and settings | §5.5, §37 | — | TODO |
-| R13.3 | `0037_faster_reads`: EXPLAIN ANALYZE on the load seed for every list, search, count and report. Indexes added or changed (every paged list in its own order, every foreign key). No policy or list calls `can_see_patient()` per row. Supabase's performance advisor reports nothing: unindexed keys, policies re-run per row, overlapping policies, duplicate or unused indexes | §27, §28, §37 | — | TODO |
+| R13.2 | `0037_session_profile`: the session in one round trip. The token's signature and expiry checked on the server against the project's published key (`getClaims`), instead of asking Supabase Auth each request. One function checks the session is still open and hands back the profile, membership, clinic, doctor, plan and the settings it needs. Today a session waits on 3: Auth, the profile, then the plan and settings | §5.5, §37 | — | TODO |
+| R13.3 | `0038_faster_reads`: EXPLAIN ANALYZE on the load seed for every list, search, count and report. Indexes added or changed (every paged list in its own order, every foreign key). No policy or list calls `can_see_patient()` per row. Supabase's performance advisor reports nothing: unindexed keys, policies re-run per row, overlapping policies, duplicate or unused indexes | §27, §28, §37 | — | TODO |
 | R13.4 | Round trips cut to the budget. Reads that do not depend on each other go at once (`allInOrder`), records come with their children, writes answer from `returning`, and side work runs after the answer. Every screen and read within 2, every save within 4; every list and search under 300 ms at the API on the load seed | §37 | — | TODO |
 | R13.5 | Pages: the proxy starts only where it has work and loads the Supabase client only to renew. Heavy code loads when first needed; first-load JS within 200 KB gzip. Polling stops while the tab is hidden. Reusing a screen revisited within seconds (`staleTimes`) measured, kept only if it helps. LCP and INP within budget on the throttled phone | §37 | — | TODO |
 | R13.6 | Hosting: `vercel.json` with region `bom1` and fluid compute, sent by `vercel deploy --prebuilt` with every release; the release guide (R14.7) says so | §35, §37 | — | TODO |

@@ -4,9 +4,16 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { UI_TEXT } from "@/constants/messages";
 
-const { download, state } = vi.hoisted(() => ({ download: vi.fn(), state: { downloading: false } }));
+const { download, send, state } = vi.hoisted(() => ({
+  download: vi.fn(),
+  send: vi.fn(),
+  state: { downloading: false, sending: false },
+}));
 vi.mock("@/features/documents/hooks/useBillDownload", () => ({
   useBillDownload: () => ({ download, downloading: state.downloading }),
+}));
+vi.mock("@/features/documents/hooks/useBillSend", () => ({
+  useBillSend: () => ({ send, sending: state.sending }),
 }));
 
 const { BillPdf } = await import("@/features/documents/components/BillPdf");
@@ -17,6 +24,7 @@ const draw = () => render(<BillPdf billId="b-1" patient="Rohan Mehta" number="20
 beforeEach(() => {
   vi.clearAllMocks();
   state.downloading = false;
+  state.sending = false;
 });
 
 describe("BillPdf (plan §15.5; D314)", () => {
@@ -38,5 +46,27 @@ describe("BillPdf (plan §15.5; D314)", () => {
       "aria-busy",
       "true",
     );
+  });
+
+  it("sends a live bill on WhatsApp, busy while it does — and offers none for a void one (D327, D341)", async () => {
+    const sent = {
+      billId: "b-1",
+      number: "2026-27/0042",
+      day: "2026-10-16",
+      patient: "Rohan Mehta",
+      phone: "+919876543210",
+      totalPaise: 150_000,
+      duePaise: 100_000,
+    };
+    const { unmount } = render(<BillPdf billId="b-1" patient="Rohan Mehta" number="2026-27/0042" sent={sent} />);
+    await userEvent.click(screen.getByRole("button", { name: words.whatsAppOf("2026-27/0042") }));
+    expect(send).toHaveBeenCalledWith(sent);
+    unmount();
+    state.sending = true;
+    const { unmount: again } = render(<BillPdf billId="b-1" patient="Rohan Mehta" number="2026-27/0042" sent={sent} />);
+    expect(screen.getByRole("button", { name: words.whatsAppOf("2026-27/0042") })).toHaveAttribute("aria-busy", "true");
+    again();
+    draw();
+    expect(screen.queryByRole("button", { name: words.whatsAppOf("2026-27/0042") })).not.toBeInTheDocument();
   });
 });

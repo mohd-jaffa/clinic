@@ -44,7 +44,8 @@ const targetOf = (bill: BillDetail): NewBillFor =>
 /**
  * A bill's page — `/bills/[id]` (plan §15.2; D314). Its land holds the bill's
  * number, the patient, the day and doctor, and where it stands — Paid, Part
- * paid, Unpaid, or Void. Under it **Print** and **Download** (plan §15.5);
+ * paid, Unpaid, or Void. Under it **Print**, **Download** and — a live
+ * bill — **WhatsApp**, with its total and what is due (plan §15.5; D341);
  * **Record payment** for `payments.create` while it is Unpaid or Part paid,
  * filled with what is still due on it, the bill read again once recorded;
  * **Void bill** for `payments.edit`, asking a reason and then to be sure;
@@ -111,7 +112,22 @@ function BillBody({ bill }: { bill: BillDetail }) {
     <div className="grid gap-6">
       <div className="grid gap-3">
         <div className="flex flex-wrap items-center gap-2">
-          <BillPdf billId={bill.id} patient={bill.patient.name} number={bill.number} />
+          <BillPdf
+            billId={bill.id}
+            patient={bill.patient.name}
+            number={bill.number}
+            sent={
+              bill.settlement && {
+                billId: bill.id,
+                number: bill.number,
+                day: bill.issuedOn,
+                patient: bill.patient.name,
+                phone: bill.patient.phone,
+                totalPaise: bill.totalPaise,
+                duePaise: bill.settlement.duePaise,
+              }
+            }
+          />
           {payable && (
             <Button
               label={billing.recordPayment}

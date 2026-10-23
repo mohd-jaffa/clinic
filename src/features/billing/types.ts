@@ -11,7 +11,14 @@ import type {
   VisitStatus,
 } from "@/constants/statuses";
 
-/** What `bill_start` (0030) answers. */
+/** A doctor as `bill_start` names them: their own consultation fee, or none to take the price list's. */
+interface BillStartDoctorRow {
+  id: string;
+  full_name: string | null;
+  fee_paise: number | null;
+}
+
+/** What `bill_start` (0032) answers. */
 export interface BillStartRow {
   patient: {
     id: string;
@@ -19,31 +26,55 @@ export interface BillStartRow {
     patient_number: number;
     date_of_birth: string;
     gender: Gender;
+    phone: string;
     archived: boolean;
   };
   visit: { id: string; visit_date: string; status: VisitStatus; billing_status: BillingStatus | null } | null;
   appointment: { id: string; status: AppointmentStatus; token_number: number | null } | null;
-  doctor: { id: string; full_name: string | null; fee_paise: number | null } | null;
+  doctor: BillStartDoctorRow | null;
+  doctors: BillStartDoctorRow[];
   consultation_billed: boolean;
   treatments: { id: string; name: string }[];
   balance_paise: number;
   to_bill: { visit_id: string; visit_date: string } | null;
 }
 
+/** A doctor a bill may name, and their own consultation fee (D26) — none to take the price list's. */
+export interface BillDoctor {
+  id: string;
+  name: string | null;
+  feePaise: number | null;
+}
+
 /**
- * Where a new bill starts (plan §15.2; D285, D302 – D313): who it is for,
- * what it bills — a visit or an arrival, or neither — its doctor and their
- * own fee (D26), whether a consultation is billed already for it (D286),
- * the treatments worked on in the visit not yet billed for it, the
- * patient's balance (D295), and — started from a patient — their oldest
- * visit still to bill (D313).
+ * Where a new bill starts (plan §15.2; D285, D302 – D313, D326, D342): who
+ * it is for — and their mobile, where it is sent (D341) — what it bills — a
+ * visit or an arrival, or neither — its doctor and their own fee (D26), the
+ * doctors a patient's bill may name instead, whether a consultation is
+ * billed already for it (D286), the treatments worked on in the visit not
+ * yet billed for it, the patient's balance (D295), and — started from a
+ * patient — their oldest visit still to bill (D313).
  */
 export interface BillStart {
-  patient: { id: string; name: string; number: number; dateOfBirth: string; gender: Gender; archived: boolean };
+  patient: {
+    id: string;
+    name: string;
+    number: number;
+    dateOfBirth: string;
+    gender: Gender;
+    phone: string;
+    archived: boolean;
+  };
   visit: { id: string; day: string; status: VisitStatus; billingStatus: BillingStatus | null } | null;
   appointment: { id: string; status: AppointmentStatus; token: number | null } | null;
-  /** None once their account is gone — or for a bill from a patient (D326). */
-  doctor: { id: string; name: string | null; feePaise: number | null } | null;
+  /**
+   * The visit's or the arrival's doctor; for a patient's bill, their
+   * assigned doctor while they practise (D326). None once their account is
+   * gone, or without one.
+   */
+  doctor: BillDoctor | null;
+  /** The clinic's active doctors, for a patient's bill to pick from (D342); none for a visit's or an arrival's. */
+  doctors: BillDoctor[];
   consultationBilled: boolean;
   treatments: { id: string; name: string }[];
   balancePaise: number;
@@ -94,6 +125,8 @@ export interface BillDetail {
   };
   visitId: string | null;
   appointmentId: string | null;
+  /** Its doctor, for a void bill issued again (D314, D342); none for a bill with no doctor (D326). */
+  doctorId: string | null;
   /** None for a bill with no doctor (D326), or once their account is gone. */
   doctor: string | null;
   lines: BillLine[];

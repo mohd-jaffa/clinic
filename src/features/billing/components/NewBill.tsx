@@ -4,9 +4,10 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { ReceiptIndianRupee } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useId, useState } from "react";
-import { useFieldArray, useForm, type Resolver } from "react-hook-form";
+import { useFieldArray, useForm, useWatch, type Resolver } from "react-hook-form";
 
 import { LinkButton } from "@/components/ui/button";
+import { ChoiceChips } from "@/components/ui/choice-chips";
 import { CoastHeader } from "@/components/ui/coast-header";
 import { LoadFailed } from "@/components/ui/list-screen";
 import { PageHeader } from "@/components/ui/page-header";
@@ -30,10 +31,13 @@ import { billSchema } from "@/lib/validation";
 import { billStartKey, billTargetOf, reissueOf } from "../keys";
 import {
   billBackOf,
+  billDoctorOf,
   billFromOf,
   blankBill,
+  picksDoctor,
   priceOf,
   reissuedBill,
+  repriced,
   serviceLine,
   toBillInput,
   type BillForm,
@@ -63,9 +67,10 @@ function forLine(start: BillStart): string | undefined {
  * void bill again, with that bill's lines (D314) — lines are added
  * from the price list (D303), and **Issue bill** issues it with what is
  * collected, without asking first (D312), then goes back where it was
- * started from with a card (D302). Lines on the left and the totals on the
- * right on a desktop; stacked, with Issue held at the foot, on a phone
- * (D310).
+ * started from with a card (D302). A bill not from a visit or an arrival
+ * names its doctor by chips — the patient's assigned doctor to start, or No
+ * doctor (D326, D342). Lines on the left and the totals on the right on a
+ * desktop; stacked, with Issue held at the foot, on a phone (D310).
  */
 export function NewBill() {
   const params = useSearchParams();
@@ -172,7 +177,18 @@ function BillEditor({
   });
   const lines = useFieldArray({ control: form.control, name: "lines" });
   const { issue, issuing } = useIssueBill(start, () => router.replace(back));
-  const feePaise = start.doctor?.feePaise ?? null;
+  const doctorId = useWatch({ control: form.control, name: "doctorId" });
+  const feePaise = billDoctorOf(start, doctorId)?.feePaise ?? null;
+  /** Another doctor for a patient's bill (D342): a Consultation line at the last one's price takes theirs (D289). */
+  const pickDoctor = (next: string) => {
+    lines.replace(
+      repriced(form.getValues("lines"), services, {
+        from: feePaise,
+        to: billDoctorOf(start, next)?.feePaise ?? null,
+      }),
+    );
+    form.setValue("doctorId", next);
+  };
   const priceFor = (service: Service) => priceOf(service, services, feePaise);
   const pickingLine = picking === null ? undefined : form.getValues(`lines.${picking}`);
   const pickingFor = pickingLine?.kind === "PICK" ? pickingLine.name : null;
@@ -213,6 +229,21 @@ function BillEditor({
         className="grid grid-cols-1 items-start gap-6 max-lg:pb-24 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]"
       >
         <div className="grid min-w-0 gap-6">
+          {picksDoctor(start) && start.doctors.length > 0 && (
+            <ChoiceChips
+              label={words.doctorLabel}
+              value={doctorId}
+              options={[
+                { value: "", label: words.noDoctor },
+                ...start.doctors.map((doctor) => ({
+                  value: doctor.id,
+                  label: doctor.name ?? UI_TEXT.appointment.formerDoctor,
+                })),
+              ]}
+              onChange={pickDoctor}
+              wrap
+            />
+          )}
           <BillLines
             form={form}
             lines={lines}

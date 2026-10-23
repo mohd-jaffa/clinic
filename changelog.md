@@ -4558,3 +4558,60 @@ the user first: D267 – D271.
 
 ### Blockers
 - None.
+
+## 2026-10-24 — R8.8: a bill's doctor, and Send bill on WhatsApp
+
+### Added
+- **`0032_bill_doctor`** (plan §29; the later migrations move up one —
+  expenses are now `0033`): `bill_start` as 0030's, and for a bill from a
+  patient their assigned doctor while that doctor practises, and the
+  clinic's active doctors with their own fees (D326, D342); the patient's
+  mobile for every start, for WhatsApp (D341). `create_bill` (0029) already
+  took a doctor picked, checked active.
+- **The doctor of a bill from a patient** (`NewBill`, D342): "Doctor" chips
+  — No doctor and each active doctor — starting on the patient's assigned
+  doctor; a doctor picked prices a Consultation line at their own fee (D289),
+  and a line still at the last doctor's price moves with the pick
+  (`repriced`); a price typed by hand stays. A visit's or an arrival's bill
+  keeps the visit's doctor. `billSchema` takes `doctorId`; `issueBill`
+  sends it; the bill's page reads it back, so **Re-issue** names the void
+  bill's doctor again (`BillDetail.doctorId`).
+- **Send bill on WhatsApp** (D327, D341): on a live bill's page and on the
+  issued card — "Your bill 2026-27/0042 from Smile Care, 15 Oct: ₹1,500."
+  and "₹1,000 is due." while something is, with the PDF: the share sheet on
+  a phone, WhatsApp Web and a download on a desktop (`useBillSend`). A void
+  bill offers none. The issued card's due is the newest bill's — the
+  balance, no more than its total (`dueOnNewest`, D298).
+- `WHATSAPP_TEXT.bill`; the bill's send words in `UI_TEXT.bill`.
+
+### Changed
+- The prescription's WhatsApp and the bill's share one hook,
+  `usePdfSend` (documents); `usePrescriptionSend` is its prescription words.
+- The response card takes a third action, `tertiary` — quiet, first, the
+  three stacked: the issued card is **Print**, **WhatsApp**, **View bill**.
+- Plan: D341, D342 recorded; tracker R8.8 DONE (2026-10-24); §15.2 and
+  §22.1 as built; the migration list renumbered from 0032. `DESIGN.md`: the
+  doctor chips, the issued card, the bill page's WhatsApp, the card's third
+  action.
+
+### Speed (plan §37)
+- **Round trips:** New bill still waits on 2 — the session, then
+  `bill_start` (now with the doctors) beside the price list. Issuing still
+  waits on 2. Sending a bill waits on 1: its PDF.
+- **Indexes:** none new; the doctors on `doctors_clinic_id_idx`.
+
+### Validation
+- Typecheck, lint, format check passed.
+- Unit and integration tests passed (3,860), coverage 100%.
+- E2E passed (phone, desktop; 154 passed, 8 skipped by design): `new-bill.spec.ts` — a patient's bill starts
+  on No doctor, Dr. Maya Rao picked prices the Consultation at her ₹800,
+  the bill saved with her; `bill-page.spec.ts` — WhatsApp from the issued
+  card and the bill's page, the share sheet on a phone, the chat with the
+  message and the PDF on a desktop.
+- `tests/db/integration/bill-start.test.ts`: a patient's bill starts on
+  their assigned doctor with the doctors and fees to pick, none when that
+  doctor no longer practises, and is issued with the doctor picked — at
+  their fee, the price list's with none.
+
+### Blockers
+- None.

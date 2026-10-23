@@ -5,15 +5,19 @@ import type { Service } from "@/features/clinic/types";
 import {
   balanceWords,
   billBackOf,
+  billDoctorOf,
   billFromOf,
   blankBill,
   collectedOf,
   consultationOf,
+  dueOnNewest,
   feeBillInput,
   linePaise,
+  picksDoctor,
   previewOf,
   priceOf,
   reissuedBill,
+  repriced,
   serviceLine,
   startingLines,
   toBillInput,
@@ -43,10 +47,19 @@ const rootCanal = entry("s-rc", "Root canal", "PROCEDURE", 600_000);
 const services = [consultation, review, rootCanal, entry("s-x", "X-ray", "INVESTIGATION", 40_000, false)];
 
 const start: BillStart = {
-  patient: { id: "p-1", name: "Asha Rao", number: 1042, dateOfBirth: "1990-01-01", gender: "FEMALE", archived: false },
+  patient: {
+    id: "p-1",
+    name: "Asha Rao",
+    number: 1042,
+    dateOfBirth: "1990-01-01",
+    gender: "FEMALE",
+    phone: "+919876543210",
+    archived: false,
+  },
   visit: { id: "v-1", day: "2026-10-16", status: "COMPLETED", billingStatus: "TO_BILL" },
   appointment: null,
   doctor: { id: "d-1", name: "Maya Rao", feePaise: 80_000 },
+  doctors: [],
   consultationBilled: false,
   treatments: [
     { id: "t-1", name: "root  canal " },
@@ -55,6 +68,50 @@ const start: BillStart = {
   balancePaise: 0,
   toBill: null,
 };
+
+/** A bill from the patient (D326, D342): Arun assigned, Maya at her own fee, Arun at the price list's. */
+const arun = { id: "d-2", name: "Arun Sen", feePaise: null };
+const maya = { id: "d-1", name: "Maya Rao", feePaise: 80_000 };
+const fromPatient: BillStart = { ...start, visit: null, treatments: [], doctor: arun, doctors: [arun, maya] };
+
+describe("picksDoctor, billDoctorOf (D326, D342)", () => {
+  it("lets a patient's bill name its doctor, and keeps a visit's or an arrival's own", () => {
+    expect(picksDoctor(fromPatient)).toBe(true);
+    expect(picksDoctor(start)).toBe(false);
+    expect(picksDoctor({ visit: null, appointment: { id: "a-1", status: "ARRIVED", token: 3 } })).toBe(false);
+  });
+
+  it("prices a patient's bill by the doctor picked — none for none — and a visit's by its own", () => {
+    expect(billDoctorOf(fromPatient, "d-1")).toBe(maya);
+    expect(billDoctorOf(fromPatient, "")).toBeNull();
+    expect(billDoctorOf(fromPatient, "d-gone")).toBeNull();
+    expect(billDoctorOf(start, "d-2")).toEqual(start.doctor);
+  });
+});
+
+describe("repriced (D289, D342)", () => {
+  it("moves a Consultation line still at the last doctor's price to the new one's, leaving a typed price", () => {
+    const lines = [
+      serviceLine(consultation, 80_000),
+      { ...serviceLine(consultation, 80_000), price: "650" },
+      serviceLine(rootCanal, 600_000),
+    ];
+    expect(repriced(lines, services, { from: 80_000, to: null }).map((line) => "price" in line && line.price)).toEqual([
+      "500",
+      "650",
+      "6000",
+    ]);
+    expect(repriced(lines, [rootCanal], { from: 80_000, to: null })).toEqual(lines);
+  });
+});
+
+describe("dueOnNewest (D298, D341)", () => {
+  it("is what the patient owes, no more than the bill — nothing with an advance", () => {
+    expect(dueOnNewest({ totalPaise: 150_000, balancePaise: 100_000 })).toBe(100_000);
+    expect(dueOnNewest({ totalPaise: 150_000, balancePaise: 400_000 })).toBe(150_000);
+    expect(dueOnNewest({ totalPaise: 150_000, balancePaise: -20_000 })).toBe(0);
+  });
+});
 
 describe("consultationOf, priceOf (D26, D289)", () => {
   it("takes the clinic's Consultation, else its first consultation in use — none when there is none", () => {
@@ -112,7 +169,12 @@ describe("blankBill (D304)", () => {
       collect: { on: true, amount: "", method: "CASH", reference: "", typed: false },
     });
     const arrival = { ...start, visit: null, appointment: { id: "a-1" } } as BillStart;
-    expect(blankBill(arrival, services)).toMatchObject({ visitId: null, appointmentId: "a-1" });
+    expect(blankBill(arrival, services)).toMatchObject({ visitId: null, appointmentId: "a-1", doctorId: "" });
+  });
+
+  it("starts a patient's bill on their assigned doctor, or none (D326)", () => {
+    expect(blankBill(fromPatient, services).doctorId).toBe("d-2");
+    expect(blankBill({ ...fromPatient, doctor: null }, services).doctorId).toBe("");
   });
 });
 
@@ -172,11 +234,17 @@ describe("collectedOf, balanceWords", () => {
 });
 
 describe("toBillInput (D304, D308)", () => {
+  it("sends the doctor picked, or none (D342)", () => {
+    expect(toBillInput(form({ doctorId: "d-2" })).doctorId).toBe("d-2");
+    expect(toBillInput(form({ doctorId: "" })).doctorId).toBeNull();
+  });
+
   it("sends a price-list line without what it shows, and collects the total until an amount is typed", () => {
     expect(toBillInput(form())).toEqual({
       patientId: "p-1",
       visitId: "v-1",
       appointmentId: null,
+      doctorId: null,
       lines: [{ kind: "SERVICE", serviceId: "s-c", treatmentId: null, quantity: 1, price: "800" }],
       discount: { kind: "NONE", amount: "", percent: "" },
       notes: "",
@@ -248,6 +316,14 @@ describe("feeBillInput (D283, D305)", () => {
 });
 
 describe("reissuedBill (D314)", () => {
+  it("names the void bill's doctor again while they practise, else the bill's own start (D342)", () => {
+    const voidOf = (doctorId: string | null) =>
+      ({ lines: [], discountPaise: 0, notes: null, doctorId }) as unknown as BillDetail;
+    expect(reissuedBill(fromPatient, services, voidOf("d-1")).doctorId).toBe("d-1");
+    expect(reissuedBill(fromPatient, services, voidOf("d-gone")).doctorId).toBe("d-2");
+    expect(reissuedBill(fromPatient, services, voidOf(null)).doctorId).toBe("d-2");
+  });
+
   const voided = {
     lines: [
       {

@@ -30,6 +30,7 @@ const aBill = (changes: Partial<BillDetail> = {}): BillDetail => ({
   },
   visitId: "v-1",
   appointmentId: null,
+  doctorId: "d-1",
   doctor: "Maya Rao",
   lines: [
     {

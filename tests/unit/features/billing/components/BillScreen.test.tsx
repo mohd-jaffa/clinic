@@ -38,6 +38,7 @@ const issued: BillDetail = {
   },
   visitId: VISIT,
   appointmentId: null,
+  doctorId: "d-1",
   doctor: "Maya Rao",
   lines: [
     {
@@ -221,6 +222,15 @@ describe("BillScreen (plan §15.2; D314)", () => {
     const stub = authStub();
     auth.current = { ...stub, subscription: { ...stub.subscription!, state: "READ_ONLY" } };
     expect(offered()).toBe(false);
+  });
+
+  it("sends a live bill on WhatsApp with its total and what is due on it, and offers none for a void one (D327, D341)", () => {
+    const { unmount } = draw();
+    expect(screen.getByRole("button", { name: "Send bill 2026-27/0042 on WhatsApp" })).toBeInTheDocument();
+    unmount();
+    bill.current = { data: voided };
+    draw();
+    expect(screen.queryByRole("button", { name: "Send bill 2026-27/0042 on WhatsApp" })).not.toBeInTheDocument();
   });
 
   it("leaves out what it does not have — a discount, notes, a doctor, who issued it", () => {

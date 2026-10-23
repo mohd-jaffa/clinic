@@ -2,11 +2,13 @@ import { randomUUID } from "node:crypto";
 
 import { expect, test, type Page } from "@playwright/test";
 
-import { UI_TEXT } from "@/constants/messages";
+import { UI_TEXT, WHATSAPP_TEXT } from "@/constants/messages";
 import type { Permission } from "@/constants/permissions";
 import { BILL_STATUS_LABELS } from "@/constants/statuses";
 import { addWalkIn } from "@/features/appointments/api";
 import { markDone, sendIn } from "@/features/appointments/moves";
+import { todayKey } from "@/lib/dates/calendar";
+import { formatNearDate } from "@/lib/format/date";
 import { walkInSchema } from "@/lib/validation";
 import { expectAccessible } from "@tests/support/e2e";
 import { addMember, admin, registerClinic, removeAll } from "@tests/support/integration";
@@ -160,4 +162,102 @@ test("a bill's page: printed, downloaded, voided with a reason, and issued again
   await page.getByRole("button", { name: billing.issue }).click();
   await expect(page).toHaveURL(new RegExp(`/visits/${visitId}$`));
   await expect(page.getByRole("dialog", { name: /^Bill \d{4}-\d{2}\/0002 issued$/ })).toBeVisible();
+});
+
+/** What a phone's share sheet was handed, kept on the page: the test cannot pick WhatsApp. */
+interface Shared {
+  name: string;
+  type: string;
+  head: string;
+  text?: string;
+}
+
+test("WhatsApp sends a bill with its total and what is due: from the issued card and its page (D327, D341)", async ({
+  browser,
+  page,
+}, info) => {
+  const { clinic, visitId } = await aClinic();
+  /** The bill issued part paid, ₹500 of ₹800: its number, and the message it is sent with. */
+  const issuedOn = async (on: Page) => {
+    await on.goto(`/billing/new?visit=${visitId}`);
+    await on.getByRole("textbox", { name: new RegExp(`^${billing.amountLabel}`) }).fill("500");
+    await on.getByRole("button", { name: billing.issue }).click();
+    const card = on.getByRole("dialog", { name: /^Bill \d{4}-\d{2}\/0001 issued$/ });
+    const number = (await card.getByRole("heading").first().textContent())!.match(/\d{4}-\d{2}\/0001/)![0];
+    const text = WHATSAPP_TEXT.bill(number, "Smile Care", formatNearDate(todayKey()), "₹800", "₹300");
+    return { card, number, text, name: `Anita Rao - Bill ${number.replace("/", "-")}.pdf` };
+  };
+
+  if (info.project.name === "phone") {
+    // A phone touched first, whose share sheet takes files.
+    const phone = await browser.newContext({
+      baseURL: info.project.use.baseURL,
+      viewport: { width: 390, height: 844 },
+      hasTouch: true,
+      isMobile: true,
+    });
+    await phone.addInitScript(() => {
+      const shared: Shared[] = [];
+      Object.assign(window, { shared });
+      Object.defineProperty(navigator, "canShare", {
+        configurable: true,
+        value: (data: ShareData) => Boolean(data.files?.length),
+      });
+      Object.defineProperty(navigator, "share", {
+        configurable: true,
+        value: async ({ files, text: message }: ShareData) => {
+          const [file] = files!;
+          shared.push({ name: file.name, type: file.type, head: await file.slice(0, 4).text(), text: message });
+        },
+      });
+    });
+    const tapped = await phone.newPage();
+    await signIn(tapped, clinic.owner.email, clinic.owner.password);
+    const { card, number, text, name } = await issuedOn(tapped);
+    await card.getByRole("link", { name: billing.viewBill }).tap();
+    await tapped.getByRole("button", { name: words.whatsAppOf(number) }).tap();
+    await expect(tapped.getByRole("status").filter({ hasText: words.shared })).toBeVisible();
+    expect(await tapped.evaluate(() => (window as unknown as { shared: Shared[] }).shared)).toEqual([
+      { name, type: "application/pdf", head: "%PDF", text },
+    ]);
+    await expectAccessible(tapped);
+    await phone.close();
+    return;
+  }
+
+  // A desktop: her chat opens on WhatsApp Web with the message, and the PDF downloads to attach — from the card.
+  await page
+    .context()
+    .route("https://wa.me/**", (route) => route.fulfill({ contentType: "text/html", body: "<title>WhatsApp</title>" }));
+  await signIn(page, clinic.owner.email, clinic.owner.password);
+  const { card, number, text, name } = await issuedOn(page);
+  await expectAccessible(page);
+  const [chat, download] = await Promise.all([
+    page.context().waitForEvent("page"),
+    page.waitForEvent("download"),
+    card.getByRole("button", { name: words.whatsApp }).click(),
+  ]);
+  expect(chat.url()).toBe(`https://wa.me/919876543210?text=${encodeURIComponent(text)}`);
+  await chat.close();
+  expect(download.suggestedFilename()).toBe(name);
+  await expect(page.getByRole("dialog", { name: words.attachTitle })).toContainText(words.attachBody(name));
+  await expectAccessible(page);
+
+  // And from its page; a void bill offers none.
+  await page
+    .getByRole("dialog", { name: words.attachTitle })
+    .getByRole("button", { name: UI_TEXT.actions.close })
+    .click();
+  await page.goto("/billing");
+  await page.getByRole("tab", { name: "Bills" }).click();
+  await page
+    .getByRole("tabpanel")
+    .getByRole("link", { name: /Anita Rao/ })
+    .click();
+  const [again] = await Promise.all([
+    page.context().waitForEvent("page"),
+    page.getByRole("button", { name: words.whatsAppOf(number) }).click(),
+  ]);
+  expect(again.url()).toBe(`https://wa.me/919876543210?text=${encodeURIComponent(text)}`);
+  await again.close();
 });

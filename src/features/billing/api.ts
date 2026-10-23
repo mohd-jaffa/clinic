@@ -11,15 +11,31 @@ import type { Tenant } from "@/lib/supabase/tenant";
 import type { BillPayload, BillsQuery, BillStartQuery, VoidBillPayload } from "@/lib/validation";
 
 import { billTotals } from "./totals";
-import type { BillDetail, BillIssued, BillListItem, BillStart, BillStartRow, BillVoided, PatientBill } from "./types";
+import type {
+  BillDetail,
+  BillDoctor,
+  BillIssued,
+  BillListItem,
+  BillStart,
+  BillStartRow,
+  BillVoided,
+  PatientBill,
+} from "./types";
 
 /**
  * Bills (plan §15.2): where a new one starts, issuing it, reading it and
- * voiding it. Each write through one function — `bill_start` (0030),
+ * voiding it. Each write through one function — `bill_start` (0030, 0032),
  * `create_bill` (0028, 0029), `void_bill` — which hold the permission, the
  * doctor scope (D3), the clinic's plan, the prices and the totals; a bill is
  * read through its policies (`payments.view`).
  */
+
+/** A doctor as `bill_start` names them, as the screen reads them. */
+const toBillDoctor = (row: BillStartRow["doctors"][number]): BillDoctor => ({
+  id: row.id,
+  name: row.full_name,
+  feePaise: row.fee_paise,
+});
 
 /**
  * Where a new bill starts (plan §15.2; D285, D302 – D313): a visit, an
@@ -46,6 +62,7 @@ export async function getBillStart(
       number: row.patient.patient_number,
       dateOfBirth: row.patient.date_of_birth,
       gender: row.patient.gender,
+      phone: row.patient.phone,
       archived: row.patient.archived,
     },
     visit: row.visit && {
@@ -59,7 +76,8 @@ export async function getBillStart(
       status: row.appointment.status,
       token: row.appointment.token_number,
     },
-    doctor: row.doctor && { id: row.doctor.id, name: row.doctor.full_name, feePaise: row.doctor.fee_paise },
+    doctor: row.doctor && toBillDoctor(row.doctor),
+    doctors: row.doctors.map(toBillDoctor),
     consultationBilled: row.consultation_billed,
     treatments: row.treatments,
     balancePaise: row.balance_paise,
@@ -110,6 +128,8 @@ export async function issueBill(
       patient_id: bill.patientId,
       visit_id: bill.visitId,
       appointment_id: bill.appointmentId,
+      // The doctor picked for a patient's bill (D326); a visit's or an arrival's keeps its own.
+      doctor_id: bill.doctorId,
       subtotal_paise: totals.subtotal,
       discount_paise: totals.discount,
       total_paise: totals.total,
@@ -191,7 +211,7 @@ export async function issueBill(
 
 /** What a bill's page reads of it, in one query: its patient — with their balance — doctor, lines and people. */
 const BILL_COLUMNS =
-  "id, bill_number, issued_at, issued_on, status, visit_id, appointment_id, subtotal_paise, discount_paise, " +
+  "id, bill_number, issued_at, issued_on, status, visit_id, appointment_id, doctor_id, subtotal_paise, discount_paise, " +
   "total_paise, notes, void_reason, voided_at, " +
   "patient:patients!bills_patient_id_clinic_id_fkey(id, full_name, patient_number, phone, date_of_birth, gender, " +
   "archived_at, balance:patient_balances!patient_balances_patient_id_clinic_id_fkey(balance_paise)), " +
@@ -207,6 +227,7 @@ interface BillRow {
   status: BillStatus;
   visit_id: string | null;
   appointment_id: string | null;
+  doctor_id: string | null;
   subtotal_paise: number;
   discount_paise: number;
   total_paise: number;
@@ -282,6 +303,7 @@ export async function getBill(tenant: Tenant, billId: string): Promise<BillDetai
     },
     visitId: row.visit_id,
     appointmentId: row.appointment_id,
+    doctorId: row.doctor_id,
     doctor: row.doctor?.member?.profile?.full_name ?? null,
     lines: [...row.items]
       .sort((a, b) => a.position - b.position)
