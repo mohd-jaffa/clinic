@@ -4713,3 +4713,18 @@ the user first: D267 – D271.
 
 ### Blockers
 - None.
+
+## 2026-10-24 — The bill's doctor chips get their label
+
+### Changed
+- **New bill's doctor chips** (`NewBill`, D342) stand under a visible
+  "Doctor" label (`ChoiceField`), as the decision has it; they read the
+  same to a screen reader. Found in the screenshots after R8.8.
+
+### Validation
+- Typecheck, lint, format check passed.
+- Unit and integration tests passed (3,944), coverage 100%.
+- E2E passed (phone, desktop; 156 passed, 8 skipped by design).
+
+### Blockers
+- None.

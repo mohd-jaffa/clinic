@@ -7,7 +7,7 @@ import { useId, useState } from "react";
 import { useFieldArray, useForm, useWatch, type Resolver } from "react-hook-form";
 
 import { LinkButton } from "@/components/ui/button";
-import { ChoiceChips } from "@/components/ui/choice-chips";
+import { ChoiceField } from "@/components/ui/choice-field";
 import { CoastHeader } from "@/components/ui/coast-header";
 import { LoadFailed } from "@/components/ui/list-screen";
 import { PageHeader } from "@/components/ui/page-header";
@@ -230,7 +230,7 @@ function BillEditor({
       >
         <div className="grid min-w-0 gap-6">
           {picksDoctor(start) && start.doctors.length > 0 && (
-            <ChoiceChips
+            <ChoiceField
               label={words.doctorLabel}
               value={doctorId}
               options={[
@@ -241,7 +241,6 @@ function BillEditor({
                 })),
               ]}
               onChange={pickDoctor}
-              wrap
             />
           )}
           <BillLines
