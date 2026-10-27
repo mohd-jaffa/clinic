@@ -9,6 +9,7 @@ import { issueBill, voidBill } from "@/features/billing/api";
 import { recordPayment, voidPayment } from "@/features/billing/payments";
 import { getDashboard } from "@/features/dashboard/api";
 import { createExpense } from "@/features/expenses/api";
+import { getDailyReport, getMonthlyReport } from "@/features/reports/api";
 import { addDaysKey, addMonthsKey, dayHour, monthStartKey, todayKey } from "@/lib/dates/calendar";
 import { billSchema, expenseSchema, paymentSchema, walkInSchema } from "@/lib/validation";
 import {
@@ -568,6 +569,42 @@ describe("the month's report (plan §18; D53)", () => {
       },
       { doctor_id: null, doctor_name: null, patients_seen: 0, visits: 0, billed_paise: 30_000, paid_paise: 30_000 },
     ]);
+  });
+
+  it("reads the same through the feature functions the reports' routes call (R10.3)", async () => {
+    await expect(getDailyReport(books.tenant!, { day: today })).resolves.toMatchObject({
+      day: today,
+      patientsSeen: 2,
+      appointments: 6,
+      statuses: { COMPLETED: 3, CANCELLED: 1, NO_SHOW: 1 },
+      collectedPaise: 130_000,
+      billedPaise: 110_000,
+      expensesPaise: 25_000,
+      netPaise: 105_000,
+      voided: { payments: 0, paymentPaise: 0 },
+    });
+    const monthly = await getMonthlyReport(books.tenant!, { month: monthStartKey(today) });
+    expect(monthly).toMatchObject({
+      month: monthStartKey(today),
+      patientsSeen: 2,
+      newPatients: 1,
+      returningPatients: 1,
+      collectedPaise: 130_000,
+      outstandingPaise: 30_000,
+    });
+    expect(monthly.days.find((day) => day.day === today)).toEqual({
+      day: today,
+      collectedPaise: 130_000,
+      expensesPaise: 25_000,
+    });
+    expect(monthly.doctors.at(-1)).toEqual({
+      doctorId: null,
+      doctorName: null,
+      patientsSeen: 0,
+      visits: 0,
+      billedPaise: 30_000,
+      paidPaise: 30_000,
+    });
   });
 
   it("is read with reports.view only, of this month or one before", async () => {

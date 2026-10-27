@@ -44,6 +44,7 @@ describe("Home (plan §17, §32.1; D347 – D353)", () => {
     const money = screen.getByRole("region", { name: "Money today" });
     expect(within(money).getByText("₹12,500")).toBeInTheDocument();
     expect(within(money).getByText("₹3,200")).toBeInTheDocument();
+    expect(within(money).getByRole("link", { name: "Collected today" })).toHaveAttribute("href", "/reports");
     expect(screen.getByRole("region", { name: /^Today’s queue/ })).toBeInTheDocument();
   });
 

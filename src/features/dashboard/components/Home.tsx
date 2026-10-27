@@ -6,7 +6,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { SkeletonRows } from "@/components/ui/skeleton";
 import { StatGrid, StatTile } from "@/components/ui/stat-tile";
 import { UI_TEXT } from "@/constants/messages";
-import { QUEUE_ROUTE } from "@/constants/navigation";
+import { QUEUE_ROUTE, REPORTS_ROUTE } from "@/constants/navigation";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { clinicHour, todayKey } from "@/lib/dates/calendar";
 import { formatPaise } from "@/lib/format/currency";
@@ -24,7 +24,7 @@ const { home: words } = UI_TEXT;
  * analytical. The land greets the person by the clinic's clock — a doctor as
  * "Dr. Rahul" — under it today's date and how many appointments it holds,
  * then how many wait and how many were seen in display numerals (D350). On
- * the ground, Collected today and Outstanding for `reports.view`, then the
+ * the ground, Collected today (opening Reports) and Outstanding for `reports.view`, then the
  * sections each person's permissions open, in two columns on a desktop. A
  * clinic with no patient yet sees its getting-started steps instead (D348).
  * Read again every 15 s and on focus (D353).
@@ -75,7 +75,11 @@ export function Home() {
               {home.money && (
                 <section aria-label={words.money}>
                   <StatGrid>
-                    <StatTile label={words.collected} value={formatPaise(home.money.collectedPaise)} />
+                    <StatTile
+                      label={words.collected}
+                      value={formatPaise(home.money.collectedPaise)}
+                      href={REPORTS_ROUTE}
+                    />
                     <StatTile label={words.outstanding} value={formatPaise(home.money.outstandingPaise)} />
                   </StatGrid>
                 </section>

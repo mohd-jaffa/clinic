@@ -145,11 +145,13 @@ const EXPENSES: NavItem = {
   access: "expenses.view",
   hint: hints.expenses,
 };
+/** The daily and monthly reports (plan §18). */
+export const REPORTS_ROUTE = "/reports";
 const REPORTS: NavItem = {
   id: "reports",
   label: places.reports,
   icon: ChartColumn,
-  href: "/reports",
+  href: REPORTS_ROUTE,
   access: "reports.view",
   hint: hints.reports,
 };

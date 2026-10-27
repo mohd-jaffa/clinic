@@ -440,6 +440,9 @@ earlier lines are never rewritten.
 | D351 | **A row on Home opens the patient's profile** (the user): in the queue, To bill, the follow-ups, tomorrow, who owes and the payments; an expense's row opens Expenses. Each section's own link (Open queue, Open billing, View all, Open appointments, Open expenses) opens its full screen. | 2026-10-27 |
 | D352 | **Getting started shows every step to everyone** (the user): each ticked once done; a step opens its screen — the price list, the team, Add patient — only for whoever may take it there; for anyone else it is words. | 2026-10-27 |
 | D353 | **Home is read again every 15 s and on focus** (the user), as the queue is (D34), so Waiting, the queue in miniature and To bill stay current at the front desk; never while the tab is hidden. | 2026-10-27 |
+| D354 | **The month's money chart puts money in above the line and money out below it** (the user): one baseline, one axis; each day a green column rises for Collected and a grey-green column falls for Expenses — one column a day, readable on a phone. A legend names them; a column pointed at or reached with the arrow keys reads out its day and both values; **Show as table** holds every value. | 2026-10-27 |
+| D355 | **The outcomes donut has four parts** (the user): Completed (green), Still to come — booked, confirmed, arrived or with the doctor — (ink), No-shows (coral), Cancelled (grey-green), in that order round the ring, so green never meets coral; the whole, cancelled included, in its middle ("50 in all"); a legend names each with its count and share. | 2026-10-27 |
+| D356 | **The Daily report picks its day with ‹ › arrows** (the user), the date between them opening the app's calendar; today to start, none after it — as Expenses steps through months. | 2026-10-27 |
 
 ## 3. Users and roles
 
@@ -1725,6 +1728,14 @@ patients (first-ever visit in the month), returning patients (a visit in the
 month and one before it), appointments by status, collected, billed, expenses,
 net, outstanding today. Charts: collected vs expenses by day (bars), appointment
 outcomes (donut).
+
+Daily picks its day with ‹ › arrows and the calendar (D356); Monthly steps
+through months the same way. The bar chart puts money in above the line and
+money out below it, one column a day (D354); the donut has four parts —
+Completed, Still to come, No-shows, Cancelled (D355). Every chart has its
+table. The charts are the kit's own (`BarChart`, `DonutChart`, D66), drawn
+in the app's green, ink, coral and grey-green, each pair that touches told
+apart for colour-blind readers too.
 
 **By doctor** (on Monthly, D53): per doctor — patients seen, visits, **billed**
 (bills issued in the month with that doctor) and **of which paid to date**
@@ -3017,7 +3028,7 @@ in the row's one commit (D136).
 |---|---|---|---|---|
 | R10.1 | `0034_dashboard_and_reports`: `dashboard_summary`, `report_daily`, `report_monthly` (D345 – D349: voids leave their own day; appointments without the cancelled; a doctor's own day; getting started until the first patient; Home's lists of five) | §17, §18 | — | DONE (2026-10-27) |
 | R10.2 | Home: sections by permission; getting-started for a new clinic (D350 – D353: Waiting and Seen on the land, today's appointments by the date; a row opens the patient; every step shown, linked for who may; read every 15 s) | §17 | — | DONE (2026-10-27) |
-| R10.3 | Reports: daily and monthly, the two charts; the kit's chart kit, bar and donut (D66) | §18 | — | TODO |
+| R10.3 | Reports: daily and monthly, the two charts; the kit's chart kit, bar and donut (D66; D354 – D356: money in up and out down; four outcomes; ‹ day › arrows) | §18 | — | DONE (2026-10-27) |
 | R10.4 | Integration: a seeded month's figures equal hand-computed ones | §34 | — | TODO |
 | R10.5 | Day-end collection summary (by method, by receiver), printable | §18 | — | TODO |
 | R10.6 | Monthly by doctor: seen, visits, billed, paid to date | §18 | — | TODO |

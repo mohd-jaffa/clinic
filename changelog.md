@@ -4847,3 +4847,55 @@ the user first: D267 – D271.
 
 ### Blockers
 - None.
+
+## 2026-10-27 — R10.3: Reports, daily and monthly, with the chart kit
+
+### Added
+- **Reports — `/reports`** (plan §18; D345, D346, D354 – D356), for
+  `reports.view`, through `GET /api/reports/daily?day=` and
+  `GET /api/reports/monthly?month=` (`getDailyReport`, `getMonthlyReport`,
+  one call each to 0034's functions; a day after today or a month after
+  this one refused by the schema and the database):
+  - **Daily:** the day picked with ‹ › arrows and the calendar, today to
+    start (D356); patients seen, appointments (the cancelled left out),
+    completed, cancelled, no-shows; collected, billed, expenses, net.
+  - **Monthly:** the month picked with ‹ ›; patients seen, new, returning,
+    appointments; collected, billed, expenses, net, outstanding today; the
+    **collected and expenses by day** chart — money in above the line, out
+    below, one column a day (D354) — and the **appointment outcomes** donut:
+    Completed, Still to come, No-shows, Cancelled (D355).
+  - The day or month picked is kept across the tabs; while the next one
+    loads the last stays in place, dimmed, rather than flashing skeletons.
+- **The kit's chart kit (D66):** `BarChart` (one axis, clean ends, a
+  readout by pointer or arrow keys, **Show as table**), `DonutChart` (a ring
+  of a few parts with the whole in its middle and a legend of counts and
+  shares), and `DaySwitcher`. Colours are the app's own: green and
+  grey-green for the bars, green, ink, coral and grey-green for the donut —
+  each touching pair checked for colour-blind and normal-vision separation
+  and 3:1 contrast in both themes.
+- `REPORT_TABS`, `apiRoutes.reports`, `REPORTS_ROUTE`,
+  `REPORT_LOAD_FAILED`, the report schemas and words.
+- **Tests:** unit tests for the kit's charts and switcher, the schemas,
+  routes, mapping, keys, hooks, the outcome grouping and the screens; the
+  feature functions against the local database in
+  `home-and-reports.test.ts`; `tests/e2e/reports.spec.ts` (phone, desktop,
+  axe) — a day's figures as worked out by hand, the day before and back,
+  the month's figures, the chart read by keyboard and as a table, the
+  donut's shares, and the front desk turned away.
+
+### Changed
+- Home's **Collected today** opens Reports.
+- Plan: D354 – D356; §18 says so; tracker R10.3 DONE (2026-10-27).
+  `DESIGN.md`: the chart kit, the day switcher, Reports.
+
+### Speed
+- Reports waits on 2 round trips: the session, then today's report and
+  this month's, read at once. Another day or month is one call.
+
+### Validation
+- Typecheck, lint, format check passed.
+- Unit and integration tests passed (4,047), coverage 100%.
+- E2E passed (phone, desktop; 162 passed, 8 skipped by design).
+
+### Blockers
+- None.

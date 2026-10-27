@@ -203,6 +203,14 @@ export const BILLING_TAB_LABELS: Record<BillingTab, string> = {
   OUTSTANDING: "Outstanding",
 };
 
+/** The views of Reports (plan §18): a day, a month. */
+export const REPORT_TABS = ["DAILY", "MONTHLY"] as const;
+export type ReportTab = (typeof REPORT_TABS)[number];
+export const REPORT_TAB_LABELS: Record<ReportTab, string> = {
+  DAILY: "Daily",
+  MONTHLY: "Monthly",
+};
+
 /** How a list's days are picked (D320): today, the last 7 days, this month, or From – To. */
 export const DATE_RANGES = ["TODAY", "WEEK", "MONTH", "CUSTOM"] as const;
 export type DateRangeKind = (typeof DATE_RANGES)[number];

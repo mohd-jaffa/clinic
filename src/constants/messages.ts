@@ -157,6 +157,8 @@ export const ERROR_MESSAGES = {
   BALANCE_LOAD_FAILED: "The balance couldn't be loaded.",
   // Home (plan §17).
   DASHBOARD_LOAD_FAILED: "Today's figures couldn't be loaded.",
+  // Reports (plan §18).
+  REPORT_LOAD_FAILED: "This report couldn't be loaded.",
 
   // Payments (plan §15.3; D297, D301).
   PAYMENT_REFUND_TOO_LARGE: "A refund can’t be more than the patient has paid in advance.",
@@ -1256,6 +1258,48 @@ export const UI_TEXT = {
   },
 
   /** Expenses (plan §16; D328 – D333, D343, D344). */
+  /** Reports (plan §18; D345 – D349, D354 – D356). */
+  reports: {
+    tabsLabel: "Reports",
+    dayLabel: "Day",
+    chooseDay: "Choose a day",
+    previousDay: "Previous day",
+    nextDay: "Next day",
+    monthLabel: "Month",
+    previousMonth: "Previous month",
+    nextMonth: "Next month",
+    patients: "Patients and appointments",
+    money: "Money",
+    patientsSeen: "Patients seen",
+    newPatients: "New patients",
+    returningPatients: "Returning patients",
+    appointments: "Appointments",
+    completed: "Completed",
+    cancelled: "Cancelled",
+    noShows: "No-shows",
+    collected: "Collected",
+    billed: "Billed",
+    expenses: "Expenses",
+    net: "Net",
+    outstanding: "Outstanding today",
+    /** The bar chart (D354): money in above the line, money out below. */
+    byDay: "Collected and expenses by day",
+    byDayHint: "Collected above the line, expenses below",
+    dayColumn: "Day",
+    byDayKeys: "Use the left and right arrow keys to read each day.",
+    /** The donut (D355): how the month's appointments ended. */
+    outcomes: "Appointment outcomes",
+    outcomesEmpty: "No appointments this month.",
+    stillToCome: "Still to come",
+    /** "12 · 40%". */
+    share: (count: number, percent: number) => `${count} · ${percent}%`,
+    /** The donut's whole, cancelled ones included: "50 in all". */
+    outcomeTotal: (count: number) => `${count} in all`,
+    showTable: "Show as table",
+    hideTable: "Hide table",
+    table: "Table",
+  },
+
   expenses: {
     add: "Add expense",
     addTitle: "Add expense",

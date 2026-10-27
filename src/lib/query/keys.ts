@@ -153,6 +153,11 @@ export const apiRoutes = {
   outstanding: {
     list: "/api/outstanding",
   },
+  // Reports (plan §18): a day's figures, a month's.
+  reports: {
+    daily: "/api/reports/daily",
+    monthly: "/api/reports/monthly",
+  },
   // Home (plan §17): its figures and sections, each with its permission.
   dashboard: {
     home: "/api/dashboard",
