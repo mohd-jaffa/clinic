@@ -188,6 +188,13 @@ export const MAX_CALENDAR_DAYS = 7;
  */
 export const QUEUE_REFRESH_MS = 15_000;
 
+/**
+ * How much Home lists (D349): five of each — To bill's oldest, the follow-ups
+ * due today, tomorrow's appointments, who owes most, the last payments and
+ * expenses — and the next three waiting for each doctor.
+ */
+export const HOME_LIST_LIMITS = { list: 5, queue: 3 } as const;
+
 /** How many patients a picker's search lists (D144): the best matches; typing more narrows them. */
 export const PICKER_RESULTS = 6;
 

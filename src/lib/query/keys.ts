@@ -153,6 +153,10 @@ export const apiRoutes = {
   outstanding: {
     list: "/api/outstanding",
   },
+  // Home (plan §17): its figures and sections, each with its permission.
+  dashboard: {
+    home: "/api/dashboard",
+  },
   // The follow-ups to call (plan §14.3): a tab a page at a time, how many each holds, a contact noted.
   followUps: {
     list: "/api/follow-ups",

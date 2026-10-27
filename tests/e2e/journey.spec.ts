@@ -2,7 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 import { ERROR_MESSAGES, UI_TEXT } from "@/constants/messages";
 import { THEME_COLORS } from "@/lib/theme/themes";
-import { authLinkTo, expectAccessible } from "@tests/support/e2e";
+import { authLinkTo, expectAccessible, greetingFor } from "@tests/support/e2e";
 import { aMobileNumber, anEmail, deleteAfter, removeAll, userIdOf } from "@tests/support/integration";
 
 /**
@@ -74,7 +74,7 @@ test("an owner signs up, confirms, signs in with their mobile and lands on Home,
   await page.getByLabel(/^Password/).fill(password);
   await page.getByRole("button", { name: auth.signIn }).click();
   await expect(page).toHaveURL(/\/home$/);
-  const greeting = page.getByRole("heading", { level: 1, name: UI_TEXT.home.greeting("Asha") });
+  const greeting = page.getByRole("heading", { level: 1, name: greetingFor("Asha") });
 
   // Home inside the shell: the bottom bar on a phone, the rail and the sidebar beyond it.
   for (const width of WIDTHS[project.name as keyof typeof WIDTHS]) {

@@ -7,6 +7,17 @@ import { admin, aMobileNumber, issueInviteToken } from "./integration";
 import { followAuthLink } from "./mailpit";
 
 /**
+ * Home's greeting for someone (plan §17), whatever the clinic's clock says
+ * when the step runs — morning, afternoon or evening — and as a doctor
+ * ("Dr. Asha") or not.
+ */
+export function greetingFor(firstName: string): RegExp {
+  const { greeting, doctor } = UI_TEXT.home;
+  const said = Object.values(greeting).flatMap((greet) => [greet(firstName), greet(doctor(firstName))]);
+  return new RegExp(`^(${said.map((text) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})$`);
+}
+
+/**
  * Every screen a journey visits is checked for accessibility as it stands
  * (plan §37: zero axe violations), at WCAG 2.2 AA; a failure names the
  * elements at fault.

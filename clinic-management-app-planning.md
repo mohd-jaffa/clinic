@@ -436,6 +436,10 @@ earlier lines are never rewritten.
 | D347 | **A doctor's Home shows their own day** (the user): a doctor who sees only their own patients finds their own appointments today, patients seen, queue and tomorrow; Collected and Outstanding (`reports.view`) are always the clinic's. | 2026-10-27 |
 | D348 | **Getting started lasts until the first patient** (the user): a clinic with no patient sees the three steps instead of Home's sections, each ticked once done — prices when any price on the list or any doctor's fee is above ₹0, the team when anyone else is invited or has joined — and the sections from its first patient on. | 2026-10-27 |
 | D349 | **Home's lists hold five; the queue, the next three per doctor:** To bill the oldest five, the follow-ups due today the first five (Overdue and Lapsed counted), tomorrow the first five by time (counted), the five owing most, the last five payments and refunds standing, the last five expenses; per doctor with anyone in or waiting, how many are in, how many wait and the next three by token. The sizes are `HOME_LIST_LIMITS` (R10.2). A report is of today or a day before, of this month or one before. | 2026-10-27 |
+| D350 | **Home's land holds Waiting and Seen** (the user): the greeting, then today's date with how many appointments it holds — "Tuesday, 27 Oct 2026 · 14 appointments" — then how many wait (opening the queue) and how many were seen, in display numerals. Collected today and Outstanding sit on the ground for `reports.view`. | 2026-10-27 |
+| D351 | **A row on Home opens the patient's profile** (the user): in the queue, To bill, the follow-ups, tomorrow, who owes and the payments; an expense's row opens Expenses. Each section's own link (Open queue, Open billing, View all, Open appointments, Open expenses) opens its full screen. | 2026-10-27 |
+| D352 | **Getting started shows every step to everyone** (the user): each ticked once done; a step opens its screen — the price list, the team, Add patient — only for whoever may take it there; for anyone else it is words. | 2026-10-27 |
+| D353 | **Home is read again every 15 s and on focus** (the user), as the queue is (D34), so Waiting, the queue in miniature and To bill stay current at the front desk; never while the tab is hidden. | 2026-10-27 |
 
 ## 3. Users and roles
 
@@ -1691,7 +1695,12 @@ on Home.
 **Appointments today** leaves the cancelled ones out (D346). A doctor who sees
 only their own patients finds their own appointments, patients seen, queue and
 tomorrow (D347); the money tiles are always the clinic's. Each list holds five,
-the queue the next three per doctor (D349).
+the queue the next three per doctor (D349). The land holds the greeting, the
+date with today's appointments, and Waiting and Seen (D350); a row opens the
+patient's profile, each section's link its screen (D351); getting started
+shows every step, linked for whoever may take it (D352); Home is read again
+every 15 s and on focus (D353). On a desktop the sections stand two to a row,
+in the order above.
 
 ## 18. Reports — `/reports`
 
@@ -3007,7 +3016,7 @@ in the row's one commit (D136).
 | ID | Work | Source | Waits on | Status |
 |---|---|---|---|---|
 | R10.1 | `0034_dashboard_and_reports`: `dashboard_summary`, `report_daily`, `report_monthly` (D345 – D349: voids leave their own day; appointments without the cancelled; a doctor's own day; getting started until the first patient; Home's lists of five) | §17, §18 | — | DONE (2026-10-27) |
-| R10.2 | Home: sections by permission; getting-started for a new clinic | §17 | — | TODO |
+| R10.2 | Home: sections by permission; getting-started for a new clinic (D350 – D353: Waiting and Seen on the land, today's appointments by the date; a row opens the patient; every step shown, linked for who may; read every 15 s) | §17 | — | DONE (2026-10-27) |
 | R10.3 | Reports: daily and monthly, the two charts; the kit's chart kit, bar and donut (D66) | §18 | — | TODO |
 | R10.4 | Integration: a seeded month's figures equal hand-computed ones | §34 | — | TODO |
 | R10.5 | Day-end collection summary (by method, by receiver), printable | §18 | — | TODO |

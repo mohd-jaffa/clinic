@@ -31,6 +31,10 @@ describe("the app's words", () => {
     expect([1, 4].map(UI_TEXT.expenseCategories.count)).toEqual(["1 category", "4 categories"]);
   });
 
+  it("counts today's appointments beside Home's date (D350)", () => {
+    expect([1, 14].map(UI_TEXT.home.appointments)).toEqual(["1 appointment", "14 appointments"]);
+  });
+
   it("counts the team, and an invite's days", () => {
     expect([1, 4].map(UI_TEXT.team.count)).toEqual(["1 person", "4 people"]);
     expect([1, 7].map(MAIL_TEXT.invite.linkValid)).toEqual(["The link works for 1 day.", "The link works for 7 days."]);

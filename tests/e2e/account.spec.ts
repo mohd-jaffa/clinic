@@ -1,7 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
 import { UI_TEXT } from "@/constants/messages";
-import { authLinkTo, expectAccessible } from "@tests/support/e2e";
+import { authLinkTo, expectAccessible, greetingFor } from "@tests/support/e2e";
 import { aMobileNumber, anEmail, deleteAfter, registerClinic, removeAll, userIdOf } from "@tests/support/integration";
 
 /**
@@ -68,7 +68,7 @@ test("signing up: you, then your clinic, then Check your email — and the link 
 
   await page.goto(await authLinkTo("magiclink", email, "/confirm-email"));
   await expect(page).toHaveURL(/\/home$/);
-  await expect(page.getByRole("heading", { level: 1, name: UI_TEXT.home.greeting("Asha") })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: greetingFor("Asha") })).toBeVisible();
 });
 
 test("confirming with a spent link, or none, offers the link again", async ({ page }) => {

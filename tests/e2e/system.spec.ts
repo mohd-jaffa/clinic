@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 import { UI_TEXT } from "@/constants/messages";
-import { expectAccessible } from "@tests/support/e2e";
+import { expectAccessible, greetingFor } from "@tests/support/e2e";
 import { registerClinic, removeAll } from "@tests/support/integration";
 
 /**
@@ -27,5 +27,5 @@ test("an address the app does not have says so, names the tab, and leads home, a
 
   await page.getByRole("link", { name: system.toHome }).click();
   await expect(page).toHaveURL(/\/home$/);
-  await expect(page.getByRole("heading", { level: 1, name: UI_TEXT.home.greeting("Test") })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: greetingFor("Test") })).toBeVisible();
 });

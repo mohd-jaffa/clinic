@@ -155,6 +155,8 @@ export const ERROR_MESSAGES = {
   EXPENSE_CATEGORY_ARCHIVED: "That category is archived. Choose another.",
   EXPENSE_ARCHIVED: "This expense is archived. Restore it to change it.",
   BALANCE_LOAD_FAILED: "The balance couldn't be loaded.",
+  // Home (plan §17).
+  DASHBOARD_LOAD_FAILED: "Today's figures couldn't be loaded.",
 
   // Payments (plan §15.3; D297, D301).
   PAYMENT_REFUND_TOO_LARGE: "A refund can’t be more than the patient has paid in advance.",
@@ -429,8 +431,75 @@ export const UI_TEXT = {
   },
 
   /** Home (plan §31.2); its numbers come with its own phase. */
+  /** Home (plan §17; D345 – D353). */
   home: {
-    greeting: (firstName: string) => `Hello, ${firstName}`,
+    /** By the clinic's clock: "Good morning, Dr. Rahul". */
+    greeting: {
+      morning: (name: string) => `Good morning, ${name}`,
+      afternoon: (name: string) => `Good afternoon, ${name}`,
+      evening: (name: string) => `Good evening, ${name}`,
+    },
+    /** A doctor greeted by their first name: "Dr. Rahul". */
+    doctor: (firstName: string) => `Dr. ${firstName}`,
+    /** How many appointments today holds, beside its date (D350): "Tuesday, 27 Oct 2026 · 14 appointments". */
+    appointments: (count: number) => (count === 1 ? "1 appointment" : `${count} appointments`),
+    waiting: "Waiting",
+    seen: "Seen",
+    money: "Money today",
+    collected: "Collected today",
+    outstanding: "Outstanding",
+    queue: {
+      title: "Today’s queue",
+      open: "Open queue",
+      empty: "No one is waiting.",
+      /** One doctor's queue: "1 with the doctor · 2 waiting". */
+      doctorLine: (withDoctor: number, waiting: number) =>
+        [withDoctor > 0 && `${withDoctor} with the doctor`, `${waiting} waiting`].filter(Boolean).join(" · "),
+      waitingFor: (doctor: string) => `Waiting for ${doctor}`,
+    },
+    toBill: {
+      title: "To bill",
+      open: "Open billing",
+      openName: "Open billing’s To bill",
+      empty: "Nothing waiting to be billed.",
+    },
+    followUps: {
+      title: "Follow-ups due today",
+      openName: "View all follow-ups",
+      empty: "No follow-ups due today.",
+      overdue: (count: number) => `${count} overdue`,
+      lapsed: (count: number) => `${count} lapsed`,
+    },
+    upcoming: {
+      title: "Tomorrow",
+      open: "Open appointments",
+      empty: "No appointments tomorrow.",
+      at: "At",
+    },
+    owing: {
+      title: "Owing most",
+      open: "Open billing",
+      openName: "Open billing’s Outstanding",
+      empty: "No one owes anything.",
+    },
+    payments: {
+      title: "Recent payments",
+      open: "Open billing",
+      openName: "Open billing’s Payments",
+      empty: "No payments yet.",
+    },
+    expenses: { title: "Recent expenses", open: "Open expenses", empty: "No expenses yet." },
+    /** A new clinic's first steps, until its first patient (D348, D352). */
+    gettingStarted: {
+      title: "Getting started",
+      hint: (clinic: string) => `Three steps to set up ${clinic}.`,
+      steps: {
+        prices: { label: "Set your prices", hint: "Price list and doctors’ fees" },
+        team: { label: "Add your team", hint: "Invite your doctors and front desk" },
+        patient: { label: "Add your first patient", hint: "Then Home fills with your day" },
+      },
+      done: "Done",
+    },
   },
 
   /** The Settings index (plan §31.2, D71): each row says what its screen holds. */

@@ -4794,3 +4794,56 @@ the user first: D267 – D271.
 
 ### Blockers
 - None.
+
+## 2026-10-27 — R10.2: Home
+
+### Added
+- **Home — `/home`** (plan §17, §32.1; D345 – D353), built on
+  `dashboard_summary` (0034) through `GET /api/dashboard` (any member; each
+  section by its own permission in SQL) and `getDashboard`:
+  - The land: the greeting by the clinic's clock — "Good morning, Dr.
+    Rahul" for a doctor — today's long date with "· 14 appointments" after
+    it, then **Waiting** (opening the queue) and **Seen** in display
+    numerals (D350).
+  - The ground: **Collected today** and **Outstanding** for `reports.view`;
+    then the sections the person may see, two to a row from 1024 px —
+    **Today's queue** (per doctor how many are in and wait, the next three
+    by token, the Urgent tag), **To bill**, **Follow-ups due today** (with
+    the overdue and lapsed counted in coral), **Tomorrow**, **Owing most**,
+    **Recent payments**, **Recent expenses**. A row opens the patient's
+    profile, an expense row Expenses; each section's link opens its screen
+    (D351); an empty section says so in one muted line.
+  - **Getting started** in place of the figures and sections until the
+    clinic's first patient (D348): set your prices, add your team, add your
+    first patient — each ticked once done, linked only for whoever may take
+    it there (D352).
+  - Read again every 15 s and on focus, as the queue is (D353).
+- `HOME_LIST_LIMITS` (five; the queue's next three), `GETTING_STARTED` (each
+  step's screen and permission), `APPOINTMENTS_ROUTE`, `EXPENSES_ROUTE`,
+  `apiRoutes.dashboard.home`, `DASHBOARD_LOAD_FAILED` and Home's words.
+- **Tests:** unit tests for the mapping, the greeting, the hook, the route
+  and the three components; `getDashboard` against the local database in
+  `home-and-reports.test.ts`; `tests/e2e/home.spec.ts` (phone, desktop, axe)
+  — a new clinic's steps ticked and then gone at its first patient; an
+  owner's day, a row opening the patient; the front desk's Home without the
+  money figures or expenses.
+
+### Changed
+- The greeting is "Good morning / afternoon / evening, …" instead of
+  "Hello, …", and the land's line under it is today's date rather than the
+  clinic's name (plan §17). The browser tests match it at any hour
+  (`greetingFor`).
+- Plan: D350 – D353; §17 says so; tracker R10.2 DONE (2026-10-27).
+  `DESIGN.md`: Home.
+
+### Speed
+- Home waits on 2 round trips: the session, then `dashboard_summary` — one
+  call for every section. Each refresh is that one call.
+
+### Validation
+- Typecheck, lint, format check passed.
+- Unit and integration tests passed (4,003), coverage 100%.
+- E2E passed (phone, desktop; 160 passed, 8 skipped by design).
+
+### Blockers
+- None.

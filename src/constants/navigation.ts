@@ -68,11 +68,13 @@ const QUEUE: NavItem = {
   href: QUEUE_ROUTE,
   access: "appointments.view",
 };
+/** The appointments calendar (plan §11.1). */
+export const APPOINTMENTS_ROUTE = "/appointments";
 const APPOINTMENTS: NavItem = {
   id: "appointments",
   label: places.appointments,
   icon: CalendarDays,
-  href: "/appointments",
+  href: APPOINTMENTS_ROUTE,
   access: "appointments.view",
   hint: hints.appointments,
 };
@@ -133,11 +135,13 @@ const BILLING: NavItem = {
   access: "payments.view",
   hint: hints.billing,
 };
+/** The clinic's expenses (plan §16). */
+export const EXPENSES_ROUTE = "/expenses";
 const EXPENSES: NavItem = {
   id: "expenses",
   label: places.expenses,
   icon: Wallet,
-  href: "/expenses",
+  href: EXPENSES_ROUTE,
   access: "expenses.view",
   hint: hints.expenses,
 };
@@ -161,6 +165,8 @@ const TEAM: NavItem = {
   hint: hints.team,
 };
 export const SETTINGS_ROUTE = "/settings";
+/** The price list, under Settings (plan §9). */
+const PRICE_LIST_SLUG = "price-list";
 const SETTINGS: NavItem = {
   id: "settings",
   label: places.settings,
@@ -229,7 +235,7 @@ export const SETTINGS_GROUPS: readonly SettingsGroup[] = [
     title: settingsGroups.clinic,
     items: [
       setting("clinic", Building2, "settings.manage", "clinic"),
-      setting("priceList", Tags, "settings.manage", "price-list"),
+      setting("priceList", Tags, "settings.manage", PRICE_LIST_SLUG),
       setting("appointmentTypes", CalendarCog, "settings.manage", "appointment-types"),
       setting("expenseCategories", Shapes, "settings.manage", "expense-categories"),
       setting("closures", CalendarOff, "settings.manage", "closures"),
@@ -355,3 +361,16 @@ export const QUICK_ADD: readonly QuickAddItem[] = [
 export function quickAddFor(member: Member): QuickAddItem[] {
   return QUICK_ADD.filter((item) => hasAccess(member, item.access));
 }
+
+/** A new clinic's first step on Home (plan §17; D348, D352): where it is taken, and who may take it there. */
+export interface GettingStartedStep {
+  id: keyof typeof UI_TEXT.home.gettingStarted.steps;
+  href: string;
+  access: Permission;
+}
+
+export const GETTING_STARTED: readonly GettingStartedStep[] = [
+  { id: "prices", href: `${SETTINGS_ROUTE}/${PRICE_LIST_SLUG}`, access: "settings.manage" },
+  { id: "team", href: TEAM_ROUTE, access: "team.manage" },
+  { id: "patient", href: addTo(PATIENTS, ADD_FORMS.patient), access: "patients.create" },
+];

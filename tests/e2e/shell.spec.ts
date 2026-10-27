@@ -1,7 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
 import { UI_TEXT } from "@/constants/messages";
-import { expectAccessible } from "@tests/support/e2e";
+import { expectAccessible, greetingFor } from "@tests/support/e2e";
 import { addMember, registerClinic, removeAll, type TestClinic } from "@tests/support/integration";
 
 /**
@@ -30,7 +30,7 @@ const main = (page: Page) => page.getByRole("navigation", { name: nav.main });
 
 test("an owner finds every place, the account and what they may add, accessibly", async ({ page }, { project }) => {
   await signIn(page, clinic.owner.email, clinic.owner.password);
-  await expect(page.getByRole("heading", { level: 1, name: UI_TEXT.home.greeting("Asha") })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: greetingFor("Asha") })).toBeVisible();
   await expect(page).toHaveTitle(`${nav.places.home} · ${UI_TEXT.appName}`);
   await expect(main(page).getByRole("link", { name: nav.places.home })).toHaveAttribute("aria-current", "page");
   await expectAccessible(page);

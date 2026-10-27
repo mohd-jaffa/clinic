@@ -7,6 +7,7 @@ import { addWalkIn } from "@/features/appointments/api";
 import { markDone, sendIn } from "@/features/appointments/moves";
 import { issueBill, voidBill } from "@/features/billing/api";
 import { recordPayment, voidPayment } from "@/features/billing/payments";
+import { getDashboard } from "@/features/dashboard/api";
 import { createExpense } from "@/features/expenses/api";
 import { addDaysKey, addMonthsKey, dayHour, monthStartKey, todayKey } from "@/lib/dates/calendar";
 import { billSchema, expenseSchema, paymentSchema, walkInSchema } from "@/lib/validation";
@@ -361,6 +362,48 @@ describe("Home (plan §17; D347 – D349)", () => {
     ]);
     expect(home.expenses).toEqual([
       expect.objectContaining({ category_name: "Supplies", description: "Gauze", amount_paise: 25_000, day: today }),
+    ]);
+  });
+
+  it("reads the same through the feature function Home's route calls (R10.2)", async () => {
+    const home = await getDashboard(clinic.owner.tenant);
+    expect(home).toMatchObject({
+      today,
+      day: { appointments: 6, patientsSeen: 2 },
+      money: { collectedPaise: 130_000, outstandingPaise: 30_000 },
+      toBill: { count: 2 },
+      followUps: { today: 1, overdue: 0, lapsed: 0 },
+      upcoming: { count: 1 },
+      owing: [{ patient: { id: rohan, name: "Rohan Mehta" }, balancePaise: 30_000 }],
+      gettingStarted: null,
+    });
+    expect(home.queue!.map(({ doctorName, withDoctor, waiting }) => [doctorName, withDoctor, waiting])).toEqual([
+      ["Arun Nair", 0, 1],
+      ["Maya Rao", 1, 0],
+    ]);
+    expect(home.queue![0].next).toEqual([
+      expect.objectContaining({ patient: expect.objectContaining({ id: kiran }), token: kiranToken, urgent: false }),
+    ]);
+    expect(home.toBill!.visits.map((visit) => visit.visitId)).toEqual([meeraVisit, rohanSecond]);
+    expect(home.followUps!.due).toEqual([
+      {
+        kind: "VISIT",
+        id: meeraVisit,
+        patient: expect.objectContaining({ id: meera }),
+        title: null,
+        doctorName: "Arun Nair",
+      },
+    ]);
+    expect(home.upcoming!.appointments).toEqual([
+      expect.objectContaining({ id: tomorrowsBooking, doctorName: "Maya Rao", typeName: "Consultation" }),
+    ]);
+    expect(home.payments!.map(({ kind, amountPaise, method }) => [kind, amountPaise, method])).toEqual([
+      ["REFUND", 20_000, "UPI"],
+      ["PAYMENT", 100_000, "UPI"],
+      ["PAYMENT", 50_000, "CASH"],
+    ]);
+    expect(home.expenses).toEqual([
+      expect.objectContaining({ categoryName: "Supplies", description: "Gauze", amountPaise: 25_000, method: "CASH" }),
     ]);
   });
 

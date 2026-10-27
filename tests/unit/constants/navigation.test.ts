@@ -7,6 +7,7 @@ import {
   BILL_FROM,
   billRoute,
   BOTTOM_NAV,
+  GETTING_STARTED,
   isActivePath,
   memberRoute,
   MORE_NAV,
@@ -108,6 +109,18 @@ describe("quick add (D67)", () => {
       quickAddFor({ role: "DOCTOR", permissions: ["appointments.create", "expenses.create"] }).map((a) => a.key),
     ).toEqual(["walk-in", "appointment", "expense"]);
     expect(quickAddFor({ role: "STAFF", permissions: [] })).toEqual([]);
+  });
+});
+
+describe("a new clinic's getting started (plan §17; D348, D352)", () => {
+  it("takes each step where it is done, for whoever may do it there", () => {
+    expect(GETTING_STARTED.map((step) => [step.id, step.href, step.access])).toEqual([
+      ["prices", "/settings/price-list", "settings.manage"],
+      ["team", TEAM_ROUTE, "team.manage"],
+      ["patient", `/patients?${ADD_PARAM}=patient`, "patients.create"],
+    ]);
+    const priceList = SETTINGS_GROUPS.flatMap((group) => group.items).find((item) => item.id === "priceList")!;
+    expect(GETTING_STARTED[0].href).toBe(priceList.href);
   });
 });
 
