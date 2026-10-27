@@ -3029,7 +3029,7 @@ in the row's one commit (D136).
 | R10.1 | `0034_dashboard_and_reports`: `dashboard_summary`, `report_daily`, `report_monthly` (D345 – D349: voids leave their own day; appointments without the cancelled; a doctor's own day; getting started until the first patient; Home's lists of five) | §17, §18 | — | DONE (2026-10-27) |
 | R10.2 | Home: sections by permission; getting-started for a new clinic (D350 – D353: Waiting and Seen on the land, today's appointments by the date; a row opens the patient; every step shown, linked for who may; read every 15 s) | §17 | — | DONE (2026-10-27) |
 | R10.3 | Reports: daily and monthly, the two charts; the kit's chart kit, bar and donut (D66; D354 – D356: money in up and out down; four outcomes; ‹ day › arrows) | §18 | — | DONE (2026-10-27) |
-| R10.4 | Integration: a seeded month's figures equal hand-computed ones | §34 | — | TODO |
+| R10.4 | Integration: a seeded month's figures equal hand-computed ones (last month laid down — done, cancelled, not come and never closed; a visit with no appointment; a bill and a payment voided, a refund, an expense archived — every Daily and Monthly figure, by doctor included, as worked out by hand and as the records hold; Home agrees) | §34 | — | DONE (2026-10-27) |
 | R10.5 | Day-end collection summary (by method, by receiver), printable | §18 | — | TODO |
 | R10.6 | Monthly by doctor: seen, visits, billed, paid to date | §18 | — | TODO |
 

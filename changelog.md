@@ -4899,3 +4899,39 @@ the user first: D267 – D271.
 
 ### Blockers
 - None.
+
+## 2026-10-27 — R10.4: a seeded month's figures, worked out by hand
+
+### Added
+- **`tests/db/integration/report-month.test.ts`** (plan §18, §34; the
+  phase's exit): last month laid down as a clinic would have left it — on
+  three days, appointments done, cancelled, not come and never closed;
+  visits with and without an appointment; a patient back from the month
+  before; bills, one voided since; payments, one voided, and a refund;
+  expenses, one archived — and a little of today. Bills, visits and
+  appointments cannot be made on a day gone, so they are laid down
+  directly, each patient's balance with them as the money functions keep
+  it (D295); payments, refunds, voids and expenses go through their own
+  functions on their days.
+  - Every figure of the Monthly report — patients seen, new and returning,
+    appointments by status, collected, billed, spent, net, owed today, each
+    day for the chart, and by doctor with what is paid to date — equals the
+    table worked out by hand in the test's header.
+  - Each of the three days' Daily reports too, its collections by who took
+    the money and how, and its voids; the days sum to the month.
+  - The month's money equals what the records themselves hold, the voided
+    and archived left out; and Home's day and money equal the day's and the
+    month's reports.
+
+### Changed
+- Plan: tracker R10.4 DONE (2026-10-27).
+
+### Validation
+- Typecheck, lint, format check passed.
+- Unit and integration tests passed (4,056), coverage 100%.
+- E2E passed (phone, desktop; 161 passed, 9 skipped by design — the
+  front-desk journey books for later today and skips itself late in the
+  evening).
+
+### Blockers
+- None.
