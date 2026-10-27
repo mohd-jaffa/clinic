@@ -23,7 +23,7 @@ import {
 } from "@tests/support/integration";
 
 /**
- * The permission matrix, so far (plan §34.3, R1.11, R3.8, R4.7, R5.1, R6.1, R6.3, R6.4, R6.7, R7.1, R7.2, R7.3, R8.1, R8.4, R9.2): every
+ * The permission matrix, so far (plan §34.3, R1.11, R3.8, R4.7, R5.1, R6.1, R6.3, R6.4, R6.7, R7.1, R7.2, R7.3, R8.1, R8.4, R9.2, R10.1): every
  * permission the schema enforces yet, allowed and refused — by the route
  * guard, and by RLS or a function with the member's own token. Each phase
  * adds the rows its tables bring; the patients routes themselves are asked in
@@ -1162,5 +1162,45 @@ describe("expenses.view, expenses.create and expenses.edit, by the guard, RLS an
       const { data: kept } = await admin().from("expenses").select("id").eq("id", expenseId);
       expect(kept, String(error?.code)).toHaveLength(1);
     }
+  });
+});
+
+describe("reports.view, by the guard and the 0034 functions: Home's money and the reports", () => {
+  let books: SignedIn & { memberId: string };
+  const home = (member: SignedIn) =>
+    member.tenant!.supabase.rpc("dashboard_summary", { p_list_limit: 5, p_queue_limit: 3 });
+
+  beforeAll(async () => {
+    books = await addMember(clinic.clinicId, { permissions: ["reports.view"] });
+  });
+
+  it("lets reports.view through the guard, and no one without it", async () => {
+    await expect(ask(books, "reports.view", "GET")).resolves.toMatchObject({ status: 200 });
+    await expect(ask(receptionist, "reports.view", "GET")).resolves.toMatchObject({ status: 403 });
+  });
+
+  it("reads the day's and the month's reports with reports.view, and refuses them without it", async () => {
+    for (const [name, args] of [
+      ["report_daily", { p_day: todayKey() }],
+      ["report_monthly", { p_month: todayKey() }],
+    ] as const) {
+      expect((await books.tenant!.supabase.rpc(name, args)).error, name).toBeNull();
+      expect((await receptionist.tenant!.supabase.rpc(name, args)).error?.hint, name).toBe("AUTH_PERMISSION_DENIED");
+    }
+  });
+
+  it("gives Home's money to reports.view, and each other section to its own permission", async () => {
+    const [{ data: theirs }, { data: desks }] = await Promise.all([home(books), home(receptionist)]);
+    expect(theirs).toMatchObject({
+      money: { collected_paise: expect.any(Number), outstanding_paise: expect.any(Number) },
+      day: null,
+      queue: null,
+    });
+    expect(desks).toMatchObject({ money: null, to_bill: null, owing: null, payments: null, expenses: null });
+    expect(desks).toMatchObject({
+      day: { appointments: expect.any(Number), patients_seen: expect.any(Number) },
+      queue: expect.any(Array),
+      upcoming: { count: expect.any(Number) },
+    });
   });
 });

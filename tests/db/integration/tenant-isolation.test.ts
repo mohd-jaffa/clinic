@@ -550,6 +550,52 @@ describe("as clinic B's owner, with a valid token", () => {
     expect(kept).toEqual({ amount_paise: 2_500_000, archived_at: null });
   });
 
+  it("finds none of A's figures on Home or in the reports, and calls none of their definitions (0034)", async () => {
+    const read = async (member: SignedIn, name: string, args: Record<string, unknown>) => {
+      const { data, error } = await member.tenant!.supabase.rpc(name, args);
+      expect(error, name).toBeNull();
+      return data as Record<string, unknown>;
+    };
+    const home = { p_list_limit: 5, p_queue_limit: 3 };
+    // A's own: today's ₹500 in, the rent spent, tomorrow's appointment.
+    await expect(read(a.owner, "dashboard_summary", home)).resolves.toMatchObject({
+      money: { collected_paise: 50_000 },
+      upcoming: { count: 1 },
+      expenses: [{ amount_paise: 2_500_000 }],
+    });
+    await expect(read(b.owner, "dashboard_summary", home)).resolves.toMatchObject({
+      day: { appointments: 0, patients_seen: 0 },
+      money: { collected_paise: 0, outstanding_paise: 0 },
+      queue: [],
+      to_bill: { count: 0, visits: [] },
+      upcoming: { count: 0, appointments: [] },
+      owing: [],
+      payments: [],
+      expenses: [],
+    });
+    await expect(read(b.owner, "report_daily", { p_day: todayKey() })).resolves.toMatchObject({
+      collected_paise: 0,
+      billed_paise: 0,
+      expenses_paise: 0,
+      collections: [],
+    });
+    await expect(read(b.owner, "report_monthly", { p_month: todayKey() })).resolves.toMatchObject({
+      collected_paise: 0,
+      expenses_paise: 0,
+      doctors: [],
+    });
+    for (const [name, args] of [
+      ["clinic_day_start", { p_clinic_id: a.clinicId, p_day: todayKey() }],
+      ["money_by_day", { p_clinic_id: a.clinicId, p_from: todayKey(), p_to: todayKey() }],
+      ["visits_done", { p_clinic_id: a.clinicId, p_from: todayKey(), p_to: todayKey(), p_doctors: null }],
+      ["appointment_counts", { p_clinic_id: a.clinicId, p_from: todayKey(), p_to: todayKey(), p_doctors: null }],
+      ["clinic_outstanding", { p_clinic_id: a.clinicId }],
+    ] as const) {
+      const { error } = await b.owner.tenant.supabase.rpc(name, args);
+      expect(error?.code, name).toBe("42501");
+    }
+  });
+
   it("prints none of A's prescriptions (R6.4)", async () => {
     await expect(
       getPrescriptionPdf(b.owner.tenant, visitId, { download: false, requestId: "req_test" }),
@@ -614,6 +660,25 @@ describe("as the platform admin (DEV)", () => {
     for (const { table } of CLINIC_TABLES) {
       const { data } = await supabase.from(table).select("*").limit(5);
       expect(data, table).toEqual([]);
+    }
+  });
+
+  it("reads no clinic's Home or reports (0034)", async () => {
+    const supabase = createClient(
+      getServerEnv().NEXT_PUBLIC_SUPABASE_URL,
+      getServerEnv().NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      {
+        auth: { persistSession: false },
+        global: { headers: { Authorization: `Bearer ${developer.session.accessToken}` } },
+      },
+    );
+    for (const [name, args] of [
+      ["dashboard_summary", { p_list_limit: 5, p_queue_limit: 3 }],
+      ["report_daily", { p_day: todayKey() }],
+      ["report_monthly", { p_month: todayKey() }],
+    ] as const) {
+      const { error } = await supabase.rpc(name, args);
+      expect(error?.hint, name).toBe("AUTH_PERMISSION_DENIED");
     }
   });
 

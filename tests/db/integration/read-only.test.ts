@@ -214,6 +214,18 @@ describe("a read-only clinic", () => {
     expect(kept).toEqual({ active: true });
   });
 
+  it("still reads Home and the reports, which write nothing (0034)", async () => {
+    const { supabase } = clinic.owner.tenant;
+    for (const [name, args] of [
+      ["dashboard_summary", { p_list_limit: 5, p_queue_limit: 3 }],
+      ["report_daily", { p_day: todayKey() }],
+      ["report_monthly", { p_month: todayKey() }],
+    ] as const) {
+      const { error } = await supabase.rpc(name, args);
+      expect(error, name).toBeNull();
+    }
+  });
+
   it("refuses a write through a route with CLINIC_PLAN_EXPIRED, and still reads", async () => {
     const write = await withClinicRoute(request("POST"), { access: "settings.manage" }, async () => ({}));
     expect(write.status).toBe(422);

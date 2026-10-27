@@ -431,6 +431,11 @@ earlier lines are never rewritten.
 | D342 | **A patient's bill names its doctor by chips** (the user): under "Doctor", No doctor and each active doctor, starting on the patient's assigned doctor (else No doctor); picking one prices a Consultation line at their fee. A visit's or an arrival's bill keeps the visit's doctor, named and not changed. | 2026-10-24 |
 | D343 | **An expense's category is picked from wrapping chips** (the user): every active category as a chip, one tap, none chosen to start so one must be picked; a corrected expense keeps its own category though archived since. | 2026-10-24 |
 | D344 | **An expense's row opens its edit sheet** (the user): for `expenses.edit` the row opens the Add sheet filled, with Save and **Archive** at its foot (asked first); without `expenses.edit` the row is not tappable — it already shows everything. | 2026-10-24 |
+| D345 | **A voided bill or payment leaves its own day's figures** (the user): Billed and Collected count what still stands, by the day it was issued or paid; a void made later lowers that earlier day's figure. The day-end collection summary lists the day's voided payments and refunds on their own. | 2026-10-27 |
+| D346 | **"Appointments" leaves the cancelled ones out** (the user): Home's Appointments today and the reports' Appointments count every booking and walk-in of the day but the cancelled; Cancelled, Completed and No-shows are figures of their own beside it. | 2026-10-27 |
+| D347 | **A doctor's Home shows their own day** (the user): a doctor who sees only their own patients finds their own appointments today, patients seen, queue and tomorrow; Collected and Outstanding (`reports.view`) are always the clinic's. | 2026-10-27 |
+| D348 | **Getting started lasts until the first patient** (the user): a clinic with no patient sees the three steps instead of Home's sections, each ticked once done — prices when any price on the list or any doctor's fee is above ₹0, the team when anyone else is invited or has joined — and the sections from its first patient on. | 2026-10-27 |
+| D349 | **Home's lists hold five; the queue, the next three per doctor:** To bill the oldest five, the follow-ups due today the first five (Overdue and Lapsed counted), tomorrow the first five by time (counted), the five owing most, the last five payments and refunds standing, the last five expenses; per doctor with anyone in or waiting, how many are in, how many wait and the next three by token. The sizes are `HOME_LIST_LIMITS` (R10.2). A report is of today or a day before, of this month or one before. | 2026-10-27 |
 
 ## 3. Users and roles
 
@@ -1679,13 +1684,22 @@ their permissions, so one route serves owner, doctor and reception.
 Phone: a 2×2 tile grid, then sections stacked. Desktop: tiles in a row, then a
 two-column grid. A brand-new clinic sees a short **getting started** list
 instead of empty sections (set your prices, add your team, add your first
-patient). Plain counts from one SQL function (`dashboard_summary`) — no charts
+patient), each step ticked once done, until its first patient (D348). Plain
+counts and short lists from one SQL function (`dashboard_summary`) — no charts
 on Home.
+
+**Appointments today** leaves the cancelled ones out (D346). A doctor who sees
+only their own patients finds their own appointments, patients seen, queue and
+tomorrow (D347); the money tiles are always the clinic's. Each list holds five,
+the queue the next three per doctor (D349).
 
 ## 18. Reports — `/reports`
 
 `reports.view`. Two tabs; every figure defined once, computed by SQL functions
-in the clinic's timezone.
+in the clinic's timezone, and shared with Home. A voided bill or payment
+leaves its own day's figures (D345); "appointments" leaves the cancelled ones
+out (D346). A report is of today or a day before, of this month or one
+before (D349).
 
 **Daily** (pick a date): patients visited (distinct patients with a completed
 visit), appointments (booked + walk-ins), completed, cancelled, no-shows,
@@ -2257,7 +2271,7 @@ expenses              id · clinic_id · category_id · description · amount_pa
 | `visit_recorded(visit)` (0022) | whether a visit holds anything: its row in the history (D226), and Back to waiting through `visit_is_empty` (D197). |
 | `follow_up_items(tab)`, `follow_up_counts()`, `record_follow_up_contact` (0026, 0027) | the follow-ups in their tabs, a page at a time, and how many each holds, for whoever sees appointments or visits (§14.3, D267 – D271); a call noted; the last contact with who made it (D275). |
 | `subscription_state(clinic)` | §7.2. |
-| `dashboard_summary()`, `report_daily(date)` (with the day-end collection summary), `report_monthly(month)` (with by doctor) | §17, §18. |
+| `dashboard_summary(list, queue)` (Home's sections, each with its permission, its lists of `list` and the queue's next `queue`), `report_daily(date)` (with the day-end collection summary), `report_monthly(month)` (with by doctor), each figure defined once in `money_by_day`, `visits_done`, `appointment_counts` and `clinic_outstanding` (read by them only) (0034) | §17, §18 (D345 – D349). |
 | `register_clinic`, `invite_member`, `accept_invite`, `update_member`, `set_member_active` | accounts and team. |
 | `create_appointment`, `update_appointment`, `change_appointment_status`, `add_walk_in`, `mark_arrived` (token; the fee bill follows through `create_bill`, D283) | appointments. |
 | `send_in`, `mark_done`, `next_patient`, `back_to_waiting` (each opens, closes or removes the visit with the appointment), `mark_stepped_out`, `mark_urgent` (0019) | the queue (§11.4; D192 – D198, D201). |
@@ -2359,7 +2373,9 @@ Planned order (one or more per tracker row):
                                 pick and their fees (D326, D342), and the patient's mobile
                                 for Send bill on WhatsApp (D341)
 0033_expenses                   expenses
-0034_dashboard_and_reports      dashboard_summary, report_daily, report_monthly
+0034_dashboard_and_reports      dashboard_summary, report_daily, report_monthly; each figure
+                                defined once (money_by_day, visits_done, appointment_counts,
+                                clinic_outstanding), voids out of their own day (D345 – D349)
 0035_subscription_notices       the daily pg_cron → pg_net call (address and secret in Vault)
 0036_clinic_deletion            request_clinic_deletion, cancel_clinic_deletion,
                                 delete_clinic (DEV)
@@ -2990,7 +3006,7 @@ in the row's one commit (D136).
 
 | ID | Work | Source | Waits on | Status |
 |---|---|---|---|---|
-| R10.1 | `0034_dashboard_and_reports`: `dashboard_summary`, `report_daily`, `report_monthly` | §17, §18 | — | TODO |
+| R10.1 | `0034_dashboard_and_reports`: `dashboard_summary`, `report_daily`, `report_monthly` (D345 – D349: voids leave their own day; appointments without the cancelled; a doctor's own day; getting started until the first patient; Home's lists of five) | §17, §18 | — | DONE (2026-10-27) |
 | R10.2 | Home: sections by permission; getting-started for a new clinic | §17 | — | TODO |
 | R10.3 | Reports: daily and monthly, the two charts; the kit's chart kit, bar and donut (D66) | §18 | — | TODO |
 | R10.4 | Integration: a seeded month's figures equal hand-computed ones | §34 | — | TODO |

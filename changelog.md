@@ -4728,3 +4728,69 @@ the user first: D267 – D271.
 
 ### Blockers
 - None.
+
+## 2026-10-27 — R10.1: Home's figures and the reports in the database
+
+### Added
+- **`0034_dashboard_and_reports`** (plan §17, §18, §28.7; D49, D53,
+  D345 – D349). Every figure is defined once, in the clinic's timezone, and
+  Home and the reports read the same definitions — `money_by_day` (collected:
+  payments less refunds; billed; spent; the net, each day), `visits_done`
+  (the patients seen, each once, and the visits), `appointment_counts` (the
+  appointments without the cancelled, and each status's count) and
+  `clinic_outstanding` (what the patients who owe owe, an advance taking
+  nothing off it). They take a clinic, so no member may call them; only the
+  three functions below do.
+  - `dashboard_summary(list, queue)`: Home's sections, each only with its
+    permission — the day's appointments and patients seen
+    (`appointments.view`, a doctor's own, D347); collected today and
+    outstanding (`reports.view`, the clinic's); the queue, each doctor with
+    anyone in or waiting, the next three by token; To bill's count and oldest
+    five (`payments.view`); the follow-ups' Today, Overdue and Lapsed counts
+    and Today's first five (`appointments.view` or `visits.view`); tomorrow's
+    count and first five; the five owing most and the last five payments,
+    within the doctor scope; the last five expenses (`expenses.view`); and
+    the getting-started steps until the first patient (D348).
+  - `report_daily(day)` (`reports.view`): patients seen, appointments and
+    each status, collected, billed, spent, net; the day-end collection
+    summary by who took the money and how, and the day's voids (D49).
+  - `report_monthly(month)` (`reports.view`): patients seen, new (first
+    visit ever in the month) and returning; appointments and each status;
+    collected, billed, spent, net, owed today; each day's collected and spent
+    for the chart; by doctor — patients seen, visits, billed, paid to date
+    from `bill_settlement`, worked out for the month's billed patients only —
+    with "No doctor" last (D53).
+  - Index `visits_clinic_id_completed_idx` (clinic, day) for the visits done;
+    every other read rides an index already there (payments and bills by
+    instant, appointments and expenses by day, balances owing).
+- **Tests:** the migration's contract test; `home-and-reports.test.ts` — a
+  clinic's day of walk-ins, bills, a voided bill, payments, a refund, a
+  payment of yesterday voided and an expense, every figure equal to the one
+  worked out by hand: Home for the owner, reception, a reader of reports,
+  each doctor and a member with none of it; the getting-started steps on a
+  new clinic; the day's report and its collections summing to Collected;
+  the month's, new and returning, and by doctor. Rows in the permission
+  matrix (`reports.view`), tenant isolation (none of A's figures; the
+  definitions refused to members), the DEV (none) and read-only (still read).
+
+### Changed
+- Plan: D345 – D349 (voids leave their own day; Appointments without the
+  cancelled; a doctor's own day on Home; getting started until the first
+  patient; Home's lists of five, the queue's next three); §17, §18, §28.7
+  and §29 say so; tracker R10.1 DONE (2026-10-27).
+
+### Speed
+- Home reads in one call after the session (`dashboard_summary`), each
+  report in one (plan §37: 2 round trips).
+
+### Migration notes
+- `npx supabase migration up --local` applies 0034; it adds one index and
+  functions, and changes no table.
+
+### Validation
+- Typecheck, lint, format check passed.
+- Unit and integration tests passed (3,973), coverage 100%.
+- E2E passed (phone, desktop; 156 passed, 8 skipped by design).
+
+### Blockers
+- None.
