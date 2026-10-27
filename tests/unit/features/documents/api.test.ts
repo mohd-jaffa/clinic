@@ -4,11 +4,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { externalServiceError } from "@/lib/errors";
 import type { Measure } from "@/lib/pdf/layout";
 import type { Tenant } from "@/lib/supabase/tenant";
+import { aDailyReport } from "@tests/support/reports";
 import { fakeSupabase, postgrestError, type FakeSupabaseOptions } from "@tests/support/supabase";
 
-const { downloadLogo, getBill, getClinicForDocuments, renderPdf, toPng, warn } = vi.hoisted(() => ({
+const { downloadLogo, getBill, getClinicForDocuments, getDailyReport, renderPdf, toPng, warn } = vi.hoisted(() => ({
   downloadLogo: vi.fn(),
   getBill: vi.fn(),
+  getDailyReport: vi.fn(),
   getClinicForDocuments: vi.fn(),
   renderPdf: vi.fn(),
   toPng: vi.fn(),
@@ -16,11 +18,12 @@ const { downloadLogo, getBill, getClinicForDocuments, renderPdf, toPng, warn } =
 }));
 vi.mock("@/features/clinic/api", () => ({ downloadLogo, getClinicForDocuments }));
 vi.mock("@/features/billing/api", () => ({ getBill }));
+vi.mock("@/features/reports/api", () => ({ getDailyReport }));
 vi.mock("@/lib/pdf/render", async (actual) => ({ ...(await actual()), renderPdf }));
 vi.mock("@/lib/logger", () => ({ logger: { warn, info: vi.fn(), error: vi.fn() } }));
 vi.mock("sharp", () => ({ default: vi.fn(() => ({ png: () => ({ toBuffer: toPng }) })) }));
 
-const { getBillPdf, getPrescriptionPdf } = await import("@/features/documents/api");
+const { getBillPdf, getCollectionsPdf, getPrescriptionPdf } = await import("@/features/documents/api");
 
 const measure: Measure = (text, _face, size) => text.length * size * 0.5;
 const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47]);
@@ -308,6 +311,41 @@ describe("getBillPdf (plan §15.5; D315, D316)", () => {
     getClinicForDocuments.mockResolvedValue({ clinic, logoPath: "clinics/clinic-1/logo/a" });
     downloadLogo.mockResolvedValue({ file: new Blob([PNG]), type: "image/png" });
     await getIt();
+    expect(drawn().logo).toEqual(PNG);
+  });
+});
+
+describe("getCollectionsPdf (plan §18; D49, D359)", () => {
+  const getIt = (download = false) =>
+    getCollectionsPdf(tenantWith({}), { day: "2026-10-27", download, requestId: "req_3" });
+
+  it("draws the day's collections on the clinic's paper, and answers it to open — named, never kept", async () => {
+    getDailyReport.mockResolvedValue(aDailyReport());
+    getClinicForDocuments.mockResolvedValue({ clinic: { ...clinic, paperSize: "A4" }, logoPath: null });
+    const answer = await getIt();
+    expect(getDailyReport).toHaveBeenCalledWith(expect.objectContaining({ clinicId: "clinic-1" }), {
+      day: "2026-10-27",
+    });
+    expect(answer.headers.get("Content-Type")).toBe("application/pdf");
+    expect(answer.headers.get("Content-Disposition")).toContain("inline");
+    expect(answer.headers.get("Content-Disposition")).toContain(encodeURIComponent("Collections - 27 Oct 2026.pdf"));
+    const { lines, ...rest } = drawn();
+    expect(rest).toMatchObject({
+      paper: "A4",
+      title: "Day-end collections, Tuesday, 27 Oct 2026",
+      author: "Smile Care",
+      logo: null,
+    });
+    expect(lines).toContain("Priya Nair");
+    expect(lines).toContain("Cash to hand over");
+  });
+
+  it("answers it to save when asked to download it, with the clinic's logo", async () => {
+    getDailyReport.mockResolvedValue(aDailyReport());
+    getClinicForDocuments.mockResolvedValue({ clinic, logoPath: "clinics/clinic-1/logo/a" });
+    downloadLogo.mockResolvedValue({ file: new Blob([PNG]), type: "image/png" });
+    const answer = await getIt(true);
+    expect(answer.headers.get("Content-Disposition")).toContain("attachment");
     expect(drawn().logo).toEqual(PNG);
   });
 });

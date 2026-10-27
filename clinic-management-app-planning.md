@@ -443,6 +443,10 @@ earlier lines are never rewritten.
 | D354 | **The month's money chart puts money in above the line and money out below it** (the user): one baseline, one axis; each day a green column rises for Collected and a grey-green column falls for Expenses — one column a day, readable on a phone. A legend names them; a column pointed at or reached with the arrow keys reads out its day and both values; **Show as table** holds every value. | 2026-10-27 |
 | D355 | **The outcomes donut has four parts** (the user): Completed (green), Still to come — booked, confirmed, arrived or with the doctor — (ink), No-shows (coral), Cancelled (grey-green), in that order round the ring, so green never meets coral; the whole, cancelled included, in its middle ("50 in all"); a legend names each with its count and share. | 2026-10-27 |
 | D356 | **The Daily report picks its day with ‹ › arrows** (the user), the date between them opening the app's calendar; today to start, none after it — as Expenses steps through months. | 2026-10-27 |
+| D357 | **What each person hands over is their cash** (the user): the cash they took less the cash they handed back; their UPI, card, bank transfer and other payments are listed beside it, gone straight to the clinic's account. | 2026-10-28 |
+| D358 | **The day-end summary goes by person, then by method** (the user): a card for each person who took money — each method they took it by, each refund they gave, and their cash to hand over in bold — then each method's received, refunded and net, the day's net collected, and the day's voided payments. | 2026-10-28 |
+| D359 | **The day-end summary prints as a PDF, as bills do** (the user): on the clinic's letterhead and paper (A4/A5), opened by **Print** in the browser's own viewer and saved by **Download** — "Collections - 27 Oct 2026.pdf" — made on demand, never stored; for `reports.view`. | 2026-10-28 |
+| D360 | **The printed summary is signed over** (the user): two lines at its foot, **Counted by** and **Received by**. It locks nothing (D49). | 2026-10-28 |
 
 ## 3. Users and roles
 
@@ -1721,7 +1725,10 @@ expenses, **net** (collected − expenses).
 **Day-end collection summary** (on Daily, D49): that day's payments by method
 (Cash, UPI, Card, Bank transfer, Other) and by **who received them**, refunds
 and voids, and the net — the figure each person at the desk should hand over.
-Printable (A4/A5). It locks nothing.
+Printable (A4/A5). It locks nothing. Each person's figure is their cash to
+hand over (D357); the summary goes by person, then by method (D358); it
+prints as a PDF on the letterhead (D359), with Counted by and Received by
+lines at its foot (D360).
 
 **Monthly** (pick a month): active patients (with a visit in the month), new
 patients (first-ever visit in the month), returning patients (a visit in the
@@ -2643,7 +2650,8 @@ These hold whatever the direction:
 
 ## 33. Documents (PDF)
 
-`src/features/documents` builds the **bill** and the **prescription** with
+`src/features/documents` builds the **bill**, the **prescription** and the
+**day-end collections** (§18, D359) with
 pdfkit and bundled fonts (with ₹), on a shared letterhead (`src/lib/pdf`), in
 **A4 or A5** by the clinic's paper size (D28) — one layout that scales, tested
 at both sizes, with the small ClinicDesk footer (D30). A
@@ -3030,7 +3038,7 @@ in the row's one commit (D136).
 | R10.2 | Home: sections by permission; getting-started for a new clinic (D350 – D353: Waiting and Seen on the land, today's appointments by the date; a row opens the patient; every step shown, linked for who may; read every 15 s) | §17 | — | DONE (2026-10-27) |
 | R10.3 | Reports: daily and monthly, the two charts; the kit's chart kit, bar and donut (D66; D354 – D356: money in up and out down; four outcomes; ‹ day › arrows) | §18 | — | DONE (2026-10-27) |
 | R10.4 | Integration: a seeded month's figures equal hand-computed ones (last month laid down — done, cancelled, not come and never closed; a visit with no appointment; a bill and a payment voided, a refund, an expense archived — every Daily and Monthly figure, by doctor included, as worked out by hand and as the records hold; Home agrees) | §34 | — | DONE (2026-10-27) |
-| R10.5 | Day-end collection summary (by method, by receiver), printable | §18 | — | TODO |
+| R10.5 | Day-end collection summary (by method, by receiver), printable (D357 – D360: cash to hand over; by person, then by method; a PDF on the letterhead; Counted by and Received by) | §18 | — | DONE (2026-10-28) |
 | R10.6 | Monthly by doctor: seen, visits, billed, paid to date | §18 | — | TODO |
 
 ### Phase 11 — Subscription operations and the developer console

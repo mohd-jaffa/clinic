@@ -157,6 +157,8 @@ export const apiRoutes = {
   reports: {
     daily: "/api/reports/daily",
     monthly: "/api/reports/monthly",
+    /** A day's collections as a PDF (D359): `?day=`, and `&download=1` to save it. */
+    collectionsPdf: "/api/reports/daily/collections.pdf",
   },
   // Home (plan §17): its figures and sections, each with its permission.
   dashboard: {

@@ -347,8 +347,10 @@ export {
 } from "./schemas/payments";
 
 export {
+  collectionsPdfQuerySchema,
   dailyReportQuerySchema,
   monthlyReportQuerySchema,
+  type CollectionsPdfQuery,
   type DailyReportQuery,
   type MonthlyReportQuery,
 } from "./schemas/reports";

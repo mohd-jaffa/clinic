@@ -4935,3 +4935,49 @@ the user first: D267 – D271.
 
 ### Blockers
 - None.
+
+## 2026-10-28 — R10.5: the day-end collection summary, printable
+
+### Added
+- **The day-end collections** (plan §18; D49, D357 – D360), on Reports →
+  Daily under the money: a card for each person who took money that day —
+  each method they took it by, each refund they gave, and their **cash to
+  hand over** (D357), cash taken less cash handed back — then each method's
+  received, refunded and net, the day's **net collected** (equal to
+  Collected), and the day's voided payments and refunds (D358). Someone no
+  longer on the team is named so.
+- **Printed as a PDF** (D359): `GET /api/reports/daily/collections.pdf?day=`
+  for `reports.view` (`getCollectionsPdf`), on the clinic's letterhead and
+  paper (A4/A5) through the documents' own renderer — the day's report and
+  the clinic at once, then the logo; made on demand, `no-store`, never kept.
+  **Print** opens it beside the app; **Download** saves "Collections - 27
+  Oct 2026.pdf". At its foot, **Counted by** and **Received by** (D360). It
+  locks nothing.
+- `dayEndOf`, `personLines`, `voidedLine`, `signedPaise`
+  (`features/reports/collections.ts`), shared by the screen and the paper;
+  `collectionsSheet`, `layoutCollections`, `collectionsFileName`,
+  `useCollectionsDownload`; `collectionsPdfQuerySchema`;
+  `COLLECTIONS_PDF_FAILED` and the words.
+- **Tests:** unit tests for the grouping, the sheet and its layout (the
+  columns, the breaks, the sign-off), the server read, the file name, the
+  hook, the route, the schema and the screen; the PDF against the local
+  database in `report-month.test.ts` (for `reports.view`, the front desk
+  refused); the summary, Print and Download in `tests/e2e/reports.spec.ts`
+  (phone, desktop, axe).
+
+### Changed
+- Plan: D357 – D360; §18 and §33 say so; tracker R10.5 DONE (2026-10-28).
+  `DESIGN.md`: the day-end collections.
+
+### Speed
+- The summary is read with the day's report (no other call). The PDF waits
+  on 2 round trips after the session: the report and the clinic at once,
+  then the logo.
+
+### Validation
+- Typecheck, lint, format check passed.
+- Unit and integration tests passed (4,081), coverage 100%.
+- E2E passed (phone, desktop; 162 passed, 8 skipped by design).
+
+### Blockers
+- None.

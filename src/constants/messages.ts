@@ -159,6 +159,7 @@ export const ERROR_MESSAGES = {
   DASHBOARD_LOAD_FAILED: "Today's figures couldn't be loaded.",
   // Reports (plan §18).
   REPORT_LOAD_FAILED: "This report couldn't be loaded.",
+  COLLECTIONS_PDF_FAILED: "The day-end collections’ PDF couldn’t be made.",
 
   // Payments (plan §15.3; D297, D301).
   PAYMENT_REFUND_TOO_LARGE: "A refund can’t be more than the patient has paid in advance.",
@@ -1298,6 +1299,29 @@ export const UI_TEXT = {
     showTable: "Show as table",
     hideTable: "Hide table",
     table: "Table",
+    /** The day-end collection summary (D49, D357 – D360). */
+    dayEnd: "Day-end collections",
+    dayEndEmpty: "No payments this day.",
+    byPerson: "By person",
+    byMethod: "By method",
+    formerMember: "No longer on the team",
+    /** A refund handed back, by how: "Refunded, Cash". */
+    refunded: (method: string) => `Refunded, ${method}`,
+    /** What each person hands over (D357): the cash they took less the cash they handed back. */
+    handOver: "Cash to hand over",
+    methodColumns: { method: "Method", received: "Received", refunded: "Refunded", net: "Net" },
+    netCollected: "Net collected",
+    /** The day's payments and refunds voided since, left out of it: "Voided: 1 payment, ₹500 · 1 refund, ₹200". */
+    voided: (parts: string) => `Voided: ${parts}`,
+    voidedPayments: (count: number, amount: string) => `${count === 1 ? "1 payment" : `${count} payments`}, ${amount}`,
+    voidedRefunds: (count: number, amount: string) => `${count === 1 ? "1 refund" : `${count} refunds`}, ${amount}`,
+    print: "Print",
+    printOf: (day: string) => `Print the day-end collections of ${day}`,
+    download: "Download",
+    downloadOf: (day: string) => `Download the day-end collections of ${day}`,
+    downloaded: "Collections downloaded",
+    savedAs: (name: string) => `Saved as “${name}”.`,
+    notDownloaded: "The collections weren’t downloaded",
   },
 
   expenses: {
@@ -1470,6 +1494,12 @@ export const UI_TEXT = {
     signatory: "Authorised signatory",
     /** The file a prescription is saved as (D223). */
     prescriptionFile: (patient: string, day: string) => `${patient} - ${day} - Prescription.pdf`,
+    /** The day-end collections (D49, D359, D360). */
+    collectionsTitle: (day: string) => `Day-end collections, ${day}`,
+    collectionsFile: (day: string) => `Collections - ${day}.pdf`,
+    collectionsRunning: (day: string) => `Day-end collections · ${day}`,
+    countedBy: "Counted by",
+    receivedBy: "Received by",
     /** The vitals in one line, each short. */
     vitals: {
       bloodPressure: "BP",

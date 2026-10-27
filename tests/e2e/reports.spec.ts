@@ -8,7 +8,7 @@ import { markDone, sendIn } from "@/features/appointments/moves";
 import { recordPayment } from "@/features/billing/payments";
 import { createExpense } from "@/features/expenses/api";
 import { addDaysKey, addMonthsKey, monthStartKey, todayKey } from "@/lib/dates/calendar";
-import { formatShortDay } from "@/lib/format/date";
+import { formatDate, formatShortDay } from "@/lib/format/date";
 import { expenseSchema, paymentSchema, walkInSchema } from "@/lib/validation";
 import { expectAccessible } from "@tests/support/e2e";
 import { addMember, admin, registerClinic, removeAll } from "@tests/support/integration";
@@ -17,7 +17,8 @@ import { addMember, admin, registerClinic, removeAll } from "@tests/support/inte
  * Reports (plan §18; R10.3, D345, D346, D354 – D356), at a phone's width and
  * a desktop's. Kavya keeps the clinic's books with `reports.view` alone: the
  * Daily report today — two seen, one cancelled, ₹1,500 collected and ₹250
- * spent — then the day before, and back with the calendar; the Monthly
+ * spent — its day-end collections by person and method, printed and saved —
+ * then the day before, and back; the Monthly
  * report with both days in it, its chart read column by column and as a
  * table, and the outcomes donut. The front desk, without `reports.view`,
  * is turned away. Each screen checked by axe, nothing wider than the screen.
@@ -116,6 +117,24 @@ test("the books: a day's figures, the day before, the month's figures and its tw
   await expect(figure(page, words.money, words.net)).toContainText("₹1,250");
   await expect(page.getByRole("button", { name: words.nextDay })).toBeDisabled();
   await fitsTheScreen(page);
+  await expectAccessible(page);
+
+  // The day-end collections (D357 – D360): the owner took it all in cash; printed as a PDF, or saved.
+  const dayEnd = page.getByRole("region", { name: words.dayEnd });
+  const asha = dayEnd.getByRole("list", { name: words.byPerson }).getByRole("listitem");
+  await expect(asha).toContainText("Asha Menon");
+  await expect(asha).toContainText(`${words.handOver}₹1,500`);
+  await expect(
+    dayEnd.getByRole("table", { name: words.byMethod }).getByRole("row", { name: "Cash ₹1,500 ₹0 ₹1,500" }),
+  ).toBeVisible();
+  const day = formatDate(today);
+  await expect(dayEnd.getByRole("link", { name: words.printOf(day) })).toHaveAttribute(
+    "href",
+    `/api/reports/daily/collections.pdf?day=${today}`,
+  );
+  const saving = page.waitForEvent("download");
+  await dayEnd.getByRole("button", { name: words.downloadOf(day) }).click();
+  expect((await saving).suggestedFilename()).toBe(`Collections - ${day}.pdf`);
   await expectAccessible(page);
 
   // The day before: its ₹400 only.

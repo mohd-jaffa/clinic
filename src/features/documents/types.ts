@@ -1,6 +1,7 @@
 import type { Gender, PaperSize } from "@/constants/statuses";
 import type { BillDetail } from "@/features/billing/types";
 import type { PrescriptionContent } from "@/features/prescriptions/types";
+import type { DailyReport } from "@/features/reports/types";
 import type { Vitals } from "@/features/visits/types";
 import type { Letterhead } from "@/lib/pdf/letterhead";
 
@@ -80,4 +81,24 @@ export interface BillSheet {
   void: string | null;
   /** Who signs: the clinic (D316). */
   signatory: string;
+}
+
+/** What the day-end collections' PDF is made from (D49, D359): the day's report, beside the clinic. */
+export interface CollectionsSource {
+  clinic: Omit<Letterhead, "logo"> & { paperSize: PaperSize };
+  report: DailyReport;
+}
+
+/** The day-end collections in the words they are printed in (D357 – D360). */
+export interface CollectionsSheet {
+  letterhead: Letterhead;
+  /** "Tuesday, 27 Oct 2026". */
+  date: string;
+  /** Each person who took money: their lines, and the cash they hand over. */
+  people: { name: string; lines: { label: string; value: string }[]; handOver: string }[];
+  /** Each method used: received, refunded and net. */
+  methods: { label: string; received: string; refunded: string; net: string }[];
+  net: string;
+  /** "Voided: 1 payment, ₹500", or none. */
+  voided: string | null;
 }

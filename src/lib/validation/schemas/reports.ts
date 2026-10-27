@@ -7,12 +7,13 @@ import { requiredDay } from "../primitives";
 
 const { reports: words } = UI_TEXT;
 
-/** A day's report (plan §18; D356): today or a day before it. */
-export const dailyReportQuerySchema = z.object({
-  day: requiredDay(words.dayLabel).refine((day) => day <= todayKey(), {
-    message: VALIDATION_MESSAGES.notAfterToday(words.dayLabel),
-  }),
+/** A report's day: today or a day before it. */
+const reportDay = requiredDay(words.dayLabel).refine((day) => day <= todayKey(), {
+  message: VALIDATION_MESSAGES.notAfterToday(words.dayLabel),
 });
+
+/** A day's report (plan §18; D356): today or a day before it. */
+export const dailyReportQuerySchema = z.object({ day: reportDay });
 
 export type DailyReportQuery = z.output<typeof dailyReportQuerySchema>;
 
@@ -26,3 +27,10 @@ export const monthlyReportQuerySchema = z.object({
 });
 
 export type MonthlyReportQuery = z.output<typeof monthlyReportQuerySchema>;
+
+/** A day's collections as a PDF (D49, D359): its day, and whether it is saved rather than opened. */
+export const collectionsPdfQuerySchema = z
+  .object({ day: reportDay, download: z.literal("1", { error: VALIDATION_MESSAGES.invalid }).optional() })
+  .transform(({ day, download }) => ({ day, download: download === "1" }));
+
+export type CollectionsPdfQuery = z.output<typeof collectionsPdfQuerySchema>;

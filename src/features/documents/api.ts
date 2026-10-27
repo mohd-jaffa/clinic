@@ -5,6 +5,7 @@ import type { Gender } from "@/constants/statuses";
 import { getBill } from "@/features/billing/api";
 import { downloadLogo, getClinicForDocuments } from "@/features/clinic/api";
 import { toContent } from "@/features/prescriptions/content";
+import { getDailyReport } from "@/features/reports/api";
 import type { PrescriptionItemRow } from "@/features/prescriptions/types";
 import type { VitalsRow } from "@/features/visits/types";
 import { toVitals } from "@/features/visits/vitals";
@@ -16,7 +17,8 @@ import { pdfResponse } from "@/lib/pdf/response";
 import type { Tenant } from "@/lib/supabase/tenant";
 
 import { billSheet, layoutBill } from "./bill";
-import { billFileName, prescriptionFileName } from "./names";
+import { collectionsSheet, layoutCollections } from "./collections";
+import { billFileName, collectionsFileName, prescriptionFileName } from "./names";
 import { layoutPrescription, prescriptionSheet } from "./prescription";
 import type { BillSource, PrescriptionSource } from "./types";
 
@@ -194,4 +196,40 @@ export async function getBillPdf(
     compose: (measure) => layoutBill(sheet, measure),
   });
   return pdfResponse(file, { name: billFileName(bill.patient.name, bill.number), download, requestId });
+}
+
+/**
+ * `GET /api/reports/daily/collections.pdf` (plan §18; D49, D359): a day's
+ * collections to open and print or, `download`ed, to save as "Collections -
+ * 27 Oct 2026.pdf". For `reports.view`; the day's report and the clinic at
+ * once, then the logo. It locks nothing.
+ */
+export async function getCollectionsPdf(
+  tenant: Tenant,
+  { day, download, requestId }: { day: string; download: boolean; requestId: string },
+): Promise<Response> {
+  const [report, { clinic, logoPath }] = await allInOrder([
+    getDailyReport(tenant, { day }),
+    getClinicForDocuments(tenant),
+  ]);
+  const logo = await logoForPdf(tenant, logoPath);
+  const source = {
+    report,
+    clinic: {
+      name: clinic.name,
+      address: clinic.address,
+      city: clinic.city,
+      phone: clinic.phone,
+      paperSize: clinic.paperSize,
+    },
+  };
+  const sheet = collectionsSheet(source, { logo: logo !== null });
+  const file = await renderPdf({
+    paper: clinic.paperSize,
+    title: UI_TEXT.documents.collectionsTitle(sheet.date),
+    author: clinic.name,
+    logo,
+    compose: (measure) => layoutCollections(sheet, measure),
+  });
+  return pdfResponse(file, { name: collectionsFileName(day), download, requestId });
 }

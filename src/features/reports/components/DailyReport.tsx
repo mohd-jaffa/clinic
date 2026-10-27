@@ -6,6 +6,7 @@ import { todayKey } from "@/lib/dates/calendar";
 import { formatPaise } from "@/lib/format/currency";
 
 import { useDailyReport } from "../hooks/useDailyReport";
+import { DayEndSummary } from "./DayEndSummary";
 import { FigureSection, ReportFrame } from "./ReportFrame";
 
 const { reports: words } = UI_TEXT;
@@ -15,7 +16,7 @@ const { reports: words } = UI_TEXT;
  * a day at a time, the date opening the calendar, none after today — and
  * its figures: the patients seen, the appointments (the cancelled left
  * out), how many completed, cancelled and did not come; collected, billed,
- * spent and the net.
+ * spent and the net; then the day-end collection summary (D49), to print.
  */
 export function DailyReport({ day, onDay }: { day: string; onDay: (day: string) => void }) {
   const query = useDailyReport(day);
@@ -52,6 +53,7 @@ export function DailyReport({ day, onDay }: { day: string; onDay: (day: string) 
                 { label: words.net, value: formatPaise(report.netPaise) },
               ]}
             />
+            <DayEndSummary report={report} />
           </>
         )}
       </ReportFrame>

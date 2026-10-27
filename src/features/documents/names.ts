@@ -16,3 +16,6 @@ export const prescriptionFileName = (patient: string, day: string) =>
  */
 export const billFileName = (patient: string, number: string) =>
   fileName(UI_TEXT.documents.billFile(patient, number.replaceAll("/", "-")));
+
+/** The file a day's collections are saved as (D359): "Collections - 27 Oct 2026.pdf". */
+export const collectionsFileName = (day: string) => fileName(UI_TEXT.documents.collectionsFile(formatDate(day)));

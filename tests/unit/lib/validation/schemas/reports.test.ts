@@ -1,6 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { dailyReportQuerySchema, firstIssue, monthlyReportQuerySchema } from "@/lib/validation";
+import {
+  collectionsPdfQuerySchema,
+  dailyReportQuerySchema,
+  firstIssue,
+  monthlyReportQuerySchema,
+} from "@/lib/validation";
 
 beforeEach(() => vi.useFakeTimers({ now: new Date("2026-10-27T06:00:00Z"), toFake: ["Date"] }));
 afterEach(() => vi.useRealTimers());
@@ -30,5 +35,17 @@ describe("monthlyReportQuerySchema (plan §18)", () => {
 
   it("refuses a month after this one", () => {
     expect(issue(monthlyReportQuerySchema, { month: "2026-11-01" })).toBe("Month can’t be after today.");
+  });
+});
+
+describe("collectionsPdfQuerySchema (plan §18; D359)", () => {
+  it("takes the day, today or before, and whether it is saved rather than opened", () => {
+    expect(collectionsPdfQuerySchema.parse({ day: "2026-10-27" })).toEqual({ day: "2026-10-27", download: false });
+    expect(collectionsPdfQuerySchema.parse({ day: "2026-10-20", download: "1" })).toEqual({
+      day: "2026-10-20",
+      download: true,
+    });
+    expect(collectionsPdfQuerySchema.safeParse({ day: "2026-10-28" }).success).toBe(false);
+    expect(collectionsPdfQuerySchema.safeParse({ day: "2026-10-27", download: "yes" }).success).toBe(false);
   });
 });

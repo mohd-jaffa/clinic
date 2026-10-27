@@ -6,6 +6,7 @@ import type { Permission } from "@/constants/permissions";
 import { addWalkIn } from "@/features/appointments/api";
 import { markDone, sendIn } from "@/features/appointments/moves";
 import { getDashboard } from "@/features/dashboard/api";
+import { getCollectionsPdf } from "@/features/documents/api";
 import { getDailyReport, getMonthlyReport } from "@/features/reports/api";
 import { addDaysKey, addMonthsKey, dayHour, financialYear, monthStartKey, todayKey } from "@/lib/dates/calendar";
 import { walkInSchema } from "@/lib/validation";
@@ -452,6 +453,19 @@ describe("last month's days, against the figures worked out by hand (plan §18; 
         figure,
       ).toBe(monthly[figure]);
     }
+  });
+});
+
+describe("the day-end collections as a PDF (plan §18; D49, D359)", () => {
+  it("prints day 3's collections for reports.view, and refuses the front desk", async () => {
+    const answer = await getCollectionsPdf(books.tenant!, { day: day3, download: true, requestId: "req_collections" });
+    expect(answer.status).toBe(200);
+    expect(answer.headers.get("Content-Type")).toBe("application/pdf");
+    expect(answer.headers.get("Content-Disposition")).toContain("attachment");
+    expect(new TextDecoder().decode((await answer.arrayBuffer()).slice(0, 5))).toBe("%PDF-");
+    await expect(
+      getCollectionsPdf(desk.tenant!, { day: day3, download: false, requestId: "req_refused" }),
+    ).rejects.toMatchObject({ code: "AUTH_PERMISSION_DENIED" });
   });
 });
 
