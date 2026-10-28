@@ -449,6 +449,10 @@ earlier lines are never rewritten.
 | D360 | **The printed summary is signed over** (the user): two lines at its foot, **Counted by** and **Received by**. It locks nothing (D49). | 2026-10-28 |
 | D361 | **By doctor is a row a doctor** (the user): the doctor's name, "12 patients · 18 visits", then "₹20,000 billed · ₹18,000 paid" — readable on a phone; the bills that name no doctor are a row of their own, last, saying only what was billed and paid. | 2026-10-28 |
 | D362 | **By doctor says what is still due on each doctor's bills** (the user): billed less paid to date, as a coral "₹2,000 due" — only when something is due. | 2026-10-28 |
+| D363 | **The Plan screen's land holds the plan's last day** (the user): the plan named as the title — "Monthly plan", "Yearly plan", "Free trial" — and its last day in display numerals, "Valid until · Active" under it; while it ends soon, ended or is view-only, a coral capsule says "Ends in 5 days" (today, tomorrow), "Ended · view-only from 20 Nov" or "View-only". | 2026-10-28 |
+| D364 | **The UPI id is shown with Copy** (the user): the owner pays from their own UPI app and then says so; no UPI payment link. The card says whether it was copied. | 2026-10-28 |
+| D365 | **WhatsApp and the email to the renewal contact open with words typed** (the user): "Hello, I'd like to renew the plan for Smile Care." — the email with the subject "Renewing the plan for Smile Care" — which the owner may change before sending. | 2026-10-28 |
+| D366 | **The Plan screen's history is every change the DEV recorded** (the user): months and years paid for, and days given or a date set by hand at ₹0, marked **No charge**, with the reason the DEV gave, so the owner sees why the date moved; the latest first. | 2026-10-28 |
 
 ## 3. Users and roles
 
@@ -3049,7 +3053,7 @@ in the row's one commit (D136).
 
 | ID | Work | Source | Waits on | Status |
 |---|---|---|---|---|
-| R11.1 | Owner's Plan screen | §7.5 | Q2 | TODO |
+| R11.1 | Owner's Plan screen (D363 – D366: the last day on the land, its state under it; the UPI id with Copy; WhatsApp and email with the words typed; every change in the history, the reason with it. Q2's default kept: each part of the contact hidden until the DEV sets it) | §7.5 | Q2 | DONE (2026-10-28) |
 | R11.2 | Console: overview, clinics (No trial and Deletion flags), clinic detail, accounts, error log, platform audit | §20 | — | TODO |
 | R11.3 | Extend plan (Monthly, Yearly, Set date); the owner's confirmation email | §7.4 | — | TODO |
 | R11.4 | Platform settings screen | §6, §20.4 | — | TODO |

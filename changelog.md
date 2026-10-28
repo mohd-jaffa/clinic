@@ -5011,3 +5011,52 @@ the user first: D267 – D271.
 
 ### Blockers
 - None.
+
+## 2026-10-28 — R11.1: the owner's Plan screen
+
+### Added
+- **The Plan screen** — `/settings/plan`, the owner's (plan §7.5; D74,
+  D363 – D366), where the plan banner's How to renew and Settings → Plan
+  lead; it opens in a view-only clinic too. The land names the plan
+  ("Monthly plan", "Free trial") and holds its last day in display
+  numerals, "Valid until · Active" under it, or a coral capsule while it
+  ends soon ("Ends in 5 days"), has ended ("Ended · view-only from 20
+  Nov") or is view-only. **How to renew**: the Monthly and Yearly prices
+  from the live platform settings, then the renewal contact — name,
+  mobile, email, UPI id with **Copy** — and Call, WhatsApp and Email, the
+  last two opening with "Hello, I'd like to renew the plan for Smile
+  Care." typed. **History**: every change the DEV recorded to the plan's
+  last day, the latest first — paid, with its day, method and reference,
+  or **No charge** with the reason the DEV gave.
+- `GET /api/subscription` (owner only; `getPlan`, `src/features/subscription`):
+  the plan and its history read as the owner (RLS, 0005), the prices and
+  the contact from `getPlatformSettings()`.
+- `src/lib/mail/mailto.ts`: an email to write in the person's own mail app.
+- **Tests:** unit tests for the read, the route, the screen, How to
+  renew (Copy, and a refused copy) and the history; an integration test
+  (`plan-screen.test.ts`) of what the DEV records and sets as the owner
+  reads it, in a view-only clinic too, and refused to a member and to
+  another clinic's owner; the Plan screen journey in
+  `tests/e2e/plan.spec.ts`, with a member turned away.
+
+### Changed
+- `standingOf()` (`src/features/subscription/state.ts`): a plan's state and
+  first view-only day on a day, now shared by the session and the Plan
+  screen; the session's `SessionSubscription` is that `PlanStanding`.
+- Plan: D363 – D366; tracker R11.1 DONE (2026-10-28). Q2 stays open, its
+  default built: each part of the renewal contact is hidden until the DEV
+  sets it. `DESIGN.md`: the Plan screen.
+
+### Speed
+- The Plan screen waits on 2 round trips: the session, then the plan, its
+  history and the platform settings at once. No new query needs an index:
+  the history is read by `subscription_payments_clinic_id_idx`
+  (`clinic_id, created_at desc`), the plan by its primary key.
+
+### Validation
+- Typecheck, lint, format check passed.
+- Unit and integration tests passed (4,111), coverage 100%.
+- E2E passed (phone, desktop; 164 passed, 8 skipped by design).
+
+### Blockers
+- None.

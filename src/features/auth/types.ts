@@ -1,6 +1,6 @@
 import type { Permission } from "@/constants/permissions";
 import type { ClinicRole, PlatformRole } from "@/constants/roles";
-import type { SubscriptionPlan, SubscriptionState } from "@/constants/statuses";
+import type { PlanStanding } from "@/features/subscription/state";
 
 /** Who someone is (plan §28.1). */
 export interface SessionProfile {
@@ -29,14 +29,7 @@ export interface SessionMembership {
 }
 
 /** Where the clinic's plan stands (plan §7.2), for the plan banner and read-only mode. */
-export interface SessionSubscription {
-  plan: SubscriptionPlan;
-  /** The last day of access, inclusive: YYYY-MM-DD in the clinic's timezone. */
-  validUntil: string;
-  state: SubscriptionState;
-  /** The first day the clinic is view-only. */
-  readOnlyFrom: string;
-}
+export type SessionSubscription = PlanStanding;
 
 /** Everything a session knows about the person, besides its tokens. */
 export interface SessionContext {

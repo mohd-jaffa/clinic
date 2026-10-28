@@ -157,6 +157,8 @@ export const ERROR_MESSAGES = {
   BALANCE_LOAD_FAILED: "The balance couldn't be loaded.",
   // Home (plan §17).
   DASHBOARD_LOAD_FAILED: "Today's figures couldn't be loaded.",
+  // The owner's Plan screen (plan §7.5).
+  PLAN_LOAD_FAILED: "Your plan couldn't be loaded.",
   // Reports (plan §18).
   REPORT_LOAD_FAILED: "This report couldn't be loaded.",
   COLLECTIONS_PDF_FAILED: "The day-end collections’ PDF couldn’t be made.",
@@ -549,6 +551,44 @@ export const UI_TEXT = {
     howToRenew: "How to renew",
     /** Beside every control read-only mode turns off (plan §32.2). */
     readOnlyReason: "Your clinic is view-only until its plan is renewed.",
+
+    // The owner's Plan screen (plan §7.5; D363 – D366): the last day on the land, its state under it.
+    named: (plan: string) => `${plan} plan`,
+    validUntil: "Valid until",
+    activeUntil: "Valid until · Active",
+    endsToday: "Ends today",
+    endsTomorrow: "Ends tomorrow",
+    endsIn: (days: number) => `Ends in ${days} days`,
+    endedViewOnlyFrom: (date: string) => `Ended · view-only from ${date}`,
+    viewOnly: "View-only",
+    renewIntro:
+      "Pay for a month or a year, then let us know. Your plan runs on from its last day, so renewing early loses no days.",
+    contactName: "Name",
+    contactPhone: "Mobile",
+    contactEmail: "Email",
+    upiId: "UPI id",
+    call: "Call",
+    callTo: (name: string) => `Call ${name}`,
+    whatsApp: "WhatsApp",
+    whatsAppTo: (name: string) => `WhatsApp ${name}`,
+    email: "Email",
+    emailTo: (name: string) => `Email ${name}`,
+    copy: "Copy",
+    copyUpi: "Copy the UPI id",
+    upiCopied: "UPI id copied",
+    upiCopiedBody: "Paste it in your UPI app to pay.",
+    upiNotCopied: "The UPI id wasn’t copied",
+    upiNotCopiedBody: "Select it and copy it yourself.",
+    /** What WhatsApp and the email open with (D365): the owner may change it before sending. */
+    renewalMessage: (clinic: string) => `Hello, I’d like to renew the plan for ${clinic}.`,
+    renewalSubject: (clinic: string) => `Renewing the plan for ${clinic}`,
+    history: "History",
+    noHistory: "Nothing recorded yet.",
+    /** A history row (D366): "Until 12 Nov 2026", then "Monthly · Paid 12 Oct 2026 · UPI"; a date set by hand, "Date changed". */
+    until: (date: string) => `Until ${date}`,
+    dateChanged: "Date changed",
+    paidOn: (date: string) => `Paid ${date}`,
+    noCharge: "No charge",
   },
 
   /** My account (plan §5.4, D72): each detail changed in a sheet of its own. */

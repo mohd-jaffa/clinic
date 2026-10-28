@@ -164,6 +164,10 @@ export const apiRoutes = {
   dashboard: {
     home: "/api/dashboard",
   },
+  // The owner's plan (plan §7.5): where it stands, how to renew, its history.
+  subscription: {
+    plan: "/api/subscription",
+  },
   // The follow-ups to call (plan §14.3): a tab a page at a time, how many each holds, a contact noted.
   followUps: {
     list: "/api/follow-ups",

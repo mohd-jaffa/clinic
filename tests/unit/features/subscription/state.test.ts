@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { readOnlyFrom, subscriptionState } from "@/features/subscription/state";
+import { readOnlyFrom, standingOf, subscriptionState } from "@/features/subscription/state";
 
 /** A plan whose last day is 12 November, warned 7 days ahead, with 7 days of grace. */
 const plan = { validUntil: "2026-11-12", warningDays: 7, graceDays: 7 };
@@ -45,5 +45,20 @@ describe("readOnlyFrom", () => {
     expect(readOnlyFrom("2026-11-12", 7)).toBe("2026-11-20");
     expect(readOnlyFrom("2026-11-12", 0)).toBe("2026-11-13");
     expect(readOnlyFrom("2026-12-31", 1)).toBe("2027-01-02");
+  });
+});
+
+describe("standingOf (plan §7.2)", () => {
+  it("tells a plan's state on a day by the live settings, and its first view-only day", () => {
+    const settings = { expiryWarningDays: 7, graceDays: 7 };
+    expect(standingOf({ plan: "MONTHLY", validUntil: "2026-11-12" }, settings, "2026-11-08")).toEqual({
+      plan: "MONTHLY",
+      validUntil: "2026-11-12",
+      state: "EXPIRING",
+      readOnlyFrom: "2026-11-20",
+    });
+    expect(
+      standingOf({ plan: "TRIAL", validUntil: "2026-11-12" }, { ...settings, graceDays: 0 }, "2026-11-13"),
+    ).toEqual({ plan: "TRIAL", validUntil: "2026-11-12", state: "READ_ONLY", readOnlyFrom: "2026-11-13" });
   });
 });

@@ -1,4 +1,5 @@
-import type { SubscriptionState } from "@/constants/statuses";
+import type { PlatformSettings } from "@/constants/platform";
+import type { SubscriptionPlan, SubscriptionState } from "@/constants/statuses";
 import { addDaysKey } from "@/lib/dates/calendar";
 
 /** What a clinic's state is worked out from (plan §7.2): days as YYYY-MM-DD in the clinic's timezone. */
@@ -26,4 +27,27 @@ export function subscriptionState({ validUntil, today, warningDays, graceDays }:
 /** The first day the clinic is view-only: the day after its grace ends. */
 export function readOnlyFrom(validUntil: string, graceDays: number): string {
   return addDaysKey(validUntil, graceDays + 1);
+}
+
+/** A clinic's plan as the screens are told it: the plan, its last day, its state, and its first view-only day. */
+export interface PlanStanding {
+  plan: SubscriptionPlan;
+  /** The last day of access, inclusive: YYYY-MM-DD in the clinic's timezone. */
+  validUntil: string;
+  state: SubscriptionState;
+  readOnlyFrom: string;
+}
+
+/** Where a plan stands on `today`, by the live settings' warning and grace (plan §7.2). */
+export function standingOf(
+  { plan, validUntil }: Pick<PlanStanding, "plan" | "validUntil">,
+  { expiryWarningDays, graceDays }: Pick<PlatformSettings, "expiryWarningDays" | "graceDays">,
+  today: string,
+): PlanStanding {
+  return {
+    plan,
+    validUntil,
+    state: subscriptionState({ validUntil, today, warningDays: expiryWarningDays, graceDays }),
+    readOnlyFrom: readOnlyFrom(validUntil, graceDays),
+  };
 }

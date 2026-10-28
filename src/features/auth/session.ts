@@ -4,7 +4,7 @@ import { effectivePermissions, type Permission } from "@/constants/permissions";
 import type { ClinicRole, PlatformRole } from "@/constants/roles";
 import type { SubscriptionPlan } from "@/constants/statuses";
 import { logoUrl } from "@/features/clinic/logo";
-import { readOnlyFrom, subscriptionState } from "@/features/subscription/state";
+import { standingOf } from "@/features/subscription/state";
 import { todayKey } from "@/lib/dates/calendar";
 import { authenticationError, authorizationError, fromPostgrestError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
@@ -65,13 +65,7 @@ async function loadSubscription(admin: SupabaseClient, clinicId: string) {
   if (error) throw fromPostgrestError(error);
 
   const { plan, valid_until: validUntil } = data as { plan: SubscriptionPlan; valid_until: string };
-  const state = subscriptionState({
-    validUntil,
-    today: todayKey(),
-    warningDays: settings.expiryWarningDays,
-    graceDays: settings.graceDays,
-  });
-  return { plan, validUntil, state, readOnlyFrom: readOnlyFrom(validUntil, settings.graceDays) };
+  return standingOf({ plan, validUntil }, settings, todayKey());
 }
 
 /**
