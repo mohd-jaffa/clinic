@@ -447,6 +447,8 @@ earlier lines are never rewritten.
 | D358 | **The day-end summary goes by person, then by method** (the user): a card for each person who took money — each method they took it by, each refund they gave, and their cash to hand over in bold — then each method's received, refunded and net, the day's net collected, and the day's voided payments. | 2026-10-28 |
 | D359 | **The day-end summary prints as a PDF, as bills do** (the user): on the clinic's letterhead and paper (A4/A5), opened by **Print** in the browser's own viewer and saved by **Download** — "Collections - 27 Oct 2026.pdf" — made on demand, never stored; for `reports.view`. | 2026-10-28 |
 | D360 | **The printed summary is signed over** (the user): two lines at its foot, **Counted by** and **Received by**. It locks nothing (D49). | 2026-10-28 |
+| D361 | **By doctor is a row a doctor** (the user): the doctor's name, "12 patients · 18 visits", then "₹20,000 billed · ₹18,000 paid" — readable on a phone; the bills that name no doctor are a row of their own, last, saying only what was billed and paid. | 2026-10-28 |
+| D362 | **By doctor says what is still due on each doctor's bills** (the user): billed less paid to date, as a coral "₹2,000 due" — only when something is due. | 2026-10-28 |
 
 ## 3. Users and roles
 
@@ -1749,7 +1751,9 @@ apart for colour-blind readers too.
 (from `bill_settlement`). A bill's doctor is its visit's doctor, or the doctor
 picked when billing without a visit; bills with neither show as "No doctor".
 Payments go against the patient, so "collected per doctor" is not invented —
-"paid to date on that doctor's bills" is what can be stated truthfully.
+"paid to date on that doctor's bills" is what can be stated truthfully. Each
+doctor is a row (D361), with what is still due on their bills in coral when
+any is (D362).
 
 Doctors without `reports.view` see none. "Revenue" in the draft is called
 **Collected**; "Net operating amount" is **Net** (collected − expenses), as the
@@ -3039,7 +3043,7 @@ in the row's one commit (D136).
 | R10.3 | Reports: daily and monthly, the two charts; the kit's chart kit, bar and donut (D66; D354 – D356: money in up and out down; four outcomes; ‹ day › arrows) | §18 | — | DONE (2026-10-27) |
 | R10.4 | Integration: a seeded month's figures equal hand-computed ones (last month laid down — done, cancelled, not come and never closed; a visit with no appointment; a bill and a payment voided, a refund, an expense archived — every Daily and Monthly figure, by doctor included, as worked out by hand and as the records hold; Home agrees) | §34 | — | DONE (2026-10-27) |
 | R10.5 | Day-end collection summary (by method, by receiver), printable (D357 – D360: cash to hand over; by person, then by method; a PDF on the letterhead; Counted by and Received by) | §18 | — | DONE (2026-10-28) |
-| R10.6 | Monthly by doctor: seen, visits, billed, paid to date | §18 | — | TODO |
+| R10.6 | Monthly by doctor: seen, visits, billed, paid to date (D361, D362: a row a doctor; what is due in coral) | §18 | — | DONE (2026-10-28) |
 
 ### Phase 11 — Subscription operations and the developer console
 

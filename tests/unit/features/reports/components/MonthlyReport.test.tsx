@@ -54,6 +54,15 @@ describe("MonthlyReport (plan §18; D354, D355)", () => {
     expect(screen.getByText("190 in all")).toBeInTheDocument();
   });
 
+  it("ends with each doctor's month, the bills with no doctor last", () => {
+    render(<MonthlyReport month="2026-10-01" onMonth={vi.fn()} />, { wrapper: Providers });
+    const rows = within(screen.getByRole("list", { name: "By doctor" })).getAllByRole("listitem");
+    expect(rows.map((row) => row.textContent)).toEqual([
+      "Maya Rao80 patients · 95 visits₹2,00,000 billed · ₹1,80,000 paid₹20,000 due",
+      "No doctor₹3,000 billed · ₹3,000 paid",
+    ]);
+  });
+
   it("steps a month back, and none after this one", async () => {
     const onMonth = vi.fn();
     const { unmount } = render(<MonthlyReport month="2026-10-01" onMonth={onMonth} />, { wrapper: Providers });

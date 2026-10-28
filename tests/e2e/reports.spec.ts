@@ -20,7 +20,7 @@ import { addMember, admin, registerClinic, removeAll } from "@tests/support/inte
  * spent — its day-end collections by person and method, printed and saved —
  * then the day before, and back; the Monthly
  * report with both days in it, its chart read column by column and as a
- * table, and the outcomes donut. The front desk, without `reports.view`,
+ * table, the outcomes donut, and Maya's month by doctor. The front desk, without `reports.view`,
  * is turned away. Each screen checked by axe, nothing wider than the screen.
  */
 test.afterAll(removeAll);
@@ -52,6 +52,7 @@ test("the books: a day's figures, the day before, the month's figures and its tw
     addMember(clinic.clinicId, { permissions: ["reports.view"] }),
     addMember(clinic.clinicId, { permissions: ["patients.view", "appointments.view"] }),
   ]);
+  await admin().from("profiles").update({ full_name: "Maya Rao" }).eq("id", maya.userId);
   const [{ data: doctor }, { data: type }, { data: supplies }] = await Promise.all([
     admin().from("doctors").select("id").eq("member_id", maya.memberId).single(),
     admin().from("appointment_types").select("id").eq("clinic_id", clinic.clinicId).eq("name", "Consultation").single(),
@@ -161,6 +162,10 @@ test("the books: a day's figures, the day before, the month's figures and its tw
   await expect(outcomes.getByRole("listitem").filter({ hasText: words.completed })).toContainText("2 · 67%");
   await expect(outcomes.getByRole("listitem").filter({ hasText: words.cancelled })).toContainText("1 · 33%");
   await expect(page.getByText(words.outcomeTotal(3))).toBeVisible();
+  // By doctor (D361, D362): Maya saw both; nothing was billed this month.
+  await expect(page.getByRole("list", { name: words.byDoctor }).getByRole("listitem")).toHaveText([
+    `Maya Rao${words.patientsCount(2)} · ${words.visitsCount(2)}${words.billedPaid("₹0", "₹0")}`,
+  ]);
   await fitsTheScreen(page);
   await expectAccessible(page);
 

@@ -4981,3 +4981,33 @@ the user first: D267 – D271.
 
 ### Blockers
 - None.
+
+## 2026-10-28 — R10.6: Monthly by doctor
+
+### Added
+- **By doctor** on Reports → Monthly (plan §18; D53, D361, D362), after the
+  charts: a row for each doctor with a visit or a bill in the month — "12
+  patients · 18 visits", then "₹20,000 billed · ₹18,000 paid", paid being
+  what is paid to date on the bills issued with them (`bill_settlement`,
+  0034) — and what is still due on those bills in coral when any is. The
+  bills that name no doctor are a row of their own, last, with only what
+  was billed and paid; a doctor no longer on the team is named so. Nothing
+  is "collected" by a doctor: payments go against the patient.
+- **Tests:** unit tests for the rows and their place on Monthly; Maya's
+  month in `tests/e2e/reports.spec.ts`. The figures themselves are proved
+  against the seeded month in `report-month.test.ts` (R10.4).
+
+### Changed
+- Plan: D361, D362; §18 says so; tracker R10.6 DONE (2026-10-28) — Phase
+  10 complete. `DESIGN.md`: By doctor.
+
+### Speed
+- Read with the month's report (no other call).
+
+### Validation
+- Typecheck, lint, format check passed.
+- Unit and integration tests passed (4,084), coverage 100%.
+- E2E passed (phone, desktop; 162 passed, 8 skipped by design).
+
+### Blockers
+- None.

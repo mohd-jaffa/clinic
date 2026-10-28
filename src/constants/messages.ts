@@ -1299,6 +1299,12 @@ export const UI_TEXT = {
     showTable: "Show as table",
     hideTable: "Hide table",
     table: "Table",
+    /** Each doctor's month (D53, D361, D362). */
+    byDoctor: "By doctor",
+    byDoctorEmpty: "No visits or bills this month.",
+    patientsCount: (count: number) => (count === 1 ? "1 patient" : `${count} patients`),
+    visitsCount: (count: number) => (count === 1 ? "1 visit" : `${count} visits`),
+    billedPaid: (billed: string, paid: string) => `${billed} billed · ${paid} paid`,
     /** The day-end collection summary (D49, D357 – D360). */
     dayEnd: "Day-end collections",
     dayEndEmpty: "No payments this day.",

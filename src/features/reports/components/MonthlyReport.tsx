@@ -10,6 +10,7 @@ import { formatShortDay } from "@/lib/format/date";
 
 import { useMonthlyReport } from "../hooks/useMonthlyReport";
 import { outcomesOf, type Outcome } from "../outcomes";
+import { DoctorsMonth } from "./DoctorsMonth";
 import { FigureSection, ReportFrame } from "./ReportFrame";
 
 const { reports: words } = UI_TEXT;
@@ -28,7 +29,7 @@ const OUTCOME_LOOK: Record<Outcome, { label: string; tone: DonutTone }> = {
  * patients seen, new and returning, and the appointments; collected,
  * billed, spent, the net and what is owed today. Then its two charts: each
  * day's collected above the line and expenses below it, and how the
- * month's appointments ended.
+ * month's appointments ended; then each doctor's month (D53).
  */
 export function MonthlyReport({ month, onMonth }: { month: string; onMonth: (month: string) => void }) {
   const query = useMonthlyReport(month);
@@ -99,6 +100,7 @@ export function MonthlyReport({ month, onMonth }: { month: string; onMonth: (mon
                 share={words.share}
               />
             </div>
+            <DoctorsMonth doctors={report.doctors} />
           </>
         )}
       </ReportFrame>
