@@ -7,8 +7,13 @@ import {
   BILL_FROM,
   billRoute,
   BOTTOM_NAV,
+  CONSOLE_BOTTOM_NAV,
+  CONSOLE_MORE_NAV,
+  CONSOLE_NAV_GROUPS,
+  consoleClinicRoute,
   GETTING_STARTED,
   isActivePath,
+  isConsolePlace,
   memberRoute,
   MORE_NAV,
   newBillRoute,
@@ -188,5 +193,24 @@ describe("a new bill (plan §15.2, D313)", () => {
   it("names a bill's page, and the profile it was opened from (D314, D325)", () => {
     expect(billRoute("b-1")).toBe("/bills/b-1");
     expect(billRoute("b-1", BILL_FROM.patient)).toBe("/bills/b-1?from=patient");
+  });
+});
+
+describe("the developer console's places (plan §20; D367)", () => {
+  it("holds every place in two groups; the bar three, More the rest", () => {
+    expect(CONSOLE_NAV_GROUPS.map((group) => group.map((place) => place.href))).toEqual([
+      ["/admin", "/admin/clinics", "/admin/accounts"],
+      ["/admin/settings", "/admin/logs", "/admin/audit"],
+    ]);
+    expect([...CONSOLE_BOTTOM_NAV, ...CONSOLE_MORE_NAV]).toEqual(CONSOLE_NAV_GROUPS.flat());
+    expect(CONSOLE_MORE_NAV.every((place) => place.hint)).toBe(true);
+    expect(consoleClinicRoute("c-1")).toBe("/admin/clinics/c-1");
+  });
+
+  it("is the Overview only at its own address, and any other place within it too", () => {
+    const [[overview, clinics]] = CONSOLE_NAV_GROUPS;
+    expect(isConsolePlace(overview, "/admin")).toBe(true);
+    expect(isConsolePlace(overview, "/admin/clinics")).toBe(false);
+    expect(isConsolePlace(clinics, "/admin/clinics/c-1")).toBe(true);
   });
 });

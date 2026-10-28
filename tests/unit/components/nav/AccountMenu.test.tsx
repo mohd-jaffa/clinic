@@ -2,7 +2,7 @@ import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { authStub } from "@tests/support/auth";
+import { aDeveloperSession, authStub } from "@tests/support/auth";
 import { Providers } from "@tests/support/providers";
 
 const { auth } = vi.hoisted(() => ({ auth: { current: {} as ReturnType<typeof authStub> } }));
@@ -112,6 +112,23 @@ describe("AccountMenu", () => {
     await userEvent.click(button);
     await userEvent.click(screen.getByRole("button", { name: "Elsewhere" }));
     await waitFor(() => expect(button).toHaveAttribute("aria-expanded", "false"));
+  });
+
+  it("names the platform admin as Developer in the console, with Sign out and no My account (D367)", async () => {
+    const { profile } = aDeveloperSession();
+    auth.current = authStub({ profile, membership: null, subscription: null });
+    render(
+      <Providers>
+        <AccountMenu />
+      </Providers>,
+    );
+    const button = screen.getByRole("button", { name: `Account: ${profile.fullName}` });
+    expect(button).toHaveTextContent("Developer");
+    await userEvent.click(button);
+    const panel = document.getElementById(button.getAttribute("aria-controls")!)!;
+    expect(panel).toHaveTextContent("Developer");
+    expect(within(panel).queryByRole("link", { name: "My account" })).not.toBeInTheDocument();
+    expect(within(panel).getByRole("button", { name: "Sign out" })).toBeInTheDocument();
   });
 
   it("is not drawn without a membership", () => {

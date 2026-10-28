@@ -29,6 +29,8 @@ export {
   wholeNumberText,
 } from "./primitives";
 
+export { consoleClinicsQuerySchema, type ConsoleClinicsQuery } from "./schemas/console";
+
 export {
   cursorParam,
   dayRangeQuery,

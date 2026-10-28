@@ -10,4 +10,8 @@ describe("mailtoHref (plan §22)", () => {
       "mailto:renew@clinicdesk.in?subject=Renewing%20Smile%20%26%20Care&body=Hello%2C%20I%E2%80%99d%20like%20to%20renew.",
     );
   });
+
+  it("opens it empty when given no words", () => {
+    expect(mailtoHref("asha@smilecare.in")).toBe("mailto:asha@smilecare.in");
+  });
 });

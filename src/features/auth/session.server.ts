@@ -1,9 +1,10 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { cache } from "react";
 
 import { hasAccess, ROUTE_ACCESS, type RouteAccess } from "@/constants/permissions";
-import { ADMIN_ROUTE } from "@/constants/routes";
+import { ADMIN_ROUTE, HOME_ROUTE } from "@/constants/routes";
 import { logger } from "@/lib/logger";
 import { createSupabaseAnonClient, createSupabaseServiceRoleClient } from "@/lib/supabase/server";
 import type { Tenant } from "@/lib/supabase/tenant";
@@ -106,24 +107,55 @@ export async function readScreen(reads: {
     doctorId: membership.doctorId,
   };
 
-  const readAll = async (group: ScreenReads = {}) => {
-    const entries = await Promise.all(
-      Object.entries(typeof group === "function" ? group(tenant) : group).map(async ([key, read]) => {
-        try {
-          // Exactly what the route would have sent: dates as strings, nothing undefined.
-          return [key, JSON.parse(JSON.stringify(await read(tenant)))] as const;
-        } catch (failure) {
-          logger.warn("A screen's first data was not read on the server; the browser will ask", {
-            route: key,
-            reason: failure instanceof Error ? failure.name : "unknown",
-          });
-          return null;
-        }
-      }),
-    );
-    return Object.fromEntries(entries.filter((entry) => entry !== null));
-  };
+  const [queries, pages] = await Promise.all([readEach(reads.queries, tenant), readEach(reads.pages, tenant)]);
+  return { queries, pages };
+}
 
-  const [queries, pages] = await Promise.all([readAll(reads.queries), readAll(reads.pages)]);
+/**
+ * Each of a screen's reads made at once, with what it is handed — the
+ * member's tenant, or the console's own client — keyed as its hook asks.
+ * A read that fails is left out and logged, by route alone.
+ */
+async function readEach<A>(
+  group: Record<string, (arg: A) => Promise<unknown>> | ((arg: A) => Record<string, (arg: A) => Promise<unknown>>) = {},
+  arg: A,
+): Promise<Record<string, unknown>> {
+  const entries = await Promise.all(
+    Object.entries(typeof group === "function" ? group(arg) : group).map(async ([key, read]) => {
+      try {
+        // Exactly what the route would have sent: dates as strings, nothing undefined.
+        return [key, JSON.parse(JSON.stringify(await read(arg)))] as const;
+      } catch (failure) {
+        logger.warn("A screen's first data was not read on the server; the browser will ask", {
+          route: key,
+          reason: failure instanceof Error ? failure.name : "unknown",
+        });
+        return null;
+      }
+    }),
+  );
+  return Object.fromEntries(entries.filter((entry) => entry !== null));
+}
+
+/** A read of a console screen's first data, made as its route would make it: as the server, for the DEV. */
+export type ConsoleRead = (admin: SupabaseClient) => Promise<unknown>;
+
+/**
+ * A developer console screen's first data (plan §20; D367), read on the
+ * server as the page is drawn, as `readScreen` reads a clinic's: only for the
+ * platform admin, through the server's own client as `withDevRoute` hands
+ * it. Anyone else signed in is sent Home; someone not yet settled gets
+ * nothing read, and the screen asks for itself.
+ */
+export async function readConsole(reads: {
+  queries?: Record<string, ConsoleRead>;
+  pages?: Record<string, ConsoleRead>;
+}): Promise<ScreenData> {
+  const session = await readServerSession();
+  if (!session) return NOTHING;
+  if (session.profile.platformRole !== "DEV") redirect(HOME_ROUTE);
+
+  const admin = createSupabaseServiceRoleClient();
+  const [queries, pages] = await Promise.all([readEach(reads.queries, admin), readEach(reads.pages, admin)]);
   return { queries, pages };
 }

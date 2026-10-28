@@ -168,6 +168,15 @@ export const apiRoutes = {
   subscription: {
     plan: "/api/subscription",
   },
+  // The developer console (plan §20), the DEV's alone: the Overview, every clinic and one, accounts, the logs.
+  console: {
+    overview: "/api/admin/overview",
+    clinics: "/api/admin/clinics",
+    clinic: (id: string) => `/api/admin/clinics/${id}`,
+    accounts: "/api/admin/accounts",
+    logs: "/api/admin/logs",
+    audit: "/api/admin/audit",
+  },
   // The follow-ups to call (plan §14.3): a tab a page at a time, how many each holds, a contact noted.
   followUps: {
     list: "/api/follow-ups",

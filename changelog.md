@@ -5060,3 +5060,83 @@ the user first: D267 – D271.
 
 ### Blockers
 - None.
+
+## 2026-10-28 — R11.2: the developer console
+
+### Added
+- **The console's frame** (plan §20; D367): the app's frame with the
+  console's own places and no ＋ — the desktop sidebar headed **Console**
+  (Overview, Clinics, Accounts; Settings, Error log, Audit), the rail, and
+  on a phone Overview · Clinics · Accounts · More (Settings, Error log,
+  Audit, Sign out). The account menu names the DEV "Developer", with Sign
+  out and no My account. `ConsoleScreen` reads a console screen's first
+  data on the server as `AppScreen` does a clinic's — as the server, for
+  the DEV only (`readConsole`); `RequireAuth for="developer"` sends anyone
+  else signed in Home. Settings opens the not-found screen until R11.4.
+- **Overview** — `/admin` (§20.1; D368): the platform's date, how many
+  clinics and how many wait for activation (No trial) on the land; the
+  clinics by state, each counted once — Trial (a trial still running) ·
+  Active · Ending soon · Ended · View only — each opening the list kept to
+  it; sign-ups this week and month, extensions this month.
+- **Clinics** — `/admin/clinics` (§20.2; D371): every clinic, the newest
+  sign-up first, searched by clinic, city, owner, email or mobile and kept
+  to one filter (the five states, or No trial); each row its kind, city
+  and owner, plan, last day and members, its state and No trial.
+- **A clinic** — `/admin/clinics/[id]` (§20.3; D370): its plan, its owner
+  with Call, WhatsApp and Email (opening empty), and every change recorded
+  to its plan with its receipt number and who recorded it. Extend plan
+  joins it in R11.3, Delete clinic in R12.5.
+- **Accounts** — `/admin/accounts` (§20.5): every profile, the newest
+  first, searched; where they belong and as what, their email, their last
+  sign-in, and Invited or Inactive.
+- **Error log** — `/admin/logs` (§20.6; D372): the server's own failures,
+  the latest first; a row opens the whole entry in a sheet.
+- **Audit** — `/admin/audit` (§20.7): the console's own actions — plans
+  extended (for which clinic, the last day from and to, what was paid) and
+  settings changed (each by name, from and to) — with who and when.
+- `0035_console`: `console_clinic_rows()` (every clinic as the console
+  sees it: its state by the live settings on its own today, where the
+  Overview counts it, and No trial — still on TRIAL with a last day before
+  its sign-up, which `register_clinic` gives only a claimed mobile, until
+  the DEV extends it), `console_overview()`, `console_clinics()`,
+  `console_clinic()`, `console_accounts()` (security definer, for
+  `auth.users.last_sign_in_at`), `console_audit()` — the service role's
+  alone. Indexes: `clinics_created_at_idx`, `profiles_created_at_idx`,
+  `subscription_payments_created_at_idx`.
+- `GET /api/admin/overview`, `/clinics`, `/clinics/[id]`, `/accounts`,
+  `/logs`, `/audit` — `withDevRoute`, read as the server; the error log
+  is read straight from `error_logs`.
+- **Tests:** the 0035 contract (indexes, who may call, the standings and
+  filters equal the app's, no clinic records read); unit tests for every
+  read, route, hook and screen, the frame, its More sheet, the gate and the
+  menu; an integration test (`console.test.ts`) of the Overview's counts,
+  No trial, search, filter, a clinic, accounts, the logs and the audit, and
+  that no one signed in may call any of it; the console journey in
+  `tests/e2e/console.spec.ts`, a clinic's owner sent Home.
+
+### Changed
+- `NavPlaces.tsx`: the bar and sidebar place marks, out of `AppShell`, so
+  the app and the console draw them alike.
+- `mailtoHref` opens an empty email when given no words.
+- Plan: D367 – D372; §20.2 says how No trial is known; §29 adds
+  `0035_console`, so the notices are `0036`, the deletion `0037`, the
+  session profile `0038` and the faster reads `0039`; R12.5 carries the
+  Deletion requested flag (D369); tracker R11.2 DONE (2026-10-28).
+  `DESIGN.md`: the console's frame and screens.
+
+### Speed
+- Every console screen waits on 2 round trips: the session, then its one
+  read (a function call, or the error log's one query), made on the
+  server as the page is drawn. The lists page by `created_at` on the new
+  indexes; the audit by `audit_logs_platform_idx`, the error log by
+  `error_logs_created_at_idx`. The Clinics search and filters scan the
+  platform's clinics in one function call, which stays small (a row per
+  clinic).
+
+### Validation
+- Typecheck, lint, format check passed.
+- Unit and integration tests passed (4,201), coverage 100%.
+- E2E passed (phone, desktop; 168 passed, 8 skipped by design).
+
+### Blockers
+- None.

@@ -453,6 +453,12 @@ earlier lines are never rewritten.
 | D364 | **The UPI id is shown with Copy** (the user): the owner pays from their own UPI app and then says so; no UPI payment link. The card says whether it was copied. | 2026-10-28 |
 | D365 | **WhatsApp and the email to the renewal contact open with words typed** (the user): "Hello, I'd like to renew the plan for Smile Care." — the email with the subject "Renewing the plan for Smile Care" — which the owner may change before sending. | 2026-10-28 |
 | D366 | **The Plan screen's history is every change the DEV recorded** (the user): months and years paid for, and days given or a date set by hand at ₹0, marked **No charge**, with the reason the DEV gave, so the owner sees why the date moved; the latest first. | 2026-10-28 |
+| D367 | **The developer console has its own places** (the user): the app's frame without the ＋ — a desktop sidebar headed **Console** with Overview, Clinics, Accounts, then Settings, Error log, Audit; a phone's bottom bar Overview · Clinics · Accounts · More (Settings, Error log, Audit, Sign out). The account at its foot is "Developer", with Sign out and no My account. | 2026-10-28 |
+| D368 | **The Overview counts each clinic once** (the user): Trial (a trial still running, ending soon included) · Active · Ending soon · Ended · View only — paying clinics by their state, a trial that ran out as Ended or View only. The Clinics filters are the same five, and No trial. | 2026-10-28 |
+| D369 | **Deletion requested comes with the request** (the user): the flag, its filter and Deletions due join the console in R12.5, built with the owner's request; R11.2 adds nothing that nothing writes. | 2026-10-28 |
+| D370 | **A clinic's page offers Call, WhatsApp and Email to its owner** (the user), as a patient's profile does; the chat and the email open empty. | 2026-10-28 |
+| D371 | **The Clinics list is the newest sign-up first** (the user); the filters find the ones to chase. | 2026-10-28 |
+| D372 | **An error log row opens the whole entry** (the user): a sheet with every field — message, code, kind, status, request, the reference the person was shown, the account and clinic, the redacted context, the driver's detail and the stack. | 2026-10-28 |
 
 ## 3. Users and roles
 
@@ -1780,8 +1786,11 @@ clinical or financial records, no clinic activity.
    waiting for activation (**No trial**), deletions due.
 2. **Clinics — `/admin/clinics`:** name, city, type, owner (name, email,
    mobile), signed up, plan, valid until, state, members count, and flags —
-   **No trial** (§7.6), **Deletion requested** with its date (§9.1). Search
-   and filter by state and flag.
+   **No trial** (§7.6), **Deletion requested** with its date (§9.1, from
+   R12.5, D369). Search and filter by state and flag. As built (R11.2): the
+   newest sign-up first (D371); No trial is a clinic still on the TRIAL plan
+   whose last day is before the day it signed up — what `register_clinic`
+   gives a claimed mobile — until the DEV extends it.
 3. **Clinic — `/admin/clinics/[id]`:** the above, the subscription's payment
    history, **Extend plan** (§7.4), and **Delete clinic** once its deletion
    date has passed (typing its name; asks first; §9.1).
@@ -2411,12 +2420,15 @@ Planned order (one or more per tracker row):
 0034_dashboard_and_reports      dashboard_summary, report_daily, report_monthly; each figure
                                 defined once (money_by_day, visits_done, appointment_counts,
                                 clinic_outstanding), voids out of their own day (D345 – D349)
-0035_subscription_notices       the daily pg_cron → pg_net call (address and secret in Vault)
-0036_clinic_deletion            request_clinic_deletion, cancel_clinic_deletion,
+0035_console                    the developer console's reads: every clinic as the console sees
+                                it, the Overview, the Clinics list, one clinic, the accounts,
+                                the platform audit (R11.2, D367 – D372)
+0036_subscription_notices       the daily pg_cron → pg_net call (address and secret in Vault)
+0037_clinic_deletion            request_clinic_deletion, cancel_clinic_deletion,
                                 delete_clinic (DEV)
-0037_session_profile            session_profile: the session, profile, membership and plan in
+0038_session_profile            session_profile: the session, profile, membership and plan in
                                 one read (R13.2, D134)
-0038_faster_reads               indexes and policies from the load-seeded EXPLAINs (R13.3)
+0039_faster_reads               indexes and policies from the load-seeded EXPLAINs (R13.3)
 ```
 
 ## 30. API
@@ -3054,10 +3066,10 @@ in the row's one commit (D136).
 | ID | Work | Source | Waits on | Status |
 |---|---|---|---|---|
 | R11.1 | Owner's Plan screen (D363 – D366: the last day on the land, its state under it; the UPI id with Copy; WhatsApp and email with the words typed; every change in the history, the reason with it. Q2's default kept: each part of the contact hidden until the DEV sets it) | §7.5 | Q2 | DONE (2026-10-28) |
-| R11.2 | Console: overview, clinics (No trial and Deletion flags), clinic detail, accounts, error log, platform audit | §20 | — | TODO |
+| R11.2 | Console: overview, clinics (No trial and Deletion flags), clinic detail, accounts, error log, platform audit (D367 – D372: the console's own places; each clinic counted once, a running trial as Trial; Deletion requested with R12.5; Call, WhatsApp and Email to the owner; the newest sign-up first; an error opened whole. `0035_console`, so the notices are 0036 on) | §20 | — | DONE (2026-10-28) |
 | R11.3 | Extend plan (Monthly, Yearly, Set date); the owner's confirmation email | §7.4 | — | TODO |
 | R11.4 | Platform settings screen | §6, §20.4 | — | TODO |
-| R11.5 | `0035_subscription_notices`: daily notices, each once per period | §22 | — | TODO |
+| R11.5 | `0036_subscription_notices`: daily notices, each once per period | §22 | — | TODO |
 | R11.6 | Owner's activity log | §19 | — | TODO |
 | R11.7 | Integration + E2E: extend, change a setting, notices once, DEV sees no clinic data | §34 | — | TODO |
 | R11.8 | Plan receipts: receipt numbers, the receipt PDF, the business details settings | §7.5, §6 | Q2 | TODO |
@@ -3070,7 +3082,7 @@ in the row's one commit (D136).
 | R12.2 | Privacy and terms | §21 | Q22 | TODO |
 | R12.3 | Manifest, icons, service worker, offline page, Install app | §21 | — | TODO |
 | R12.4 | Security headers; `noindex` on app routes; share-preview image | §21 | — | TODO |
-| R12.5 | `0036_clinic_deletion`: the owner's request and cancel (banner, emails), the admin's delete after the cooling-off | §9.1, §20 | — | TODO |
+| R12.5 | `0037_clinic_deletion`: the owner's request and cancel (banner, emails), the admin's delete after the cooling-off; the console's Deletion requested flag, its filter and Deletions due (D369) | §9.1, §20 | — | TODO |
 | R12.6 | CSV export, one file per area, audited | §9 | — | TODO |
 
 ### Phase 13 — Speed and the release checks (D134, D185)
@@ -3086,8 +3098,8 @@ deployment, waits on that (D185).**
 | ID | Work | Source | Waits on | Status |
 |---|---|---|---|---|
 | R13.1 | The measuring setup: a load seed (a clinic with 50 000 patients, 200 000 appointments, 100 000 bills, a year of visits); the production build timed locally with 40 ms added to each database request; every screen, read and save timed and its round trips counted; Home, Queue and Patients timed on a throttled phone (4× CPU, 4G). The baseline in the changelog | §37 | — | TODO |
-| R13.2 | `0037_session_profile`: the session in one round trip. The token's signature and expiry checked on the server against the project's published key (`getClaims`), instead of asking Supabase Auth each request. One function checks the session is still open and hands back the profile, membership, clinic, doctor, plan and the settings it needs. Today a session waits on 3: Auth, the profile, then the plan and settings | §5.5, §37 | — | TODO |
-| R13.3 | `0038_faster_reads`: EXPLAIN ANALYZE on the load seed for every list, search, count and report. Indexes added or changed (every paged list in its own order, every foreign key). No policy or list calls `can_see_patient()` per row. Supabase's performance advisor reports nothing: unindexed keys, policies re-run per row, overlapping policies, duplicate or unused indexes | §27, §28, §37 | — | TODO |
+| R13.2 | `0038_session_profile`: the session in one round trip. The token's signature and expiry checked on the server against the project's published key (`getClaims`), instead of asking Supabase Auth each request. One function checks the session is still open and hands back the profile, membership, clinic, doctor, plan and the settings it needs. Today a session waits on 3: Auth, the profile, then the plan and settings | §5.5, §37 | — | TODO |
+| R13.3 | `0039_faster_reads`: EXPLAIN ANALYZE on the load seed for every list, search, count and report. Indexes added or changed (every paged list in its own order, every foreign key). No policy or list calls `can_see_patient()` per row. Supabase's performance advisor reports nothing: unindexed keys, policies re-run per row, overlapping policies, duplicate or unused indexes | §27, §28, §37 | — | TODO |
 | R13.4 | Round trips cut to the budget. Reads that do not depend on each other go at once (`allInOrder`), records come with their children, writes answer from `returning`, and side work runs after the answer. Every screen and read within 2, every save within 4; every list and search under 300 ms at the API on the load seed | §37 | — | TODO |
 | R13.5 | Pages: the proxy starts only where it has work and loads the Supabase client only to renew. Heavy code loads when first needed; first-load JS within 200 KB gzip. Polling stops while the tab is hidden. Reusing a screen revisited within seconds (`staleTimes`) measured, kept only if it helps. LCP and INP within budget on the throttled phone | §37 | — | TODO |
 | R13.6 | Hosting: `vercel.json` with region `bom1` and fluid compute, sent by `vercel deploy --prebuilt` with every release; the release guide (R14.7) says so | §35, §37 | — | TODO |

@@ -32,7 +32,7 @@ vi.mock("@/features/auth/session", async (original) => ({
   getSession,
 }));
 
-const { readInitialSession, readScreen } = await import("@/features/auth/session.server");
+const { readConsole, readInitialSession, readScreen } = await import("@/features/auth/session.server");
 
 beforeEach(() => {
   jar.clear();
@@ -166,6 +166,42 @@ describe("readScreen", () => {
     const read = vi.fn();
     signedIn(aDeveloperSession());
     await expect(readScreen({ queries: { "/api/patients": read } })).rejects.toThrow("NEXT_REDIRECT /admin");
+    expect(read).not.toHaveBeenCalled();
+  });
+});
+
+describe("readConsole (plan §20; D367)", () => {
+  it("reads a console screen's first data as the server, for the platform admin, in the shape the routes send", async () => {
+    signedIn(aDeveloperSession());
+    const overview = vi.fn(async () => ({ today: "2026-10-28", at: new Date("2026-10-28T05:00:00Z") }));
+    const accounts = vi.fn(async () => ({ items: [], nextCursor: null }));
+
+    const data = await readConsole({
+      queries: { "/api/admin/overview": overview },
+      pages: { "/api/admin/accounts": accounts },
+    });
+
+    expect(overview).toHaveBeenCalledWith("service-client");
+    expect(data).toEqual({
+      queries: { "/api/admin/overview": { today: "2026-10-28", at: "2026-10-28T05:00:00.000Z" } },
+      pages: { "/api/admin/accounts": { items: [], nextCursor: null } },
+    });
+  });
+
+  it("leaves out a read that fails, and reads nothing for a screen with none", async () => {
+    signedIn(aDeveloperSession());
+    expect(
+      await readConsole({ queries: { "/api/admin/overview": async () => Promise.reject(new TypeError("down")) } }),
+    ).toEqual({ queries: {}, pages: {} });
+    expect(warn).toHaveBeenCalledWith(expect.any(String), { route: "/api/admin/overview", reason: "TypeError" });
+    expect(await readConsole({})).toEqual({ queries: {}, pages: {} });
+  });
+
+  it("reads nothing without a session, and sends anyone else signed in Home", async () => {
+    const read = vi.fn();
+    expect(await readConsole({ queries: { "/api/admin/overview": read } })).toEqual({ queries: {}, pages: {} });
+    signedIn();
+    await expect(readConsole({ queries: { "/api/admin/overview": read } })).rejects.toThrow("NEXT_REDIRECT /home");
     expect(read).not.toHaveBeenCalled();
   });
 });

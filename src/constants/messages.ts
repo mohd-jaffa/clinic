@@ -161,6 +161,13 @@ export const ERROR_MESSAGES = {
   PLAN_LOAD_FAILED: "Your plan couldn't be loaded.",
   // Reports (plan §18).
   REPORT_LOAD_FAILED: "This report couldn't be loaded.",
+  // The developer console (plan §20).
+  CONSOLE_OVERVIEW_LOAD_FAILED: "The overview couldn't be loaded.",
+  CONSOLE_CLINICS_LOAD_FAILED: "The clinics couldn't be loaded.",
+  CONSOLE_CLINIC_LOAD_FAILED: "This clinic couldn't be loaded.",
+  CONSOLE_ACCOUNTS_LOAD_FAILED: "The accounts couldn't be loaded.",
+  CONSOLE_ERRORS_LOAD_FAILED: "The error log couldn't be loaded.",
+  CONSOLE_AUDIT_LOAD_FAILED: "The audit couldn't be loaded.",
   COLLECTIONS_PDF_FAILED: "The day-end collections’ PDF couldn’t be made.",
 
   // Payments (plan §15.3; D297, D301).
@@ -589,6 +596,127 @@ export const UI_TEXT = {
     dateChanged: "Date changed",
     paidOn: (date: string) => `Paid ${date}`,
     noCharge: "No charge",
+  },
+
+  /**
+   * The developer console (plan §20; D367 – D372): the DEV's, with no
+   * clinic's data — its places, the Overview, the clinics, the accounts, the
+   * error log and the platform audit.
+   */
+  console: {
+    title: "Console",
+    places: {
+      overview: "Overview",
+      clinics: "Clinics",
+      accounts: "Accounts",
+      settings: "Settings",
+      logs: "Error log",
+      audit: "Audit",
+    },
+    /** What each place behind More holds, under its name. */
+    hints: {
+      settings: "Prices, trial, retention, contact",
+      logs: "The server’s own failures",
+      audit: "Extensions and settings changes",
+    },
+
+    // The Overview (plan §20.1; D368).
+    overviewSubtitle: (clinics: number) => (clinics === 1 ? "1 clinic" : `${clinics} clinics`),
+    byStanding: "Clinics by state",
+    lately: "This week and month",
+    signupsWeek: "Sign-ups this week",
+    signupsMonth: "Sign-ups this month",
+    extensionsMonth: "Extensions this month",
+    waiting: "Waiting for activation",
+
+    // The Clinics list and a clinic (plan §20.2, §20.3; D370, D371).
+    searchClinicsHint: "Clinic, city, owner, email or mobile",
+    filters: "Show",
+    allClinics: "All",
+    noClinics: "No clinic has signed up yet.",
+    noClinicsMatch: "No clinic matches.",
+    planUntil: (plan: string, date: string) => `${plan} · until ${date}`,
+    members: (count: number) => (count === 1 ? "1 member" : `${count} members`),
+    clinic: "Clinic",
+    owner: "Owner",
+    plan: "Plan",
+    signedUpLabel: "Signed up",
+    membersLabel: "Members",
+    planLabel: "Plan",
+    validUntilLabel: "Valid until",
+    stateLabel: "State",
+    nameLabel: "Name",
+    emailLabel: "Email",
+    mobileLabel: "Mobile",
+    noMobile: "Not added",
+    call: "Call",
+    callTo: (name: string) => `Call ${name}`,
+    whatsApp: "WhatsApp",
+    whatsAppTo: (name: string) => `WhatsApp ${name}`,
+    email: "Email",
+    emailTo: (name: string) => `Email ${name}`,
+    planHistory: "Plan history",
+    noPlanHistory: "Nothing recorded yet.",
+    receipt: (number: string) => `Receipt ${number}`,
+
+    // Accounts (plan §20.5).
+    searchAccountsHint: "Name, email, mobile or clinic",
+    noAccounts: "No accounts yet.",
+    noAccountsMatch: "No account matches.",
+    noClinic: "No clinic",
+    signedIn: (when: string) => `Signed in ${when}`,
+    neverSignedIn: "Never signed in",
+
+    // The error log (plan §20.6; D372).
+    noErrors: "Nothing has failed.",
+    errorTitle: "Failure",
+    errorFields: {
+      when: "When",
+      source: "Source",
+      message: "Message",
+      code: "Code",
+      kind: "Kind",
+      status: "Status",
+      request: "Request",
+      reference: "Reference",
+      account: "Account",
+      clinic: "Clinic",
+      detail: "Detail",
+      context: "Context",
+      stack: "Stack",
+    },
+
+    // The platform audit (plan §20.7).
+    noAudit: "Nothing recorded yet.",
+    planExtended: (clinic: string) => `Plan extended · ${clinic}`,
+    goneClinic: "A clinic no longer here",
+    settingsChanged: "Settings changed",
+    changed: (from: string, to: string) => `${from} → ${to}`,
+    unset: "—",
+    otherAction: (entity: string, action: string) => `${entity} · ${action}`,
+    byWhom: (name: string, when: string) => `${name} · ${when}`,
+    someone: "Someone no longer here",
+    /** Each platform setting by name (plan §6), as the audit and the settings screen say it. */
+    settingNames: {
+      trialDays: "Trial days",
+      monthlyPricePaise: "Monthly price",
+      yearlyPricePaise: "Yearly price",
+      expiryWarningDays: "Warning days",
+      graceDays: "Grace days",
+      expiryNoticeDays: "Expiry email days",
+      auditKeepDays: "Audit kept for (days)",
+      errorLogKeepDays: "Error log kept for (days)",
+      inviteValidDays: "Invite valid for (days)",
+      followUpLapsedDays: "Follow-up lapses after (days)",
+      deletionCoolingDays: "Deletion cooling-off (days)",
+      maxImportRows: "Import rows at most",
+      renewalContactName: "Renewal contact",
+      renewalContactPhone: "Renewal mobile",
+      renewalContactEmail: "Renewal email",
+      renewalUpiId: "UPI id",
+      businessName: "Business name",
+      businessAddress: "Business address",
+    },
   },
 
   /** My account (plan §5.4, D72): each detail changed in a sheet of its own. */

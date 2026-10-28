@@ -90,3 +90,31 @@ describe("the session gate", () => {
     expect(screen.queryByText("Patient profile")).not.toBeInTheDocument();
   });
 });
+
+describe("the console's gate (D367)", () => {
+  const consoleUnder = () =>
+    render(
+      <RequireAuth for="developer">
+        <p>Overview</p>
+      </RequireAuth>,
+    );
+
+  it("draws the console for the platform admin", () => {
+    const { profile } = aDeveloperSession();
+    auth.current = authStub({ profile, membership: null, subscription: null });
+    consoleUnder();
+    expect(screen.getByText("Overview")).toBeVisible();
+    expect(router.replace).not.toHaveBeenCalled();
+  });
+
+  it("sends a clinic's member Home, and a visitor to sign in", async () => {
+    const { unmount } = consoleUnder();
+    await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/home"));
+    expect(screen.queryByText("Overview")).not.toBeInTheDocument();
+    unmount();
+
+    auth.current = authStub({ status: "anonymous", profile: null, membership: null });
+    consoleUnder();
+    await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/login?next=%2Fpatients%2Fp-1"));
+  });
+});

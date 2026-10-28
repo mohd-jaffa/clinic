@@ -5,7 +5,7 @@ import { useEffect, type ReactNode } from "react";
 
 import { ScreenSkeleton } from "@/components/ui/skeleton";
 import { UI_TEXT } from "@/constants/messages";
-import { ADMIN_ROUTE, signInPath } from "@/constants/routes";
+import { ADMIN_ROUTE, HOME_ROUTE, signInPath } from "@/constants/routes";
 
 import { useAuth } from "../AuthProvider";
 
@@ -21,21 +21,32 @@ import { useAuth } from "../AuthProvider";
  * session rather than a round trip after it. Once the session is known the
  * same element simply shows, so the screen is not mounted twice.
  *
+ * The developer console's screens (`for="developer"`, D367) are the other
+ * way round: they send anyone signed in but the platform admin to Home.
+ *
  * It is a convenience, not the control: the API and RLS refuse both cases on
  * their own, so a screen that slipped past this would have nothing to show.
  */
-export function RequireAuth({ children }: { children: ReactNode }) {
+export function RequireAuth({
+  for: who = "member",
+  children,
+}: {
+  /** Whose screens these are: a clinic's members', or the platform admin's console. */
+  for?: "member" | "developer";
+  children: ReactNode;
+}) {
   const { status, profile } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
   const developer = profile?.platformRole === "DEV";
-  const blocked = status === "anonymous" || developer;
+  const elsewhere = status === "authenticated" && developer !== (who === "developer");
+  const blocked = status === "anonymous" || elsewhere;
 
   useEffect(() => {
     if (status === "anonymous") router.replace(signInPath(pathname));
-    else if (developer) router.replace(ADMIN_ROUTE);
-  }, [status, developer, pathname, router]);
+    else if (elsewhere) router.replace(developer ? ADMIN_ROUTE : HOME_ROUTE);
+  }, [status, elsewhere, developer, pathname, router]);
 
   if (blocked) return <ScreenSkeleton label={UI_TEXT.auth.checkingSession} />;
 

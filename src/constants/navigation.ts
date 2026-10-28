@@ -1,5 +1,6 @@
 import {
   BadgeIndianRupee,
+  Bug,
   Building2,
   CalendarClock,
   CalendarCog,
@@ -14,10 +15,13 @@ import {
   House,
   IdCard,
   IndianRupee,
+  LayoutDashboard,
   ListOrdered,
   ReceiptIndianRupee,
+  ScrollText,
   Settings,
   Shapes,
+  SlidersHorizontal,
   Tags,
   Trash2,
   UserPlus,
@@ -28,7 +32,7 @@ import {
 
 import { UI_TEXT } from "./messages";
 import { FOLLOW_UP_ACCESS, hasAccess, ROUTE_ACCESS, type Permission, type RouteAccess } from "./permissions";
-import { HOME_ROUTE } from "./routes";
+import { ADMIN_ROUTE, HOME_ROUTE } from "./routes";
 
 /**
  * Where the app can be navigated to (plan §31.1). One set of places, so the
@@ -376,3 +380,81 @@ export const GETTING_STARTED: readonly GettingStartedStep[] = [
   { id: "team", href: TEAM_ROUTE, access: "team.manage" },
   { id: "patient", href: addTo(PATIENTS, ADD_FORMS.patient), access: "patients.create" },
 ];
+
+/**
+ * The developer console's places (plan §20; D367), the DEV's alone: no clinic
+ * and nothing to add. The Overview at `/admin`, then the rest under it.
+ */
+export interface ConsolePlace {
+  id: keyof typeof UI_TEXT.console.places;
+  label: string;
+  icon: LucideIcon;
+  href: string;
+  /** What it holds, under its name in the More sheet. */
+  hint?: string;
+}
+
+export const CONSOLE_CLINICS_ROUTE = `${ADMIN_ROUTE}/clinics`;
+export const consoleClinicRoute = (id: string) => `${CONSOLE_CLINICS_ROUTE}/${id}`;
+export const CONSOLE_ACCOUNTS_ROUTE = `${ADMIN_ROUTE}/accounts`;
+/** The platform settings (plan §20.4), built with R11.4. */
+export const CONSOLE_SETTINGS_ROUTE = `${ADMIN_ROUTE}/settings`;
+export const CONSOLE_LOGS_ROUTE = `${ADMIN_ROUTE}/logs`;
+export const CONSOLE_AUDIT_ROUTE = `${ADMIN_ROUTE}/audit`;
+
+const { places: consolePlaces, hints: consoleHints } = UI_TEXT.console;
+
+const OVERVIEW: ConsolePlace = {
+  id: "overview",
+  label: consolePlaces.overview,
+  icon: LayoutDashboard,
+  href: ADMIN_ROUTE,
+};
+const CLINICS: ConsolePlace = {
+  id: "clinics",
+  label: consolePlaces.clinics,
+  icon: Building2,
+  href: CONSOLE_CLINICS_ROUTE,
+};
+const ACCOUNTS: ConsolePlace = {
+  id: "accounts",
+  label: consolePlaces.accounts,
+  icon: UsersRound,
+  href: CONSOLE_ACCOUNTS_ROUTE,
+};
+const PLATFORM_SETTINGS: ConsolePlace = {
+  id: "settings",
+  label: consolePlaces.settings,
+  icon: SlidersHorizontal,
+  href: CONSOLE_SETTINGS_ROUTE,
+  hint: consoleHints.settings,
+};
+const LOGS: ConsolePlace = {
+  id: "logs",
+  label: consolePlaces.logs,
+  icon: Bug,
+  href: CONSOLE_LOGS_ROUTE,
+  hint: consoleHints.logs,
+};
+const AUDIT: ConsolePlace = {
+  id: "audit",
+  label: consolePlaces.audit,
+  icon: ScrollText,
+  href: CONSOLE_AUDIT_ROUTE,
+  hint: consoleHints.audit,
+};
+
+/** The sidebar and the rail, in two groups: the platform's clinics and people, then its settings and records. */
+export const CONSOLE_NAV_GROUPS: readonly (readonly ConsolePlace[])[] = [
+  [OVERVIEW, CLINICS, ACCOUNTS],
+  [PLATFORM_SETTINGS, LOGS, AUDIT],
+];
+
+/** The phone's bottom bar (D367): Overview, Clinics, Accounts — then More, which holds the rest. */
+export const CONSOLE_BOTTOM_NAV: readonly ConsolePlace[] = [OVERVIEW, CLINICS, ACCOUNTS];
+export const CONSOLE_MORE_NAV: readonly ConsolePlace[] = [PLATFORM_SETTINGS, LOGS, AUDIT];
+
+/** Whether a console place is the one shown: the Overview only at its own address, every other within it too. */
+export function isConsolePlace(place: ConsolePlace, pathname: string): boolean {
+  return place.href === ADMIN_ROUTE ? pathname === ADMIN_ROUTE : isActivePath(place.href, pathname);
+}

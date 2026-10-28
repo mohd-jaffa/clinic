@@ -9,7 +9,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { cn } from "@/components/ui/cn";
 import { UI_TEXT } from "@/constants/messages";
 import { MY_ACCOUNT_ROUTE } from "@/constants/navigation";
-import { CLINIC_ROLE_LABELS } from "@/constants/roles";
+import { CLINIC_ROLE_LABELS, PLATFORM_ROLE_LABELS } from "@/constants/roles";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { useSignOut } from "@/features/auth/hooks/useSignOut";
 
@@ -20,7 +20,8 @@ const ITEM =
  * Who is signed in, at the foot of the tablet's rail and the desktop's
  * sidebar (plan §31.1): their initials — and from 1024 px their name and role
  * — opening a panel with where they work, **My account** and **Sign out**,
- * which closes it and asks first. A disclosure: a tap elsewhere, Escape or leaving it with
+ * which closes it and asks first. The platform admin, in the console (D367),
+ * is "Developer" and has no clinic, so no My account — only Sign out. A disclosure: a tap elsewhere, Escape or leaving it with
  * the keys closes it, Escape handing the focus back.
  */
 export function AccountMenu() {
@@ -33,8 +34,9 @@ export function AccountMenu() {
   const { signingOut, signOut } = useSignOut(close);
   useAnchoredPopover({ open, panel, control, maxHeight: 360, onDismiss: close });
 
-  if (!profile || !membership) return null;
-  const role = CLINIC_ROLE_LABELS[membership.role];
+  const developer = profile?.platformRole === "DEV";
+  if (!profile || (!membership && !developer)) return null;
+  const role = membership ? CLINIC_ROLE_LABELS[membership.role] : PLATFORM_ROLE_LABELS.DEV;
 
   const onKeyDown = (event: KeyboardEvent) => {
     if (event.key !== "Escape" || !open) return;
@@ -87,16 +89,20 @@ export function AccountMenu() {
           <Avatar name={profile.fullName} />
           <div className="min-w-0">
             <p className="truncate font-bold">{profile.fullName}</p>
-            <p className="truncate text-small text-muted">{UI_TEXT.nav.membership(membership.clinicName, role)}</p>
+            <p className="truncate text-small text-muted">
+              {membership ? UI_TEXT.nav.membership(membership.clinicName, role) : role}
+            </p>
           </div>
         </div>
         <ul role="list" className="grid gap-1 border-t border-line pt-2">
-          <li>
-            <Link href={MY_ACCOUNT_ROUTE} onClick={close} className={ITEM}>
-              <UserRound size={20} strokeWidth={2.25} aria-hidden="true" className="shrink-0 text-muted" />
-              {UI_TEXT.nav.myAccount}
-            </Link>
-          </li>
+          {membership && (
+            <li>
+              <Link href={MY_ACCOUNT_ROUTE} onClick={close} className={ITEM}>
+                <UserRound size={20} strokeWidth={2.25} aria-hidden="true" className="shrink-0 text-muted" />
+                {UI_TEXT.nav.myAccount}
+              </Link>
+            </li>
+          )}
           <li>
             <button
               type="button"

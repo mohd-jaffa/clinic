@@ -356,6 +356,36 @@ export const SUBSCRIPTION_STATE_TONES: Record<SubscriptionState, StatusTone> = {
   READ_ONLY: "attention",
 };
 
+/**
+ * Where the developer console counts a clinic (plan §20.1; D368): a trial
+ * still running is Trial; any other clinic by its plan's state. 0035's
+ * `console_clinic_rows()` works it out; tests/db keeps the two equal.
+ */
+export const CLINIC_STANDINGS = ["TRIAL", "ACTIVE", "EXPIRING", "GRACE", "READ_ONLY"] as const;
+export type ClinicStanding = (typeof CLINIC_STANDINGS)[number];
+export const CLINIC_STANDING_LABELS: Record<ClinicStanding, string> = {
+  TRIAL: "Trial",
+  ACTIVE: "Active",
+  EXPIRING: "Ending soon",
+  GRACE: "Ended",
+  READ_ONLY: "View only",
+};
+export const CLINIC_STANDING_TONES: Record<ClinicStanding, StatusTone> = {
+  TRIAL: "neutral",
+  ACTIVE: "live",
+  EXPIRING: "attention",
+  GRACE: "attention",
+  READ_ONLY: "attention",
+};
+
+/** The console's Clinics filters (plan §20.2): a standing, or No trial — waiting for activation (plan §7.6). */
+export const CONSOLE_CLINIC_FILTERS = [...CLINIC_STANDINGS, "NO_TRIAL"] as const;
+export type ConsoleClinicFilter = (typeof CONSOLE_CLINIC_FILTERS)[number];
+export const CONSOLE_CLINIC_FILTER_LABELS: Record<ConsoleClinicFilter, string> = {
+  ...CLINIC_STANDING_LABELS,
+  NO_TRIAL: "No trial",
+};
+
 /** How the admin extends a plan (plan §7.4): a month, a year, or a date set by hand. */
 export const EXTENSION_KINDS = ["MONTHLY", "YEARLY", "CUSTOM"] as const;
 export type ExtensionKind = (typeof EXTENSION_KINDS)[number];
