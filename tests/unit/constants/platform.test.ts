@@ -67,20 +67,17 @@ describe("the platform settings' columns", () => {
 });
 
 describe("the Settings screen's groups (plan §20.4; D379)", () => {
-  it("hold every setting once, in five groups, all but the business details, which join with the receipts", () => {
+  it("hold every setting once, in six groups, the business details last (R11.8)", () => {
     expect(Object.keys(PLATFORM_SETTING_GROUPS)).toEqual([
       "trialAndPricing",
       "expiry",
       "retention",
       "invitesAndImports",
       "renewalContact",
+      "businessDetails",
     ]);
     const grouped = Object.values(PLATFORM_SETTING_GROUPS).flat();
     expect(new Set(grouped).size).toBe(grouped.length);
-    expect([...grouped].sort()).toEqual(
-      Object.keys(PLATFORM_SETTING_DEFAULTS)
-        .filter((key) => key !== "businessName" && key !== "businessAddress")
-        .sort(),
-    );
+    expect([...grouped].sort()).toEqual(Object.keys(PLATFORM_SETTING_DEFAULTS).sort());
   });
 });

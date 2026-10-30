@@ -22,7 +22,8 @@ const { console: words } = UI_TEXT;
  */
 
 /** How a setting is typed and read. */
-export type SettingKind = "days" | "price" | "rows" | "daysBefore" | "name" | "mobile" | "email" | "upi";
+export type SettingKind =
+  "days" | "price" | "rows" | "daysBefore" | "name" | "mobile" | "email" | "upi" | "business" | "address";
 
 export const SETTING_KINDS: Record<EditableSettingKey, SettingKind> = {
   trialDays: "days",
@@ -41,6 +42,8 @@ export const SETTING_KINDS: Record<EditableSettingKey, SettingKind> = {
   renewalContactPhone: "mobile",
   renewalContactEmail: "email",
   renewalUpiId: "upi",
+  businessName: "business",
+  businessAddress: "address",
 };
 
 /** When a change takes effect (plan §6; D381), for each setting it matters for. */
@@ -60,6 +63,8 @@ const EFFECTS: Partial<Record<EditableSettingKey, keyof typeof words.effects>> =
   renewalContactPhone: "contact",
   renewalContactEmail: "contact",
   renewalUpiId: "contact",
+  businessName: "receipts",
+  businessAddress: "receipts",
 };
 
 /** A setting as the screen shows it: "30 days", "₹300", "7 and 1 days before", or Not set. */
@@ -76,6 +81,8 @@ export function showSetting(key: EditableSettingKey, settings: PlatformSettings)
       return words.daysBefore(value as number[]);
     case "mobile":
       return value ? `${UI_TEXT.fields.phonePrefix} ${formatPhoneDigits(value as string)}` : words.notSet;
+    case "address":
+      return value ? (value as string).split("\n").join(", ") : words.notSet;
     default:
       return (value as string | null) ?? words.notSet;
   }
@@ -113,6 +120,9 @@ export function settingHint(key: EditableSettingKey): string {
     case "renewalContactEmail":
     case "renewalUpiId":
       return words.contactHint;
+    case "businessName":
+    case "businessAddress":
+      return words.businessHint;
     default:
       return words.daysHint(DEFAULTS[key], BOUNDS[key].min, BOUNDS[key].max);
   }

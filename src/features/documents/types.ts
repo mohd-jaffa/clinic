@@ -1,4 +1,4 @@
-import type { Gender, PaperSize } from "@/constants/statuses";
+import type { ExtensionKind, Gender, PaperSize, PaymentMethod } from "@/constants/statuses";
 import type { BillDetail } from "@/features/billing/types";
 import type { PrescriptionContent } from "@/features/prescriptions/types";
 import type { DailyReport } from "@/features/reports/types";
@@ -101,4 +101,37 @@ export interface CollectionsSheet {
   net: string;
   /** "Voided: 1 payment, ₹500", or none. */
   voided: string | null;
+}
+
+/**
+ * A plan payment's receipt as it is read (plan §7.5; D58, D392): the payment
+ * and its receipt number, the clinic that paid and its owner, and the
+ * platform's own name and address from the live settings — unset until the
+ * DEV sets them.
+ */
+export interface ReceiptSource {
+  receiptNumber: string;
+  kind: ExtensionKind;
+  amountPaise: number;
+  method: PaymentMethod;
+  reference: string | null;
+  paidOn: string;
+  /** The plan's last day before it, and after. */
+  validFrom: string;
+  validUntil: string;
+  recordedAt: string;
+  clinic: { name: string; city: string };
+  owner: string;
+  business: { name: string | null; address: string | null };
+}
+
+/** The receipt in the words it is printed in. */
+export interface ReceiptSheet {
+  business: { name: string; address: string[] };
+  number: string;
+  date: string;
+  from: string[];
+  forWhat: string[];
+  amount: string;
+  paid: string;
 }

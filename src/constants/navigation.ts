@@ -192,6 +192,8 @@ export const templateRoute = (id: string) => `${TEMPLATES_ROUTE}/${id}`;
 
 /** The owner's Plan screen (plan §7.5): where the plan banner's How to renew leads (D74). */
 export const PLAN_ROUTE = `${SETTINGS_ROUTE}/plan`;
+/** A plan payment's receipt, from its email (D394): signed in first if need be, then the PDF itself. */
+export const planReceiptRoute = (paymentId: string) => `${PLAN_ROUTE}/receipts/${paymentId}`;
 
 /** Importing patients from a file, the owner's (plan §10.5). */
 export const IMPORT_ROUTE = `${SETTINGS_ROUTE}/import`;

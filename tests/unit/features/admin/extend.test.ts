@@ -110,7 +110,17 @@ describe("extendPlan (plan §7.4; D373 – D376)", () => {
       receiptNumber: "R/2026-27/0007",
       reason: null,
       planUrl: "https://clinicdesk.test/settings/plan",
+      receiptUrl: "https://clinicdesk.test/settings/plan/receipts/sp-2",
     });
+  });
+
+  it("links a change at no charge to the Plan screen alone: it has no receipt", async () => {
+    const free = { ...clinicRow.payments[0], plan: "CUSTOM" as const, amount_paise: 0, receipt_number: null };
+    const { client } = fakeSupabase({
+      rpc: () => ({ data: { created: true, payment: { id: "sp-2" }, clinic: { ...clinicRow, payments: [free] } } }),
+    });
+    await extendPlan(client, "c-1", { ...month, kind: "CUSTOM", amountPaise: 0 }, KEY, who);
+    expect(mocks.sendPlanExtended).toHaveBeenCalledWith(expect.objectContaining({ receiptUrl: null }));
   });
 
   it("keeps the extension when the email fails, logs it, and says so (D376)", async () => {

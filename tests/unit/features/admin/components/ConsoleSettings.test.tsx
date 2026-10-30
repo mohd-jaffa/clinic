@@ -25,7 +25,14 @@ describe("ConsoleSettings (plan §20.4; D378, D379)", () => {
     expect(screen.getByText(/^Last changed by Jaffa · 30 Oct 2026/)).toBeInTheDocument();
     expect(
       screen.getAllByRole("region").map((region) => within(region).getByRole("heading", { level: 2 }).textContent),
-    ).toEqual(["Trial and pricing", "Expiry", "Retention", "Invites, follow-ups and imports", "Renewal contact"]);
+    ).toEqual([
+      "Trial and pricing",
+      "Expiry",
+      "Retention",
+      "Invites, follow-ups and imports",
+      "Renewal contact",
+      "Business details",
+    ]);
     const pricing = screen.getByRole("region", { name: "Trial and pricing" });
     expect(pricing).toHaveTextContent("Trial days30 days");
     expect(pricing).toHaveTextContent("Monthly price₹300");

@@ -182,9 +182,9 @@ test("the owner's Plan screen: its last day, how to renew, and every change reco
     await expect(page.getByText(plan.upiCopied, { exact: true })).toBeVisible();
     expect(await page.evaluate(() => navigator.clipboard.readText())).toBe("clinicdesk@okaxis");
 
-    // Every change, the latest first; the free days marked No charge, with the reason (D366).
+    // Every change, the latest first; the month paid with its Receipt (D393), the free days marked No charge, with the reason (D366).
     await expect(page.getByRole("list", { name: plan.history }).getByRole("listitem")).toHaveText([
-      `${plan.until(formatDate(lastDay))}Monthly · ${plan.paidOn(formatDate(todayKey()))} · UPI · UPI-4821${formatPaise(saved.monthlyPricePaise)}`,
+      `${plan.until(formatDate(lastDay))}Monthly · ${plan.paidOn(formatDate(todayKey()))} · UPI · UPI-4821${plan.receipt}${formatPaise(saved.monthlyPricePaise)}`,
       `${plan.until(formatDate(given))}${plan.dateChanged} · ${formatDate(todayKey())} · Ten days for the move${plan.noCharge}`,
     ]);
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(

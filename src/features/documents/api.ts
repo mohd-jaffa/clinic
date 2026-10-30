@@ -1,7 +1,8 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import sharp from "sharp";
 
 import { UI_TEXT } from "@/constants/messages";
-import type { Gender } from "@/constants/statuses";
+import type { ExtensionKind, Gender, PaymentMethod } from "@/constants/statuses";
 import { getBill } from "@/features/billing/api";
 import { downloadLogo, getClinicForDocuments } from "@/features/clinic/api";
 import { toContent } from "@/features/prescriptions/content";
@@ -11,6 +12,7 @@ import type { VitalsRow } from "@/features/visits/types";
 import { toVitals } from "@/features/visits/vitals";
 import { businessRuleError, fromPostgrestError, notFoundError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
+import { getPlatformSettings } from "@/lib/platform/settings";
 import { allInOrder } from "@/lib/parallel";
 import { renderPdf } from "@/lib/pdf/render";
 import { pdfResponse } from "@/lib/pdf/response";
@@ -18,9 +20,10 @@ import type { Tenant } from "@/lib/supabase/tenant";
 
 import { billSheet, layoutBill } from "./bill";
 import { collectionsSheet, layoutCollections } from "./collections";
-import { billFileName, collectionsFileName, prescriptionFileName } from "./names";
+import { billFileName, collectionsFileName, prescriptionFileName, receiptFileName } from "./names";
 import { layoutPrescription, prescriptionSheet } from "./prescription";
-import type { BillSource, PrescriptionSource } from "./types";
+import { layoutReceipt, receiptSheet } from "./receipt";
+import type { BillSource, PrescriptionSource, ReceiptSource } from "./types";
 
 /**
  * The prescription's and the bill's PDFs (plan §13, §15.5, §33; D218 –
@@ -232,4 +235,119 @@ export async function getCollectionsPdf(
     compose: (measure) => layoutCollections(sheet, measure),
   });
   return pdfResponse(file, { name: collectionsFileName(day), download, requestId });
+}
+
+/** A plan payment with a receipt, as `subscription_payments` (0005) holds it. */
+interface ReceiptRow {
+  receipt_number: string | null;
+  plan: ExtensionKind;
+  amount_paise: number;
+  method: PaymentMethod;
+  reference: string | null;
+  paid_on: string;
+  valid_from: string;
+  valid_until: string;
+  created_at: string;
+}
+
+const RECEIPT_COLUMNS =
+  "receipt_number, plan, amount_paise, method, reference, paid_on, valid_from, valid_until, created_at";
+
+type Settings = Awaited<ReturnType<typeof getPlatformSettings>>;
+
+/** The receipt's source, from its payment — none for a change at no charge, which has no receipt (D58). */
+function receiptOf(
+  row: ReceiptRow | null,
+  clinic: { name: string; city: string },
+  owner: string,
+  settings: Settings,
+): ReceiptSource {
+  if (!row?.receipt_number) throw notFoundError("RECORD_NOT_FOUND");
+  return {
+    receiptNumber: row.receipt_number,
+    kind: row.plan,
+    amountPaise: row.amount_paise,
+    method: row.method,
+    reference: row.reference,
+    paidOn: row.paid_on,
+    validFrom: row.valid_from,
+    validUntil: row.valid_until,
+    recordedAt: row.created_at,
+    clinic,
+    owner,
+    business: { name: settings.businessName, address: settings.businessAddress },
+  };
+}
+
+/** Draws a receipt on A5 (D392) and answers it to open, or `download`ed, to save. */
+async function receiptPdf(
+  source: ReceiptSource,
+  { download, requestId }: { download: boolean; requestId: string },
+): Promise<Response> {
+  const sheet = receiptSheet(source);
+  const file = await renderPdf({
+    paper: "A5",
+    title: UI_TEXT.documents.receipt.title(sheet.number),
+    author: sheet.business.name,
+    logo: null,
+    compose: (measure) => layoutReceipt(sheet, measure),
+  });
+  return pdfResponse(file, { name: receiptFileName(sheet.number), download, requestId });
+}
+
+/**
+ * `GET /api/subscription/payments/[id]/receipt.pdf` (plan §7.5; D58, D393):
+ * the owner's receipt for a payment of their clinic's plan — read as the
+ * owner, whom alone RLS lets read it — with the clinic and the live business
+ * details, at once. A view-only clinic's too. Kept nowhere.
+ */
+export async function getPlanReceiptPdf(
+  tenant: Tenant,
+  owner: string,
+  paymentId: string,
+  options: { download: boolean; requestId: string },
+): Promise<Response> {
+  const [payment, clinic, settings] = await allInOrder([
+    tenant.supabase.from("subscription_payments").select(RECEIPT_COLUMNS).eq("id", paymentId).maybeSingle(),
+    tenant.supabase.from("clinics").select("name, city").eq("id", tenant.clinicId).single(),
+    getPlatformSettings(),
+  ]);
+  if (payment.error) throw fromPostgrestError(payment.error);
+  if (clinic.error) throw fromPostgrestError(clinic.error);
+  const place = clinic.data as { name: string; city: string };
+  return receiptPdf(receiptOf(payment.data as ReceiptRow | null, place, owner, settings), options);
+}
+
+/** A payment as the console reads it for its receipt: with its clinic and the clinic's owner. */
+interface ConsoleReceiptRow extends ReceiptRow {
+  clinic: { name: string; city: string; members: { profile: { full_name: string } }[] };
+}
+
+/**
+ * `GET /api/admin/payments/[id]/receipt.pdf` (D395): the same receipt for the
+ * DEV, to send the owner a copy — read as the server, the payment with its
+ * clinic and owner in one query, beside the live business details. A
+ * receipt is the platform's own record; it shows nothing of the clinic's.
+ */
+export async function getConsoleReceiptPdf(
+  admin: SupabaseClient,
+  paymentId: string,
+  options: { download: boolean; requestId: string },
+): Promise<Response> {
+  const [payment, settings] = await allInOrder([
+    admin
+      .from("subscription_payments")
+      .select(
+        `${RECEIPT_COLUMNS}, clinic:clinics(name, city, members:clinic_members!inner(profile:profiles!clinic_members_user_id_fkey(full_name)))`,
+      )
+      .eq("id", paymentId)
+      .eq("clinic.members.role", "OWNER")
+      .maybeSingle(),
+    getPlatformSettings(admin),
+  ]);
+  if (payment.error) throw fromPostgrestError(payment.error);
+  const row = payment.data as unknown as ConsoleReceiptRow | null;
+  if (!row) throw notFoundError("RECORD_NOT_FOUND");
+  const { name, city, members } = row.clinic;
+  return receiptPdf(receiptOf(row, { name, city }, members[0].profile.full_name, settings), options);
 }

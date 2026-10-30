@@ -26,13 +26,16 @@ export interface PlanExtendedInput {
   reason: string | null;
   /** The owner's Plan screen. */
   planUrl: string;
+  /** Its receipt, for money received (D394): signed in first if need be. */
+  receiptUrl: string | null;
 }
 
 /**
  * Plan extended (plan §22; D375, D376): to the owner, for every change the
  * DEV records — the new last day, then what was recorded: how much, how and
- * when it was paid, and its receipt; or No charge, with the reason given. A
- * date moved earlier, to correct one, says the last day has changed.
+ * when it was paid, and its receipt, which its button downloads (D394); or
+ * No charge, with the reason given, and the Plan screen. A date moved
+ * earlier, to correct one, says the last day has changed.
  */
 export function planExtendedTemplate(input: PlanExtendedInput) {
   const text = MAIL_TEXT.planExtended;
@@ -54,7 +57,9 @@ export function planExtendedTemplate(input: PlanExtendedInput) {
       recorded,
       ...(input.receiptNumber ? [text.receipt(input.receiptNumber)] : []),
     ],
-    action: { label: text.action, url: input.planUrl, fallback: MAIL_TEXT.linkFallback },
+    action: input.receiptUrl
+      ? { label: text.receiptAction, url: input.receiptUrl, fallback: MAIL_TEXT.linkFallback }
+      : { label: text.action, url: input.planUrl, fallback: MAIL_TEXT.linkFallback },
     footnote: text.footnote(input.clinicName),
   };
   return { subject, text: emailText(parts), html: emailHtml(parts) };

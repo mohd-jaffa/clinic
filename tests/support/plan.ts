@@ -1,6 +1,6 @@
 import type { PlanPayment, PlanView } from "@/features/subscription/types";
 
-/** A month paid for by UPI, recorded on the day it was paid. */
+/** A month paid for by UPI, recorded on the day it was paid, with its receipt. */
 export function aPlanPayment(overrides: Partial<PlanPayment> = {}): PlanPayment {
   return {
     id: "sp-1",
@@ -12,6 +12,7 @@ export function aPlanPayment(overrides: Partial<PlanPayment> = {}): PlanPayment 
     validUntil: "2026-11-12",
     reason: null,
     recordedOn: "2026-10-12",
+    receiptNumber: "R/2026-27/0001",
     ...overrides,
   };
 }

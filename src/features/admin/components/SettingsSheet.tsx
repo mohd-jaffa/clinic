@@ -6,7 +6,7 @@ import { useForm, type FieldErrors, type Resolver, type UseFormRegister } from "
 import { FormSheet } from "@/components/ui/form-sheet";
 import { MoneyField } from "@/components/ui/money-field";
 import { PhoneField } from "@/components/ui/phone-field";
-import { TextField } from "@/components/ui/text-field";
+import { TextAreaField, TextField } from "@/components/ui/text-field";
 import { TEXT_LIMITS } from "@/constants/limits";
 import { UI_TEXT } from "@/constants/messages";
 import {
@@ -64,6 +64,10 @@ function SettingField({
       return <TextField maxLength={TEXT_LIMITS.upiId} autoCapitalize="none" spellCheck={false} {...shared} />;
     case "name":
       return <TextField maxLength={TEXT_LIMITS.personName} {...shared} />;
+    case "business":
+      return <TextField maxLength={TEXT_LIMITS.clinicName} {...shared} />;
+    case "address":
+      return <TextAreaField maxLength={TEXT_LIMITS.address} {...shared} />;
     default:
       return <TextField {...shared} />;
   }

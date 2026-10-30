@@ -32,6 +32,11 @@ describe("showSetting (plan §20.4)", () => {
     expect(showSetting("renewalContactPhone", now)).toBe("+91 98450 12345");
     expect(showSetting("renewalContactPhone", PLATFORM_SETTING_DEFAULTS)).toBe("Not set");
     expect(showSetting("renewalUpiId", now)).toBe("Not set");
+    expect(showSetting("businessName", { ...now, businessName: "ClinicDesk Software" })).toBe("ClinicDesk Software");
+    expect(showSetting("businessAddress", { ...now, businessAddress: "12 MG Road\nKochi 682001" })).toBe(
+      "12 MG Road, Kochi 682001",
+    );
+    expect(showSetting("businessAddress", now)).toBe("Not set");
   });
 });
 
@@ -56,6 +61,10 @@ describe("settingHint (plan §20.4)", () => {
       "Default 7, 1 · up to 5 days, each 1 – 60, with commas between. Empty sends none.",
     );
     expect(settingHint("renewalUpiId")).toBe("Shown on every owner’s Plan screen; empty hides it.");
+    expect(settingHint("businessName")).toBe(
+      "Printed at the top of every plan receipt; empty prints ClinicDesk’s name alone.",
+    );
+    expect(settingHint("businessAddress")).toBe(settingHint("businessName"));
   });
 });
 
@@ -83,6 +92,9 @@ describe("what a save changes, and says (D381)", () => {
   it("says nothing of when for a change it does not matter for", () => {
     expect(askLine(["deletionCoolingDays"], now, { deletionCoolingDays: 14 })).toBe(
       "Deletion cooling-off (days) 7 → 14.",
+    );
+    expect(askLine(["businessName"], now, { businessName: "ClinicDesk Software" })).toBe(
+      "Business name — → ClinicDesk Software. Prints on every receipt from now, earlier ones too.",
     );
     expect(askLine(["renewalContactName"], now, { renewalContactName: null })).toBe(
       "Renewal contact Jaffa → —. Shows on every owner’s Plan screen at once.",

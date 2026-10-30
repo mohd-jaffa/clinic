@@ -16,10 +16,11 @@ const month: PlanExtendedInput = {
   receiptNumber: "R/2026-27/0001",
   reason: null,
   planUrl: "https://clinicdesk.test/settings/plan",
+  receiptUrl: "https://clinicdesk.test/settings/plan/receipts/sp-2",
 };
 
 describe("planExtendedTemplate (plan §22; D375)", () => {
-  it("says the new last day, what was paid, how and when, its receipt, and leads to the Plan screen", () => {
+  it("says the new last day, what was paid, how and when, and downloads its receipt (D394)", () => {
     const mail = planExtendedTemplate(month);
     expect(mail.subject).toBe("Smile Care's plan runs until 12 Dec 2026");
     expect(mail.html).toContain("Your plan is extended");
@@ -27,11 +28,12 @@ describe("planExtendedTemplate (plan §22; D375)", () => {
     expect(mail.text).toContain("Smile Care's plan now runs until 12 Dec 2026.");
     expect(mail.text).toContain("Monthly · ₹300 paid by UPI on 30 Oct 2026");
     expect(mail.text).toContain("Receipt R/2026-27/0001");
-    expect(mail.text).toContain("See your plan: https://clinicdesk.test/settings/plan");
+    expect(mail.text).toContain("Download receipt: https://clinicdesk.test/settings/plan/receipts/sp-2");
+    expect(mail.html).toContain('href="https://clinicdesk.test/settings/plan/receipts/sp-2"');
     expect(mail.text).toContain("You're getting this because you own Smile Care on ClinicDesk");
   });
 
-  it("says a date set free is no charge, with the reason given, and has no receipt", () => {
+  it("says a date set free is no charge, with the reason given, and leads to the Plan screen — no receipt", () => {
     const mail = planExtendedTemplate({
       ...month,
       kind: "CUSTOM",
@@ -41,8 +43,10 @@ describe("planExtendedTemplate (plan §22; D375)", () => {
       paidOn: null,
       receiptNumber: null,
       reason: "Ten days for the move",
+      receiptUrl: null,
     });
     expect(mail.text).toContain("Set date · No charge · Ten days for the move");
+    expect(mail.text).toContain("See your plan: https://clinicdesk.test/settings/plan");
     expect(mail.text).not.toContain("Receipt");
     expect(mail.html).toContain("Your plan is extended");
   });

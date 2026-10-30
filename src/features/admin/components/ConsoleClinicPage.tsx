@@ -19,10 +19,12 @@ import {
   PAYMENT_METHOD_LABELS,
   SUBSCRIPTION_PLAN_LABELS,
 } from "@/constants/statuses";
+import { ReceiptLink } from "@/features/documents/components/ReceiptLink";
 import { formatPaise } from "@/lib/format/currency";
 import { formatDate, formatDateTime } from "@/lib/format/date";
 import { mailtoHref } from "@/lib/mail/mailto";
 import { callHref, formatPhoneDigits, whatsAppHref } from "@/lib/phone";
+import { apiRoutes } from "@/lib/query/keys";
 
 import { useConsoleClinic } from "../hooks/useConsoleClinic";
 import type { ConsoleClinicDetail, ConsolePlanPayment } from "../types";
@@ -166,7 +168,11 @@ const lineOf = (payment: ConsolePlanPayment) =>
     .filter(Boolean)
     .join(" · ");
 
-/** Every change recorded to the clinic's plan, the latest first: the day it runs to, how, and who recorded it when. */
+/**
+ * Every change recorded to the clinic's plan, the latest first: the day it
+ * runs to, how, and who recorded it when; money received with its Receipt,
+ * to send the owner a copy (D395).
+ */
 function PlanHistory({ payments }: { payments: ConsolePlanPayment[] }) {
   const id = useId();
   return (
@@ -181,7 +187,16 @@ function PlanHistory({ payments }: { payments: ConsolePlanPayment[] }) {
               key={payment.id}
               title={UI_TEXT.plan.until(formatDate(payment.validUntil))}
               subtitle={lineOf(payment)}
-              note={words.byWhom(payment.recordedBy ?? words.someone, formatDateTime(payment.recordedAt))}
+              note={[
+                words.byWhom(payment.recordedBy ?? words.someone, formatDateTime(payment.recordedAt)),
+                payment.receiptNumber && (
+                  <ReceiptLink
+                    key="receipt"
+                    href={apiRoutes.console.receipt(payment.id)}
+                    number={payment.receiptNumber}
+                  />
+                ),
+              ]}
               detail={payment.amountPaise > 0 ? formatPaise(payment.amountPaise) : UI_TEXT.plan.noCharge}
               wrap
             />

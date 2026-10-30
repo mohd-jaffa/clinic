@@ -478,6 +478,11 @@ earlier lines are never rewritten.
 | D389 | **A row of the activity opens the whole change** (the user): a sheet with who and when, the patient with **Open patient**, and each change — values from and to ("Fee: ₹500 → ₹300"), the doctors, types and categories by name, clinical and personal text by field name alone. | 2026-10-31 |
 | D390 | **The activity log stands under day headings** (the user): Today, Yesterday, then "28 Oct"; each row its time; the latest first, a page at a time. | 2026-10-31 |
 | D391 | **How the activity is read** (the agent, within §19): `0038_activity`'s `clinic_activity()` — the owner's, checked inside — pages the trail first, then reads each row's patient (through the record, or the visit, treatment or appointment it hangs from), the record it names, and the names behind the ids its changes hold; a record deleted since is said from what the row kept; the trail's rows are stamped as each is written (`clock_timestamp()`), so a change's rows read in order. Each line is worded by `src/features/activity/describe.ts` from the kind of record, the action and the change. Indexes for one person's and one kind's rows. So the clinic's deletion is `0039` on. | 2026-10-31 |
+| D392 | **A plan receipt is A5** (the user): the platform's business name and address across the top (the app's name alone until they are set); "Receipt" with its number and the day it was recorded; Received from — the clinic and its city, the owner; For — the plan and the days it paid for; the amount in bold, how and when it was paid; and at its foot "A receipt for a plan payment; not a tax invoice." | 2026-10-31 |
+| D393 | **A paid row of the Plan screen's history has a Receipt link** (the user): a small capsule that opens the PDF in the browser's own viewer, to print or save; a change at no charge has none. | 2026-10-31 |
+| D394 | **The Plan extended email downloads the receipt** (the user): for money received its button is **Download receipt** — through `/settings/plan/receipts/[id]`, so an owner signed out signs in first — a change at no charge keeps **See your plan**. | 2026-10-31 |
+| D395 | **The console's clinic page offers the same receipts** (the user), on each paid row of its Plan history, so the DEV can send the owner a copy; a receipt is the platform's own record, not the clinic's data. | 2026-10-31 |
+| D396 | **How receipts are made** (the agent, within §7.5): on demand, never stored, from the payment, the clinic and its owner, and the live business details — so a new name or address prints on earlier receipts too, as the card says; the owner's read through RLS, the DEV's as the server in one query; the days paid for are from the day after the later of the old last day and the day before it was recorded. The business name and address are the console's sixth Settings group (D379). No migration: receipt numbers came with `0005`. | 2026-10-31 |
 
 ## 3. Users and roles
 
@@ -769,6 +774,12 @@ the amount, the method and reference, and a receipt number from one
 platform-wide, per-financial-year counter (`R/2026-27/0001`). Generated on
 demand, never stored; also linked from the "Plan extended" email. No GST (a
 GST invoice is later).
+
+As built (R11.8): A5, under the business details, with what was paid for and
+how (D392); a Receipt link on each paid row of the history (D393); **Download
+receipt** in the Plan extended email, signed in first if need be (D394); the
+same receipts on the console's clinic page (D395); made on demand from the
+live business details (D396).
 
 ### 7.6 One trial per mobile (D42)
 
@@ -1834,7 +1845,8 @@ clinical or financial records, no clinic activity.
    the deletion cooling-off under Retention, the rows per import with the
    invites and follow-ups, the business details with R11.8 (D379); the expiry
    email days typed "7, 1" (D380); the card says each change and when it takes
-   effect (D381).
+   effect (D381). R11.8 added **Business details** (name, address) as the
+   sixth group.
 5. **Accounts — `/admin/accounts`:** every profile: name, email, clinic, role,
    status, last sign-in.
 6. **Error log — `/admin/logs`:** failures of the server's own, for
@@ -2512,7 +2524,7 @@ take an `Idempotency-Key` header.
 | Expenses | `GET, POST /api/expenses` · `PATCH /api/expenses/[id]` · `POST /api/expenses/[id]/archive` · `GET /api/expenses/summary` |
 | Home, reports | `GET /api/dashboard` · `GET /api/reports/daily` · `GET /api/reports/monthly` |
 | Activity | `GET /api/activity` (owner) |
-| Admin | `GET /api/admin/overview` · `GET /api/admin/clinics` · `GET, DELETE /api/admin/clinics/[id]` · `POST /api/admin/clinics/[id]/extend` · `GET, PATCH /api/admin/settings` · `GET /api/admin/accounts` · `GET /api/admin/logs` · `GET /api/admin/audit` |
+| Admin | `GET /api/admin/overview` · `GET /api/admin/clinics` · `GET, DELETE /api/admin/clinics/[id]` · `POST /api/admin/clinics/[id]/extend` · `GET, PATCH /api/admin/settings` · `GET /api/admin/accounts` · `GET /api/admin/logs` · `GET /api/admin/audit` · `GET /api/admin/payments/[id]/receipt.pdf` |
 | Public | `GET /api/public/pricing` (landing) · `POST /api/cron/subscription-notices` (CRON_SECRET) |
 
 ## 31. Screens and navigation
@@ -3125,7 +3137,7 @@ in the row's one commit (D136).
 | R11.5 | `0037_subscription_notices`: daily notices, each once per period (D382 – D386: at 9:00 in India; a missed day caught up with the latest alone, a failed email tried again; the key date, how to renew and the Plan screen; none to a clinic waiting for activation; marked as claimed, so never twice) | §22 | — | DONE (2026-10-30) |
 | R11.6 | Owner's activity log (D387 – D391: each row's patient by name and number; Person and Kind menus; a row opened whole; under day headings; read in one call with each row's patient and record. `0038_activity`, so the clinic's deletion is 0039 on) | §19 | — | DONE (2026-10-31) |
 | R11.7 | Integration + E2E: extend, change a setting, notices once, DEV sees no clinic data (beside R11.3 – R11.5's own: the DEV's token reads nothing of a clinic through any of the 15 read functions, given the clinic's own ids; the scheduler's route answers its secret alone and tells each owner once; a journey across both roles — the DEV extends and raises a price, seeing no patient on any console screen and refused every clinic screen and API, and the owner's Plan screen shows both) | §34 | — | DONE (2026-10-31) |
-| R11.8 | Plan receipts: receipt numbers, the receipt PDF, the business details settings | §7.5, §6 | Q2 | TODO |
+| R11.8 | Plan receipts: receipt numbers, the receipt PDF, the business details settings (D392 – D396: A5 under the business details; a Receipt link on each paid row; Download receipt in the email, signed in first; the same on the console's clinic page; made on demand from the live details. Q2's values themselves are still the DEV's to set before release) | §7.5, §6 | Q2 | DONE (2026-10-31) |
 
 ### Phase 12 — Landing, legal and PWA
 

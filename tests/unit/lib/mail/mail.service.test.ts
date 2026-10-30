@@ -73,6 +73,7 @@ describe("MailService", () => {
       receiptNumber: "R/2026-27/0001",
       reason: null,
       planUrl: "https://x.test/settings/plan",
+      receiptUrl: null,
     });
     expect(send).toHaveBeenCalledWith(
       expect.objectContaining({

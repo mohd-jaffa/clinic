@@ -167,6 +167,7 @@ export const apiRoutes = {
   // The owner's plan (plan §7.5): where it stands, how to renew, its history.
   subscription: {
     plan: "/api/subscription",
+    receipt: (id: string) => `/api/subscription/payments/${id}/receipt.pdf`,
   },
   // The developer console (plan §20), the DEV's alone: the Overview, every clinic and one, accounts, the logs.
   // The owner's activity log (plan §19): a page at a time, kept to a person and a kind.
@@ -177,6 +178,7 @@ export const apiRoutes = {
     clinic: (id: string) => `/api/admin/clinics/${id}`,
     extend: (id: string) => `/api/admin/clinics/${id}/extend`,
     settings: "/api/admin/settings",
+    receipt: (id: string) => `/api/admin/payments/${id}/receipt.pdf`,
     accounts: "/api/admin/accounts",
     logs: "/api/admin/logs",
     audit: "/api/admin/audit",

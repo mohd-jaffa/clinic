@@ -19,3 +19,7 @@ export const billFileName = (patient: string, number: string) =>
 
 /** The file a day's collections are saved as (D359): "Collections - 27 Oct 2026.pdf". */
 export const collectionsFileName = (day: string) => fileName(UI_TEXT.documents.collectionsFile(formatDate(day)));
+
+/** The file a plan receipt is saved as (D392): "Receipt R-2026-27-0001.pdf" — its slashes dashes. */
+export const receiptFileName = (number: string) =>
+  fileName(UI_TEXT.documents.receipt.file(number.replaceAll("/", "-")));

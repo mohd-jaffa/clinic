@@ -12,6 +12,7 @@ import {
   optionalEmail,
   optionalIndianMobile,
   optionalLine,
+  optionalLines,
   optionalPaiseText,
   optionalUpiId,
   paiseText,
@@ -91,8 +92,8 @@ const whole = (key: WholeSetting) => wholeNumberText(names[key], BOUNDS[key]);
  * them, each held to its bounds (src/constants/platform.ts, which the
  * database's CHECKs equal) — the days and counts as typed, the prices in
  * rupees, the expiry emails' days as a list, and the renewal contact, each
- * part emptied to hide it. Only what is sent is changed. The business details
- * join with the receipts (R11.8, D379).
+ * part emptied to hide it; and the business name and address the receipts
+ * print (R11.8). Only what is sent is changed.
  */
 export const platformSettingsSchema = z
   .object({
@@ -112,6 +113,8 @@ export const platformSettingsSchema = z
     renewalContactPhone: optionalIndianMobile(),
     renewalContactEmail: optionalEmail(names.renewalContactEmail),
     renewalUpiId: optionalUpiId(names.renewalUpiId),
+    businessName: optionalLine(names.businessName, TEXT_LIMITS.clinicName),
+    businessAddress: optionalLines(names.businessAddress, TEXT_LIMITS.address),
   })
   .partial();
 

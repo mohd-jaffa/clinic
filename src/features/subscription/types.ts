@@ -30,6 +30,8 @@ export interface PlanPayment {
   reason: string | null;
   /** The day it was recorded, in the clinic's timezone. */
   recordedOn: string;
+  /** Money received has one (D58); its receipt opens from the row (D393). */
+  receiptNumber: string | null;
 }
 
 /**

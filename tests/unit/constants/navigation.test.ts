@@ -20,6 +20,7 @@ import {
   NAV_GROUPS,
   placesFor,
   PLAN_ROUTE,
+  planReceiptRoute,
   QUICK_ADD,
   quickAddFor,
   SETTINGS_GROUPS,
@@ -157,6 +158,7 @@ describe("the Settings index (plan §31.2, D71)", () => {
 
   it("leads to the Plan screen the plan banner's How to renew opens (D74)", () => {
     expect(SETTINGS_GROUPS[1].items[0].href).toBe(PLAN_ROUTE);
+    expect(planReceiptRoute("sp-1")).toBe("/settings/plan/receipts/sp-1");
   });
 
   it("marks only Delete clinic as what cannot be undone", () => {

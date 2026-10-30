@@ -80,6 +80,12 @@ describe("ConsoleClinicPage (plan §20.3; D370)", () => {
     expect(given).toHaveTextContent("Set date · Ten days for the move");
     expect(given).toHaveTextContent("Someone no longer here");
     expect(given).toHaveTextContent("No charge");
+    // Money received has its receipt, to send the owner a copy (D395); a change at no charge has none.
+    expect(within(paid).getByRole("link", { name: "Receipt R/2026-27/0001" })).toHaveAttribute(
+      "href",
+      "/api/admin/payments/sp-2/receipt.pdf",
+    );
+    expect(within(given).queryByRole("link")).not.toBeInTheDocument();
   });
 
   it("says when nothing has been recorded", () => {

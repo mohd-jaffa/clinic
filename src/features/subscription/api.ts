@@ -18,10 +18,12 @@ export interface PlanPaymentRow {
   paid_on: string | null;
   valid_until: string;
   reason: string | null;
+  receipt_number: string | null;
   created_at: string;
 }
 
-const PAYMENT_COLUMNS = "id, plan, amount_paise, method, reference, paid_on, valid_until, reason, created_at";
+const PAYMENT_COLUMNS =
+  "id, plan, amount_paise, method, reference, paid_on, valid_until, reason, receipt_number, created_at";
 
 export const toPlanPayment = (row: PlanPaymentRow): PlanPayment => ({
   id: row.id,
@@ -33,6 +35,7 @@ export const toPlanPayment = (row: PlanPaymentRow): PlanPayment => ({
   validUntil: row.valid_until,
   reason: row.reason,
   recordedOn: dayKey(row.created_at),
+  receiptNumber: row.receipt_number,
 });
 
 /**

@@ -206,7 +206,16 @@ describe("platformSettingsSchema (plan §6, §20.4; D378 – D380)", () => {
     });
   });
 
-  it("does not change the business details, which join with the receipts (D379)", () => {
-    expect(platformSettingsSchema.parse({ businessName: "ClinicDesk" })).toEqual({});
+  it("reads the business details the receipts print, each emptied to leave it out (R11.8)", () => {
+    expect(
+      platformSettingsSchema.parse({
+        businessName: "  ClinicDesk  Software ",
+        businessAddress: "12 MG Road  \nKochi 682001 ",
+      }),
+    ).toEqual({ businessName: "ClinicDesk Software", businessAddress: "12 MG Road\nKochi 682001" });
+    expect(platformSettingsSchema.parse({ businessName: "", businessAddress: "" })).toEqual({
+      businessName: null,
+      businessAddress: null,
+    });
   });
 });

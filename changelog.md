@@ -5426,3 +5426,57 @@ the user first: D267 – D271.
 
 ### Blockers
 - None.
+
+## 2026-10-31 — R11.8: plan receipts
+
+### Added
+- **The receipt PDF** (plan §7.5; D58, D392): A5, under the platform's
+  business name and address (the app's name alone until they are set) —
+  "Receipt" with its number (`R/2026-27/0001`, from `0005`'s counter) and
+  the day it was recorded; Received from — the clinic and its city, the
+  owner; For — the plan and the days it paid for; the amount, how and when
+  it was paid; "A receipt for a plan payment; not a tax invoice." Made on
+  demand from the payment and the live business details, never stored.
+- **Where it opens:** a **Receipt** link on each paid row of the owner's
+  Plan history (D393) — `GET /api/subscription/payments/[id]/receipt.pdf`,
+  the owner's, a view-only clinic's too; the console's clinic page, on
+  each paid row of its Plan history, for the DEV to send a copy (D395) —
+  `GET /api/admin/payments/[id]/receipt.pdf`; and the Plan extended email,
+  whose button for money received is **Download receipt** (D394), through
+  `/settings/plan/receipts/[id]`, so an owner signed out signs in first.
+- **Business details** (plan §6, §20.4): the console's sixth Settings
+  group — the business name and address every receipt prints; saving says
+  it prints on every receipt, earlier ones too.
+- `receiptSheet`, `layoutReceipt`, `periodOf`, `getPlanReceiptPdf`,
+  `getConsoleReceiptPdf`, `receiptFileName`, `ReceiptLink`;
+  `planReceiptRoute`; the owner's plan read carries each payment's receipt
+  number.
+- **Tests:** the receipt's period, words and layout; its readers (the
+  owner's through RLS, the DEV's in one query; none for a change at no
+  charge); the three routes; the links on both histories; the email's
+  button; the Business details group, its schema and its sheet; an
+  integration test — a real PDF for the owner and the DEV under the
+  business details, none for another clinic's owner, a member of staff, a
+  free change or a payment not there; and the cross-role journey now opens
+  the receipt from the console, sets the business details, and opens it for
+  the owner from the history and through the email's address.
+
+### Changed
+- Plan: D392 – D396; §7.5 and §20.4 say how they were built; §30 adds the
+  console's receipt route; tracker R11.8 DONE (2026-10-31). Q2 stays open:
+  the business name and address themselves are the DEV's to set before
+  release. `DESIGN.md`: plan receipts and the Business details group.
+
+### Speed
+- A receipt waits on 2 round trips: the session, then the payment, the
+  clinic and the settings at once (the DEV's: the payment with its clinic
+  and owner in one query, beside the settings).
+
+### Validation
+- Typecheck, lint, format check passed.
+- Unit and integration tests passed (4,379), coverage 100%.
+- E2E passed (phone, desktop; 178 passed, 8 skipped by design), on port
+  3107 through the scratch config.
+
+### Blockers
+- None.

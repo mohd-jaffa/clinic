@@ -7,7 +7,9 @@ import { SectionHeading } from "@/components/ui/section-heading";
 import { UI_TEXT } from "@/constants/messages";
 import { EXTENSION_KIND_LABELS, PAYMENT_METHOD_LABELS } from "@/constants/statuses";
 import { formatPaise } from "@/lib/format/currency";
+import { ReceiptLink } from "@/features/documents/components/ReceiptLink";
 import { formatDate } from "@/lib/format/date";
+import { apiRoutes } from "@/lib/query/keys";
 
 import type { PlanPayment } from "../types";
 
@@ -30,7 +32,7 @@ const lineOf = (payment: PlanPayment) =>
  * last day, the latest first — the day it runs to, then a month or a year
  * paid for, or days given or a date put right, marked **No charge**, with
  * the reason they gave, so the owner sees why the date moved. The line under
- * each is read whole.
+ * each is read whole; money received has its Receipt (D393).
  */
 export function PlanHistory({ payments }: { payments: PlanPayment[] }) {
   const id = useId();
@@ -48,6 +50,11 @@ export function PlanHistory({ payments }: { payments: PlanPayment[] }) {
               title={words.until(formatDate(payment.validUntil))}
               subtitle={lineOf(payment)}
               detail={payment.amountPaise > 0 ? formatPaise(payment.amountPaise) : words.noCharge}
+              note={
+                payment.receiptNumber && (
+                  <ReceiptLink href={apiRoutes.subscription.receipt(payment.id)} number={payment.receiptNumber} />
+                )
+              }
               wrap
             />
           ))}

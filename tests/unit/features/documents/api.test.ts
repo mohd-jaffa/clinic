@@ -7,23 +7,27 @@ import type { Tenant } from "@/lib/supabase/tenant";
 import { aDailyReport } from "@tests/support/reports";
 import { fakeSupabase, postgrestError, type FakeSupabaseOptions } from "@tests/support/supabase";
 
-const { downloadLogo, getBill, getClinicForDocuments, getDailyReport, renderPdf, toPng, warn } = vi.hoisted(() => ({
-  downloadLogo: vi.fn(),
-  getBill: vi.fn(),
-  getDailyReport: vi.fn(),
-  getClinicForDocuments: vi.fn(),
-  renderPdf: vi.fn(),
-  toPng: vi.fn(),
-  warn: vi.fn(),
-}));
+const { downloadLogo, getBill, getClinicForDocuments, getDailyReport, getPlatformSettings, renderPdf, toPng, warn } =
+  vi.hoisted(() => ({
+    downloadLogo: vi.fn(),
+    getPlatformSettings: vi.fn(),
+    getBill: vi.fn(),
+    getDailyReport: vi.fn(),
+    getClinicForDocuments: vi.fn(),
+    renderPdf: vi.fn(),
+    toPng: vi.fn(),
+    warn: vi.fn(),
+  }));
 vi.mock("@/features/clinic/api", () => ({ downloadLogo, getClinicForDocuments }));
 vi.mock("@/features/billing/api", () => ({ getBill }));
 vi.mock("@/features/reports/api", () => ({ getDailyReport }));
+vi.mock("@/lib/platform/settings", () => ({ getPlatformSettings }));
 vi.mock("@/lib/pdf/render", async (actual) => ({ ...(await actual()), renderPdf }));
 vi.mock("@/lib/logger", () => ({ logger: { warn, info: vi.fn(), error: vi.fn() } }));
 vi.mock("sharp", () => ({ default: vi.fn(() => ({ png: () => ({ toBuffer: toPng }) })) }));
 
-const { getBillPdf, getCollectionsPdf, getPrescriptionPdf } = await import("@/features/documents/api");
+const { getBillPdf, getCollectionsPdf, getConsoleReceiptPdf, getPlanReceiptPdf, getPrescriptionPdf } =
+  await import("@/features/documents/api");
 
 const measure: Measure = (text, _face, size) => text.length * size * 0.5;
 const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47]);
@@ -347,5 +351,109 @@ describe("getCollectionsPdf (plan §18; D49, D359)", () => {
     const answer = await getIt(true);
     expect(answer.headers.get("Content-Disposition")).toContain("attachment");
     expect(drawn().logo).toEqual(PNG);
+  });
+});
+
+/** A month paid by UPI, with its receipt, as `subscription_payments` holds it. */
+const PAID = {
+  receipt_number: "R/2026-27/0001",
+  plan: "MONTHLY",
+  amount_paise: 30_000,
+  method: "UPI",
+  reference: "UPI-4821",
+  paid_on: "2026-10-30",
+  valid_from: "2026-11-12",
+  valid_until: "2026-12-12",
+  created_at: "2026-10-30T05:00:00.000Z",
+};
+const BUSINESS = { businessName: "ClinicDesk Software", businessAddress: "12 MG Road\nKochi 682001" };
+
+describe("getPlanReceiptPdf (plan §7.5; D58, D392, D393)", () => {
+  /** The owner's client: the payment as RLS lets the owner read it, and the clinic. */
+  const ownerWith = (payment: object | null, error: unknown = null) =>
+    tenantWith({
+      answer: ({ table }) =>
+        table === "subscription_payments" ? { data: payment, error } : { data: { name: "Smile Care", city: "Kochi" } },
+    });
+
+  it("draws the receipt on A5 under the business details, and answers it to open — named, never kept", async () => {
+    getPlatformSettings.mockResolvedValue(BUSINESS);
+    const answer = await getPlanReceiptPdf(ownerWith(PAID), "Asha Menon", "sp-1", {
+      download: false,
+      requestId: "req_9",
+    });
+    expect(answer.headers.get("Content-Type")).toBe("application/pdf");
+    expect(answer.headers.get("Content-Disposition")).toContain("inline");
+    expect(answer.headers.get("Content-Disposition")).toContain("Receipt%20R-2026-27-0001.pdf");
+    expect(answer.headers.get("Cache-Control")).toBe("private, no-store");
+    const { paper, title, author, logo, lines } = drawn();
+    expect({ paper, title, author, logo }).toEqual({
+      paper: "A5",
+      title: "Receipt R/2026-27/0001",
+      author: "ClinicDesk Software",
+      logo: null,
+    });
+    expect(lines).toEqual(
+      expect.arrayContaining(["ClinicDesk Software", "Smile Care, Kochi", "Asha Menon", "Monthly plan", "₹300"]),
+    );
+    expect(
+      (await getPlanReceiptPdf(ownerWith(PAID), "Asha Menon", "sp-1", { download: true, requestId: "r" })).headers.get(
+        "Content-Disposition",
+      ),
+    ).toContain("attachment");
+  });
+
+  it("finds no receipt for a change at no charge, nor a payment the owner may not read", async () => {
+    getPlatformSettings.mockResolvedValue(BUSINESS);
+    const options = { download: false, requestId: "req_9" };
+    await expect(
+      getPlanReceiptPdf(ownerWith({ ...PAID, receipt_number: null }), "A", "sp-1", options),
+    ).rejects.toMatchObject({
+      code: "RECORD_NOT_FOUND",
+    });
+    await expect(getPlanReceiptPdf(ownerWith(null), "A", "sp-1", options)).rejects.toMatchObject({
+      code: "RECORD_NOT_FOUND",
+    });
+    await expect(
+      getPlanReceiptPdf(ownerWith(null, postgrestError("42501")), "A", "sp-1", options),
+    ).rejects.toMatchObject({
+      code: "AUTH_PERMISSION_DENIED",
+    });
+    const noClinic = tenantWith({
+      answer: ({ table }) => (table === "clinics" ? { error: postgrestError("PGRST116") } : { data: PAID }),
+    });
+    await expect(getPlanReceiptPdf(noClinic, "A", "sp-1", options)).rejects.toMatchObject({ code: "RECORD_NOT_FOUND" });
+    expect(renderPdf).not.toHaveBeenCalled();
+  });
+});
+
+describe("getConsoleReceiptPdf (D395)", () => {
+  const consoleWith = (row: object | null, error: unknown = null) =>
+    fakeSupabase({ answer: () => ({ data: row, error }) });
+
+  it("draws the same receipt for the DEV: the payment with its clinic and owner, in one query", async () => {
+    getPlatformSettings.mockResolvedValue({ businessName: null, businessAddress: null });
+    const { client, queries } = consoleWith({
+      ...PAID,
+      clinic: { name: "Smile Care", city: "Kochi", members: [{ profile: { full_name: "Asha Menon" } }] },
+    });
+    const answer = await getConsoleReceiptPdf(client, "sp-1", { download: false, requestId: "req_9" });
+    expect(answer.headers.get("Content-Type")).toBe("application/pdf");
+    expect(getPlatformSettings).toHaveBeenCalledWith(client);
+    expect(JSON.stringify(queries[0].calls)).toContain("clinic.members.role");
+    const { author, lines } = drawn();
+    expect(author).toBe("ClinicDesk");
+    expect(lines).toEqual(expect.arrayContaining(["ClinicDesk", "Smile Care, Kochi", "Asha Menon"]));
+  });
+
+  it("finds none that is not there, and says a refusal in the app's words", async () => {
+    getPlatformSettings.mockResolvedValue(BUSINESS);
+    const options = { download: false, requestId: "req_9" };
+    await expect(getConsoleReceiptPdf(consoleWith(null).client, "sp-9", options)).rejects.toMatchObject({
+      code: "RECORD_NOT_FOUND",
+    });
+    await expect(
+      getConsoleReceiptPdf(consoleWith(null, postgrestError("42501")).client, "sp-9", options),
+    ).rejects.toMatchObject({ code: "AUTH_PERMISSION_DENIED" });
   });
 });

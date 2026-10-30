@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { PLAN_ROUTE } from "@/constants/navigation";
+import { PLAN_ROUTE, planReceiptRoute } from "@/constants/navigation";
 import { captureError } from "@/lib/audit/errorLog";
 import { getServerEnv } from "@/lib/env/server";
 import { fromPostgrestError } from "@/lib/errors";
@@ -17,8 +17,12 @@ interface ExtendedRow {
   clinic: ClinicDetailRow;
 }
 
-/** Plan extended (plan §22; D375): the owner is told the new last day and what was recorded. Throws when it could not go. */
+/**
+ * Plan extended (plan §22; D375, D394): the owner is told the new last day
+ * and what was recorded, and given its receipt. Throws when it could not go.
+ */
 async function emailOwner(clinic: ConsoleClinicDetail, payment: ConsolePlanPayment): Promise<void> {
+  const app = getServerEnv().NEXT_PUBLIC_APP_URL;
   await createConfiguredMailService().sendPlanExtended({
     to: clinic.owner.email,
     name: clinic.owner.name,
@@ -31,7 +35,8 @@ async function emailOwner(clinic: ConsoleClinicDetail, payment: ConsolePlanPayme
     paidOn: payment.paidOn,
     receiptNumber: payment.receiptNumber,
     reason: payment.reason,
-    planUrl: `${getServerEnv().NEXT_PUBLIC_APP_URL}${PLAN_ROUTE}`,
+    planUrl: `${app}${PLAN_ROUTE}`,
+    receiptUrl: payment.receiptNumber ? `${app}${planReceiptRoute(payment.id)}` : null,
   });
 }
 

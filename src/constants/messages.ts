@@ -603,6 +603,9 @@ export const UI_TEXT = {
     dateChanged: "Date changed",
     paidOn: (date: string) => `Paid ${date}`,
     noCharge: "No charge",
+    /** A paid row's receipt (D393): opened in the browser's own viewer, to print or save. */
+    receipt: "Receipt",
+    receiptOf: (number: string) => `Receipt ${number}`,
   },
 
   /**
@@ -771,6 +774,7 @@ export const UI_TEXT = {
       retention: "Retention",
       invitesAndImports: "Invites, follow-ups and imports",
       renewalContact: "Renewal contact",
+      businessDetails: "Business details",
     },
     days: (count: number) => (count === 1 ? "1 day" : `${count} days`),
     rows: (count: string) => `${count} rows`,
@@ -787,6 +791,7 @@ export const UI_TEXT = {
     daysBeforeHint: (preset: string, count: number, min: number, max: number) =>
       `Default ${preset} · up to ${count} days, each ${min} – ${max}, with commas between. Empty sends none.`,
     contactHint: "Shown on every owner’s Plan screen; empty hides it.",
+    businessHint: "Printed at the top of every plan receipt; empty prints ClinicDesk’s name alone.",
     saveAsk: "Save these settings?",
     saveConfirm: "Save",
     /** When a change takes effect (plan §6; D381), said once for each that matters. */
@@ -800,6 +805,7 @@ export const UI_TEXT = {
       followUps: "Changes which follow-ups are lapsed at once.",
       imports: "Applies to the next import.",
       contact: "Shows on every owner’s Plan screen at once.",
+      receipts: "Prints on every receipt from now, earlier ones too.",
     },
     settingsSaved: "Settings saved",
     settingsNotSaved: "The settings weren’t saved",
@@ -1971,6 +1977,21 @@ export const UI_TEXT = {
     collectionsTitle: (day: string) => `Day-end collections, ${day}`,
     collectionsFile: (day: string) => `Collections - ${day}.pdf`,
     collectionsRunning: (day: string) => `Day-end collections · ${day}`,
+    /** A plan payment's receipt (plan §7.5; D58, D392): the platform's, to the clinic that paid. */
+    receipt: {
+      title: (number: string) => `Receipt ${number}`,
+      file: (number: string) => `Receipt ${number}.pdf`,
+      heading: "Receipt",
+      receivedFrom: "Received from",
+      forWhat: "For",
+      amount: "Amount",
+      plans: { MONTHLY: "Monthly plan", YEARLY: "Yearly plan", CUSTOM: "Plan, to a date set" },
+      period: (from: string, to: string) => `${from} – ${to}`,
+      until: (to: string) => `Until ${to}`,
+      paid: (method: string, reference: string | null, day: string) =>
+        [`Paid by ${method}`, reference, day].filter(Boolean).join(" · "),
+      foot: "A receipt for a plan payment; not a tax invoice.",
+    },
     countedBy: "Counted by",
     receivedBy: "Received by",
     /** The vitals in one line, each short. */
@@ -2569,6 +2590,8 @@ export const MAIL_TEXT = {
     noCharge: "No charge",
     receipt: (number: string) => `Receipt ${number}`,
     action: "See your plan",
+    /** For money received (D394): the receipt, the owner signed in first if need be. */
+    receiptAction: "Download receipt",
     footnote: (clinic: string) =>
       `You're getting this because you own ${clinic} on ${UI_TEXT.appName}, and its plan was changed.`,
   },

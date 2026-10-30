@@ -3,12 +3,15 @@ import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { extendPlan } from "@/features/admin/extend";
+import { getConsoleReceiptPdf, getPlanReceiptPdf } from "@/features/documents/api";
 import { periodEnd } from "@/features/subscription/state";
 import { addDaysKey, financialYear, todayKey } from "@/lib/dates/calendar";
 import { formatDate } from "@/lib/format/date";
+import { getPlatformSettings, updatePlatformSettings } from "@/lib/platform/settings";
 import { createSupabaseAnonClient } from "@/lib/supabase/server";
 import type { ExtendPlanPayload } from "@/lib/validation";
 import {
+  addMember,
   admin,
   makeDeveloper,
   registerClinic,
@@ -179,5 +182,63 @@ describe("extending a plan (plan §7.4)", () => {
       }),
     ).rejects.toMatchObject({ code: "AUTH_PERMISSION_DENIED" });
     expect(await inbox()).toBe(before);
+  });
+});
+
+describe("the receipt (plan §7.5; D58, D392 – D395)", () => {
+  const options = { download: false, requestId: "req_receipt" };
+  const isPdf = async (answer: Response) => {
+    expect(answer.headers.get("Content-Type")).toBe("application/pdf");
+    expect(
+      Buffer.from(await answer.arrayBuffer())
+        .subarray(0, 5)
+        .toString(),
+    ).toBe("%PDF-");
+  };
+
+  it("is drawn for the owner and the DEV, under the business details — and for nobody else, nor a free change", async () => {
+    const saved = await getPlatformSettings();
+    await updatePlatformSettings(
+      asDeveloper(),
+      { businessName: "ClinicDesk Software", businessAddress: "12 MG Road\nKochi 682001" },
+      "req_receipt_business",
+    );
+    try {
+      await setValidUntil(clinic.clinicId, addDaysKey(todayKey(), 5));
+      const { payment } = await extend(month);
+      const answer = await getPlanReceiptPdf(clinic.owner.tenant, "Owner", payment.id, options);
+      await isPdf(answer);
+      expect(answer.headers.get("Content-Disposition")).toContain(
+        encodeURIComponent(`Receipt ${payment.receiptNumber!.replaceAll("/", "-")}.pdf`),
+      );
+      // The DEV's copy: the payment with its clinic and owner in one query.
+      await isPdf(await getConsoleReceiptPdf(admin(), payment.id, options));
+
+      // Another clinic's owner, and a member of this clinic's staff, find none.
+      const [other, desk] = await Promise.all([
+        registerClinic(),
+        addMember(clinic.clinicId, { permissions: ["patients.view", "payments.view"] }),
+      ]);
+      for (const tenant of [other.owner.tenant, desk.tenant!]) {
+        await expect(getPlanReceiptPdf(tenant, "Someone", payment.id, options)).rejects.toMatchObject({
+          code: "RECORD_NOT_FOUND",
+        });
+      }
+
+      // A change at no charge has no receipt.
+      const { payment: free } = await extend(given(addDaysKey(todayKey(), 90), "Free days"));
+      await expect(getPlanReceiptPdf(clinic.owner.tenant, "Owner", free.id, options)).rejects.toMatchObject({
+        code: "RECORD_NOT_FOUND",
+      });
+      await expect(getConsoleReceiptPdf(admin(), randomUUID(), options)).rejects.toMatchObject({
+        code: "RECORD_NOT_FOUND",
+      });
+    } finally {
+      await updatePlatformSettings(
+        asDeveloper(),
+        { businessName: saved.businessName, businessAddress: saved.businessAddress },
+        "req_receipt_restore",
+      );
+    }
   });
 });

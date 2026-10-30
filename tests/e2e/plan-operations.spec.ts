@@ -19,11 +19,12 @@ import { makeDeveloper, registerClinic, removeAll, setValidUntil } from "@tests/
 /**
  * The plan's operations end to end (plan §7.4, §20, §34; R11.7), at a
  * phone's width and a desktop's: the platform admin finds a clinic whose
- * plan has ended, extends it by a month paid by UPI and raises the monthly
- * price — and on every console screen on the way sees nothing of the
- * clinic's patients, nor reaches a clinic screen or API. The owner's Plan
- * screen then shows the new last day, the payment and the new price; and
- * the patient the console never showed is on the owner's own screen.
+ * plan has ended, extends it by a month paid by UPI, opens its receipt,
+ * raises the monthly price and sets the business details receipts print —
+ * and on every console screen on the way sees nothing of the clinic's
+ * patients, nor reaches a clinic screen or API. The owner's Plan screen then
+ * shows the new last day, the payment and its receipt (R11.8), and the new
+ * price; the patient the console never showed is on the owner's own screen.
  */
 test.afterAll(removeAll);
 
@@ -127,6 +128,14 @@ test("the DEV extends a plan and raises a price, seeing no patient; the owner's 
     await unsent.getByRole("button", { name: UI_TEXT.actions.close }).click();
     await expect(planned).toContainText(formatDate(month));
 
+    // Its receipt, from the clinic's history, to send the owner a copy (D395).
+    const receipt = page.getByRole("list", { name: words.planHistory }).getByRole("link", { name: /^Receipt R\// });
+    const receiptHref = (await receipt.getAttribute("href"))!;
+    const copy = await page.request.get(receiptHref);
+    expect(copy.status()).toBe(200);
+    expect(copy.headers()["content-type"]).toBe("application/pdf");
+    const paymentId = receiptHref.split("/").at(-2)!;
+
     // The monthly price raised, asked first (D381).
     await go(page, words.places.settings);
     await page
@@ -142,6 +151,23 @@ test("the DEV extends a plan and raises a price, seeing no patient; the owner's 
       .click();
     await expect(page.getByRole("region", { name: words.settingGroups.trialAndPricing })).toContainText(
       formatPaise(price),
+    );
+
+    // The business details every receipt prints (R11.8).
+    await page
+      .getByRole("region", { name: words.settingGroups.businessDetails })
+      .getByRole("button", { name: words.changeGroup(words.settingGroups.businessDetails) })
+      .click();
+    const business = page.getByRole("dialog", { name: words.settingGroups.businessDetails });
+    await business.getByRole("textbox", { name: words.settingNames.businessName }).fill(`ClinicDesk ${tag}`);
+    await business.getByRole("textbox", { name: words.settingNames.businessAddress }).fill("12 MG Road\nKochi 682001");
+    await expectAccessible(page);
+    await business.getByRole("button", { name: UI_TEXT.actions.save }).click();
+    const asked = page.getByRole("alertdialog", { name: words.saveAsk });
+    await expect(asked).toContainText(words.effects.receipts);
+    await asked.getByRole("button", { name: words.saveConfirm }).click();
+    await expect(page.getByRole("region", { name: words.settingGroups.businessDetails })).toContainText(
+      "12 MG Road, Kochi 682001",
     );
 
     // Accounts, the error log, the audit: still nothing of the patients.
@@ -182,6 +208,14 @@ test("the DEV extends a plan and raises a price, seeing no patient; the owner's 
     await expect(owner.getByText(formatDate(month), { exact: true })).toBeVisible();
     await expect(owner.getByRole("list", { name: plan.history })).toContainText(`UPI-${tag}`);
     await expect(owner.getByRole("region", { name: plan.howToRenew })).toContainText(formatPaise(price));
+    // The owner's receipt, from the history (D393) and through the email's address (D394).
+    const own = owner.getByRole("list", { name: plan.history }).getByRole("link", { name: /^Receipt R\// });
+    await expect(own).toHaveAttribute("href", `/api/subscription/payments/${paymentId}/receipt.pdf`);
+    const opened = await owner.request.get((await own.getAttribute("href"))!);
+    expect(opened.headers()["content-type"]).toBe("application/pdf");
+    const fromEmail = await owner.request.get(`/settings/plan/receipts/${paymentId}`);
+    expect(fromEmail.url()).toContain(`/api/subscription/payments/${paymentId}/receipt.pdf`);
+    expect(fromEmail.headers()["content-type"]).toBe("application/pdf");
     await expectAccessible(owner);
     // The patient the console never showed is there, for the clinic's own owner.
     await owner.goto(`/patients/${patient.id}`);
@@ -190,7 +224,11 @@ test("the DEV extends a plan and raises a price, seeing no patient; the owner's 
   } finally {
     await updatePlatformSettings(
       createSupabaseAnonClient(developer.session.accessToken),
-      { monthlyPricePaise: saved.monthlyPricePaise },
+      {
+        monthlyPricePaise: saved.monthlyPricePaise,
+        businessName: saved.businessName,
+        businessAddress: saved.businessAddress,
+      },
       "req_e2e_restore_price",
     );
   }

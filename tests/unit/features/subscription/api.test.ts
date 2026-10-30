@@ -25,6 +25,7 @@ const paid = {
   paid_on: "2026-10-12",
   valid_until: "2026-11-12",
   reason: null,
+  receipt_number: "R/2026-27/0001",
   // 9 PM in Mumbai on the 12th: still the 12th.
   created_at: "2026-10-12T15:30:00.000Z",
 };
@@ -38,6 +39,7 @@ const given = {
   paid_on: null,
   valid_until: "2026-10-12",
   reason: "Ten days for the move",
+  receipt_number: null,
   // 1 AM in Mumbai on the 3rd.
   created_at: "2026-10-02T19:30:00.000Z",
 };
@@ -82,12 +84,14 @@ describe("getPlan (plan §7.5; D363 – D366)", () => {
           validUntil: "2026-11-12",
           reason: null,
           recordedOn: "2026-10-12",
+          receiptNumber: "R/2026-27/0001",
         },
         expect.objectContaining({
           kind: "CUSTOM",
           amountPaise: 0,
           reason: "Ten days for the move",
           recordedOn: "2026-10-03",
+          receiptNumber: null,
         }),
       ],
     });

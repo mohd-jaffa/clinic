@@ -91,6 +91,19 @@ describe("SettingsSheet (plan §20.4; D378 – D381)", () => {
     expect(field(retention, /^Audit kept for/)).toHaveAccessibleDescription("Default 30 · 7 – 3650 days");
   });
 
+  it("gives the business details their fields: the name a line, the address several (R11.8)", async () => {
+    const sheet = draw("businessDetails", "Business details");
+    expect(field(sheet, /^Business name/)).toHaveAttribute("maxlength", String(TEXT_LIMITS.clinicName));
+    const address = field(sheet, /^Business address/);
+    expect(address.tagName).toBe("TEXTAREA");
+    expect(address).toHaveAttribute("maxlength", String(TEXT_LIMITS.address));
+    await userEvent.type(address, "12 MG Road");
+    await save(sheet);
+    expect(
+      within(await screen.findByRole("alertdialog")).getByText(/^Business address — → 12 MG Road\./),
+    ).toBeInTheDocument();
+  });
+
   it("gives the import rows theirs", () => {
     const imports = draw("invitesAndImports", "Invites, follow-ups and imports");
     expect(field(imports, /^Rows per import/)).toHaveAccessibleDescription("Default 10,000 · 100 – 50,000 rows");
