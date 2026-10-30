@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import { addDaysKey, todayKey } from "@/lib/dates/calendar";
-import { consoleClinicsQuerySchema, extendPlanSchema, type ExtendPlanInput } from "@/lib/validation";
+import {
+  consoleClinicsQuerySchema,
+  extendPlanSchema,
+  platformSettingsSchema,
+  type ExtendPlanInput,
+} from "@/lib/validation";
 
 describe("consoleClinicsQuerySchema (plan §20.2)", () => {
   it("reads what was typed, one filter and where the page starts", () => {
@@ -118,5 +123,90 @@ describe("extendPlanSchema (plan §7.4; D373, D374)", () => {
   it("refuses a kind or a method it does not know, in the app's words", () => {
     expect(refusals({ ...month, kind: "WEEKLY" as never })).toMatchObject({ kind: "That value is not valid." });
     expect(refusals({ ...month, method: "CHEQUE" as never })).toMatchObject({ method: "Choose method." });
+  });
+});
+
+describe("platformSettingsSchema (plan §6, §20.4; D378 – D380)", () => {
+  const refused = (input: Record<string, unknown>) =>
+    Object.fromEntries(
+      (platformSettingsSchema.safeParse(input).error?.issues ?? []).map((issue) => [
+        issue.path.join("."),
+        issue.message,
+      ]),
+    );
+
+  it("reads a group as typed: days and rows as numbers, prices in paise, the email days as a list", () => {
+    expect(
+      platformSettingsSchema.parse({
+        trialDays: "45",
+        monthlyPricePaise: "350",
+        yearlyPricePaise: "3,500.50",
+        expiryNoticeDays: "1, 14 7",
+        maxImportRows: "20000",
+      }),
+    ).toEqual({
+      trialDays: 45,
+      monthlyPricePaise: 35_000,
+      yearlyPricePaise: 350_050,
+      expiryNoticeDays: [14, 7, 1],
+      maxImportRows: 20_000,
+    });
+  });
+
+  it("changes only what is sent", () => {
+    expect(platformSettingsSchema.parse({})).toEqual({});
+    expect(platformSettingsSchema.parse({ graceDays: "0" })).toEqual({ graceDays: 0 });
+  });
+
+  it("reads the renewal contact, each part emptied to hide it", () => {
+    expect(
+      platformSettingsSchema.parse({
+        renewalContactName: "  Jaffa  ",
+        renewalContactPhone: "98450 12345",
+        renewalContactEmail: "renew@clinicdesk.in",
+        renewalUpiId: "clinicdesk@okaxis",
+      }),
+    ).toEqual({
+      renewalContactName: "Jaffa",
+      renewalContactPhone: "+919845012345",
+      renewalContactEmail: "renew@clinicdesk.in",
+      renewalUpiId: "clinicdesk@okaxis",
+    });
+    expect(
+      platformSettingsSchema.parse({
+        renewalContactName: "",
+        renewalContactPhone: "",
+        renewalContactEmail: "",
+        renewalUpiId: "",
+      }),
+    ).toEqual({ renewalContactName: null, renewalContactPhone: null, renewalContactEmail: null, renewalUpiId: null });
+  });
+
+  it("holds each setting to its bounds, in the setting's own name", () => {
+    expect(
+      refused({
+        trialDays: "366",
+        auditKeepDays: "6",
+        maxImportRows: "50001",
+        monthlyPricePaise: "",
+        yearlyPricePaise: "10,00,001",
+        expiryNoticeDays: "90",
+        renewalContactPhone: "12345",
+        renewalUpiId: "pay me",
+      }),
+    ).toEqual({
+      trialDays: "Trial days must be from 0 to 365.",
+      auditKeepDays: "Audit kept for (days) must be from 7 to 3650.",
+      maxImportRows: "Rows per import must be from 100 to 50000.",
+      monthlyPricePaise: "Monthly price needs a value.",
+      yearlyPricePaise: "Yearly price can be at most ₹10,00,000.",
+      expiryNoticeDays: "Expiry email days must be days from 1 to 60, with commas between.",
+      renewalContactPhone: "Enter a valid 10-digit mobile number.",
+      renewalUpiId: "UPI id must look like name@bank.",
+    });
+  });
+
+  it("does not change the business details, which join with the receipts (D379)", () => {
+    expect(platformSettingsSchema.parse({ businessName: "ClinicDesk" })).toEqual({});
   });
 });

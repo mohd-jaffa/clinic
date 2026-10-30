@@ -1,3 +1,4 @@
+import { PLATFORM_SETTING_DEFAULTS } from "@/constants/platform";
 import type {
   ConsoleAccount,
   ConsoleAuditEntry,
@@ -5,6 +6,7 @@ import type {
   ConsoleClinicDetail,
   ConsoleError,
   ConsoleOverview,
+  ConsoleSettings,
 } from "@/features/admin/types";
 
 /** The console's Overview on 28 Oct (plan §20.1): five clinics, one waiting for activation. */
@@ -127,6 +129,21 @@ export function anAuditEntry(overrides: Partial<ConsoleAuditEntry> = {}): Consol
     actorName: "Jaffa",
     clinicName: null,
     at: "2026-10-28T05:00:00.000Z",
+    ...overrides,
+  };
+}
+
+/** The platform settings (plan §20.4): the defaults, a renewal contact set, last changed by Jaffa. */
+export function aConsoleSettings(overrides: Partial<ConsoleSettings> = {}): ConsoleSettings {
+  return {
+    settings: {
+      ...PLATFORM_SETTING_DEFAULTS,
+      renewalContactName: "Jaffa",
+      renewalContactPhone: "+919845012345",
+      renewalUpiId: "clinicdesk@okaxis",
+    },
+    updatedAt: "2026-10-30T05:00:00.000Z",
+    updatedBy: "Jaffa",
     ...overrides,
   };
 }

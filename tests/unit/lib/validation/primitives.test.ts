@@ -4,16 +4,19 @@ import { z } from "zod";
 import { PASSWORD_LENGTH, TEXT_LIMITS } from "@/constants/limits";
 import { VALIDATION_MESSAGES } from "@/constants/messages";
 import {
+  dayListText,
   firstIssue,
   indianMobile,
   isPhoneNumber,
   optionalEmail,
   optionalGstin,
   optionalDay,
+  optionalIndianMobile,
   optionalLine,
   optionalLines,
   optionalPaiseText,
   optionalPhoneNumber,
+  optionalUpiId,
   optionalWholeNumberText,
   paiseAmount,
   paiseText,
@@ -393,5 +396,50 @@ describe("password", () => {
 
   it("is called Password unless named", () => {
     expect(messageOf(password(), "")).toBe(VALIDATION_MESSAGES.required("Password"));
+  });
+});
+
+describe("optionalIndianMobile", () => {
+  it("is null when empty, else +91 E.164 however it was typed", () => {
+    const mobile = optionalIndianMobile();
+    expect(mobile.parse("")).toBeNull();
+    expect(mobile.parse(undefined)).toBeNull();
+    expect(mobile.parse(null)).toBeNull();
+    expect(mobile.parse(" 98450 12345 ")).toBe("+919845012345");
+    expect(mobile.parse("+919845012345")).toBe("+919845012345");
+    expect(messageOf(mobile, "12345")).toBe(VALIDATION_MESSAGES.phone);
+  });
+});
+
+describe("optionalUpiId", () => {
+  it("is null when empty, else a UPI id's shape within its length", () => {
+    const upi = optionalUpiId("UPI id");
+    expect(upi.parse(" ")).toBeNull();
+    expect(upi.parse(" clinicdesk@okaxis ")).toBe("clinicdesk@okaxis");
+    expect(messageOf(upi, "clinicdesk")).toBe(VALIDATION_MESSAGES.upiId("UPI id"));
+    expect(messageOf(upi, "a@1bank")).toBe(VALIDATION_MESSAGES.upiId("UPI id"));
+    expect(messageOf(upi, `${"a".repeat(TEXT_LIMITS.upiId)}@okaxis`)).toBe(
+      VALIDATION_MESSAGES.tooLong("UPI id", TEXT_LIMITS.upiId),
+    );
+  });
+});
+
+describe("dayListText", () => {
+  const days = dayListText("Expiry email days", { min: 1, max: 60, maxCount: 3 });
+
+  it("reads days typed with commas or spaces, largest first, each once; empty is none", () => {
+    expect(days.parse("1, 7")).toEqual([7, 1]);
+    expect(days.parse(" 14 7,7 , 1 ")).toEqual([14, 7, 1]);
+    expect(days.parse("")).toEqual([]);
+  });
+
+  it("refuses a day out of bounds or not whole, and too many days", () => {
+    const outOf = VALIDATION_MESSAGES.dayList("Expiry email days", 1, 60);
+    expect(messageOf(days, "0, 7")).toBe(outOf);
+    expect(messageOf(days, "61")).toBe(outOf);
+    expect(messageOf(days, "7.5")).toBe(outOf);
+    expect(messageOf(days, "a week")).toBe(outOf);
+    expect(messageOf(days, "30, 14, 7, 1")).toBe(VALIDATION_MESSAGES.atMostCount("Expiry email days", 3));
+    expect(messageOf(days, 7)).toBe(VALIDATION_MESSAGES.invalid);
   });
 });

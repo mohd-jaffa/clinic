@@ -168,6 +168,7 @@ export const ERROR_MESSAGES = {
   CONSOLE_ACCOUNTS_LOAD_FAILED: "The accounts couldn't be loaded.",
   CONSOLE_ERRORS_LOAD_FAILED: "The error log couldn't be loaded.",
   CONSOLE_AUDIT_LOAD_FAILED: "The audit couldn't be loaded.",
+  CONSOLE_SETTINGS_LOAD_FAILED: "The platform settings couldn't be loaded.",
   COLLECTIONS_PDF_FAILED: "The day-end collections’ PDF couldn’t be made.",
 
   // Payments (plan §15.3; D297, D301).
@@ -218,6 +219,10 @@ export const VALIDATION_MESSAGES = {
   tooLong: (label: string, max: number) => `${label} can be at most ${max} characters.`,
   tooShort: (label: string, min: number) => `${label} must be at least ${min} characters.`,
   between: (label: string, min: number, max: number) => `${label} must be from ${min} to ${max}.`,
+  upiId: (label: string) => `${label} must look like name@bank.`,
+  dayList: (label: string, min: number, max: number) =>
+    `${label} must be days from ${min} to ${max}, with commas between.`,
+  atMostCount: (label: string, max: number) => `${label} can list at most ${max}.`,
   number: (label: string) => `${label} must be a number.`,
   decimals: (label: string, places: number) =>
     `${label} can have at most ${places} decimal place${places === 1 ? "" : "s"}.`,
@@ -743,7 +748,7 @@ export const UI_TEXT = {
       inviteValidDays: "Invite valid for (days)",
       followUpLapsedDays: "Follow-up lapses after (days)",
       deletionCoolingDays: "Deletion cooling-off (days)",
-      maxImportRows: "Import rows at most",
+      maxImportRows: "Rows per import",
       renewalContactName: "Renewal contact",
       renewalContactPhone: "Renewal mobile",
       renewalContactEmail: "Renewal email",
@@ -751,6 +756,51 @@ export const UI_TEXT = {
       businessName: "Business name",
       businessAddress: "Business address",
     },
+
+    // Platform settings (plan §6, §20.4; D378 – D381): grouped, each group changed in a sheet.
+    settingsSubtitle: "The platform’s rules, for every clinic",
+    lastChanged: (name: string, when: string) => `Last changed by ${name} · ${when}`,
+    lastChangedAt: (when: string) => `Last changed ${when}`,
+    change: "Change",
+    changeGroup: (group: string) => `Change ${group.toLowerCase()}`,
+    settingGroups: {
+      trialAndPricing: "Trial and pricing",
+      expiry: "Expiry",
+      retention: "Retention",
+      invitesAndImports: "Invites, follow-ups and imports",
+      renewalContact: "Renewal contact",
+    },
+    days: (count: number) => (count === 1 ? "1 day" : `${count} days`),
+    rows: (count: string) => `${count} rows`,
+    /** The expiry emails' days (plan §22): "7 and 1 days before"; none for no list. */
+    daysBefore: (days: number[]) => {
+      if (days.length === 0) return "None";
+      if (days.length === 1) return days[0] === 1 ? "1 day before" : `${days[0]} days before`;
+      return `${days.slice(0, -1).join(", ")} and ${days.at(-1)} days before`;
+    },
+    notSet: "Not set",
+    daysHint: (preset: number, min: number, max: number) => `Default ${preset} · ${min} – ${max} days`,
+    priceHint: (preset: string, max: string) => `Default ${preset} · up to ${max}`,
+    rowsHint: (preset: string, min: string, max: string) => `Default ${preset} · ${min} – ${max} rows`,
+    daysBeforeHint: (preset: string, count: number, min: number, max: number) =>
+      `Default ${preset} · up to ${count} days, each ${min} – ${max}, with commas between. Empty sends none.`,
+    contactHint: "Shown on every owner’s Plan screen; empty hides it.",
+    saveAsk: "Save these settings?",
+    saveConfirm: "Save",
+    /** When a change takes effect (plan §6; D381), said once for each that matters. */
+    effects: {
+      signUps: "Applies to clinics that sign up from now.",
+      prices: "Fills in the next extension and every Plan screen; recorded ones keep theirs.",
+      states: "Changes every clinic’s state at once.",
+      notices: "Applies from the next daily emails.",
+      purge: "Applies at the next purge, within the hour.",
+      invites: "Applies to invites sent from now.",
+      followUps: "Changes which follow-ups are lapsed at once.",
+      imports: "Applies to the next import.",
+      contact: "Shows on every owner’s Plan screen at once.",
+    },
+    settingsSaved: "Settings saved",
+    settingsNotSaved: "The settings weren’t saved",
   },
 
   /** My account (plan §5.4, D72): each detail changed in a sheet of its own. */

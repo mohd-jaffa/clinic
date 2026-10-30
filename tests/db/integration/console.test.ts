@@ -4,6 +4,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   getConsoleClinic,
   getConsoleOverview,
+  getConsoleSettings,
   listConsoleAccounts,
   listConsoleAudit,
   listConsoleClinics,
@@ -12,6 +13,7 @@ import {
 import { addDaysKey, todayKey } from "@/lib/dates/calendar";
 import { getPlatformSettings, updatePlatformSettings } from "@/lib/platform/settings";
 import { createSupabaseAnonClient } from "@/lib/supabase/server";
+import { platformSettingsSchema } from "@/lib/validation";
 import type { PlatformSettings } from "@/constants/platform";
 import {
   admin,
@@ -171,6 +173,46 @@ describe("the console's Accounts, error log and audit (plan §20.5 – §20.7)",
     expect(extension).toMatchObject({ entityType: "subscription_payments", clinicName: `Paid ${tag}` });
     // Registering a clinic writes the clinic's own audit row, which the console never reads.
     expect(page.items.some((entry) => entry.entityType === "clinics")).toBe(false);
+  });
+});
+
+describe("the console's Settings (plan §6, §20.4; D378)", () => {
+  it("reads every setting and who last changed them, and saves a group as typed, audited", async () => {
+    const typed = platformSettingsSchema.parse({
+      followUpLapsedDays: String(saved.followUpLapsedDays === 45 ? 46 : 45),
+      expiryNoticeDays: "1, 14, 7",
+      renewalContactPhone: "98450 12345",
+    });
+    await updatePlatformSettings(asDeveloper(), typed, `req_group_${tag}`);
+    const read = await getConsoleSettings(admin());
+    expect(read).toMatchObject({
+      settings: {
+        followUpLapsedDays: typed.followUpLapsedDays,
+        expiryNoticeDays: [14, 7, 1],
+        renewalContactPhone: "+919845012345",
+      },
+      updatedBy: "Test Developer",
+    });
+    expect(Date.now() - Date.parse(read.updatedAt)).toBeLessThan(60_000);
+
+    const { data: audit } = await admin()
+      .from("audit_logs")
+      .select("clinic_id, changes")
+      .eq("request_id", `req_group_${tag}`)
+      .single();
+    expect(audit).toMatchObject({
+      clinic_id: null,
+      changes: { expiry_notice_days: { to: [14, 7, 1] }, renewal_contact_phone: { to: "+919845012345" } },
+    });
+  });
+
+  it("is changed by no one but the platform admin, and never out of its bounds", async () => {
+    await expect(
+      updatePlatformSettings(trial.owner.tenant.supabase, { graceDays: 30 }, "req_owner"),
+    ).rejects.toMatchObject({ code: "AUTH_PERMISSION_DENIED" });
+    await expect(updatePlatformSettings(asDeveloper(), { graceDays: 61 }, "req_bound")).rejects.toMatchObject({
+      kind: "BUSINESS_RULE",
+    });
   });
 });
 

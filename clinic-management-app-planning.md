@@ -464,6 +464,10 @@ earlier lines are never rewritten.
 | D375 | **The owner's Plan extended email says the last day, what was recorded, and leads to the Plan screen** (the user): "Smile Care's plan runs until 12 Dec 2026", then "Monthly · ₹300 paid by UPI on 30 Oct 2026" and its receipt number — or "Set date · No charge · the reason" — and **See your plan**. A date moved earlier says "Your plan's last day has changed". The receipt PDF link joins it with R11.8. | 2026-10-30 |
 | D376 | **Every recorded change emails the owner** (the user), a correction included; there is no tick to stay quiet. A failed email never undoes the change: it is logged, and the card says "Smile Care's plan is changed, but the owner's email didn't go", for the DEV to tell them with Call, WhatsApp or Email. | 2026-10-30 |
 | D377 | **An extension is recorded once per key** (AGENTS.md §26, as payments are): Extend plan sends an `Idempotency-Key`, and `extend_clinic_subscription` (`0036_extend_plan`) answers the same key, for the same clinic, with what it recorded the first time — no second payment, month or email. So the notices are `0037` on. | 2026-10-30 |
+| D378 | **The Settings screen shows the groups, each changed in a sheet** (the user): each group's settings as they stand ("30 days", "₹300", "7 and 1 days before", "Not set") under its heading with **Change**, which opens the group in a sheet — each setting's field hinting its default and bounds ("Default 30 · 0 – 365 days"); the land says who last changed them, and when. Only what changed is sent. | 2026-10-30 |
+| D379 | **Five groups; the business details come with the receipts** (the user): Trial and pricing (trial, monthly, yearly) · Expiry (warning, grace, expiry email days) · Retention (audit, error log, deletion cooling-off) · Invites, follow-ups and imports (invite, follow-up lapses, rows per import) · Renewal contact (name, mobile, email, UPI id). The business name and address join the screen with R11.8, which prints them. | 2026-10-30 |
+| D380 | **The expiry email days are one field, "7, 1"** (the user): days before the last day, commas between, up to 5, each 1 – 60; kept largest first, repeats dropped; empty sends none. Shown as "7 and 1 days before". | 2026-10-30 |
+| D381 | **Saving asks first with each change and when it takes effect** (the user): "Trial days 30 → 45. Applies to clinics that sign up from now." — said once for each that matters: sign-ups from now; the next extension and every Plan screen (recorded ones keep theirs); every clinic's state at once; the next daily emails; the next purge, within the hour; invites sent from now; which follow-ups are lapsed at once; the next import; every owner's Plan screen at once. Nothing changed, nothing is asked or sent. | 2026-10-30 |
 
 ## 3. Users and roles
 
@@ -1810,7 +1814,11 @@ clinical or financial records, no clinic activity.
 4. **Platform settings — `/admin/settings`:** every setting in §6, grouped
    (Trial and pricing · Expiry · Retention · Invites and follow-ups · Renewal
    contact), each with its default and bounds shown; saving asks first and is
-   audited.
+   audited. As built (R11.4): each group changed in a sheet of its own (D378);
+   the deletion cooling-off under Retention, the rows per import with the
+   invites and follow-ups, the business details with R11.8 (D379); the expiry
+   email days typed "7, 1" (D380); the card says each change and when it takes
+   effect (D381).
 5. **Accounts — `/admin/accounts`:** every profile: name, email, clinic, role,
    status, last sign-in.
 6. **Error log — `/admin/logs`:** failures of the server's own, for
@@ -3084,7 +3092,7 @@ in the row's one commit (D136).
 | R11.1 | Owner's Plan screen (D363 – D366: the last day on the land, its state under it; the UPI id with Copy; WhatsApp and email with the words typed; every change in the history, the reason with it. Q2's default kept: each part of the contact hidden until the DEV sets it) | §7.5 | Q2 | DONE (2026-10-28) |
 | R11.2 | Console: overview, clinics (No trial and Deletion flags), clinic detail, accounts, error log, platform audit (D367 – D372: the console's own places; each clinic counted once, a running trial as Trial; Deletion requested with R12.5; Call, WhatsApp and Email to the owner; the newest sign-up first; an error opened whole. `0035_console`, so the notices are 0036 on) | §20 | — | DONE (2026-10-28) |
 | R11.3 | Extend plan (Monthly, Yearly, Set date); the owner's confirmation email (D373 – D377: one sheet, the kind on top, the new last day under it, a card asks first; Monthly and Yearly only for money received, free days by Set date with a reason; the email says the last day and what was recorded; every change emails the owner, a failed email said on the card; once per key. `0036_extend_plan`, so the notices are 0037 on) | §7.4 | — | DONE (2026-10-30) |
-| R11.4 | Platform settings screen | §6, §20.4 | — | TODO |
+| R11.4 | Platform settings screen (D378 – D381: the groups as they stand, each changed in a sheet with its default and bounds; five groups, the business details with R11.8; the expiry email days typed "7, 1"; the card says each change and when it takes effect. No migration: `update_platform_settings` (0004, 0016) was already the write) | §6, §20.4 | — | DONE (2026-10-30) |
 | R11.5 | `0037_subscription_notices`: daily notices, each once per period | §22 | — | TODO |
 | R11.6 | Owner's activity log | §19 | — | TODO |
 | R11.7 | Integration + E2E: extend, change a setting, notices once, DEV sees no clinic data | §34 | — | TODO |

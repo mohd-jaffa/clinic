@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { TEXT_LIMITS } from "@/constants/limits";
+import { UPI_ID } from "@/lib/validation/primitives";
 import {
   PLATFORM_SETTING_BOUNDS,
   PLATFORM_SETTING_COLUMNS,
@@ -57,6 +58,8 @@ describe("0004 platform settings", () => {
     expect(columnLine(sql, "platform_settings", "renewal_contact_phone")).toContain("public.is_indian_mobile(");
     expect(columnLine(sql, "platform_settings", "renewal_contact_email")).toContain("public.is_email(");
     expect(sql).toContain(`char_length(renewal_upi_id) <= ${TEXT_LIMITS.upiId}`);
+    // The form's UPI id shape is the CHECK's own.
+    expect(sql).toContain(`renewal_upi_id ~ '${UPI_ID.source}'`);
     expect(cleanTextLimit(sql, "platform_settings", "business_name")).toBe(TEXT_LIMITS.clinicName);
     expect(cleanTextLimit(sql, "platform_settings", "business_address")).toBe(TEXT_LIMITS.address);
   });

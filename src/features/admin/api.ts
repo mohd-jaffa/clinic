@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { PAGE_SIZE } from "@/constants/limits";
+import { PLATFORM_SETTING_COLUMNS } from "@/constants/platform";
 import type { ClinicRole, PlatformRole } from "@/constants/roles";
 import type {
   AuditAction,
@@ -16,6 +17,7 @@ import type {
 } from "@/constants/statuses";
 import { pageWindow, toPage, type Page } from "@/lib/api/pagination";
 import { fromPostgrestError, notFoundError } from "@/lib/errors";
+import { toPlatformSettings, type PlatformSettingsRow } from "@/lib/platform/settings";
 import { searchTerms } from "@/lib/supabase/search";
 
 import type {
@@ -26,6 +28,7 @@ import type {
   ConsoleError,
   ConsoleOverview,
   ConsolePlanPayment,
+  ConsoleSettings,
 } from "./types";
 
 /**
@@ -292,6 +295,19 @@ export async function listConsoleErrors(
     .range(range.from, range.to);
   if (error) throw fromPostgrestError(error);
   return toPage((data as unknown as ErrorRow[]).map(toConsoleError), start);
+}
+
+/** The settings row, with when it was last changed and by whom. */
+type SettingsRow = PlatformSettingsRow & { updated_at: string; editor: { full_name: string } | null };
+
+const SETTINGS_COLUMNS = `${Object.values(PLATFORM_SETTING_COLUMNS).join(", ")}, updated_at, editor:profiles(full_name)`;
+
+/** The platform settings (plan §20.4; D378): every one, and who last changed them — one query. */
+export async function getConsoleSettings(admin: SupabaseClient): Promise<ConsoleSettings> {
+  const { data, error } = await admin.from("platform_settings").select(SETTINGS_COLUMNS).single();
+  if (error) throw fromPostgrestError(error);
+  const row = data as unknown as SettingsRow;
+  return { settings: toPlatformSettings(row), updatedAt: row.updated_at, updatedBy: row.editor?.full_name ?? null };
 }
 
 /** A page of the platform audit (plan §20.7), the latest first. */

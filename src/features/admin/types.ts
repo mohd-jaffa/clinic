@@ -1,3 +1,4 @@
+import type { PlatformSettings } from "@/constants/platform";
 import type { ClinicRole, PlatformRole } from "@/constants/roles";
 import type {
   AuditAction,
@@ -128,4 +129,12 @@ export interface ConsoleAuditEntry {
   /** The clinic an extension was for, while it still exists. */
   clinicName: string | null;
   at: string;
+}
+
+/** The platform settings as the console shows them (plan §20.4): every one, and who last changed them, when. */
+export interface ConsoleSettings {
+  settings: PlatformSettings;
+  updatedAt: string;
+  /** Null until the DEV first saves, or once whoever did is gone. */
+  updatedBy: string | null;
 }

@@ -8,7 +8,7 @@ import { addDaysKey, todayKey } from "@/lib/dates/calendar";
 import { formatPaise } from "@/lib/format/currency";
 import { formatDate, formatLongDate } from "@/lib/format/date";
 import { paiseToText } from "@/lib/money";
-import { getPlatformSettings } from "@/lib/platform/settings";
+import { getPlatformSettings, updatePlatformSettings } from "@/lib/platform/settings";
 import { createSupabaseAnonClient } from "@/lib/supabase/server";
 import { expectAccessible } from "@tests/support/e2e";
 import { admin, makeDeveloper, registerClinic, removeAll, setValidUntil } from "@tests/support/integration";
@@ -21,7 +21,8 @@ import { admin, makeDeveloper, registerClinic, removeAll, setValidUntil } from "
  * accounts, the error log, opened whole, and the platform audit. It extends
  * a plan (R11.3, D373 – D376): a month paid for activates the clinic waiting,
  * then days given free move its last day — the owner's email, which the
- * journeys never send, said to have not gone. A clinic's owner is sent Home.
+ * journeys never send, said to have not gone. It changes a platform setting
+ * (R11.4, D378 – D381), asked first, and finds it in the audit. A clinic's owner is sent Home.
  * Each screen checked by axe, nothing wider than it.
  */
 test.afterAll(removeAll);
@@ -224,6 +225,58 @@ test("the platform admin extends a plan: a month paid for activates a clinic wai
   await expect(page.getByRole("list", { name: words.planHistory })).toContainText(reason);
   await fitsTheScreen(page);
   await expectAccessible(page);
+});
+
+test("the platform admin changes a setting: a group opened in its sheet, asked first, and audited", async ({
+  page,
+}) => {
+  const [developer, saved] = await Promise.all([makeDeveloper(), getPlatformSettings()]);
+  const lapsed = saved.followUpLapsedDays === 365 ? 364 : saved.followUpLapsedDays + 1;
+  const name = words.settingNames.followUpLapsedDays;
+  try {
+    await signIn(page, developer.email, developer.password);
+    await page.goto("/admin");
+    await go(page, words.places.settings);
+    await expect(page.getByRole("heading", { level: 1, name: words.places.settings })).toBeVisible();
+    const group = page.getByRole("region", { name: words.settingGroups.invitesAndImports });
+    await expect(group).toContainText(words.days(saved.followUpLapsedDays));
+    await fitsTheScreen(page);
+    await expectAccessible(page);
+
+    // The group in its own sheet: each setting with its default and bounds; out of them, refused in words.
+    await group.getByRole("button", { name: words.changeGroup(words.settingGroups.invitesAndImports) }).click();
+    const sheet = page.getByRole("dialog", { name: words.settingGroups.invitesAndImports });
+    const field = sheet.getByRole("textbox", { name });
+    await expect(field).toHaveValue(String(saved.followUpLapsedDays));
+    await field.fill("400");
+    await sheet.getByRole("button", { name: UI_TEXT.actions.save }).click();
+    await expect(sheet.getByText(`${name} must be from 7 to 365.`)).toBeVisible();
+    await field.fill(String(lapsed));
+    await expectAccessible(page);
+    await sheet.getByRole("button", { name: UI_TEXT.actions.save }).click();
+
+    // Asked first: the change, and when it takes effect (D381).
+    const ask = page.getByRole("alertdialog", { name: words.saveAsk });
+    await expect(ask).toContainText(`${name} ${saved.followUpLapsedDays} → ${lapsed}.`);
+    await expect(ask).toContainText(words.effects.followUps);
+    await expectAccessible(page);
+    await ask.getByRole("button", { name: words.saveConfirm }).click();
+    await expect(page.getByText(words.settingsSaved).first()).toBeVisible();
+    await expect(group).toContainText(words.days(lapsed));
+    await expect(page.getByText(/^Last changed by Test Developer/)).toBeVisible();
+
+    // And in the platform audit.
+    await go(page, words.places.audit);
+    await expect(page.getByRole("list", { name: words.places.audit })).toContainText(
+      `${name} ${saved.followUpLapsedDays} → ${lapsed}`,
+    );
+  } finally {
+    await updatePlatformSettings(
+      createSupabaseAnonClient(developer.session.accessToken),
+      { followUpLapsedDays: saved.followUpLapsedDays },
+      "req_e2e_restore",
+    );
+  }
 });
 
 test("the console is the platform admin's alone: a clinic's owner is sent Home", async ({ page }) => {

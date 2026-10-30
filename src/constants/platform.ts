@@ -104,3 +104,21 @@ export const PLATFORM_SETTING_BOUNDS = {
   deletionCoolingDays: { min: 0, max: 90 },
   maxImportRows: { min: 100, max: 50_000 },
 } as const satisfies Partial<Record<PlatformSettingKey, NumberBound>>;
+
+/**
+ * How the console's Settings screen groups them (plan §20.4; D378, D379),
+ * each group changed in a sheet of its own. The business name and address
+ * join with the plan receipts that print them (R11.8).
+ */
+export const PLATFORM_SETTING_GROUPS = {
+  trialAndPricing: ["trialDays", "monthlyPricePaise", "yearlyPricePaise"],
+  expiry: ["expiryWarningDays", "graceDays", "expiryNoticeDays"],
+  retention: ["auditKeepDays", "errorLogKeepDays", "deletionCoolingDays"],
+  invitesAndImports: ["inviteValidDays", "followUpLapsedDays", "maxImportRows"],
+  renewalContact: ["renewalContactName", "renewalContactPhone", "renewalContactEmail", "renewalUpiId"],
+} as const satisfies Record<string, readonly PlatformSettingKey[]>;
+
+export type PlatformSettingGroup = keyof typeof PLATFORM_SETTING_GROUPS;
+
+/** A setting the Settings screen changes: every one but the business details, for now (D379). */
+export type EditableSettingKey = (typeof PLATFORM_SETTING_GROUPS)[PlatformSettingGroup][number];

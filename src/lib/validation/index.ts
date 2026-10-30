@@ -32,9 +32,12 @@ export {
 export {
   consoleClinicsQuerySchema,
   extendPlanSchema,
+  platformSettingsSchema,
   type ConsoleClinicsQuery,
   type ExtendPlanInput,
   type ExtendPlanPayload,
+  type PlatformSettingsInput,
+  type PlatformSettingsPayload,
 } from "./schemas/console";
 
 export {

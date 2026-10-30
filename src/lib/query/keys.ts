@@ -174,6 +174,7 @@ export const apiRoutes = {
     clinics: "/api/admin/clinics",
     clinic: (id: string) => `/api/admin/clinics/${id}`,
     extend: (id: string) => `/api/admin/clinics/${id}/extend`,
+    settings: "/api/admin/settings",
     accounts: "/api/admin/accounts",
     logs: "/api/admin/logs",
     audit: "/api/admin/audit",

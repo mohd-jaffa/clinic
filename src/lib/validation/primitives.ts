@@ -132,6 +132,55 @@ export function indianMobile(label = "Mobile number") {
 }
 
 /**
+ * A mobile number that may be left empty — the renewal contact's (plan §6):
+ * blank is null, anything else set in +91 E.164 as `indianMobile` sets it.
+ */
+export function optionalIndianMobile() {
+  return z.optional(z.union([z.string(), z.null()])).transform((typed, ctx) => {
+    const text = (typed ?? "").trim();
+    if (text === "") return null;
+    const e164 = toE164India(text);
+    if (e164 === null) {
+      ctx.addIssue({ code: "custom", message: VALIDATION_MESSAGES.phone });
+      return z.NEVER;
+    }
+    return e164;
+  });
+}
+
+// A UPI id's shape, "clinicdesk@okaxis", as the platform_settings CHECK has it (0004).
+export const UPI_ID = /^[A-Za-z0-9._-]{2,}@[A-Za-z][A-Za-z0-9]+$/;
+
+/** A UPI id that may be left empty — the renewal contact's (plan §6); blank is null. */
+export function optionalUpiId(label: string) {
+  return optionalString(label, TEXT_LIMITS.upiId, {
+    test: (value) => UPI_ID.test(value),
+    message: VALIDATION_MESSAGES.upiId(label),
+  });
+}
+
+/**
+ * Days typed as a list — the expiry emails', "7, 1" (D380): whole numbers
+ * within the bounds, commas or spaces between, at most `maxCount` of them,
+ * kept largest first with repeats dropped. Empty is none.
+ */
+export function dayListText(label: string, { min, max, maxCount }: { min: number; max: number; maxCount: number }) {
+  return z.string({ error: VALIDATION_MESSAGES.invalid }).transform((typed, ctx) => {
+    const refuse = (message: string) => {
+      ctx.addIssue({ code: "custom", message });
+      return z.NEVER;
+    };
+    const parts = typed.split(/[\s,]+/).filter(Boolean);
+    if (parts.some((part) => !/^\d{1,9}$/.test(part) || Number(part) < min || Number(part) > max)) {
+      return refuse(VALIDATION_MESSAGES.dayList(label, min, max));
+    }
+    const days = [...new Set(parts.map(Number))].sort((a, b) => b - a);
+    if (days.length > maxCount) return refuse(VALIDATION_MESSAGES.atMostCount(label, maxCount));
+    return days;
+  });
+}
+
+/**
  * A phone number as a person writes it, mobile or landline — "0484 234 5678",
  * "+91 98765 43210" — that may be left empty: 6 to 15 digits with spaces,
  * hyphens and brackets, kept as typed, as the database's is_phone_number()

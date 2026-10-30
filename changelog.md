@@ -5206,3 +5206,58 @@ the user first: D267 – D271.
 
 ### Blockers
 - None.
+
+## 2026-10-30 — R11.4: the platform settings screen
+
+### Added
+- **Settings** in the console — `/admin/settings` (plan §6, §20.4; D378):
+  the land says who last changed the settings and when; five groups, each
+  its settings as they stand and **Change**, which opens the group in a
+  sheet, every field hinting its default and bounds. Only what changed is
+  sent; nothing changed, the sheet just closes.
+- **The groups** (D379): Trial and pricing · Expiry · Retention (the
+  deletion cooling-off with the logs) · Invites, follow-ups and imports
+  (the rows per import with them) · Renewal contact. The business name and
+  address join with R11.8's receipts.
+- **The expiry email days as one field** (D380): "7, 1" — up to 5, each 1 –
+  60, kept largest first with repeats dropped; empty sends none.
+- **Saving asks first** (D381): each change, from and to, as the audit says
+  it, and when it takes effect, each said once; then "Settings saved".
+- `GET`, `PATCH /api/admin/settings` (`withDevRoute`; the save with the
+  DEV's own client through `update_platform_settings`, which checks the role
+  and the bounds again and writes the platform audit row);
+  `platformSettingsSchema` (every setting optional, each to its bounds);
+  `optionalIndianMobile`, `optionalUpiId` (its shape the CHECK's own) and
+  `dayListText`; `getConsoleSettings`, `ConsoleClient.saveSettings`,
+  `useConsoleSettings`, `useSaveSettings`, `ConsoleSettings`,
+  `SettingsSheet`; `PLATFORM_SETTING_GROUPS`.
+- **Tests:** the groups hold every setting once; the UPI id shape equals
+  0004's CHECK; unit tests for the new primitives, the schema, how each
+  setting is shown, typed, hinted and said, the read, the route, the client,
+  the hooks, the screen and the sheet; integration — a group saved as typed
+  is read back with who changed it and audited, and refused for a clinic's
+  owner and out of its bounds; a journey in `console.spec.ts` that changes a
+  setting, is refused out of bounds, asked first, and finds it in the audit.
+
+### Changed
+- "Import rows at most" is "Rows per import", in the audit too.
+- `describe.ts`: `settingChange()`, one wording for a setting changed, for
+  the audit and the Settings screen.
+- Plan: D378 – D381; §20.4 says how it was built; tracker R11.4 DONE
+  (2026-10-30). `DESIGN.md`: the console's Settings.
+
+### Speed
+- The Settings screen waits on 2 round trips: the session, then one query
+  of the one settings row with who last changed it.
+- A save waits on 2: the session, then `update_platform_settings`, which
+  writes the row and its audit row in one call; the screen then reads the
+  settings again.
+
+### Validation
+- Typecheck, lint, format check passed.
+- Unit and integration tests passed (4,283), coverage 100%.
+- E2E passed (phone, desktop; 172 passed, 8 skipped by design), on port
+  3107 through the scratch config, as for R11.3.
+
+### Blockers
+- None.

@@ -19,4 +19,15 @@ describe("ConsoleClient (plan §30)", () => {
     expect([url, init.method, init.body]).toEqual(["/api/admin/clinics/c-1/extend", "POST", JSON.stringify(input)]);
     expect(new Headers(init.headers).get("Idempotency-Key")).toBe("key-1");
   });
+
+  it("saves some settings", async () => {
+    mockFetch.mockResolvedValue({ ok: true, status: 200, json: async () => ({ data: { trialDays: 45 } }) });
+    expect(await ConsoleClient.saveSettings({ trialDays: "45" })).toEqual({ trialDays: 45 });
+    const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+    expect([url, init.method, init.body]).toEqual([
+      "/api/admin/settings",
+      "PATCH",
+      JSON.stringify({ trialDays: "45" }),
+    ]);
+  });
 });

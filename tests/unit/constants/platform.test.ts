@@ -4,6 +4,7 @@ import {
   PLATFORM_SETTING_BOUNDS,
   PLATFORM_SETTING_COLUMNS,
   PLATFORM_SETTING_DEFAULTS,
+  PLATFORM_SETTING_GROUPS,
   type NumberBound,
 } from "@/constants/platform";
 
@@ -62,5 +63,24 @@ describe("the platform settings' columns", () => {
       .filter(([, value]) => typeof value === "number" || Array.isArray(value))
       .map(([key]) => key);
     expect(Object.keys(PLATFORM_SETTING_BOUNDS)).toEqual(numbers);
+  });
+});
+
+describe("the Settings screen's groups (plan §20.4; D379)", () => {
+  it("hold every setting once, in five groups, all but the business details, which join with the receipts", () => {
+    expect(Object.keys(PLATFORM_SETTING_GROUPS)).toEqual([
+      "trialAndPricing",
+      "expiry",
+      "retention",
+      "invitesAndImports",
+      "renewalContact",
+    ]);
+    const grouped = Object.values(PLATFORM_SETTING_GROUPS).flat();
+    expect(new Set(grouped).size).toBe(grouped.length);
+    expect([...grouped].sort()).toEqual(
+      Object.keys(PLATFORM_SETTING_DEFAULTS)
+        .filter((key) => key !== "businessName" && key !== "businessAddress")
+        .sort(),
+    );
   });
 });

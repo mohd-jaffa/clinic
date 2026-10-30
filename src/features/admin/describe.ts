@@ -36,13 +36,17 @@ function extensionLine(changes: Record<string, unknown>): string {
   ].join(" · ");
 }
 
+/** One setting changed, by name, from and to: "Trial days 30 → 45" — as the audit and the Settings screen say it. */
+export function settingChange(key: PlatformSettingKey, from: unknown, to: unknown): string {
+  return `${words.settingNames[key]} ${words.changed(settingValue(key, from), settingValue(key, to))}`;
+}
+
 /** What a settings change did (0004): each setting by name, from and to. */
 function settingsLine(changes: Record<string, unknown>): string {
   return Object.entries(changes)
     .map(([column, change]) => {
-      const key = SETTING_OF_COLUMN[column];
       const { from, to } = change as Change;
-      return `${words.settingNames[key]} ${words.changed(settingValue(key, from), settingValue(key, to))}`;
+      return settingChange(SETTING_OF_COLUMN[column], from, to);
     })
     .join(" · ");
 }

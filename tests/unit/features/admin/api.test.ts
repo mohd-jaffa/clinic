@@ -1,9 +1,11 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 
+import { PLATFORM_SETTING_DEFAULTS } from "@/constants/platform";
 import {
   getConsoleClinic,
   getConsoleOverview,
+  getConsoleSettings,
   listConsoleAccounts,
   listConsoleAudit,
   listConsoleClinics,
@@ -254,5 +256,30 @@ describe("the console's reads (plan §20)", () => {
     ]) {
       await expect(read()).rejects.toMatchObject({ code: "AUTH_PERMISSION_DENIED" });
     }
+  });
+
+  it("reads the platform settings in one query, with who last changed them", async () => {
+    const row = { trial_days: 45, monthly_price_paise: 35_000, renewal_upi_id: "clinicdesk@okaxis" };
+    const { client, queries } = fakeSupabase({
+      answer: () => ({
+        data: { ...row, updated_at: "2026-10-30T05:00:00.000Z", editor: { full_name: "Jaffa" } },
+      }),
+    });
+    const read = await getConsoleSettings(client);
+    expect(read).toMatchObject({
+      settings: { trialDays: 45, monthlyPricePaise: 35_000, renewalUpiId: "clinicdesk@okaxis", graceDays: null },
+      updatedAt: "2026-10-30T05:00:00.000Z",
+      updatedBy: "Jaffa",
+    });
+    expect(Object.keys(read.settings)).toEqual(Object.keys(PLATFORM_SETTING_DEFAULTS));
+    expect(queries[0].table).toBe("platform_settings");
+    expect(JSON.stringify(queries[0].calls)).toContain("editor:profiles(full_name)");
+
+    const never = fakeSupabase({
+      answer: () => ({ data: { ...row, updated_at: "2026-10-01T00:00:00Z", editor: null } }),
+    });
+    expect((await getConsoleSettings(never.client)).updatedBy).toBeNull();
+    const failing = fakeSupabase({ answer: () => ({ error: postgrestError("42501") }) });
+    await expect(getConsoleSettings(failing.client)).rejects.toMatchObject({ code: "AUTH_PERMISSION_DENIED" });
   });
 });
