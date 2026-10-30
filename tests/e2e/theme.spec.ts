@@ -14,7 +14,7 @@ test.describe("the themes (D36)", () => {
   test("follow a dark device, accessibly", async ({ page }) => {
     await page.emulateMedia({ colorScheme: "dark" });
     await page.goto("/");
-    await expect(page.getByRole("heading", { level: 1, name: UI_TEXT.appName })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: UI_TEXT.landing.headline })).toBeVisible();
     expect(await ground(page)).toBe(rgb(THEME_COLORS.dark));
     await expectAccessible(page);
   });

@@ -1,0 +1,15 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [".impeccable/mocks/decision/two-seats.html"],
+        "createdAt": "2026-10-30T20:47:41.966Z",
+        "reason": "agent: decision-round sketch; its pills copy the app kit's own Pin (4px 14px) and StatusPill (2px 10px) padding from DESIGN.md"
+      }
+    ]
+  }
+}

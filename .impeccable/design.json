@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-03T07:06:08.685Z",
+  "generatedAt": "2026-10-31T00:00:00.000Z",
   "title": "Design System: ClinicDesk",
   "extensions": {
     "themes": {
@@ -545,11 +545,11 @@
     "typographyMeta": {
       "display-lg": {
         "displayName": "Display large",
-        "purpose": "The Lake token numeral."
+        "purpose": "The Lake token numeral; the landing's headline and price line from 1024 px."
       },
       "display": {
         "displayName": "Display",
-        "purpose": "Page title from 768 px; numbers on the land; account titles and line from 1024 px."
+        "purpose": "Page title from 768 px; numbers on the land; account titles and line from 1024 px. The landing's headline and price line below 1024 px."
       },
       "token": {
         "displayName": "Token",
@@ -593,7 +593,7 @@
       {
         "name": "raised",
         "value": "0 18px 40px -18px rgb(var(--shadow-tone) / 0.35)",
-        "purpose": "Top-layer only: Sheet, Dialog, response notice, SelectMenu, DatePicker and AccountMenu popovers."
+        "purpose": "Top-layer only: Sheet, Dialog, response notice, SelectMenu, DatePicker and AccountMenu popovers; on a page, only the screenshot in a landing lake (ShotLake)."
       }
     ],
     "motion": [
@@ -650,6 +650,10 @@
       {
         "name": "lg",
         "value": "1024px"
+      },
+      {
+        "name": "xl",
+        "value": "1280px (the landing only: wider margins, interlocking lakes)"
       }
     ],
     "coastlines": {
@@ -665,6 +669,25 @@
       "safeArea": ["--safe-top", "--safe-right", "--safe-bottom", "--safe-left"],
       "keyboard": "--keyboard-inset",
       "bottomBar": "--bottom-bar-offset (5.5rem under 768 px when the bottom bar is present)"
+    },
+    "landing": {
+      "source": "src/components/landing/Landing.tsx",
+      "shapes": ["", "-scale-x-100", "-scale-y-100", "-scale-100"],
+      "frames": {
+        "phone": {
+          "lake": "3/5, 5/7 from 640px",
+          "shot": "58%, 50% from 640px"
+        },
+        "desk": {
+          "lake": "1/1, 5/4 from 640px",
+          "shot": "75%, 70% from 640px"
+        }
+      },
+      "partWidths": ["38rem", "36rem", "34rem", "31rem", "29rem"],
+      "bleedBelow": "640px",
+      "interlockFrom": "1280px",
+      "themePictures": ".for-light / .for-dark in globals.css (D401)",
+      "screenshots": "src/assets/landing, made by scripts/landing-shots.mts; each with a .webp.json provenance"
     }
   },
   "components": [
@@ -747,6 +770,14 @@
       "description": "StatusPill: a dot and a word, toned from statuses.ts.",
       "html": "<span class=\"ds-pill ds-live\"><i></i>Active</span> <span class=\"ds-pill ds-att\"><i></i>View-only</span>",
       "css": ".ds-pill{display:inline-flex;align-items:center;gap:6px;padding:2px 10px;border-radius:9999px;font:700 .8125rem/1.35 var(--font-sans,Figtree,system-ui,sans-serif)}.ds-pill i{width:6px;height:6px;border-radius:9999px;background:currentColor}.ds-live{background:var(--action-soft);color:var(--action)}.ds-att{background:var(--coral-soft);color:var(--coral)}"
+    },
+    {
+      "name": "Shot Lake",
+      "kind": "custom",
+      "refersTo": "shot-lake",
+      "description": "ShotLake: the landing's window; an opening of ground in the land, the lake's one shape turned over, holding a real screenshot whole, inset and lifted.",
+      "html": "<div class=\"ds-shotland\"><div class=\"ds-shotlake\"><span class=\"ds-shotopen\"></span><div class=\"ds-shot\"><b>Queue</b><p>04 Rohan Mehta</p><p>03 Anjali Raghavan</p></div></div></div>",
+      "css": ".ds-shotland{background:var(--land);padding:16px;font-family:var(--font-sans,Figtree,system-ui,sans-serif)}.ds-shotlake{position:relative;display:grid;place-items:center;aspect-ratio:5/7;max-width:260px}.ds-shotopen{position:absolute;inset:0;background:var(--ground);border-radius:48% 52% 44% 56% / 38% 40% 60% 62%;transform:scaleX(-1)}.ds-shot{position:relative;width:50%;aspect-ratio:390/844;background:var(--ground);color:var(--ink);border-radius:1.375rem;box-shadow:0 18px 40px -18px rgb(var(--shadow-tone) / 0.35),0 0 0 1px var(--line);padding:10px;font-size:.75rem}.ds-shot p{margin:6px 0 0}"
     }
   ],
   "narrative": {
@@ -813,6 +844,11 @@
         "section": "shapes"
       },
       {
+        "name": "The Whole Screen Rule",
+        "body": "A screenshot sits whole in its lake, inset (`rounded-row`) so its corners clear the lake's curve: the lake's proportion and the screen's width are set together (`FRAMES`), never by cropping the screen to fit.",
+        "section": "shapes"
+      },
+      {
         "name": "The Coastline Edge Rule",
         "body": "Land ends in a coastline from `COASTLINES`, never in a straight edge or a card radius, and never in a path generated at render time. Only the `Pin` sits on the coastline; no other text crosses it.",
         "section": "shapes"
@@ -826,7 +862,8 @@
       "**Do** put every create or edit form in a `Sheet`, every outcome through `useResponse()`, and every irreversible action behind a confirm card.",
       "**Do** set money, times, tokens and phone numbers in `tabular-nums`, and the numbers that matter at token or display size.",
       "**Do** check every screen in light and dark, at phone, tablet and desktop, with no axe violations.",
-      "**Do** keep every target at least 44 px and every input at 16 px or more."
+      "**Do** keep every target at least 44 px and every input at 16 px or more.",
+      "**Do** show the app outside itself only as real screenshots, in light and dark, whole in a `ShotLake`, the theme's own shown by `.for-light` / `.for-dark` (D400, D401)."
     ],
     "donts": [
       "**Don't** use yellow, gold, blue or lilac, in either theme.",
@@ -835,11 +872,12 @@
       "**Don't** give a menu row its own card, or set an icon on a tile, tinted square or circle under it (§32.1 Refuses, D75).",
       "**Don't** build the white-cards-and-pastel-icon-tiles dashboard grid or a grey ERP table.",
       "**Don't** end land in a straight edge, draw a coastline at render time, or let text other than the `Pin` cross a coastline.",
-      "**Don't** put a shadow on anything that sits on the page; `--shadow-raised` is for the top layer only.",
+      "**Don't** put a shadow on anything that sits on the page; `--shadow-raised` is for the top layer only, and for a screenshot in a landing lake.",
       "**Don't** add a third font weight, uppercase or letter-spaced labels, or eyebrows above titles.",
       "**Don't** use the browser's native select, date or time pickers (D65).",
       "**Don't** add a top bar on a phone, move the ＋ off the centre of the bottom bar, or replace it with a floating button.",
       "**Don't** add photographs or illustrations; people are initials (`Avatar`).",
+      "**Don't** crop a screenshot to fit a lake, or put the landing's screens on feature cards or beside a split hero (D400).",
       "**Don't** use bounce, spring or overshoot, or a second duration or curve."
     ]
   }

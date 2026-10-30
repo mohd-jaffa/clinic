@@ -201,6 +201,9 @@ components:
     textColor: "{colors.ink}"
     rounded: "{rounded.sheet}"
     width: "28rem"
+  shot-lake:
+    backgroundColor: "{colors.ground}"
+    rounded: "{rounded.lake}"
 ---
 
 # Design System: ClinicDesk
@@ -235,7 +238,7 @@ Tokens are defined bare on `:root` (light), redefined for a dark device unless t
 Tailwind's own palette is cleared (`--color-*: initial`), so `bg-land`, `text-ink` and the rest are the only colours a screen can name.
 
 ### Primary
-- **Leaf Land** (`--land`): the field that leads a screen (`CoastHeader`, `AuthScene`, the Quick Actions lobe), the patch behind the current place in the bottom bar and rail, the whole current place in the sidebar, the raised ＋, an avatar on the ground, the lobe behind an empty state, and text selection. Text on it is `--land-ink`, quieter text `--land-muted`.
+- **Leaf Land** (`--land`): the field that leads a screen (`CoastHeader`, `AuthScene`, the Quick Actions lobe), the patch behind the current place in the bottom bar and rail, the whole current place in the sidebar, the raised ＋, an avatar on the ground, the lobe behind an empty state, the whole landing page, and text selection. Text on it is `--land-ink`, quieter text `--land-muted`.
 - **Clinic Green** (`--action`): the primary capsule's fill, quiet button words, links such as "Forgot password?", the focus ring, the caret, today's ring in the calendar, the success mark, and the response notice's countdown line. Text on it is `--on-action`.
 - **Action Wash** (`--action-soft`): the hover behind a quiet button and the background of a live status pill.
 
@@ -247,7 +250,7 @@ Tailwind's own palette is cleared (`--color-*: initial`), so `bg-land`, `text-in
 - **Coral Wash** (`--coral-soft`): the plan band once the plan has ended, the offline band, the attention status pill, the danger `AlertChip`, and the attention `SystemNotice` lobe.
 
 ### Neutral
-- **Sage Ground** (`--ground`): the page, the shell's bar, rail and sidebar, menus, and the opening of the `Lake`.
+- **Sage Ground** (`--ground`): the page, the shell's bar, rail and sidebar, menus, and the opening of the `Lake` and of the landing's `ShotLake`.
 - **Surface White** (`--surface`): rows that stand on their own (`Row` look `surface`), fields, sheets, cards, popovers, the quiet plan band, and the Quick Actions capsules.
 - **Paper White** (`--paper`): the page a bill or prescription prints on — white in every theme — under the clinic's logo wherever it is shown (`ClinicLogo`), so a logo made for paper is seen as it will print.
 - **Green Ink** (`--ink`): all text on ground and surface, the secondary capsule's outline, bare menu icons.
@@ -274,8 +277,8 @@ Tailwind's own palette is cleared (`--color-*: initial`), so `bg-land`, `text-in
 Tailwind's sizes are cleared (`--text-*: initial`); these are the only sizes.
 
 ### Hierarchy
-- **Display large** (`text-display-lg`, bold, 0.95): the token numeral in the `Lake`.
-- **Display** (`text-display`, bold, 0.95, -0.02em): a page title from 768 px (`PageHeader`), a number on the land (`StatTile` on land), the account screens' title and the app's line from 1024 px.
+- **Display large** (`text-display-lg`, bold, 0.95): the token numeral in the `Lake`; the landing's headline and price line from 1024 px (-0.03em, as the numeral).
+- **Display** (`text-display`, bold, 0.95, -0.02em): a page title from 768 px (`PageHeader`), a number on the land (`StatTile` on land), the account screens' title and the app's line from 1024 px, the landing's headline and price line below 1024 px.
 - **Token** (`text-token`, bold, 0.95, -0.02em, tabular): a row's lead numeral (`RowToken`): a token, a booked time.
 - **Heading** (`text-heading`, bold, 1.15): a page title on a phone, a stat on the ground, a `SystemNotice` title, the large `Wordmark`.
 - **Title** (`text-title`, bold, 1.25): section headings, sheet and card titles, the clinic name in the sidebar, the page subtitle from 768 px.
@@ -302,6 +305,7 @@ Mobile first at 360, 390 and 414 px; every screen ships phone, tablet and deskto
 - **The land's share:** a lead screen's land is generous (about a third of the first viewport); a dense screen keeps the slim `band` coastline.
 - **Account screens (`AuthScene`, D70):** on a phone the land holds the `Wordmark` and the app's line over the phone coastline, the form below on the ground, max 28rem wide. From 1024 px the land fills the left half, sticky, its right edge the `side` coastline; the form stands centred on the right.
 - **Bands:** `OfflineBanner` and `PlanBanner` lead `main` above the land and pay the top safe area; anything after a band (`[data-band] ~ *`) does not pay it again.
+- **The landing (`Landing.tsx`, D400, D402):** all land, at most 90rem wide, side margins 20 px, 40 px from 768 px and 80 px from 1280 px (`xl`, used only here), the safe area added. Below 640 px a lake runs to the screen's edges (`BLEED`), so the screen in it can be read. From 1024 px the first view splits 0.9fr / 1.1fr, the line left and the queue lake right, and the five parts alternate sides; from 1280 px each part rises over the one before (`-mt-40`, the first `-mt-56`) so the lakes interlock.
 - **Device:** insets flow only through `--safe-top/right/bottom/left` and the `safe-top`, `safe-bottom`, `safe-x` utilities (with `--safe-pt/pb/px` for an element's own padding). Heights are `dvh`. `--keyboard-inset` lifts sheets and cards above the iOS keyboard; `--bottom-bar-offset` lifts notices and the last row above the phone's bar.
 
 ### Named Rules
@@ -315,6 +319,7 @@ The page is flat: land, ground and surface are tonal layers with no shadows, gra
 
 ### Shadow Vocabulary
 - **Raised** (`--shadow-raised`): `Sheet`, `Dialog` (confirm and response cards), the response notice, `SelectMenu`, `SuggestField` and `DatePicker` popovers, and the `AccountMenu` popover. Nothing on the page itself.
+- **Raised, on a picture** (`--shadow-raised`): the one use on a page, the screenshot standing in a landing lake (`ShotLake`), with a `--line` ring, so the picture reads as a screen set in the opening rather than part of the land (D400). Nothing the app draws casts it.
 
 ### Named Rules
 **The Raised Only In The Top Layer Rule.** A shadow means "this floats over the page and will go away". Rows, fields, stat tiles, the land and the shell never cast one. A surface row is set apart by its fill on the ground, an outline row by a `--line` ring.
@@ -324,12 +329,14 @@ The page is flat: land, ground and surface are tonal layers with no shadows, gra
 - **Fully round** (`rounded-full`): every capsule, field well, pill, chip, nav patch, the ＋, avatars, icon buttons, calendar days, skeleton lines.
 - **Row** (`--radius-row`, 22 px): surface and outline rows, the textarea, stat tiles on the ground, the facts strip in a response card, the select menu, skeletons.
 - **Sheet** (`--radius-sheet`, 28 px): sheets (top corners on a phone, left corners as a side panel), cards, the notice, the date picker and account popovers, the lobe's top corners from 768 px.
-- **Lake** (`--radius-lake`): the hand-drawn opening in the land; used only by `Lake`.
+- **Lake** (`--radius-lake`): the hand-drawn opening in the land; used only by `Lake` and the landing's `ShotLake`, which turns the one shape over (`SHAPES`: as drawn, `-scale-x-100`, `-scale-y-100`, `-scale-100`, on a background span) so lakes vary without a new shape.
 - **Lobe** (`--radius-lobe`): a small island of land; the mark behind `EmptyState` and `SystemNotice`.
 - **Coastlines** (`src/assets/coastlines.ts`): four authored paths, drawn by `Coastline`: `phone` (390×34, under a phone's lead land, with room for a pin at the right), `wide` (1200×34, from 768 px), `side` (34×1200, the upright edge of the account screens from 1024 px), `band` (1200×12, a dense screen's slim edge). They stretch along the edge with `preserveAspectRatio="none"` and keep their depth. `flip` turns one over for land rising from below (the phone lobe).
 
 ### Named Rules
 **The Capsule Rule.** If a person can tap it or type in it, it is round-ended. Square corners and small radii do not appear on controls.
+
+**The Whole Screen Rule.** A screenshot sits whole in its lake, inset (`rounded-row`) so its corners clear the lake's curve: the lake's proportion and the screen's width are set together (`FRAMES`), never by cropping the screen to fit.
 
 **The Coastline Edge Rule.** Land ends in a coastline from `COASTLINES`, never in a straight edge or a card radius, and never in a path generated at render time. Only the `Pin` sits on the coastline; no other text crosses it.
 
@@ -468,6 +475,14 @@ The signature of the shell. On a phone, a lobe of land rises from the bottom wit
 - **`CoastHeader`:** size `lead` (generous padding, the `phone` coastline under 768 px, `wide` above) or `band` (slim, the `band` coastline). Pays the top safe area. Holds a `PageHeader` (heading on a phone, display from 768 px, land-muted subtitle, an optional land-muted `detail` line — a patient's doctor — and `actions` under them, aligned with the title, a row each — an archived patient's notice, their alert chips, then Call and WhatsApp as small capsules) and an optional `Pin`.
 - **`Lake`:** an opening in the land, `--ground` showing through, `--radius-lake`, holding the patient now with the doctor: a display-large token, the name in title, a detail line, and their actions side by side. On the Queue (phone, D168) there is one per patient in with a doctor, named "With doctor: Rohan Mehta"; with no one in, one holds "The room is free" and a muted line. Its actions are **Done** (small secondary), **Next patient** (small primary) and **Open visit** (small quiet link) for whoever reads visits; with `onOpen` the name is a button — underlined on hover, the action focus ring — opening the appointment's detail (D172). A `tag` sits under the detail line: the **Urgent** tag (D201).
 
+### Landing (`Landing.tsx`: `Landing`, `ShotLake`; `Contact.tsx`: `Contact`; `globals.css`: `.for-light`, `.for-dark`)
+- **The page (`Landing`, plan §21; D397 – D402):** one field of land (`bg-land`, `--land-ink`, quieter lines `--land-muted`) with no coastline; the ground shows only through lakes. A header of the large `Wordmark` and **Sign in** (secondary capsule), or **Open ClinicDesk** for someone signed in. The first view: the line (display, display-large from 1024 px, at most 15ch), a body lede, **Start free trial** (primary; **Set up your clinic** at a trial of no days) and the live terms in small tabular `--land-muted`; then the queue lake, at most 37.5rem, over a caption that the clinic is made up. Then the five parts of the day, each a heading, two body lines and a lake; the phone and desk section; the price line in display / display-large with **Start free trial** again; the `Contact` capsules (Call, WhatsApp, Email, secondary with icons) once a phone or an email is set; a footer of the `Wordmark` and the app's line over a `--land-muted` hairline. Coral appears only inside the app's own screens. No eyebrows, no feature cards.
+- **`ShotLake`:** a span of `--ground` in `--radius-lake`, mirrored by its `shape`, holding a real screenshot whole and centred, `rounded-row`, `shadow-raised`, `ring-1 ring-line`. The lake in the first view loads its screen at once; the rest lazily.
+- **Frames (`FRAMES`):** `phone` lakes are 3/5 with the screen at 58% below 640 px, 5/7 at 50% above; `desk` lakes are square at 75%, then 5/4 at 70%. Each pair keeps the screen's corners clear of the lake's curve.
+- **The day's parts (`PARTS`):** appointments, visit, bill, follow-ups, reports, in the order the day runs (D398), their lakes easing off as the day does (38, 36, 34, 31, 29rem) and turned over in turn.
+- **A picture for each theme (`.for-light`, `.for-dark`, D401):** every screenshot is kept in light and dark and the one of the theme the page is drawn in is shown, on the same selectors as the tokens (a device in dark unless the person chose Light; a person who chose Dark), because a `<picture>`'s media query cannot follow a chosen theme.
+- **Screenshots (`src/assets/landing`, `scripts/landing-shots.mts`):** fourteen WebP files, each screen in both themes, a phone's at 390 × 844 (2×) and Home on a 1440 × 900 desktop, each with a `.webp.json` saying where it came from. The script makes a made-up clinic, photographs the built app and deletes the clinic; the screens are never mocked or redrawn.
+
 ### Bands (`OfflineBanner.tsx`, `PlanBanner.tsx`)
 Slim bands across the top of a signed-in screen, above the land, small bold `--ink` sentences with a 20 px icon. The plan band is quiet (`--surface`, hairline under it, muted icon) while the plan ends soon, and `--coral-soft` with a coral icon once it has ended or the clinic is view-only (D73); the owner gets **How to renew**. The offline band is `--coral-soft` with a coral no-signal icon (D55).
 
@@ -485,6 +500,7 @@ One duration (`--duration-map`, 260 ms) and one curve (`--ease-map`), no oversho
 - **Do** set money, times, tokens and phone numbers in `tabular-nums`, and the numbers that matter at token or display size.
 - **Do** check every screen in light and dark, at phone, tablet and desktop, with no axe violations.
 - **Do** keep every target at least 44 px and every input at 16 px or more.
+- **Do** show the app outside itself only as real screenshots, in light and dark, whole in a `ShotLake`, the theme's own shown by `.for-light` / `.for-dark` (D400, D401).
 
 ### Don't:
 - **Don't** use yellow, gold, blue or lilac, in either theme.
@@ -493,9 +509,10 @@ One duration (`--duration-map`, 260 ms) and one curve (`--ease-map`), no oversho
 - **Don't** give a menu row its own card, or set an icon on a tile, tinted square or circle under it (§32.1 Refuses, D75).
 - **Don't** build the white-cards-and-pastel-icon-tiles dashboard grid or a grey ERP table.
 - **Don't** end land in a straight edge, draw a coastline at render time, or let text other than the `Pin` cross a coastline.
-- **Don't** put a shadow on anything that sits on the page; `--shadow-raised` is for the top layer only.
+- **Don't** put a shadow on anything that sits on the page; `--shadow-raised` is for the top layer only, and for a screenshot in a landing lake.
 - **Don't** add a third font weight, uppercase or letter-spaced labels, or eyebrows above titles.
 - **Don't** use the browser's native select, date or time pickers (D65).
 - **Don't** add a top bar on a phone, move the ＋ off the centre of the bottom bar, or replace it with a floating button.
 - **Don't** add photographs or illustrations; people are initials (`Avatar`).
+- **Don't** crop a screenshot to fit a lake, or put the landing's screens on feature cards or beside a split hero (D400).
 - **Don't** use bounce, spring or overshoot, or a second duration or curve.

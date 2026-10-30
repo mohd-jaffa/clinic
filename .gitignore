@@ -32,6 +32,9 @@ supabase/.temp/
 # Design reference images — kept locally, never committed
 /design-references/
 
+# The landing shots' scratch folder (scripts/landing-shots.mts)
+/.landing-shots/
+
 # Impeccable working files (mocks, reviews, build state, decision logs)
 /.impeccable/mocks/
 /.impeccable/review/

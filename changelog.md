@@ -5480,3 +5480,77 @@ the user first: D267 – D271.
 
 ### Blockers
 - None.
+
+## 2026-10-31 — R12.1: the landing page
+
+### Added
+- **The landing page — `/`** (plan §21; D397 – D402), shaped with
+  Impeccable (D399) as **the lake window** (D400): one field of land, the
+  clinic's day showing through lakes cut into it, each holding a real
+  screen whole. The first view: the line in the system's largest type, a
+  two-line lede, **Start free trial** with the live trial and prices under
+  it ("30 days free · then ₹300 a month or ₹3,000 a year"), **Sign in**
+  beside the name, and a large lake with the phone queue. Then the day's
+  five parts in the order it runs (D398) — queue and appointments, visits
+  and prescriptions, bills and payments, follow-ups, reports — each a lake
+  with its screen and two lines; a phone and a desk; the two prices and the
+  trial; and the renewal contact — Call, WhatsApp, Email — once a phone or
+  an email is set. Someone signed in has one way on — **Open ClinicDesk**
+  at the top (the console, for the DEV) — and sees the prices without the
+  trial; a trial set to no days is never called free (**Set up your
+  clinic**). On a phone each lake runs to the screen's edges so its screen
+  can be read; the lakes ease off in size as the day does. Each screen is
+  taken in light and dark, and the
+  page shows the one of its own theme — the device's, or a person's choice
+  (D401, `.for-light` / `.for-dark` in `globals.css`). Marked as a demo
+  clinic with made-up names; no testimonials, numbers or logos.
+- **`GET /api/public/pricing`** (plan §30): the trial, the two prices and
+  the contact as the DEV last saved them — never the UPI id —
+  `getPublicPricing` / `readPublicPricing` in `src/lib/platform/pricing.ts`;
+  the page leaves the prices and the contact out, logged, when the
+  settings cannot be read. The page is drawn on the server; the contact
+  (`Contact.tsx`) in the browser, as the kit's buttons are, since their
+  icons cannot cross from the server.
+- **`scripts/landing-shots.mts`** (as Brio's): makes a demo clinic in the
+  local Supabase, takes the queue, appointments, a visit, a bill,
+  follow-ups and reports at a phone's width and Home at a desktop's, in
+  both themes, into `src/assets/landing/` — each with its origin beside it
+  (`<file>.webp.json`) — and deletes the clinic.
+- **Tests:** the pricing read and its failure; the route; the page's words,
+  links, prices, trial wording, contact parts, signed-in and DEV offers,
+  and its screens in both themes; an E2E journey at a phone's width and a
+  desktop's — the live prices, a price and contact the DEV saves shown at
+  the next load, the dark screens on a dark device, Start free trial and
+  Sign in, and Open ClinicDesk for an owner — each screen checked by axe.
+  The smoke and theme journeys now find the landing's line at `/`, where
+  the placeholder's name was.
+
+### Changed
+- Plan: D397 – D402; §21 says how the landing was built; tracker R12.1
+  DONE (2026-10-31). Q1 (the final name) and Q2 (the contact's values)
+  stay open, needed before release. `DESIGN.md`: the landing.
+- When the settings cannot be read, the page still offers **Start free
+  trial** under "Try it free first." (D402): wrong only if the trial is
+  set to no days at that same moment.
+
+### Speed
+- The landing waits on at most 2 round trips: the session (only when a
+  session cookie is sent; read once, shared with the layout) and the
+  settings, at once. `GET /api/public/pricing` is one read. Each screenshot
+  below the first view loads as it is reached, and only in the visitor's
+  theme; the first view's two are fetched at once.
+
+### Validation
+- Impeccable finish review: **ship**, after one fix round — larger screens
+  that run to a phone's edges, lakes easing off through the day, no free
+  claim at a trial of no days, one way on for someone signed in — each
+  scored resolved; the detector found nothing; every screenshot carries
+  its provenance.
+- Typecheck, lint, format check passed.
+- Unit and integration tests passed (4,398), coverage 100%.
+- E2E passed (phone, desktop; 186 passed, 8 skipped by design), on port
+  3107 through the scratch config.
+
+### Blockers
+- None. Q1 (the final name) and Q2 (the renewal contact's values) remain
+  open questions, needed before release (R14.8), not blockers here.

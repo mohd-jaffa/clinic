@@ -483,6 +483,12 @@ earlier lines are never rewritten.
 | D394 | **The Plan extended email downloads the receipt** (the user): for money received its button is **Download receipt** — through `/settings/plan/receipts/[id]`, so an owner signed out signs in first — a change at no charge keeps **See your plan**. | 2026-10-31 |
 | D395 | **The console's clinic page offers the same receipts** (the user), on each paid row of its Plan history, so the DEV can send the owner a copy; a receipt is the platform's own record, not the clinic's data. | 2026-10-31 |
 | D396 | **How receipts are made** (the agent, within §7.5): on demand, never stored, from the payment, the clinic and its owner, and the live business details — so a new name or address prints on earlier receipts too, as the card says; the owner's read through RLS, the DEV's as the server in one query; the days paid for are from the day after the later of the old last day and the day before it was recorded. The business name and address are the console's sixth Settings group (D379). No migration: receipt numbers came with `0005`. | 2026-10-31 |
+| D397 | **The landing goes out under the working name** (the user): "ClinicDesk" for now; Q1 stays open, and the final name replaces `UI_TEXT.appName` before release (R14.8). | 2026-10-31 |
+| D398 | **The landing walks a clinic's day, screen by screen** (the user): the queue first; then queue and appointments, visits and prescriptions, bills and payments, follow-ups and reports, in the order the day runs, each a real screenshot and two lines; then a phone and a desk; the trial and the two prices; the renewal contact. | 2026-10-31 |
+| D399 | **The landing is shaped with Impeccable first** (the user): three directions sketched within the Clinic Map (§32.1) and one chosen; its contract is `.impeccable/surfaces/src-app-page-tsx.md`. | 2026-10-31 |
+| D400 | **The lake window** (the user): the page is one field of land, and the day shows through lakes cut into it — the app's own Lake made the page's window, each holding a real screen whole, inset from its edge. The first view is the land: the line in the system's largest type, Start free trial with the live trial and prices under it, beside a large lake with the phone queue; the next lake begins at its foot. No split hero over a row of feature cards. | 2026-10-31 |
+| D401 | **The screenshots come in light and dark** (the user): each screen taken in both themes, and the one of the theme the page is drawn in shown — the device's, or a person's own choice — by CSS on the same selectors as the tokens, which a `<picture>`'s media query cannot follow. | 2026-10-31 |
+| D402 | **How the landing reads and is made** (the agent, within §21): the page reads the session (once, shared with the layout) and the live settings at once; settings that cannot be read leave the prices and the contact out — the trial still offered, never a default shown as live — and are logged. `GET /api/public/pricing` tells anyone the trial, the two prices and the contact, never the UPI id. The contact shows once a phone or an email is set. Someone signed in has one way on, **Open ClinicDesk** at the top (the console, for the DEV), and sees the prices without the trial. A trial of no days is never called free: **Start free trial** becomes **Set up your clinic**. On a phone each lake runs to the screen's edges, so its screen can be read; the lakes ease off in size as the day does. `scripts/landing-shots.mts` makes a demo clinic, takes each screen at a phone's width — and Home at a desktop's — in both themes, and deletes the clinic. | 2026-10-31 |
 
 ## 3. Users and roles
 
@@ -1864,6 +1870,14 @@ clinical or financial records, no clinic activity.
   from platform settings at request time. Real screenshots come from a demo
   clinic made and deleted by a script (as Brio's `landing-shots`). No invented
   testimonials, numbers or logos.
+
+  As built (R12.1): the lake window (D400) — one field of land, the day's
+  screens through lakes cut into it, in the visitor's theme (D401), in the
+  order the day runs (D398); Start free trial with the live trial and prices
+  under it, Sign in beside the name; the renewal contact once a phone or an
+  email is set; **Open ClinicDesk** for someone signed in (D402). The prices
+  are left out, never guessed, when the settings cannot be read; a trial of
+  no days is never called free.
 - **`/privacy` and `/terms`** (public): their words in
   `src/constants/privacy.ts` and `terms.ts`, with an updated date. When the app
   starts keeping something new, the policy changes with it. It says that a
@@ -3143,7 +3157,7 @@ in the row's one commit (D136).
 
 | ID | Work | Source | Waits on | Status |
 |---|---|---|---|---|
-| R12.1 | Landing with live pricing and renewal contact; screenshots script | §21 | Q1, Q2 | TODO |
+| R12.1 | Landing with live pricing and renewal contact; screenshots script (D397 – D402: under the working name; a clinic's day screen by screen; shaped with Impeccable; the lake window; light and dark screenshots. Q1's final name and Q2's contact are still needed before release) | §21 | Q1, Q2 | DONE (2026-10-31) |
 | R12.2 | Privacy and terms | §21 | Q22 | TODO |
 | R12.3 | Manifest, icons, service worker, offline page, Install app | §21 | — | TODO |
 | R12.4 | Security headers; `noindex` on app routes; share-preview image | §21 | — | TODO |

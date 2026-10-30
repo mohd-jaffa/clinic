@@ -436,6 +436,32 @@ main[data-navigating] > :not([data-screen-skeleton], [data-band]) {
   --safe-top: 0px;
 }
 
+/* A picture made for one theme (D401): the landing's screenshots, each taken
+   in light and in dark, show the one of the theme the page is drawn in — the
+   device's, or the person's own choice — by the same selectors the tokens
+   use, which a <picture>'s media query cannot follow. */
+.for-dark {
+  display: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .for-light {
+    display: none;
+  }
+
+  :root:not([data-theme="light"]) .for-dark {
+    display: block;
+  }
+}
+
+:root[data-theme="dark"] .for-light {
+  display: none;
+}
+
+:root[data-theme="dark"] .for-dark {
+  display: block;
+}
+
 /* Reduced motion: instant (plan §32.1). */
 @media (prefers-reduced-motion: reduce) {
   *,

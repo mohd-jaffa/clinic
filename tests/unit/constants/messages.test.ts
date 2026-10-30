@@ -15,6 +15,10 @@ describe("the app's words", () => {
     expect(UI_TEXT.appDescription).toBeTruthy();
   });
 
+  it("titles the landing with the name it is given, so a rename stays one constant (D397)", () => {
+    expect(UI_TEXT.landing.pageTitle("Clinic")).toBe("Clinic — your clinic’s day, on a phone or at the desk");
+  });
+
   it("knows its own error codes, and nothing else — not even an object's own keys", () => {
     expect(isErrorMessageCode("CONFLICT")).toBe(true);
     for (const code of ["NOPE", "toString", "", null, undefined]) expect(isErrorMessageCode(code)).toBe(false);

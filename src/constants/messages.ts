@@ -2220,6 +2220,82 @@ export const UI_TEXT = {
   },
 
   /** My account's theme switch (D36): kept per device. */
+  /**
+   * The landing page (plan §21; D397 – D401): a clinic's day, screen by
+   * screen, in the order the day runs. The app's name is passed in, so a
+   * rename stays the one constant above (Q1).
+   */
+  landing: {
+    pageTitle: (app: string) => `${app} — your clinic’s day, on a phone or at the desk`,
+    headline: "Your clinic’s day, from the first token to the last bill.",
+    lede: "The queue, visits and prescriptions, follow-ups, bills and reports — for the front desk and the doctor, on a phone or at the desk.",
+    startTrial: "Start free trial",
+    /** Start free trial, when the trial is set to no days: nothing is called free. */
+    setUp: "Set up your clinic",
+    signIn: "Sign in",
+    openApp: (app: string) => `Open ${app}`,
+    /** Under Start free trial: the live trial and prices, the trial left out when it is 0 days. */
+    terms: (trialDays: number, monthly: string, yearly: string) =>
+      trialDays > 0
+        ? `${trialDays} ${trialDays === 1 ? "day" : "days"} free · then ${monthly} a month or ${yearly} a year`
+        : `${monthly} a month or ${yearly} a year`,
+    demoNote: "A demo clinic; every name in it is made up.",
+    queueAlt: "Today’s queue on a phone: the patient with the doctor, and who is waiting to be sent in.",
+    parts: {
+      appointments: {
+        title: "Queue and appointments",
+        body: "Book a time or take a walk-in. Each patient gets a token, and the desk sends them in when the doctor is ready.",
+        alt: "The appointments on a phone: today’s bookings and walk-ins, each with where it stands.",
+      },
+      visit: {
+        title: "Visits and prescriptions",
+        body: "Vitals, notes and the prescription, written by the doctor or typed for them by an assistant. Allergies stay at the top.",
+        alt: "A visit on a phone: the patient’s allergy and alert at the top, their token, and their vitals.",
+      },
+      bill: {
+        title: "Bills and payments",
+        body: "Bill from your own price list, take cash, UPI or card, and print it in A4 or A5 or send it on WhatsApp.",
+        alt: "A paid bill on a phone: its lines from the price list, the total and the payment.",
+      },
+      followUps: {
+        title: "Follow-ups",
+        body: "Who is due back today and who is late, each a call or a WhatsApp reminder away.",
+        alt: "The follow-ups on a phone: the patients due back today, each with a call button.",
+      },
+      reports: {
+        title: "Reports",
+        body: "What came in and what went out, by day and by month, and who still owes.",
+        alt: "The month’s report on a phone: collected, billed, expenses and the net, and each day’s money in and out.",
+      },
+    },
+    devices: {
+      title: "On a phone or at the desk",
+      body: "Reception’s computer, the doctor’s phone, the owner’s laptop: one clinic, with each person signed in to only what they may see.",
+      alt: "Home on a desktop: today’s queue, what is to bill and what came in.",
+    },
+    pricing: {
+      title: (monthly: string, yearly: string) => `${monthly} a month, or ${yearly} a year.`,
+      /** When the prices cannot be read: the trial is still offered, no price is guessed. */
+      titleUnread: "Try it free first.",
+      trial: (trialDays: number, app: string) =>
+        `${trialDays} ${trialDays === 1 ? "day" : "days"} free first, with every part of ${app}. Nothing to pay to start.`,
+      noTrial: (app: string) => `Every part of ${app}, on either plan.`,
+    },
+    contact: {
+      title: "Questions first?",
+      talkTo: (name: string) => `Talk to ${name}.`,
+      talkToUs: "Talk to us.",
+      call: "Call",
+      callTo: (name: string) => `Call ${name}`,
+      whatsApp: "WhatsApp",
+      whatsAppTo: (name: string) => `WhatsApp ${name}`,
+      email: "Email",
+      emailTo: (name: string) => `Email ${name}`,
+      message: (app: string) => `Hello, I’d like to know more about ${app}.`,
+      subject: (app: string) => `About ${app}`,
+    },
+  },
+
   theme: {
     label: "Theme",
     hint: "Kept on this device only.",
