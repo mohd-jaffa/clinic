@@ -340,6 +340,15 @@ export const SUBSCRIPTION_PLAN_LABELS: Record<SubscriptionPlan, string> = {
   YEARLY: "Yearly",
 };
 
+/**
+ * The plan emails the daily run sends an owner (plan §22; D382 – D385), each
+ * once for a plan's last day: before it ends (one on each of the expiry email
+ * days), the day after it ended, and the day it becomes view-only. Plan
+ * extended goes when it is recorded (R11.3), not by the daily run.
+ */
+export const PLAN_NOTICES = ["ENDS_SOON", "ENDED", "READ_ONLY"] as const;
+export type PlanNotice = (typeof PLAN_NOTICES)[number];
+
 /** Where a clinic's plan stands (plan §7.2), derived from its date and the settings, never stored. */
 export const SUBSCRIPTION_STATES = ["ACTIVE", "EXPIRING", "GRACE", "READ_ONLY"] as const;
 export type SubscriptionState = (typeof SUBSCRIPTION_STATES)[number];

@@ -23,7 +23,7 @@ const optionalBoolean = z.preprocess((value) => {
  * Everything the server reads from its environment, checked once (plan §35):
  * a missing or malformed value stops the request with `CONFIG_INVALID` rather
  * than failing somewhere deeper with a stranger message. `.env.example` lists
- * exactly these; `CRON_SECRET` joins them with the plan emails (Phase 11).
+ * exactly these.
  */
 const serverEnvSchema = z.object({
   NEXT_PUBLIC_SUPABASE_URL: z.url(),
@@ -44,6 +44,11 @@ const serverEnvSchema = z.object({
   // The key of the HMAC that remembers which mobiles have had a trial (plan
   // §7.6). Changing it forgets every claim, so it is set once and kept.
   TRIAL_CLAIM_SECRET: z.string().min(32),
+
+  // What the database's scheduler sends to call the daily plan emails (plan
+  // §22): kept also in Supabase Vault, as `cron_secret`. Unset, the route
+  // answers no one.
+  CRON_SECRET: z.preprocess(blankAsMissing, z.string().min(32).optional()),
 });
 
 export type ServerEnv = z.infer<typeof serverEnvSchema>;

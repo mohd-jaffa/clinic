@@ -5261,3 +5261,64 @@ the user first: D267 – D271.
 
 ### Blockers
 - None.
+
+## 2026-10-30 — R11.5: the daily plan emails
+
+### Added
+- **The plan emails** (plan §22; D382 – D385): every day at 9:00 in India
+  the database's scheduler calls `POST /api/cron/subscription-notices`,
+  which emails each owner what is due for their plan's last day — **Plan
+  ends soon** on each expiry email day before it, **Plan ended** the day
+  after (none when there is no grace), **Clinic is view-only** the day the
+  grace ends — once each. A missed day catches up with the latest one alone;
+  an email that did not go is tried again the next day. Each says the key
+  date, how to renew (the prices, the renewal contact and the UPI id as set)
+  and leads to the Plan screen; a trial is called one. A clinic waiting for
+  activation (No trial) is told nothing until it is extended.
+- `0037_subscription_notices`: `clinic_subscriptions.last_notice`,
+  `last_notice_due`, `last_notice_for` (all or none);
+  `clinic_subscriptions_valid_until_idx`; `claim_subscription_notices()`
+  (the latest notice due by the clinic's own today, marked as it is claimed,
+  skipping rows another run holds) and `release_subscription_notices()`,
+  the server's alone; `call_subscription_notices()`, which reads the app's
+  address and `CRON_SECRET` from Vault and calls it through pg_net, and its
+  pg_cron job at 03:30 UTC (D386).
+- `CRON_SECRET` (optional; unset, the route answers no one), in
+  `.env.example` with the two Vault secrets production needs;
+  `requireCronSecret` (`src/lib/api/cron.ts`, compared in constant time);
+  `sendSubscriptionNotices` (`src/features/subscription/notices.ts`: 50
+  claimed at a time, 5 sent at once, no batch begun after 40 s);
+  `planNoticeTemplate`, `MailService.sendPlanNotice`; `PLAN_NOTICES`;
+  `CRON_SECRET_INVALID`.
+- **Tests:** the 0037 contract (the notices equal `PLAN_NOTICES`, the
+  stages, once per last day, No trial left alone, the claim's locks, who may
+  call, the schedule, nothing secret in it); unit tests for the secret
+  check, the env, the emails, the run (batches, a failed email released and
+  logged, the time limit) and the route; an integration test
+  (`subscription-notices.test.ts`) — each notice to the right owner once in
+  Mailpit, a missed day caught up, a new last day starting again, the next
+  notice for the same one, no grace going straight to view-only, a claim
+  released for the next run, two runs at once claiming a plan once, and no
+  one signed in claiming.
+
+### Changed
+- Plan: D382 – D386; §22 says how it was built; the data model names the
+  three columns; §29's `0037` line; tracker R11.5 DONE (2026-10-30).
+  `DESIGN.md`: the daily plan emails.
+
+### Speed
+- A run is one call to read the settings and claim the first 50 plans at
+  once, then the emails, then one call to release any that failed and one to
+  claim the next 50 while the last was full. The claim reads plans by
+  `valid_until` on its new index.
+
+### Validation
+- Typecheck, lint, format check passed.
+- Unit and integration tests passed (4,313), coverage 100%.
+- E2E passed (phone, desktop; 170 passed, 10 skipped), on port 3107
+  through the scratch config. Two more skipped than R11.4's run: the front
+  desk journey skips itself late in the day, and this run ended near
+  midnight; nothing here touches what it covers.
+
+### Blockers
+- None.

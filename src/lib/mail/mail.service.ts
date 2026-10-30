@@ -3,6 +3,7 @@ import { accountConfirmationTemplate } from "./templates/account-confirmation";
 import { inviteTemplate, type InviteInput } from "./templates/invite";
 import { passwordResetTemplate } from "./templates/password-reset";
 import { planExtendedTemplate, type PlanExtendedInput } from "./templates/plan-extended";
+import { planNoticeTemplate, type PlanNoticeInput } from "./templates/plan-notice";
 
 interface MailServiceOptions {
   provider: MailProvider;
@@ -40,6 +41,11 @@ export class MailService {
 
   async sendPlanExtended(input: Omit<PlanExtendedInput, "appUrl"> & { to: string }) {
     const content = planExtendedTemplate({ ...input, appUrl: this.appUrl });
+    await this.provider.send({ from: this.from, to: input.to, ...content });
+  }
+
+  async sendPlanNotice(input: Omit<PlanNoticeInput, "appUrl"> & { to: string }) {
+    const content = planNoticeTemplate({ ...input, appUrl: this.appUrl });
     await this.provider.send({ from: this.from, to: input.to, ...content });
   }
 }

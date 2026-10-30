@@ -18,6 +18,7 @@ export const ERROR_MESSAGES = {
 
   AUTH_SESSION_REQUIRED: "Please sign in to continue.",
   AUTH_SESSION_INVALID: "Your session has expired. Please sign in again.",
+  CRON_SECRET_INVALID: "This call needs the scheduler's secret.",
   AUTH_PERMISSION_DENIED: "You don't have permission to do this. Your clinic's owner can give it to you.",
   // One wording for a wrong password and an unknown account (plan §5.2).
   AUTH_INVALID_CREDENTIALS: "That email or mobile number and password don't match.",
@@ -2302,6 +2303,45 @@ export const MAIL_TEXT = {
     body: "We got a request to reset the password for your account. Choose a new one with the button below.",
     action: "Choose a new password",
     footnote: "If you didn't ask for this, ignore this email. Your password stays as it is.",
+  },
+  /**
+   * The daily plan emails (plan §22; D384): the key date, then how to renew —
+   * the prices and whatever of the renewal contact is set — and the Plan
+   * screen. A trial is called one.
+   */
+  planNotice: {
+    plan: (trial: boolean) => (trial ? "free trial" : "plan"),
+    endsSoon: {
+      subject: (clinic: string, plan: string, date: string) => `${clinic}'s ${plan} ends on ${date}`,
+      heading: (plan: string, daysLeft: number) =>
+        daysLeft <= 0
+          ? `Your ${plan} ends today`
+          : daysLeft === 1
+            ? `Your ${plan} ends tomorrow`
+            : `Your ${plan} ends in ${daysLeft} days`,
+      body: (clinic: string, plan: string, date: string) =>
+        `${clinic}'s ${plan} ends on ${date}. Renew before then to keep working without a break.`,
+    },
+    ended: {
+      subject: (clinic: string, plan: string) => `${clinic}'s ${plan} has ended`,
+      heading: (plan: string) => `Your ${plan} has ended`,
+      body: (clinic: string, plan: string, ended: string, viewOnly: string) =>
+        `${clinic}'s ${plan} ended on ${ended}. Everything still works until ${viewOnly}, when the clinic becomes view-only. Renew before then to keep working.`,
+    },
+    readOnly: {
+      subject: (clinic: string) => `${clinic} is now view-only`,
+      heading: "Your clinic is view-only",
+      body: (clinic: string, plan: string, ended: string) =>
+        `${clinic}'s ${plan} ended on ${ended}, so the clinic is now view-only. Everything is kept: you can still read, search and print. Renew to make changes again.`,
+    },
+    preheader: "When it ends, and how to renew.",
+    prices: (monthly: string, yearly: string) => `${monthly} a month, or ${yearly} a year.`,
+    /** The renewal contact as set: who, then how to reach them; either alone. */
+    contact: (who: string | null, ways: string) =>
+      ways ? `To renew, contact ${who ?? "us"}: ${ways}` : `To renew, contact ${who}.`,
+    upi: (upiId: string) => `UPI: ${upiId}`,
+    action: "See how to renew",
+    footnote: (clinic: string) => `You're getting this because you own ${clinic} on ${UI_TEXT.appName}.`,
   },
   /** Plan extended (plan §22; D375, D376): every change the DEV records, to the owner. */
   planExtended: {

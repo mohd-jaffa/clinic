@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { MAIL_TEXT } from "@/constants/messages";
+import { PLATFORM_SETTING_DEFAULTS } from "@/constants/platform";
 import { MailService } from "@/lib/mail/mail.service";
 
 function service() {
@@ -77,6 +78,29 @@ describe("MailService", () => {
       expect.objectContaining({
         to: "asha@example.com",
         subject: MAIL_TEXT.planExtended.subject("Smile Care", "12 Dec 2026"),
+        text: expect.stringContaining("https://x.test/settings/plan"),
+      }),
+    );
+  });
+
+  it("sends the owner a daily plan email", async () => {
+    const { send, mail } = service();
+    await mail.sendPlanNotice({
+      to: "asha@example.com",
+      name: "Asha",
+      clinicName: "Smile Care",
+      notice: "READ_ONLY",
+      trial: false,
+      validUntil: "2026-11-12",
+      today: "2026-11-20",
+      readOnlyFrom: "2026-11-20",
+      renewal: PLATFORM_SETTING_DEFAULTS,
+      planUrl: "https://x.test/settings/plan",
+    });
+    expect(send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: "asha@example.com",
+        subject: MAIL_TEXT.planNotice.readOnly.subject("Smile Care"),
         text: expect.stringContaining("https://x.test/settings/plan"),
       }),
     );

@@ -47,6 +47,13 @@ describe("getServerEnv", () => {
     expect(() => getServerEnv({ ...base, TRIAL_CLAIM_SECRET: "short" })).toThrow(AppError);
   });
 
+  it("reads the scheduler's secret, a blank one as unset, and refuses one too short (plan §22)", () => {
+    const secret = "a-cron-secret-of-at-least-thirty-two-chars";
+    expect(getServerEnv({ ...base, CRON_SECRET: secret }).CRON_SECRET).toBe(secret);
+    expect(getServerEnv({ ...base, CRON_SECRET: "" }).CRON_SECRET).toBeUndefined();
+    expect(() => getServerEnv({ ...base, CRON_SECRET: "short" })).toThrow(AppError);
+  });
+
   it("counts a missing NODE_ENV as development", () => {
     const withoutNodeEnv = Object.fromEntries(Object.entries(base).filter(([key]) => key !== "NODE_ENV"));
     expect(getServerEnv(withoutNodeEnv as NodeJS.ProcessEnv).NODE_ENV).toBe("development");

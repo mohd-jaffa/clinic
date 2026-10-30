@@ -243,3 +243,13 @@ export const EMAIL_LINK_VALID_HOURS = 24;
  * most the 72 characters its hashing reads.
  */
 export const PASSWORD_LENGTH = { min: 8, max: 72 } as const;
+
+/**
+ * The daily plan emails (plan §22; D383): plans claimed this many at a time,
+ * emailed a few at once, and no new batch begun after this long — a run
+ * left over is caught up by the next day's, which the route's own limit
+ * (`maxDuration`) leaves room for.
+ */
+export const NOTICE_BATCH_SIZE = 50;
+export const NOTICE_SENDS_AT_ONCE = 5;
+export const NOTICE_RUN_MS = 40_000;

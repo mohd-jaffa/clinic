@@ -468,6 +468,11 @@ earlier lines are never rewritten.
 | D379 | **Five groups; the business details come with the receipts** (the user): Trial and pricing (trial, monthly, yearly) · Expiry (warning, grace, expiry email days) · Retention (audit, error log, deletion cooling-off) · Invites, follow-ups and imports (invite, follow-up lapses, rows per import) · Renewal contact (name, mobile, email, UPI id). The business name and address join the screen with R11.8, which prints them. | 2026-10-30 |
 | D380 | **The expiry email days are one field, "7, 1"** (the user): days before the last day, commas between, up to 5, each 1 – 60; kept largest first, repeats dropped; empty sends none. Shown as "7 and 1 days before". | 2026-10-30 |
 | D381 | **Saving asks first with each change and when it takes effect** (the user): "Trial days 30 → 45. Applies to clinics that sign up from now." — said once for each that matters: sign-ups from now; the next extension and every Plan screen (recorded ones keep theirs); every clinic's state at once; the next daily emails; the next purge, within the hour; invites sent from now; which follow-ups are lapsed at once; the next import; every owner's Plan screen at once. Nothing changed, nothing is asked or sent. | 2026-10-30 |
+| D382 | **The daily plan emails go at 9:00 in India** (the user): pg_cron's job at 03:30 UTC, fixed in `0037_subscription_notices`; a later migration moves it. | 2026-10-30 |
+| D383 | **A missed day catches up, and a failed email is tried again** (the user): each run sends a plan the latest notice due by its clinic's today and not yet sent for its last day — once, and never a backlog of older ones; an email that did not go is put back for the next run. | 2026-10-30 |
+| D384 | **The plan emails say the key date, how to renew, and lead to the Plan screen** (the user): "Your plan ends in 7 days" (tomorrow, today) with its last day; "Your plan has ended" with the day it becomes view-only; "Your clinic is view-only", everything kept and still readable, searchable and printable. Then the two prices, the renewal contact and the UPI id — each only if set — and **See how to renew**. A trial says "free trial". | 2026-10-30 |
+| D385 | **A clinic waiting for activation gets no plan email** (the user): No trial (plan §7.6) was told at sign-up and is flagged in the console; its emails start once the DEV extends it. | 2026-10-30 |
+| D386 | **How the daily run keeps each email to once** (the agent, within §22): the subscription row keeps the last notice, the day it was due and the last day it was about (`last_notice`, `last_notice_due`, `last_notice_for`); `claim_subscription_notices` marks plans as told as it claims them, skipping rows another run holds, and `release_subscription_notices` puts back the ones whose email failed. The route claims 50 at a time, sends 5 at once, begins no batch after 40 s (`maxDuration` 60), and leaves the rest to the next day. `CRON_SECRET` is optional in the env: unset, the route answers no one. | 2026-10-30 |
 
 ## 3. Users and roles
 
@@ -1882,6 +1887,13 @@ in Supabase Vault, never in a migration) — the database's scheduler, not a
 worker. Each email is sent once per validity period (recorded on the
 subscription row).
 
+As built (R11.5): at 9:00 in India (D382); each run sends a plan the latest
+notice due and not yet sent for its last day, and tries a failed email again
+on the next run (D383); the emails say the key date, how to renew and lead to
+the Plan screen (D384); a clinic waiting for activation gets none (D385); the
+claim marks as it claims, so two runs at once tell no one twice (D386). Ended
+is not sent when there is no grace: the clinic is view-only that day.
+
 ### 22.1 WhatsApp click-to-send (D48)
 
 No WhatsApp API, provider, template approval or cost: a button opens WhatsApp
@@ -2190,7 +2202,8 @@ doctors               id · clinic_id · member_id (unique) · specialization ·
                       · active
 platform_settings     id (true) · every setting in §6 · updated_by · updated_at
 clinic_subscriptions  clinic_id (PK) · plan (TRIAL|MONTHLY|YEARLY) · valid_until date
-                      · last_notice · last_notice_for · updated_by
+                      · last_notice (ENDS_SOON|ENDED|READ_ONLY) · last_notice_due
+                      · last_notice_for · updated_by
 subscription_payments id · clinic_id · plan (MONTHLY|YEARLY|CUSTOM) · amount_paise ≥ 0
                       · method · reference · paid_on · valid_from · valid_until
                       · reason · recorded_by · receipt_number ('R/2026-27/0001')
@@ -2447,7 +2460,9 @@ Planned order (one or more per tracker row):
 0036_extend_plan                Monthly and Yearly only for money received; an extension once
                                 per idempotency key, answered with the clinic as the console
                                 sees it; the live prices on a clinic's page (R11.3, D373 – D377)
-0037_subscription_notices       the daily pg_cron → pg_net call (address and secret in Vault)
+0037_subscription_notices       the daily pg_cron → pg_net call (address and secret in Vault);
+                                what each plan was last told; claim and release
+                                (R11.5, D382 – D386)
 0038_clinic_deletion            request_clinic_deletion, cancel_clinic_deletion,
                                 delete_clinic (DEV)
 0039_session_profile            session_profile: the session, profile, membership and plan in
@@ -3093,7 +3108,7 @@ in the row's one commit (D136).
 | R11.2 | Console: overview, clinics (No trial and Deletion flags), clinic detail, accounts, error log, platform audit (D367 – D372: the console's own places; each clinic counted once, a running trial as Trial; Deletion requested with R12.5; Call, WhatsApp and Email to the owner; the newest sign-up first; an error opened whole. `0035_console`, so the notices are 0036 on) | §20 | — | DONE (2026-10-28) |
 | R11.3 | Extend plan (Monthly, Yearly, Set date); the owner's confirmation email (D373 – D377: one sheet, the kind on top, the new last day under it, a card asks first; Monthly and Yearly only for money received, free days by Set date with a reason; the email says the last day and what was recorded; every change emails the owner, a failed email said on the card; once per key. `0036_extend_plan`, so the notices are 0037 on) | §7.4 | — | DONE (2026-10-30) |
 | R11.4 | Platform settings screen (D378 – D381: the groups as they stand, each changed in a sheet with its default and bounds; five groups, the business details with R11.8; the expiry email days typed "7, 1"; the card says each change and when it takes effect. No migration: `update_platform_settings` (0004, 0016) was already the write) | §6, §20.4 | — | DONE (2026-10-30) |
-| R11.5 | `0037_subscription_notices`: daily notices, each once per period | §22 | — | TODO |
+| R11.5 | `0037_subscription_notices`: daily notices, each once per period (D382 – D386: at 9:00 in India; a missed day caught up with the latest alone, a failed email tried again; the key date, how to renew and the Plan screen; none to a clinic waiting for activation; marked as claimed, so never twice) | §22 | — | DONE (2026-10-30) |
 | R11.6 | Owner's activity log | §19 | — | TODO |
 | R11.7 | Integration + E2E: extend, change a setting, notices once, DEV sees no clinic data | §34 | — | TODO |
 | R11.8 | Plan receipts: receipt numbers, the receipt PDF, the business details settings | §7.5, §6 | Q2 | TODO |
