@@ -430,6 +430,42 @@ export const SERVICE_CATEGORY_LABELS: Record<ServiceCategory, string> = {
 export const AUDIT_ACTIONS = ["CREATE", "UPDATE", "DELETE", "STATUS_CHANGE", "ARCHIVE", "RESTORE", "VOID"] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 
+/**
+ * The kinds the owner's activity log is kept to (plan §19; D388), each the
+ * tables whose rows it holds — every table the clinic's trail is written for.
+ */
+export const ACTIVITY_KINDS = [
+  "PATIENTS",
+  "APPOINTMENTS",
+  "VISITS",
+  "TREATMENTS",
+  "BILLING",
+  "EXPENSES",
+  "TEAM",
+  "SETTINGS",
+] as const;
+export type ActivityKind = (typeof ACTIVITY_KINDS)[number];
+export const ACTIVITY_KIND_LABELS: Record<ActivityKind, string> = {
+  PATIENTS: "Patients",
+  APPOINTMENTS: "Appointments",
+  VISITS: "Visits and prescriptions",
+  TREATMENTS: "Treatments and follow-ups",
+  BILLING: "Bills and payments",
+  EXPENSES: "Expenses",
+  TEAM: "Team",
+  SETTINGS: "Clinic settings",
+};
+export const ACTIVITY_KIND_TABLES: Record<ActivityKind, readonly string[]> = {
+  PATIENTS: ["patients", "patient_alerts"],
+  APPOINTMENTS: ["appointments"],
+  VISITS: ["visits", "vitals", "prescriptions", "prescription_templates"],
+  TREATMENTS: ["treatments", "treatment_sessions", "follow_up_contacts"],
+  BILLING: ["bills", "payments"],
+  EXPENSES: ["expenses"],
+  TEAM: ["clinic_members"],
+  SETTINGS: ["clinics", "services", "appointment_types", "expense_categories", "clinic_closures"],
+};
+
 /** Where a failure in the error log happened (plan §36). */
 export const ERROR_SOURCES = ["API", "SCREEN", "SERVER", "CRON"] as const;
 export type ErrorSource = (typeof ERROR_SOURCES)[number];

@@ -12,17 +12,3 @@ export const thisMonth = (today: string = todayKey()) => monthStartKey(today);
 
 /** Whether a month — by its first day — is this one or later, so there is none after it to show: no expense is dated later (D328). */
 export const isLatestMonth = (month: string, today: string = todayKey()) => month >= monthStartKey(today);
-
-/**
- * A month's expenses, grouped by their day, newest first, each day's in the
- * order they came (D332).
- */
-export function byDay<T extends { day: string }>(expenses: readonly T[]): { day: string; expenses: T[] }[] {
-  const days: { day: string; expenses: T[] }[] = [];
-  for (const expense of expenses) {
-    const last = days.at(-1);
-    if (last?.day === expense.day) last.expenses.push(expense);
-    else days.push({ day: expense.day, expenses: [expense] });
-  }
-  return days;
-}

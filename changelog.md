@@ -5322,3 +5322,68 @@ the user first: D267 – D271.
 
 ### Blockers
 - None.
+
+## 2026-10-31 — R11.6: the owner's activity log
+
+### Added
+- **Activity** — `/settings/activity` (plan §19; D387 – D390), the
+  owner's: who did what, when, the latest first, under day headings (Today,
+  Yesterday, "28 Oct"), a page at a time. Each row says what was done with
+  what matters — "Recorded a payment of ₹2,000 · UPI", "Cancelled an
+  appointment", "Issued bill 2026-27/0042 · ₹1,500", "Added Scaling to the
+  price list" — over its patient by name and number ("Meena Iyer ·
+  P-1023"), and who did it at what time. **Everyone** and **All kinds**
+  menus keep it to a person and to one of eight kinds. A row opens the
+  whole change: who and when, the patient with **Open patient**, and each
+  change from and to — doctors, types and categories by name, clinical and
+  personal text by field name alone. A view-only clinic reads it as ever.
+- `0038_activity`: `clinic_activity()` (security definer, the owner checked
+  inside): a page of the trail, then each row's patient — through its own
+  record, or the visit, treatment or appointment it hangs from — the record
+  it names, and the names behind the doctor, type and category ids its
+  changes hold (D391); `audit_logs_clinic_actor_idx`,
+  `audit_logs_clinic_entity_idx`; and the trail's rows stamped as each is
+  written (`clock_timestamp()`), so the rows of one change — a sitting that
+  starts and completes its treatment — read in the order they happened. (They
+  shared one time before, and `treatment-records.test.ts` read them back in
+  either order: it failed once in this run's suite.)
+- `GET /api/activity` (`withClinicRoute`, owner); `activityQuerySchema`;
+  `listActivity`, `describeActivity`, `subjectOf`, `changeLines`
+  (`src/features/activity/describe.ts`: a line for every kind of row the
+  trail is written for); `useActivity`, `ActivityLog`, `ActivitySheet`;
+  `ACTIVITY_KINDS` with their tables.
+- **Tests:** the 0038 contract (the indexes, the owner's alone, the page
+  read first, every table it explains kept by a kind); the kinds hold each
+  table once; unit tests for every line, subject and change, the read, the
+  key, the hook, the schema, the route, the screen and the sheet; an
+  integration test (`activity.test.ts`) — what the owner and the desk did
+  through the app's own functions read back with the patient, the record
+  and a category by name, kept to a person, a kind and both, read in a
+  view-only clinic, and refused to a member and to another clinic's owner;
+  a journey (`activity.spec.ts`) from Settings: today's payment with its
+  patient, kept to a kind, opened whole and on to the patient; a member of
+  staff told it is not theirs.
+
+### Changed
+- `byDay` moved from `src/features/expenses/month.ts` to
+  `src/lib/dates/group.ts`, used by Expenses and the activity log.
+- Plan: D387 – D391; §19 says how it was built; §29 adds `0038_activity`,
+  so the clinic's deletion is `0039`, the session profile `0040` and the
+  faster reads `0041`; tracker R11.6 DONE (2026-10-31). `DESIGN.md`: the
+  activity log.
+
+### Speed
+- The activity log waits on 2 round trips: the session, then its first page
+  and the team (for the Person menu) at once. A page is one call: the
+  trail's rows on `audit_logs_clinic_id_created_at_idx` (or the person or
+  kind index), then each row's patient, record and names by their primary
+  keys — 20 rows, not the whole trail.
+
+### Validation
+- Typecheck, lint, format check passed.
+- Unit and integration tests passed (4,358), coverage 100%.
+- E2E passed (phone, desktop; 176 passed, 8 skipped by design), on port
+  3107 through the scratch config.
+
+### Blockers
+- None.

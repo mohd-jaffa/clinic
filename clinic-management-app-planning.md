@@ -473,6 +473,11 @@ earlier lines are never rewritten.
 | D384 | **The plan emails say the key date, how to renew, and lead to the Plan screen** (the user): "Your plan ends in 7 days" (tomorrow, today) with its last day; "Your plan has ended" with the day it becomes view-only; "Your clinic is view-only", everything kept and still readable, searchable and printable. Then the two prices, the renewal contact and the UPI id — each only if set — and **See how to renew**. A trial says "free trial". | 2026-10-30 |
 | D385 | **A clinic waiting for activation gets no plan email** (the user): No trial (plan §7.6) was told at sign-up and is flagged in the console; its emails start once the DEV extends it. | 2026-10-30 |
 | D386 | **How the daily run keeps each email to once** (the agent, within §22): the subscription row keeps the last notice, the day it was due and the last day it was about (`last_notice`, `last_notice_due`, `last_notice_for`); `claim_subscription_notices` marks plans as told as it claims them, skipping rows another run holds, and `release_subscription_notices` puts back the ones whose email failed. The route claims 50 at a time, sends 5 at once, begins no batch after 40 s (`maxDuration` 60), and leaves the rest to the next day. `CRON_SECRET` is optional in the env: unset, the route answers no one. | 2026-10-30 |
+| D387 | **The activity log names a patient by name and number** (the user): "Recorded a payment of ₹2,000 · UPI" over "Meena Iyer · P-1023". The trail stores neither (plan §27.6); both are read live, for the owner only. | 2026-10-31 |
+| D388 | **The activity log filters by two menus** (the user): Person — Everyone, then each of the team — and Kind: Patients · Appointments · Visits and prescriptions · Treatments and follow-ups · Bills and payments · Expenses · Team · Clinic settings. | 2026-10-31 |
+| D389 | **A row of the activity opens the whole change** (the user): a sheet with who and when, the patient with **Open patient**, and each change — values from and to ("Fee: ₹500 → ₹300"), the doctors, types and categories by name, clinical and personal text by field name alone. | 2026-10-31 |
+| D390 | **The activity log stands under day headings** (the user): Today, Yesterday, then "28 Oct"; each row its time; the latest first, a page at a time. | 2026-10-31 |
+| D391 | **How the activity is read** (the agent, within §19): `0038_activity`'s `clinic_activity()` — the owner's, checked inside — pages the trail first, then reads each row's patient (through the record, or the visit, treatment or appointment it hangs from), the record it names, and the names behind the ids its changes hold; a record deleted since is said from what the row kept; the trail's rows are stamped as each is written (`clock_timestamp()`), so a change's rows read in order. Each line is worded by `src/features/activity/describe.ts` from the kind of record, the action and the change. Indexes for one person's and one kind's rows. So the clinic's deletion is `0039` on. | 2026-10-31 |
 
 ## 3. Users and roles
 
@@ -1798,6 +1803,12 @@ payment of ₹2,000 for P-1023"), filterable by person and kind, for the last
 `audit_keep_days` (§6). Written by the server only; no member can write or
 change a row. DEV never reads a clinic's activity (it names patients).
 
+As built (R11.6): each row says what was done with what matters — "Recorded a
+payment of ₹2,000 · UPI" — over its patient by name and number (D387), and who
+did it at what time; two menus keep it to a person and a kind (D388); a row
+opens the whole change (D389); rows stand under their day (D390); read in one
+call, the owner's, with each row's patient and record (D391).
+
 ## 20. Developer console — `/admin`
 
 DEV only, behind `withDevRoute`. It shows **no clinic data** — no patients,
@@ -2463,11 +2474,14 @@ Planned order (one or more per tracker row):
 0037_subscription_notices       the daily pg_cron → pg_net call (address and secret in Vault);
                                 what each plan was last told; claim and release
                                 (R11.5, D382 – D386)
-0038_clinic_deletion            request_clinic_deletion, cancel_clinic_deletion,
+0038_activity                   clinic_activity: the owner's activity log, each row with its
+                                patient, record and names; the person and kind indexes
+                                (R11.6, D387 – D391)
+0039_clinic_deletion            request_clinic_deletion, cancel_clinic_deletion,
                                 delete_clinic (DEV)
-0039_session_profile            session_profile: the session, profile, membership and plan in
+0040_session_profile            session_profile: the session, profile, membership and plan in
                                 one read (R13.2, D134)
-0040_faster_reads               indexes and policies from the load-seeded EXPLAINs (R13.3)
+0041_faster_reads               indexes and policies from the load-seeded EXPLAINs (R13.3)
 ```
 
 ## 30. API
@@ -3109,7 +3123,7 @@ in the row's one commit (D136).
 | R11.3 | Extend plan (Monthly, Yearly, Set date); the owner's confirmation email (D373 – D377: one sheet, the kind on top, the new last day under it, a card asks first; Monthly and Yearly only for money received, free days by Set date with a reason; the email says the last day and what was recorded; every change emails the owner, a failed email said on the card; once per key. `0036_extend_plan`, so the notices are 0037 on) | §7.4 | — | DONE (2026-10-30) |
 | R11.4 | Platform settings screen (D378 – D381: the groups as they stand, each changed in a sheet with its default and bounds; five groups, the business details with R11.8; the expiry email days typed "7, 1"; the card says each change and when it takes effect. No migration: `update_platform_settings` (0004, 0016) was already the write) | §6, §20.4 | — | DONE (2026-10-30) |
 | R11.5 | `0037_subscription_notices`: daily notices, each once per period (D382 – D386: at 9:00 in India; a missed day caught up with the latest alone, a failed email tried again; the key date, how to renew and the Plan screen; none to a clinic waiting for activation; marked as claimed, so never twice) | §22 | — | DONE (2026-10-30) |
-| R11.6 | Owner's activity log | §19 | — | TODO |
+| R11.6 | Owner's activity log (D387 – D391: each row's patient by name and number; Person and Kind menus; a row opened whole; under day headings; read in one call with each row's patient and record. `0038_activity`, so the clinic's deletion is 0039 on) | §19 | — | DONE (2026-10-31) |
 | R11.7 | Integration + E2E: extend, change a setting, notices once, DEV sees no clinic data | §34 | — | TODO |
 | R11.8 | Plan receipts: receipt numbers, the receipt PDF, the business details settings | §7.5, §6 | Q2 | TODO |
 
@@ -3121,7 +3135,7 @@ in the row's one commit (D136).
 | R12.2 | Privacy and terms | §21 | Q22 | TODO |
 | R12.3 | Manifest, icons, service worker, offline page, Install app | §21 | — | TODO |
 | R12.4 | Security headers; `noindex` on app routes; share-preview image | §21 | — | TODO |
-| R12.5 | `0038_clinic_deletion`: the owner's request and cancel (banner, emails), the admin's delete after the cooling-off; the console's Deletion requested flag, its filter and Deletions due (D369) | §9.1, §20 | — | TODO |
+| R12.5 | `0039_clinic_deletion`: the owner's request and cancel (banner, emails), the admin's delete after the cooling-off; the console's Deletion requested flag, its filter and Deletions due (D369) | §9.1, §20 | — | TODO |
 | R12.6 | CSV export, one file per area, audited | §9 | — | TODO |
 
 ### Phase 13 — Speed and the release checks (D134, D185)
@@ -3137,8 +3151,8 @@ deployment, waits on that (D185).**
 | ID | Work | Source | Waits on | Status |
 |---|---|---|---|---|
 | R13.1 | The measuring setup: a load seed (a clinic with 50 000 patients, 200 000 appointments, 100 000 bills, a year of visits); the production build timed locally with 40 ms added to each database request; every screen, read and save timed and its round trips counted; Home, Queue and Patients timed on a throttled phone (4× CPU, 4G). The baseline in the changelog | §37 | — | TODO |
-| R13.2 | `0039_session_profile`: the session in one round trip. The token's signature and expiry checked on the server against the project's published key (`getClaims`), instead of asking Supabase Auth each request. One function checks the session is still open and hands back the profile, membership, clinic, doctor, plan and the settings it needs. Today a session waits on 3: Auth, the profile, then the plan and settings | §5.5, §37 | — | TODO |
-| R13.3 | `0040_faster_reads`: EXPLAIN ANALYZE on the load seed for every list, search, count and report. Indexes added or changed (every paged list in its own order, every foreign key). No policy or list calls `can_see_patient()` per row. Supabase's performance advisor reports nothing: unindexed keys, policies re-run per row, overlapping policies, duplicate or unused indexes | §27, §28, §37 | — | TODO |
+| R13.2 | `0040_session_profile`: the session in one round trip. The token's signature and expiry checked on the server against the project's published key (`getClaims`), instead of asking Supabase Auth each request. One function checks the session is still open and hands back the profile, membership, clinic, doctor, plan and the settings it needs. Today a session waits on 3: Auth, the profile, then the plan and settings | §5.5, §37 | — | TODO |
+| R13.3 | `0041_faster_reads`: EXPLAIN ANALYZE on the load seed for every list, search, count and report. Indexes added or changed (every paged list in its own order, every foreign key). No policy or list calls `can_see_patient()` per row. Supabase's performance advisor reports nothing: unindexed keys, policies re-run per row, overlapping policies, duplicate or unused indexes | §27, §28, §37 | — | TODO |
 | R13.4 | Round trips cut to the budget. Reads that do not depend on each other go at once (`allInOrder`), records come with their children, writes answer from `returning`, and side work runs after the answer. Every screen and read within 2, every save within 4; every list and search under 300 ms at the API on the load seed | §37 | — | TODO |
 | R13.5 | Pages: the proxy starts only where it has work and loads the Supabase client only to renew. Heavy code loads when first needed; first-load JS within 200 KB gzip. Polling stops while the tab is hidden. Reusing a screen revisited within seconds (`staleTimes`) measured, kept only if it helps. LCP and INP within budget on the throttled phone | §37 | — | TODO |
 | R13.6 | Hosting: `vercel.json` with region `bom1` and fluid compute, sent by `vercel deploy --prebuilt` with every release; the release guide (R14.7) says so | §35, §37 | — | TODO |

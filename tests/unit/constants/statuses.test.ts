@@ -99,3 +99,12 @@ describe("a treatment's status moves (plan §14.1)", () => {
     expect(TREATMENT_START_STATUSES).toEqual(["PLANNED", "IN_PROGRESS"]);
   });
 });
+
+describe("the activity log's kinds (plan §19; D388)", () => {
+  it("hold each audited table once, every kind its own tables", () => {
+    expect(Object.keys(statuses.ACTIVITY_KIND_TABLES)).toEqual([...statuses.ACTIVITY_KINDS]);
+    const tables = Object.values(statuses.ACTIVITY_KIND_TABLES).flat();
+    expect(new Set(tables).size).toBe(tables.length);
+    for (const table of tables) expect(table).toMatch(/^[a-z_]+$/);
+  });
+});

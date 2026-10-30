@@ -29,6 +29,8 @@ export {
   wholeNumberText,
 } from "./primitives";
 
+export { activityQuerySchema, type ActivityQuery } from "./schemas/activity";
+
 export {
   consoleClinicsQuerySchema,
   extendPlanSchema,

@@ -11,13 +11,13 @@ import { Row, RowList } from "@/components/ui/row";
 import { UI_TEXT } from "@/constants/messages";
 import { PAYMENT_METHOD_LABELS } from "@/constants/statuses";
 import { todayKey } from "@/lib/dates/calendar";
+import { byDay } from "@/lib/dates/group";
 import type { DayRange } from "@/lib/dates/range";
 import { formatPaise } from "@/lib/format/currency";
 import { formatNearDate } from "@/lib/format/date";
 
 import { useArchiveExpense } from "../hooks/useArchiveExpense";
 import { useExpenses } from "../hooks/useExpenses";
-import { byDay } from "../month";
 import type { Expense } from "../types";
 
 const { expenses: words } = UI_TEXT;
@@ -68,7 +68,7 @@ export function ExpenseList({
         }
         renderList={(expenses) => (
           <div className="grid gap-5">
-            {byDay(expenses).map(({ day, expenses: ofDay }) => (
+            {byDay(expenses, (expense) => expense.day).map(({ day, rows: ofDay }) => (
               <DayExpenses key={day} day={day} expenses={ofDay} canEdit={canEdit} onOpen={onOpen} />
             ))}
           </div>

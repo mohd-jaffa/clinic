@@ -169,6 +169,8 @@ export const apiRoutes = {
     plan: "/api/subscription",
   },
   // The developer console (plan §20), the DEV's alone: the Overview, every clinic and one, accounts, the logs.
+  // The owner's activity log (plan §19): a page at a time, kept to a person and a kind.
+  activity: { list: "/api/activity" },
   console: {
     overview: "/api/admin/overview",
     clinics: "/api/admin/clinics",
