@@ -62,9 +62,25 @@ export interface ConsolePlanPayment {
   recordedAt: string;
 }
 
-/** One clinic's page in the console (plan §20.3): its row, and every change recorded to its plan. */
+/**
+ * One clinic's page in the console (plan §20.3): its row, every change
+ * recorded to its plan, and the live prices, which fill in Monthly and
+ * Yearly in Extend plan (plan §7.4).
+ */
 export interface ConsoleClinicDetail extends ConsoleClinic {
   payments: ConsolePlanPayment[];
+  prices: { monthlyPaise: number; yearlyPaise: number };
+}
+
+/**
+ * What Extend plan answers (plan §7.4; D376): the clinic as it now stands,
+ * the change recorded, and whether the owner was emailed — null when the
+ * same Extend plan was sent again, and recorded the first time.
+ */
+export interface PlanExtended {
+  clinic: ConsoleClinicDetail;
+  payment: ConsolePlanPayment;
+  emailSent: boolean | null;
 }
 
 /** An account (plan §20.5): who, the clinic they belong to and as what, and when they last signed in. */

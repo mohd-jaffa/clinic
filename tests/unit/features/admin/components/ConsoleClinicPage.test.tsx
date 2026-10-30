@@ -31,6 +31,17 @@ describe("ConsoleClinicPage (plan §20.3; D370)", () => {
     expect(plan).toHaveTextContent("Members3");
   });
 
+  it("opens Extend plan from the plan, and closes it again (plan §7.4; D373)", async () => {
+    draw();
+    await userEvent.click(
+      within(screen.getByRole("region", { name: "Plan" })).getByRole("button", { name: "Extend plan" }),
+    );
+    const sheet = screen.getByRole("dialog", { name: "Extend the plan for Smile Care" });
+    expect(within(sheet).getByRole("radio", { name: "Monthly" })).toBeChecked();
+    await userEvent.click(within(sheet).getByRole("button", { name: "Close" }));
+    expect(screen.queryByRole("dialog", { name: "Extend the plan for Smile Care" })).not.toBeInTheDocument();
+  });
+
   it("gives the owner, with Call, WhatsApp and Email to reach them, the chat and the email empty (D370)", () => {
     draw();
     const owner = screen.getByRole("region", { name: "Owner" });

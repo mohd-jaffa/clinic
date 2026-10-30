@@ -659,6 +659,40 @@ export const UI_TEXT = {
     noPlanHistory: "Nothing recorded yet.",
     receipt: (number: string) => `Receipt ${number}`,
 
+    // Extend plan (plan §7.4; D373 – D376): one sheet, the kind on top, then a card asks first.
+    extend: "Extend plan",
+    extendFor: (clinic: string) => `Extend the plan for ${clinic}`,
+    kindLabel: "Extend by",
+    newLastDayLabel: "New last day",
+    newLastDay: (date: string) => `New last day · ${date}`,
+    nowUntil: (date: string) => `Now until ${date}`,
+    amountLabel: "Amount",
+    amountHint: "The price, unless another was agreed.",
+    freeAmountHint: "₹0 for days given free.",
+    paidOnLabel: "Paid on",
+    methodLabel: "Method",
+    referenceLabel: "Reference",
+    referenceHint: "A UPI ref or cheque number, if any.",
+    reasonLabel: "Reason",
+    reasonHint: "The owner sees it in their plan history.",
+    extendAsk: (clinic: string, date: string) => `Extend ${clinic} to ${date}?`,
+    moveAsk: (clinic: string, date: string) => `Move ${clinic}’s last day to ${date}?`,
+    paidAsk: (amount: string, method: string) =>
+      `${amount} by ${method} is recorded with a receipt, and the owner is emailed.`,
+    freeAsk: "It is recorded as no charge, with your reason, and the owner is emailed.",
+    extendConfirm: "Extend",
+    moveConfirm: "Move the date",
+    extended: (clinic: string) => `${clinic}’s plan is extended`,
+    moved: (clinic: string) => `${clinic}’s last day is moved`,
+    runsUntil: (date: string) => `It now runs until ${date}.`,
+    ownerEmailed: (date: string) => `It now runs until ${date}. The owner is emailed.`,
+    notEmailed: (clinic: string) => `${clinic}’s plan is changed, but the owner’s email didn’t go`,
+    notEmailedBody: (date: string) =>
+      `It now runs until ${date}. Let the owner know yourself with Call, WhatsApp or Email.`,
+    notExtended: "The plan wasn’t changed",
+    lastDayFact: "Last day",
+    receiptFact: "Receipt",
+
     // Accounts (plan §20.5).
     searchAccountsHint: "Name, email, mobile or clinic",
     noAccounts: "No accounts yet.",
@@ -2218,5 +2252,20 @@ export const MAIL_TEXT = {
     body: "We got a request to reset the password for your account. Choose a new one with the button below.",
     action: "Choose a new password",
     footnote: "If you didn't ask for this, ignore this email. Your password stays as it is.",
+  },
+  /** Plan extended (plan §22; D375, D376): every change the DEV records, to the owner. */
+  planExtended: {
+    subject: (clinic: string, date: string) => `${clinic}'s plan runs until ${date}`,
+    preheader: "What was recorded, and where to see your plan.",
+    heading: "Your plan is extended",
+    /** A date set earlier than the last one: a correction. */
+    movedHeading: "Your plan's last day has changed",
+    body: (clinic: string, date: string) => `${clinic}'s plan now runs until ${date}.`,
+    paid: (amount: string, method: string, date: string) => `${amount} paid by ${method} on ${date}`,
+    noCharge: "No charge",
+    receipt: (number: string) => `Receipt ${number}`,
+    action: "See your plan",
+    footnote: (clinic: string) =>
+      `You're getting this because you own ${clinic} on ${UI_TEXT.appName}, and its plan was changed.`,
   },
 } as const;

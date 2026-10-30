@@ -88,7 +88,7 @@ describe("the console's reads (plan §20)", () => {
     expect(all.rpcs[0].args).toEqual({ p_words: null, p_digits: null, p_filter: null, p_offset: 0, p_limit: 21 });
   });
 
-  it("reads one clinic with every change recorded to its plan, and says when there is none", async () => {
+  it("reads one clinic with every change recorded to its plan and the live prices, and says when there is none", async () => {
     const { client } = fakeSupabase({
       rpc: () => ({
         data: {
@@ -109,10 +109,12 @@ describe("the console's reads (plan §20)", () => {
               created_at: "2026-10-12T05:00:00.000Z",
             },
           ],
+          prices: { monthly_paise: 30_000, yearly_paise: 300_000 },
         },
       }),
     });
     const clinic = await getConsoleClinic(client, "c-1");
+    expect(clinic.prices).toEqual({ monthlyPaise: 30_000, yearlyPaise: 300_000 });
     expect(clinic.payments).toEqual([
       {
         id: "sp-1",

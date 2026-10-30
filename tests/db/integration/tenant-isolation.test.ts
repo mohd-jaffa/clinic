@@ -637,6 +637,7 @@ describe("as clinic B's owner, with a valid token", () => {
       p_paid_on: null,
       p_valid_until: null,
       p_reason: null,
+      p_idempotency_key: randomUUID(),
     });
     expect(extended?.code).toBe("42501");
 

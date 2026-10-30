@@ -40,7 +40,7 @@ export function aConsoleClinic(overrides: Partial<ConsoleClinic> = {}): ConsoleC
   };
 }
 
-/** The same clinic's page (plan §20.3): a month paid for, and ten days given before it. */
+/** The same clinic's page (plan §20.3): a month paid for, and ten days given before it; the prices of today. */
 export function aConsoleClinicDetail(overrides: Partial<ConsoleClinicDetail> = {}): ConsoleClinicDetail {
   return {
     ...aConsoleClinic({ plan: "MONTHLY", validUntil: "2026-12-10", state: "ACTIVE", standing: "ACTIVE" }),
@@ -74,6 +74,7 @@ export function aConsoleClinicDetail(overrides: Partial<ConsoleClinicDetail> = {
         recordedAt: "2026-10-20T05:00:00.000Z",
       },
     ],
+    prices: { monthlyPaise: 30_000, yearlyPaise: 300_000 },
     ...overrides,
   };
 }

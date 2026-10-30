@@ -5140,3 +5140,69 @@ the user first: D267 – D271.
 
 ### Blockers
 - None.
+
+## 2026-10-30 — R11.3: Extend plan, and the owner's email
+
+### Added
+- **Extend plan** on a clinic's console page (plan §7.4; D373): one sheet,
+  Monthly · Yearly · Set date at its top and the new last day under them,
+  worked out as the database will (`periodEnd()`, from the later of the
+  plan's last day and yesterday); the amount filled in with the live
+  price, the day paid (today), the method (UPI first), a reference and a
+  reason. A card asks first, saying to what day and what is recorded.
+- **Free days go through Set date** (D374): Monthly and Yearly are money
+  received — more than ₹0, with how and when it was paid, and a receipt.
+  Set date takes the new last day and a reason, at ₹0 unless money came,
+  when it asks how and when too.
+- **The owner's Plan extended email** (plan §22; D375, D376): every change
+  recorded emails the owner — the new last day, then what was paid, how
+  and when, and its receipt number, or "No charge" with the reason — and
+  **See your plan**. A date moved earlier says the last day has changed.
+  A failed email never undoes the change: it is logged, and the card says
+  the plan is changed but the email didn't go. The receipt PDF link comes
+  with R11.8.
+- `0036_extend_plan`: `subscription_payments.idempotency_key` (unique with
+  the clinic) and `subscription_payments_period_paid` (Monthly and Yearly
+  only above ₹0); `extend_clinic_subscription` takes the key and answers
+  the same key with what it recorded the first time (D377), with
+  `created` and the clinic as the console now sees it; `console_clinic`
+  carries the live prices.
+- `POST /api/admin/clinics/[id]/extend` (`withDevRoute`, the DEV's own
+  client, `Idempotency-Key`), `extendPlanSchema`, `ConsoleClient.extend`,
+  `useExtendPlan`, `ExtendPlanSheet`, `planExtendedTemplate` and
+  `MailService.sendPlanExtended`.
+- **Tests:** the 0036 contract; unit tests for the rule, the schema, the
+  email, the route, the server function (sent, failed, sent again), the
+  client, the hook, the sheet and the page's button; an integration test
+  (`extend-plan.test.ts`) of a month paid early, once per key with one
+  email, a month's end the console agrees with, a date set free and one
+  moved earlier as the owner reads them in Mailpit, and the refusals (a
+  month at ₹0, no key, not the DEV); a journey in `console.spec.ts` that
+  activates a clinic waiting with a month, then gives it days free.
+
+### Changed
+- Every test that calls `extend_clinic_subscription` sends its key.
+- Plan: D373 – D377; §7.4 says how it was built; §29 adds
+  `0036_extend_plan`, so the notices are `0037`, the deletion `0038`, the
+  session profile `0039` and the faster reads `0040`; tracker R11.3 DONE
+  (2026-10-30). `DESIGN.md`: Extend plan and the email.
+
+### Speed
+- A clinic's page still waits on 2 round trips: the session, then
+  `console_clinic`, which now brings the prices in the same call.
+- Extend plan waits on 2: the session, then the one function call that
+  records the change, its receipt, the new last day and the audit row and
+  answers with the clinic; then the email (SMTP, not the database), and an
+  error-log row only if it fails (3). The page then reads its clinic
+  again. The key is looked up on the clinic's unique index, under the
+  subscription row's lock.
+
+### Validation
+- Typecheck, lint, format check passed.
+- Unit and integration tests passed (4,243), coverage 100%.
+- E2E passed (phone, desktop; 170 passed, 8 skipped by design) — run on
+  port 3107 through a scratch config, as another project's journeys held
+  3100 at the time (nothing in the repo changed for it).
+
+### Blockers
+- None.

@@ -3,7 +3,12 @@ import { randomUUID } from "node:crypto";
 import { expect, test, type Page } from "@playwright/test";
 
 import { UI_TEXT } from "@/constants/messages";
+import { periodEnd } from "@/features/subscription/state";
 import { addDaysKey, todayKey } from "@/lib/dates/calendar";
+import { formatPaise } from "@/lib/format/currency";
+import { formatDate, formatLongDate } from "@/lib/format/date";
+import { paiseToText } from "@/lib/money";
+import { getPlatformSettings } from "@/lib/platform/settings";
 import { createSupabaseAnonClient } from "@/lib/supabase/server";
 import { expectAccessible } from "@tests/support/e2e";
 import { admin, makeDeveloper, registerClinic, removeAll, setValidUntil } from "@tests/support/integration";
@@ -13,8 +18,11 @@ import { admin, makeDeveloper, registerClinic, removeAll, setValidUntil } from "
  * and a desktop's: the platform admin finds the clinic waiting for
  * activation from the Overview, searches the clinics, opens one — its plan,
  * its owner with Call, WhatsApp and Email, what was recorded — then the
- * accounts, the error log, opened whole, and the platform audit. A clinic's
- * owner is sent Home. Each screen checked by axe, nothing wider than it.
+ * accounts, the error log, opened whole, and the platform audit. It extends
+ * a plan (R11.3, D373 – D376): a month paid for activates the clinic waiting,
+ * then days given free move its last day — the owner's email, which the
+ * journeys never send, said to have not gone. A clinic's owner is sent Home.
+ * Each screen checked by axe, nothing wider than it.
  */
 test.afterAll(removeAll);
 
@@ -61,6 +69,7 @@ test("the platform admin's console: the overview, a clinic waiting, the accounts
     p_paid_on: todayKey(),
     p_valid_until: null,
     p_reason: null,
+    p_idempotency_key: randomUUID(),
   });
   expect(error).toBeNull();
   const reference = `req_${tag}`;
@@ -141,6 +150,80 @@ test("the platform admin's console: the overview, a clinic waiting, the accounts
   await fitsTheScreen(page);
   await expectAccessible(page);
   await admin().from("error_logs").delete().eq("reference", reference);
+});
+
+test("the platform admin extends a plan: a month paid for activates a clinic waiting, then days are given free", async ({
+  page,
+}) => {
+  const tag = randomUUID().slice(0, 6);
+  const name = `Waiting ${tag}`;
+  const [developer, waiting, settings] = await Promise.all([
+    makeDeveloper(),
+    registerClinic({ fullName: "Asha Menon", clinicName: name }),
+    getPlatformSettings(),
+  ]);
+  const before = addDaysKey(todayKey(), -61);
+  await setValidUntil(waiting.clinicId, before);
+
+  await signIn(page, developer.email, developer.password);
+  await page.goto(`/admin/clinics/${waiting.clinicId}`);
+  const plan = page.getByRole("region", { name: words.plan, exact: true });
+  await expect(plan).toContainText("No trial");
+
+  // A month at the live price, paid today by UPI, running on from today (D373, D374).
+  await plan.getByRole("button", { name: words.extend }).click();
+  const sheet = page.getByRole("dialog", { name: words.extendFor(name) });
+  await expect(sheet.getByRole("radio", { name: "Monthly" })).toBeChecked();
+  const month = periodEnd("MONTHLY", before, todayKey());
+  await expect(sheet.getByText(words.newLastDay(formatDate(month)))).toBeVisible();
+  await expect(sheet.getByRole("textbox", { name: new RegExp(`^${words.amountLabel}`) })).toHaveValue(
+    paiseToText(settings.monthlyPricePaise),
+  );
+  await expect(sheet.getByRole("radio", { name: "UPI" })).toBeChecked();
+  await sheet.getByRole("textbox", { name: new RegExp(`^${words.referenceLabel}`) }).fill(`UPI-${tag}`);
+  await fitsTheScreen(page);
+  await expectAccessible(page);
+  await sheet.getByRole("button", { name: words.extend }).click();
+
+  // The card asks first, then says the new last day and that the owner is emailed (D376).
+  const ask = page.getByRole("alertdialog", { name: words.extendAsk(name, formatDate(month)) });
+  await expect(ask).toContainText(words.paidAsk(formatPaise(settings.monthlyPricePaise), "UPI"));
+  await expectAccessible(page);
+  await ask.getByRole("button", { name: words.extendConfirm }).click();
+  // The journeys send no mail, so the card says the owner's email didn't go; the plan is changed all the same.
+  const unsent = page.getByRole("alertdialog", { name: words.notEmailed(name) });
+  await expect(unsent).toContainText(words.notEmailedBody(formatDate(month)));
+  await unsent.getByRole("button", { name: UI_TEXT.actions.close }).click();
+  await expect(plan).toContainText("Monthly");
+  await expect(plan).toContainText(formatDate(month));
+  await expect(plan).not.toContainText("No trial");
+  await expect(page.getByRole("list", { name: words.planHistory })).toContainText(`UPI-${tag}`);
+
+  // Ten days given free: a date set by hand, with its reason, at ₹0 (D374).
+  const free = addDaysKey(month, 10);
+  await plan.getByRole("button", { name: words.extend }).click();
+  await sheet.getByRole("radio", { name: "Set date" }).click();
+  await expect(sheet.getByRole("radio", { name: "UPI" })).toBeHidden();
+  await sheet.getByRole("button", { name: new RegExp(`^${words.newLastDayLabel}`) }).click();
+  const calendar = page.getByRole("dialog", { name: UI_TEXT.datePicker.calendar(words.newLastDayLabel) });
+  const day = calendar.getByRole("button", { name: formatLongDate(free) });
+  for (let step = 0; step < 3 && !(await day.isVisible()); step++) {
+    await calendar.getByRole("button", { name: UI_TEXT.datePicker.nextMonth }).click();
+  }
+  await day.click();
+  const reason = `Ten days for the move ${tag}`;
+  await sheet.getByRole("textbox", { name: new RegExp(`^${words.reasonLabel}`) }).fill(reason);
+  await expectAccessible(page);
+  await sheet.getByRole("button", { name: words.extend }).click();
+  const given = page.getByRole("alertdialog", { name: words.extendAsk(name, formatDate(free)) });
+  await expect(given).toContainText(words.freeAsk);
+  await given.getByRole("button", { name: words.extendConfirm }).click();
+  await expect(unsent).toContainText(words.notEmailedBody(formatDate(free)));
+  await unsent.getByRole("button", { name: UI_TEXT.actions.close }).click();
+  await expect(plan).toContainText(formatDate(free));
+  await expect(page.getByRole("list", { name: words.planHistory })).toContainText(reason);
+  await fitsTheScreen(page);
+  await expectAccessible(page);
 });
 
 test("the console is the platform admin's alone: a clinic's owner is sent Home", async ({ page }) => {

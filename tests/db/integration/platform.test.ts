@@ -150,6 +150,7 @@ describe("extending a plan (plan §7.4)", () => {
       p_paid_on: todayKey(),
       p_valid_until: null,
       p_reason: null,
+      p_idempotency_key: randomUUID(),
       p_request_id: requestId,
     });
     expect(error).toBeNull();
@@ -189,6 +190,7 @@ describe("extending a plan (plan §7.4)", () => {
       p_paid_on: todayKey(),
       p_valid_until: null,
       p_reason: null,
+      p_idempotency_key: randomUUID(),
     });
     const [year, month, day] = addDaysKey(todayKey(), -1).split("-").map(Number);
     const expected = new Date(Date.UTC(year + 1, month - 1, day)).toISOString().slice(0, 10);
@@ -206,6 +208,7 @@ describe("extending a plan (plan §7.4)", () => {
       p_paid_on: null,
       p_valid_until: date,
       p_reason: null,
+      p_idempotency_key: randomUUID(),
     });
     expect(noReason?.code).toBe("23514");
 
@@ -218,6 +221,7 @@ describe("extending a plan (plan §7.4)", () => {
       p_paid_on: null,
       p_valid_until: date,
       p_reason: "Ten days to settle in",
+      p_idempotency_key: randomUUID(),
     });
     expect(data).toMatchObject({
       subscription: { plan: "YEARLY", valid_until: date },
@@ -235,6 +239,7 @@ describe("extending a plan (plan §7.4)", () => {
       p_paid_on: null,
       p_valid_until: null,
       p_reason: null,
+      p_idempotency_key: randomUUID(),
     };
     const { error: unknown } = await asDeveloper().rpc("extend_clinic_subscription", args);
     expect(unknown?.hint).toBe("RECORD_NOT_FOUND");

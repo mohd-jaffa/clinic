@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { readOnlyFrom, standingOf, subscriptionState } from "@/features/subscription/state";
+import { periodEnd, readOnlyFrom, standingOf, subscriptionState } from "@/features/subscription/state";
 
 /** A plan whose last day is 12 November, warned 7 days ahead, with 7 days of grace. */
 const plan = { validUntil: "2026-11-12", warningDays: 7, graceDays: 7 };
@@ -60,5 +60,23 @@ describe("standingOf (plan §7.2)", () => {
     expect(
       standingOf({ plan: "TRIAL", validUntil: "2026-11-12" }, { ...settings, graceDays: 0 }, "2026-11-13"),
     ).toEqual({ plan: "TRIAL", validUntil: "2026-11-12", state: "READ_ONLY", readOnlyFrom: "2026-11-13" });
+  });
+});
+
+describe("periodEnd (plan §7.4)", () => {
+  it("runs on from the plan's last day when paid early, so no day is lost", () => {
+    expect(periodEnd("MONTHLY", "2026-11-12", "2026-10-30")).toBe("2026-12-12");
+    expect(periodEnd("YEARLY", "2026-11-12", "2026-10-30")).toBe("2027-11-12");
+  });
+
+  it("runs on from yesterday when paid late, or on the last day, so the period starts today", () => {
+    expect(periodEnd("MONTHLY", "2026-09-01", "2026-10-30")).toBe("2026-11-29");
+    expect(periodEnd("MONTHLY", "2026-10-29", "2026-10-30")).toBe("2026-11-29");
+    expect(periodEnd("MONTHLY", "2026-10-30", "2026-10-30")).toBe("2026-11-30");
+  });
+
+  it("keeps a month's end inside a shorter month", () => {
+    expect(periodEnd("MONTHLY", "2027-01-31", "2026-10-30")).toBe("2027-02-28");
+    expect(periodEnd("YEARLY", "2028-02-29", "2026-10-30")).toBe("2029-02-28");
   });
 });

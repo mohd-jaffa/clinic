@@ -29,7 +29,13 @@ export {
   wholeNumberText,
 } from "./primitives";
 
-export { consoleClinicsQuerySchema, type ConsoleClinicsQuery } from "./schemas/console";
+export {
+  consoleClinicsQuerySchema,
+  extendPlanSchema,
+  type ConsoleClinicsQuery,
+  type ExtendPlanInput,
+  type ExtendPlanPayload,
+} from "./schemas/console";
 
 export {
   cursorParam,

@@ -1,6 +1,6 @@
 import type { PlatformSettings } from "@/constants/platform";
-import type { SubscriptionPlan, SubscriptionState } from "@/constants/statuses";
-import { addDaysKey } from "@/lib/dates/calendar";
+import type { ExtensionKind, SubscriptionPlan, SubscriptionState } from "@/constants/statuses";
+import { addDaysKey, addMonthsKey } from "@/lib/dates/calendar";
 
 /** What a clinic's state is worked out from (plan §7.2): days as YYYY-MM-DD in the clinic's timezone. */
 export interface SubscriptionDates {
@@ -50,4 +50,16 @@ export function standingOf(
     state: subscriptionState({ validUntil, today, warningDays: expiryWarningDays, graceDays }),
     readOnlyFrom: readOnlyFrom(validUntil, graceDays),
   };
+}
+
+/**
+ * The last day a Monthly or a Yearly extension runs to (plan §7.4): a
+ * calendar month, or twelve, on from the later of the plan's last day and
+ * yesterday — so paying early never loses a day, and paying late starts from
+ * today. The same rule as `extend_clinic_subscription()` (0036), kept equal
+ * by a test: the console shows it before the DEV saves.
+ */
+export function periodEnd(kind: Exclude<ExtensionKind, "CUSTOM">, validUntil: string, today: string): string {
+  const yesterday = addDaysKey(today, -1);
+  return addMonthsKey(validUntil > yesterday ? validUntil : yesterday, kind === "MONTHLY" ? 1 : 12);
 }

@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import type { PlatformSettings } from "@/constants/platform";
@@ -37,6 +39,7 @@ const extend = (args: Record<string, unknown>) =>
     p_paid_on: null,
     p_valid_until: null,
     p_reason: null,
+    p_idempotency_key: randomUUID(),
     ...args,
   });
 

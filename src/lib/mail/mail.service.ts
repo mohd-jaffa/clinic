@@ -2,6 +2,7 @@ import type { MailProvider } from "./mail.provider";
 import { accountConfirmationTemplate } from "./templates/account-confirmation";
 import { inviteTemplate, type InviteInput } from "./templates/invite";
 import { passwordResetTemplate } from "./templates/password-reset";
+import { planExtendedTemplate, type PlanExtendedInput } from "./templates/plan-extended";
 
 interface MailServiceOptions {
   provider: MailProvider;
@@ -34,6 +35,11 @@ export class MailService {
 
   async sendPasswordReset(input: { to: string; name: string; resetUrl: string }) {
     const content = passwordResetTemplate({ ...input, appUrl: this.appUrl });
+    await this.provider.send({ from: this.from, to: input.to, ...content });
+  }
+
+  async sendPlanExtended(input: Omit<PlanExtendedInput, "appUrl"> & { to: string }) {
+    const content = planExtendedTemplate({ ...input, appUrl: this.appUrl });
     await this.provider.send({ from: this.from, to: input.to, ...content });
   }
 }

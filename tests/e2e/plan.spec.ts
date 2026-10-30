@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import { expect, test, type Page } from "@playwright/test";
 
 import { UI_TEXT } from "@/constants/messages";
@@ -132,6 +134,7 @@ test("the owner's Plan screen: its last day, how to renew, and every change reco
         p_paid_on: null,
         p_valid_until: null,
         p_reason: null,
+        p_idempotency_key: randomUUID(),
         ...args,
       });
       expect(error).toBeNull();

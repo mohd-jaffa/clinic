@@ -25,6 +25,7 @@ import type {
   ConsoleClinicDetail,
   ConsoleError,
   ConsoleOverview,
+  ConsolePlanPayment,
 } from "./types";
 
 /**
@@ -63,7 +64,7 @@ export interface ClinicRow {
   no_trial: boolean;
 }
 
-interface ClinicPaymentRow {
+export interface ClinicPaymentRow {
   id: string;
   plan: ExtensionKind;
   amount_paise: number;
@@ -76,6 +77,12 @@ interface ClinicPaymentRow {
   receipt_number: string | null;
   recorded_by_name: string | null;
   created_at: string;
+}
+
+/** What `console_clinic` hands back: the clinic's row, its plan's history and the live prices. */
+export interface ClinicDetailRow extends ClinicRow {
+  payments: ClinicPaymentRow[];
+  prices: { monthly_paise: number; yearly_paise: number };
 }
 
 /** What `console_accounts` hands back for each account. */
@@ -152,6 +159,27 @@ export const toConsoleClinic = (row: ClinicRow): ConsoleClinic => ({
   noTrial: row.no_trial,
 });
 
+export const toPlanPayment = (row: ClinicPaymentRow): ConsolePlanPayment => ({
+  id: row.id,
+  kind: row.plan,
+  amountPaise: row.amount_paise,
+  method: row.method,
+  reference: row.reference,
+  paidOn: row.paid_on,
+  validFrom: row.valid_from,
+  validUntil: row.valid_until,
+  reason: row.reason,
+  receiptNumber: row.receipt_number,
+  recordedBy: row.recorded_by_name,
+  recordedAt: row.created_at,
+});
+
+export const toClinicDetail = (row: ClinicDetailRow): ConsoleClinicDetail => ({
+  ...toConsoleClinic(row),
+  payments: row.payments.map(toPlanPayment),
+  prices: { monthlyPaise: row.prices.monthly_paise, yearlyPaise: row.prices.yearly_paise },
+});
+
 export const toAccount = (row: AccountRow): ConsoleAccount => ({
   id: row.id,
   name: row.full_name,
@@ -222,29 +250,15 @@ export async function listConsoleClinics(
   return toPage((data as ClinicRow[]).map(toConsoleClinic), start);
 }
 
-/** One clinic's page (plan §20.3): its row and every change recorded to its plan, the latest first. */
+/**
+ * One clinic's page (plan §20.3): its row, every change recorded to its
+ * plan, the latest first, and the live prices.
+ */
 export async function getConsoleClinic(admin: SupabaseClient, clinicId: string): Promise<ConsoleClinicDetail> {
   const { data, error } = await admin.rpc("console_clinic", { p_clinic_id: clinicId });
   if (error) throw fromPostgrestError(error);
   if (data === null) throw notFoundError("RECORD_NOT_FOUND");
-  const row = data as ClinicRow & { payments: ClinicPaymentRow[] };
-  return {
-    ...toConsoleClinic(row),
-    payments: row.payments.map((payment) => ({
-      id: payment.id,
-      kind: payment.plan,
-      amountPaise: payment.amount_paise,
-      method: payment.method,
-      reference: payment.reference,
-      paidOn: payment.paid_on,
-      validFrom: payment.valid_from,
-      validUntil: payment.valid_until,
-      reason: payment.reason,
-      receiptNumber: payment.receipt_number,
-      recordedBy: payment.recorded_by_name,
-      recordedAt: payment.created_at,
-    })),
-  };
+  return toClinicDetail(data as ClinicDetailRow);
 }
 
 /** A page of every account (plan §20.5), the newest first, matched on what was typed. */

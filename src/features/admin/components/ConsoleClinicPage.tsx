@@ -1,9 +1,9 @@
 "use client";
 
-import { Mail, MessageCircle, Phone } from "lucide-react";
-import { useId } from "react";
+import { CalendarPlus, Mail, MessageCircle, Phone } from "lucide-react";
+import { useId, useState } from "react";
 
-import { LinkButton } from "@/components/ui/button";
+import { Button, LinkButton } from "@/components/ui/button";
 import { CoastHeader } from "@/components/ui/coast-header";
 import { DetailList } from "@/components/ui/detail-list";
 import { LoadFailed } from "@/components/ui/list-screen";
@@ -27,6 +27,7 @@ import { callHref, formatPhoneDigits, whatsAppHref } from "@/lib/phone";
 import { useConsoleClinic } from "../hooks/useConsoleClinic";
 import type { ConsoleClinicDetail, ConsolePlanPayment } from "../types";
 import { ClinicPills } from "./ClinicPills";
+import { ExtendPlanSheet } from "./ExtendPlanSheet";
 
 const { console: words } = UI_TEXT;
 
@@ -35,8 +36,9 @@ const { console: words } = UI_TEXT;
  * D370): never its data, only what the Clinics list knows of it. The land
  * names it, its kind and city. On the ground: its **Plan** — the plan, its
  * last day, where it stands and No trial, when it signed up and how many
- * members it has — then its **Owner**, with Call, WhatsApp and Email to
- * reach them; beside them on a desktop, every change recorded to its plan.
+ * members it has, and **Extend plan** (plan §7.4; D373) — then its
+ * **Owner**, with Call, WhatsApp and Email to reach them; beside them on a
+ * desktop, every change recorded to its plan.
  */
 export function ConsoleClinicPage({ clinicId }: { clinicId: string }) {
   const query = useConsoleClinic(clinicId);
@@ -76,18 +78,25 @@ export function ConsoleClinicPage({ clinicId }: { clinicId: string }) {
 
 function PlanSection({ clinic }: { clinic: ConsoleClinicDetail }) {
   const id = useId();
+  const [extending, setExtending] = useState(false);
   return (
     <section aria-labelledby={id}>
       <SectionHeading id={id} title={words.plan} />
-      <DetailList
-        details={[
-          { label: words.planLabel, value: SUBSCRIPTION_PLAN_LABELS[clinic.plan] },
-          { label: words.validUntilLabel, value: formatDate(clinic.validUntil) },
-          { label: words.stateLabel, value: <ClinicPills clinic={clinic} /> },
-          { label: words.signedUpLabel, value: formatDateTime(clinic.signedUpAt) },
-          { label: words.membersLabel, value: String(clinic.members) },
-        ]}
-      />
+      <div className="grid gap-4">
+        <DetailList
+          details={[
+            { label: words.planLabel, value: SUBSCRIPTION_PLAN_LABELS[clinic.plan] },
+            { label: words.validUntilLabel, value: formatDate(clinic.validUntil) },
+            { label: words.stateLabel, value: <ClinicPills clinic={clinic} /> },
+            { label: words.signedUpLabel, value: formatDateTime(clinic.signedUpAt) },
+            { label: words.membersLabel, value: String(clinic.members) },
+          ]}
+        />
+        <div>
+          <Button label={words.extend} icon={CalendarPlus} size="sm" onClick={() => setExtending(true)} />
+        </div>
+      </div>
+      <ExtendPlanSheet clinic={clinic} open={extending} onClose={() => setExtending(false)} />
     </section>
   );
 }

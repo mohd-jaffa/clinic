@@ -60,6 +60,7 @@ beforeAll(async () => {
     p_paid_on: todayKey(),
     p_valid_until: null,
     p_reason: null,
+    p_idempotency_key: randomUUID(),
     p_request_id: `req_${tag}`,
   });
   if (error) throw error;

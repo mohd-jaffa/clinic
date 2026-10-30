@@ -57,6 +57,31 @@ describe("MailService", () => {
     );
   });
 
+  it("sends the owner the plan extended email", async () => {
+    const { send, mail } = service();
+    await mail.sendPlanExtended({
+      to: "asha@example.com",
+      name: "Asha",
+      clinicName: "Smile Care",
+      kind: "MONTHLY",
+      validFrom: "2026-11-12",
+      validUntil: "2026-12-12",
+      amountPaise: 30_000,
+      method: "UPI",
+      paidOn: "2026-10-30",
+      receiptNumber: "R/2026-27/0001",
+      reason: null,
+      planUrl: "https://x.test/settings/plan",
+    });
+    expect(send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: "asha@example.com",
+        subject: MAIL_TEXT.planExtended.subject("Smile Care", "12 Dec 2026"),
+        text: expect.stringContaining("https://x.test/settings/plan"),
+      }),
+    );
+  });
+
   it("lets a provider's failure through, for the caller to report", async () => {
     const { send, mail } = service();
     send.mockImplementation(async () => {
