@@ -4,6 +4,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import type { PlatformSettings } from "@/constants/platform";
 import type { SubscriptionPlan } from "@/constants/statuses";
+import { POST } from "@/app/api/cron/subscription-notices/route";
 import { sendSubscriptionNotices, type ClaimedNotice } from "@/features/subscription/notices";
 import { addDaysKey, todayKey } from "@/lib/dates/calendar";
 import { formatDayMonth } from "@/lib/format/date";
@@ -25,8 +26,9 @@ import { latestMessageTo, messagesTo } from "@tests/support/mailpit";
  * day, once — before it ends, the day after, the day it becomes view-only —
  * a missed day caught up with the latest alone, a new last day starting
  * again, a clinic waiting for activation told nothing; an email that did not
- * go is tried again; two runs at once tell no one twice. The run may also
- * tell other local clinics, so only these clinics are looked at.
+ * go is tried again; two runs at once tell no one twice; and the scheduler's
+ * route, for its secret alone, tells each once. The run may also tell other
+ * local clinics, so only these clinics are looked at.
  */
 let developer: SignedIn;
 let saved: PlatformSettings;
@@ -206,5 +208,49 @@ describe("the daily plan emails (plan §22)", () => {
       p_claims: [],
     });
     expect(owner?.code).toBe("42501");
+  });
+});
+
+describe("through the scheduler's route (plan §22; D382)", () => {
+  const SECRET = `cron-${randomUUID()}-${randomUUID()}`;
+  const call = (authorization?: string) =>
+    POST(
+      new Request("http://localhost/api/cron/subscription-notices", {
+        method: "POST",
+        headers: { "content-type": "application/json", ...(authorization && { authorization }) },
+        body: "{}",
+      }),
+    );
+
+  beforeAll(() => {
+    process.env.CRON_SECRET = SECRET;
+  });
+
+  afterAll(() => {
+    delete process.env.CRON_SECRET;
+  });
+
+  it("answers no one without the secret, and tells each owner once with it", async () => {
+    const routed = await registerClinic({ clinicName: "Notice routed" });
+    await setPlan(routed, "MONTHLY", addDaysKey(today, 7));
+    const seen = await inbox(routed);
+
+    for (const authorization of [undefined, "Bearer not-the-secret"]) {
+      const refused = await call(authorization);
+      expect(refused.status).toBe(401);
+      expect(await refused.json()).toMatchObject({ success: false, error: { code: "CRON_SECRET_INVALID" } });
+    }
+    expect(await told(routed)).toEqual({ last_notice: null, last_notice_due: null, last_notice_for: null });
+
+    const first = await call(`Bearer ${SECRET}`);
+    expect(first.status).toBe(200);
+    expect((await first.json()).data.sent).toBeGreaterThanOrEqual(1);
+    expect((await nextMail(routed, seen)).subject).toBe(
+      `Notice routed's plan ends on ${formatDayMonth(addDaysKey(today, 7))}`,
+    );
+
+    const second = await call(`Bearer ${SECRET}`);
+    expect(second.status).toBe(200);
+    expect(await inbox(routed)).toBe(seen + 1);
   });
 });

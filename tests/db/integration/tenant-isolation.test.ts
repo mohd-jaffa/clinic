@@ -664,7 +664,7 @@ describe("as the platform admin (DEV)", () => {
     }
   });
 
-  it("reads no clinic's Home or reports (0034)", async () => {
+  it("reads none of a clinic through any function a member reads with — even given its own ids (plan §20)", async () => {
     const supabase = createClient(
       getServerEnv().NEXT_PUBLIC_SUPABASE_URL,
       getServerEnv().NEXT_PUBLIC_SUPABASE_ANON_KEY,
@@ -673,13 +673,46 @@ describe("as the platform admin (DEV)", () => {
         global: { headers: { Authorization: `Bearer ${developer.session.accessToken}` } },
       },
     );
-    for (const [name, args] of [
+    const today = todayKey();
+    const since = `${addDaysKey(today, -60)}T00:00:00Z`;
+    const reads: readonly [string, Record<string, unknown>][] = [
       ["dashboard_summary", { p_list_limit: 5, p_queue_limit: 3 }],
-      ["report_daily", { p_day: todayKey() }],
-      ["report_monthly", { p_month: todayKey() }],
-    ] as const) {
-      const { error } = await supabase.rpc(name, args);
-      expect(error?.hint, name).toBe("AUTH_PERMISSION_DENIED");
+      ["report_daily", { p_day: today }],
+      ["report_monthly", { p_month: today }],
+      ["clinic_activity", { p_actor: null, p_entity_types: null, p_offset: 0, p_limit: 20 }],
+      ["bill_start", { p_visit_id: visitId, p_appointment_id: null, p_patient_id: null }],
+      ["closure_appointments", { p_doctor_id: doctorId, p_starts_on: today, p_ends_on: today, p_limit: 10 }],
+      ["doctor_booked_times", { p_doctor_id: doctorId, p_day: today }],
+      ["expense_totals", { p_from: addDaysKey(today, -60), p_to: today }],
+      ["follow_up_counts", {}],
+      ["follow_up_items", { p_tab: "TODAY", p_offset: 0, p_limit: 20 }],
+      ["list_bills", { p_from: since, p_to: `${today}T23:59:59Z`, p_state: null, p_offset: 0, p_limit: 20 }],
+      ["medicine_suggestions", { p_search: "a", p_doctor_id: doctorId }],
+      [
+        "search_patients",
+        {
+          p_words: null,
+          p_digits: null,
+          p_number: null,
+          p_archived: false,
+          p_owing: false,
+          p_offset: 0,
+          p_limit: 20,
+        },
+      ],
+      ["to_bill_count", { p_doctor_id: null }],
+      ["to_bill_visits", { p_doctor_id: null, p_offset: 0, p_limit: 20 }],
+    ];
+    /** Nothing at all: no row, no figure, no name — refused, or empty through and through (a total of nothing is a row of nulls). */
+    const holdsNothing = (value: unknown): boolean =>
+      value === null ||
+      value === 0 ||
+      value === false ||
+      (Array.isArray(value) && value.every(holdsNothing)) ||
+      (typeof value === "object" && value !== null && Object.values(value).every(holdsNothing));
+    for (const [name, args] of reads) {
+      const { data, error } = await supabase.rpc(name, args);
+      expect(error !== null || holdsNothing(data), `${name}: ${JSON.stringify(data)}`).toBe(true);
     }
   });
 

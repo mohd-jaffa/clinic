@@ -5387,3 +5387,42 @@ the user first: D267 – D271.
 
 ### Blockers
 - None.
+
+## 2026-10-31 — R11.7: subscription operations tested end to end
+
+### Added
+- **The DEV reads nothing of a clinic** (plan §20; `tenant-isolation.test.ts`):
+  with their own token, every function a member reads with —
+  `dashboard_summary`, `report_daily`, `report_monthly`, `clinic_activity`,
+  `bill_start`, `closure_appointments`, `doctor_booked_times`,
+  `expense_totals`, `follow_up_counts`, `follow_up_items`, `list_bills`,
+  `medicine_suggestions`, `search_patients`, `to_bill_count`,
+  `to_bill_visits` — refuses or holds nothing, even given a clinic's own
+  patient, visit and doctor ids; beside the earlier check that no clinic
+  table answers them.
+- **The scheduler's route, end to end** (plan §22;
+  `subscription-notices.test.ts`): `POST /api/cron/subscription-notices`
+  refuses a call without `CRON_SECRET`, or with another, in the envelope,
+  marking nothing; with it, the owner whose plan ends in 7 days gets one
+  email in Mailpit, and none more when it is called again.
+- **A journey across both roles** (`plan-operations.spec.ts`, phone and
+  desktop): the DEV finds a clinic whose plan has ended, extends it by a
+  month by UPI and raises the monthly price — on the Overview, the clinic's
+  page, Accounts, the error log and the audit seeing nothing of the clinic's
+  patient (name, number, mobile or money), and sent to the console from
+  `/patients`, `/billing` and `/settings/activity`, refused (403) by the
+  patient, payment, search and activity APIs. The owner's Plan screen then
+  shows the new last day, the payment and the new price; the patient the
+  console never showed is on the owner's own screen.
+
+### Changed
+- Plan: tracker R11.7 DONE (2026-10-31).
+
+### Validation
+- Typecheck, lint, format check passed.
+- Unit and integration tests passed (4,359), coverage 100%.
+- E2E passed (phone, desktop; 178 passed, 8 skipped by design), on port
+  3107 through the scratch config.
+
+### Blockers
+- None.
